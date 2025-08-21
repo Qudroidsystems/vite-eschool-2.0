@@ -196,7 +196,7 @@ use Spatie\Permission\Models\Role;
                                 <input type="text" id="admissionNo" name="admissionNo" class="form-control" placeholder="Enter admission number" required>
                             </div>
                             <div class="mb-3">
-                                <label for="tittle" class="form-label">Title <span class="text-danger">*</span></label>
+                                <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
                                 <select id="title" name="title" class="form-control" required>
                                     <option value="">Select Title</option>
                                     <option value="Mr">Mr</option>
@@ -276,11 +276,45 @@ use Spatie\Permission\Models\Role;
                                 </select>
                             </div>
                             <div class="mb-3">
+                                <label for="student_category" class="form-label">Student Category <span class="text-danger">*</span></label>
+                                <select id="student_category" name="student_category" class="form-control" required>
+                                    <option value="">Select Category</option>
+                                    <option value="Day">Day</option>
+                                    <option value="Boarding">Boarding</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="nin_number" class="form-label">NIN Number</label>
+                                <input type="text" id="nin_number" name="nin_number" class="form-control" placeholder="Enter NIN number (11 digits)">
+                            </div>
+                            <div class="mb-3">
+                                <label for="blood_group" class="form-label">Blood Group <span class="text-danger">*</span></label>
+                                <select id="blood_group" name="blood_group" class="form-control" required>
+                                    <option value="">Select Blood Group</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="mother_tongue" class="form-label">Mother Tongue <span class="text-danger">*</span></label>
+                                <input type="text" id="mother_tongue" name="mother_tongue" class="form-control" placeholder="Enter mother tongue" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="reason_for_leaving" class="form-label">Reason for Leaving Previous School <span class="text-danger">*</span></label>
+                                <input type="text" id="reason_for_leaving" name="reason_for_leaving" class="form-control" placeholder="Enter reason for leaving" required>
+                            </div>
+                            <div class="mb-3">
                                 <label for="last_school" class="form-label">Last School Attended <span class="text-danger">*</span></label>
                                 <input type="text" id="last_school" name="last_school" class="form-control" placeholder="Enter last school attended" required>
                             </div>
                             <div class="mb-3">
-                                <label for="lastClass" class="form-label">Last Class Attended <span class="text-danger">*</span></label>
+                                <label for="last_class" class="form-label">Last Class Attended <span class="text-danger">*</span></label>
                                 <input type="text" id="last_class" name="last_class" class="form-control" placeholder="Enter last class attended" required>
                             </div>
                             <div class="mb-3">
@@ -439,12 +473,46 @@ use Spatie\Permission\Models\Role;
                                 </select>
                             </div>
                             <div class="mb-3">
+                                <label for="editStudentCategory" class="form-label">Student Category <span class="text-danger">*</span></label>
+                                <select id="editStudentCategory" name="student_category" class="form-control" required>
+                                    <option value="">Select Category</option>
+                                    <option value="Day">Day</option>
+                                    <option value="Boarding">Boarding</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editNinNumber" class="form-label">NIN Number</label>
+                                <input type="text" id="editNinNumber" name="nin_number" class="form-control" placeholder="Enter NIN number (11 digits)">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editBloodGroup" class="form-label">Blood Group <span class="text-danger">*</span></label>
+                                <select id="editBloodGroup" name="blood_group" class="form-control" required>
+                                    <option value="">Select Blood Group</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editMotherTongue" class="form-label">Mother Tongue <span class="text-danger">*</span></label>
+                                <input type="text" id="editMotherTongue" name="mother_tongue" class="form-control" placeholder="Enter mother tongue" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editReasonForLeaving" class="form-label">Reason for Leaving Previous School <span class="text-danger">*</span></label>
+                                <input type="text" id="editReasonForLeaving" name="reason_for_leaving" class="form-control" placeholder="Enter reason for leaving" required>
+                            </div>
+                            <div class="mb-3">
                                 <label for="editLastSchool" class="form-label">Last School Attended <span class="text-danger">*</span></label>
                                 <input type="text" id="editLastSchool" name="last_school" class="form-control" placeholder="Enter last school attended" required>
                             </div>
                             <div class="mb-3">
-                                <label for="editLastClass" class="form-label">Last Class <span class="text-danger">*</span></label>
-                                <input type="text" id="editLastClass" name="last_class" class="form-control" placeholder="Enter last class" required>
+                                <label for="editLastClass" class="form-label">Last Class Attended <span class="text-danger">*</span></label>
+                                <input type="text" id="editLastClass" name="last_class" class="form-control" placeholder="Enter last class attended" required>
                             </div>
                             <div class="mb-3">
                                 <label for="editSchoolclassid" class="form-label">Class <span class="text-danger">*</span></label>
@@ -486,152 +554,111 @@ use Spatie\Permission\Models\Role;
                                     </div>
                                 </div>
                             </div>
-                            <div class="alert alert-danger d-none" id="alert-error-msg"></div>
+                            <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary" id="update-btn">Update</button>
+                            <button type="submit" class="btn btn-primary" id="edit-btn">Update Student</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-
-        <!-- Delete Student Modal -->
-        <div id="deleteRecordModal" class="modal fade zoomIn" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="btn-close" id="deleteRecord-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-md-5">
-                        <div class="text-center">
-                            <div class="text-danger">
-                                <i class="bi bi-trash display-4"></i>
-                            </div>
-                            <div class="mt-4">
-                                <h3 class="mb-2">Are you sure?</h3>
-                                <p class="text-muted fs-lg mx-3 mb-0">Are you sure you want to remove this record?</p>
-                            </div>
-                        </div>
-                        <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
-                            <button type="button" class="btn w-sm btn-light btn-hover" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn w-sm btn-danger btn-hover" id="delete-record">Yes, Delete It!</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Image View Modal -->
-        <div id="imageViewModal" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Student Image</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body text-center">
-                        <img id="enlargedImage" src="" alt="Student Image" class="img-fluid">
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
-    <!-- End Page-content -->
+</div>
 
-    <!-- Include external scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{{ asset('js/init.js') }}"></script>
 
-    <script>
-        // Define permissions for JavaScript
-        window.appPermissions = {
-            canShowStudent: {{ Auth::user()->hasPermissionTo('View student') ? 'true' : 'false' }},
-            canUpdateStudent: {{ Auth::user()->hasPermissionTo('Update student') ? 'true' : 'false' }},
-            canDeleteStudent: {{ Auth::user()->hasPermissionTo('Delete student') ? 'true' : 'false' }}
-        };
+<script>
+    // Fetch states and LGAs for Add Student Modal
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch('/states_lgas.json')
+            .then(response => response.json())
+            .then(data => {
+                const stateSelect = document.getElementById('addState');
+                const localSelect = document.getElementById('addLocal');
+                const editStateSelect = document.getElementById('editState');
+                const editLocalSelect = document.getElementById('editLocal');
 
-        document.addEventListener("DOMContentLoaded", function () {
-            if (typeof axios === 'undefined') {
-                console.error('Axios is not loaded');
-                alert('Axios library is missing. Please check the script inclusion.');
-                return;
-            }
-            if (!document.querySelector('meta[name="csrf-token"]')) {
-                console.error('CSRF token meta tag is missing');
-                alert('CSRF token is missing. Please ensure the CSRF meta tag is included in the layout.');
-                return;
-            }
+                // Populate states
+                data.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state.state;
+                    option.textContent = state.state;
+                    stateSelect.appendChild(option);
+                    editStateSelect.appendChild(option.cloneNode(true));
+                });
 
-            var ctx = document.getElementById("studentsByStatusChart").getContext("2d");
-            new Chart(ctx, {
-                type: "bar",
-                data: {
-                    labels: ["Old Student", "New Student"],
-                    datasets: [{
-                        label: "Students by Status",
-                        data: @json(array_values($status_counts)),
-                        backgroundColor: ["#4e73df", "#1cc88a"],
-                        borderColor: ["#4e73df", "#1cc88a"],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: "Number of Students"
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: "Status"
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: "top"
-                        }
+                // Handle state change for Add Student Modal
+                stateSelect.addEventListener('change', function () {
+                    localSelect.innerHTML = '<option value="">Select Local Government</option>';
+                    const selectedState = data.find(state => state.state === this.value);
+                    if (selectedState) {
+                        selectedState.lgas.forEach(lga => {
+                            const option = document.createElement('option');
+                            option.value = lga;
+                            option.textContent = lga;
+                            localSelect.appendChild(option);
+                        });
                     }
-                }
+                });
+
+                // Handle state change for Edit Student Modal
+                editStateSelect.addEventListener('change', function () {
+                    editLocalSelect.innerHTML = '<option value="">Select Local Government</option>';
+                    const selectedState = data.find(state => state.state === this.value);
+                    if (selectedState) {
+                        selectedState.lgas.forEach(lga => {
+                            const option = document.createElement('option');
+                            option.value = lga;
+                            option.textContent = lga;
+                            editLocalSelect.appendChild(option);
+                        });
+                    }
+                });
             });
 
-            if (typeof Choices !== 'undefined') {
-                document.querySelectorAll('[data-choices]').forEach(element => {
-                    new Choices(element, {
-                        searchEnabled: element.dataset.choicesSearchFalse !== undefined,
-                        removeItemButton: element.dataset.choicesRemoveitem !== undefined
-                    });
-                });
+        // Avatar preview for Add Student Modal
+        document.getElementById('avatar').addEventListener('change', function (e) {
+            const addStudentAvatar = document.getElementById('addStudentAvatar');
+            if (e.target.files && e.target.files[0]) {
+                addStudentAvatar.src = URL.createObjectURL(e.target.files[0]);
+                addStudentAvatar.style.display = 'block';
             } else {
-                console.warn('Choices.js is not loaded. Select elements will function as standard dropdowns.');
+                addStudentAvatar.src = "{{ asset('theme/layouts/assets/media/avatars/blank.png') }}";
+                addStudentAvatar.style.display = 'none';
             }
-
-            axios.get('/students/data')
-                .then(response => {
-                    console.log('Students data response:', response.data);
-                })
-                .catch(error => {
-                    console.error('Error fetching /students/data:', {
-                        status: error.response?.status,
-                        data: error.response?.data,
-                        message: error.message
-                    });
-                    alert('Failed to fetch students. Check the console for details.');
-                });
-
-            initializeStudentList();
         });
-    </script>
-</div>
+
+        // Avatar preview for Edit Student Modal
+        document.getElementById('editAvatar').addEventListener('change', function (e) {
+            const editStudentAvatar = document.getElementById('editStudentAvatar');
+            if (e.target.files && e.target.files[0]) {
+                editStudentAvatar.src = URL.createObjectURL(e.target.files[0]);
+                editStudentAvatar.style.display = 'block';
+            } else {
+                editStudentAvatar.src = "{{ asset('theme/layouts/assets/media/avatars/blank.png') }}";
+                editStudentAvatar.style.display = 'block';
+            }
+        });
+
+        // Age calculation
+        window.showage = function (date, displayId = 'addAge') {
+            if (date) {
+                const dob = new Date(date);
+                const today = new Date();
+                let age = today.getFullYear() - dob.getFullYear();
+                const monthDiff = today.getMonth() - dob.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                }
+                document.getElementById(displayId).textContent = age + ' years';
+                document.getElementById(displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput').value = age;
+            } else {
+                document.getElementById(displayId).textContent = '';
+                document.getElementById(displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput').value = '';
+            }
+        };
+    });
+</script>
+
 @endsection

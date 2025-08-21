@@ -7,22 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Schoolterm;
 use App\Models\Schoolsession;
 
-
 class Student extends Model
 {
-
     use HasFactory;
     protected $table = "studentRegistration";
-    //protected $primaryKey = "admissionNo";
 
     protected $fillable = [
         'userid',
-        // 'admissionNo',
         'title',
         'firstname',
         'lastname',
         'othername',
-        'nationlity',
+        'nationality',
         'gender',
         'home_address',
         'home_address2',
@@ -37,12 +33,16 @@ class Student extends Model
         'registeredBy',
         'statusId',
         'batchid',
-
+        'student_category',
+        'nin_number',
+        'blood_group',
+        'mother_tongue',
+        'reason_for_leaving',
     ];
 
     public function class()
     {
-        return $this->belongsTo(SchoolClass::class, 'class_id'); // Assuming SchoolClass is the model
+        return $this->belongsTo(SchoolClass::class, 'class_id');
     }
 
     public function term()
@@ -55,7 +55,7 @@ class Student extends Model
         return $this->belongsTo(Schoolsession::class, 'session_id');
     }
 
-     public function studentClass()
+    public function studentClass()
     {
         return $this->hasOne(Studentclass::class, 'studentId', 'id');
     }
