@@ -15,9 +15,39 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // User::factory()->create([
+        //     'name' => 'Test User',
+        //     'email' => 'test@example.com',
+        // ]);
+
+        $this->call([
+            PermissionTableSeeder::class,
+            RoleTableSeeder::class,
+            UserTableSeeder::class,
+            TermTableSeeder::class,
+
+            ViewClassPermissionTableSeeder::class,
+            CompulsorySubjectsPermissionTableSeeder::class,
+            MockSubjectVettingsPermissionTableSeeder::class,
+            MyClassMySubjectPermissionTableSeeder::class,
+            MyMockSubjectVettingsPermissionTableSeeder::class,
+            MySubjectVettingsPermissionTableSeeder::class,
+            PrincipalscommentPermissionTableSeeder::class,
+            SchoolBillTermSessionPermissionTableSeeder::class,
+            SchoolInformationPermissionTableSeeder::class,
+            StudentMockReportPermissionTableSeeder::class,
+            StudentPermissionTableSeeder::class,
+            StudentReportPermissionTableSeeder::class,
+            StudentStatusTableSeeder::class,
+            SubjectClassResultRoomOperationPermissionTableSeeder::class,
+            SubjectUploadForStaffPermissionTableSeeder::class,
+            SubjectVettedPermissionTableSeeder::class,
+            SubjectVettingsPermissionTableSeeder::class,
+        
+         
+
+           
+            // Add more seeders as needed
         ]);
     }
 }
