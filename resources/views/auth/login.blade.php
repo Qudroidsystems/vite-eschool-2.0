@@ -274,7 +274,7 @@
                                     <div class="card mb-0 border-0 shadow-none mb-0">
                                         <div class="card-body p-sm-5 m-lg-4">
                                             <div class="text-center mt-5">
-                                                <h5 class="fs-3xl">TopClass College Portal</h5>
+                                                <h5 class="fs-3xl">College Portal (Demo)</h5>
                                                 <p class="text-muted">Sign in to continue</p>
                                             </div>
                                             <div class="p-2 mt-5">
