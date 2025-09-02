@@ -153,8 +153,7 @@
     </head>
 
     <body>
-
-
+    
         <section class="auth-page-wrapper  position-relative d-flex align-items-center justify-content-center min-vh-100">
             <div class="container">
                 <div class="row justify-content-center">

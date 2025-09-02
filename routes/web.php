@@ -157,8 +157,12 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/studentbulkuploadsave', [StudentController::class, 'bulkuploadsave'])->name('student.bulkuploadsave');
     Route::get('/batchindex', [StudentController::class, 'batchindex'])->name('studentbatchindex');
     Route::delete('/student/deletestudentbatch', [StudentController::class, 'deletestudentbatch'])->name('student.deletestudentbatch');
-    Route::post('/students/destroy-multiple', [StudentController::class, 'destroyMultiple'])->name('students.destroy-multiple');
+    Route::post('/students/destroy-multiple', [StudentController::class, 'destroyMultiple'])->name('student.destroyMultiple');
     Route::put('/student/updateclass', [StudentController::class, 'updateClass'])->name('student.updateclass');
+    Route::post('/generate-student-pdf', [StudentController::class, 'generateStudentPdf'])->name('student.pdf');
+    // Route::get('/generate-admission-number/{year}', [StudentController::class, 'generateAdmissionNumber'])->name('student.generate-admission-number');
+    // Route::get('/student/data', [StudentController::class, 'data'])->name('students.data');
+    Route::get('/students/last-admission-number', [StudentController::class, 'getLastAdmissionNumber'])->name('student.getLastAdmissionNumber');
     
     Route::resource('classoperation', ClassOperationController::class);
 

@@ -8,20 +8,25 @@ use Illuminate\Database\Eloquent\Model;
 class Classcategory extends Model
 {
     use HasFactory;
-    protected $table = "classcategories";
+
+    protected $table = 'classcategories';
 
     protected $fillable = [
         'category',
-        'ca1score',
-        'ca2score',
-        'ca3score',
-        'examscore',
-        'is_senior', // Add this new field
+        'is_senior',
     ];
 
     protected $casts = [
         'is_senior' => 'boolean',
     ];
+
+    /**
+     * Relationship to Assessments
+     */
+    public function assessments()
+    {
+        return $this->hasMany(Assessment::class, 'classcategory_id');
+    }
 
     public function schoolclasses()
     {
@@ -107,5 +112,13 @@ class Classcategory extends Model
     public function scopeJunior($query)
     {
         return $query->where('is_senior', false);
+    }
+
+    /**
+     * Calculate total maximum score from assessments
+     */
+    public function getTotalMaxScoreAttribute()
+    {
+        return $this->assessments->sum('max_score');
     }
 }

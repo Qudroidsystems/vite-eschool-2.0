@@ -65,45 +65,25 @@ function debounceInput(func, wait) {
 }
 
 // Form fields
-let addIdField, addCategoryField, addCa1ScoreField, addCa2ScoreField, addCa3ScoreField, addExamScoreField, addTotalScoreField, addSubmitButton;
-let editIdField, editCategoryField, editCa1ScoreField, editCa2ScoreField, editCa3ScoreField, editExamScoreField, editTotalScoreField, editSubmitButton;
+let addIdField, addCategoryField, addSubmitButton;
+let editIdField, editCategoryField, editSubmitButton;
 
 // Initialize form fields with retry
 function initializeFormFields(attempt = 1, maxAttempts = 5) {
     try {
         addIdField = document.getElementById("add-id-field");
         addCategoryField = document.getElementById("category");
-        addCa1ScoreField = document.getElementById("ca1score");
-        addCa2ScoreField = document.getElementById("ca2score");
-        addCa3ScoreField = document.getElementById("ca3score");
-        addExamScoreField = document.getElementById("examscore");
-        addTotalScoreField = document.getElementById("total_score");
         addSubmitButton = document.getElementById("add-btn");
         editIdField = document.getElementById("edit-id-field");
         editCategoryField = document.getElementById("edit-category");
-        editCa1ScoreField = document.getElementById("edit-ca1score");
-        editCa2ScoreField = document.getElementById("edit-ca2score");
-        editCa3ScoreField = document.getElementById("edit-ca3score");
-        editExamScoreField = document.getElementById("edit-examscore");
-        editTotalScoreField = document.getElementById("edit-total_score");
         editSubmitButton = document.getElementById("update-btn");
 
         const fieldsFound = {
             addIdField: !!addIdField,
             addCategoryField: !!addCategoryField,
-            addCa1ScoreField: !!addCa1ScoreField,
-            addCa2ScoreField: !!addCa2ScoreField,
-            addCa3ScoreField: !!addCa3ScoreField,
-            addExamScoreField: !!addExamScoreField,
-            addTotalScoreField: !!addTotalScoreField,
             addSubmitButton: !!addSubmitButton,
             editIdField: !!editIdField,
             editCategoryField: !!editCategoryField,
-            editCa1ScoreField: !!editCa1ScoreField,
-            editCa2ScoreField: !!editCa2ScoreField,
-            editCa3ScoreField: !!editCa3ScoreField,
-            editExamScoreField: !!editExamScoreField,
-            editTotalScoreField: !!editTotalScoreField,
             editSubmitButton: !!editSubmitButton
         };
 
@@ -139,79 +119,62 @@ function initializeFormFields(attempt = 1, maxAttempts = 5) {
     }
 }
 
-// Calculate total score for Add Modal
-function calculateAddTotalScore() {
-    try {
-        if (!addCa1ScoreField || !addCa2ScoreField || !addCa3ScoreField || !addExamScoreField || !addTotalScoreField || !addSubmitButton) {
-            console.error("Add modal fields missing:", {
-                addCa1ScoreField: !!addCa1ScoreField,
-                addCa2ScoreField: !!addCa2ScoreField,
-                addCa3ScoreField: !!addCa3ScoreField,
-                addExamScoreField: !!addExamScoreField,
-                addTotalScoreField: !!addTotalScoreField,
-                addSubmitButton: !!addSubmitButton
-            });
-            return;
-        }
-
-        const ca1 = parseFloat(addCa1ScoreField.value) || 0;
-        const ca2 = parseFloat(addCa2ScoreField.value) || 0;
-        const ca3 = parseFloat(addCa3ScoreField.value) || 0;
-        const exam = parseFloat(addExamScoreField.value) || 0;
-        const total = ca1 + ca2 + ca3 + exam;
-
-        console.log("Add Modal Scores:", {
-            ca1: ca1.toFixed(2),
-            ca2: ca2.toFixed(2),
-            ca3: ca3.toFixed(2),
-            exam: exam.toFixed(2),
-            total: total.toFixed(2)
-        });
-
-        addTotalScoreField.value = total.toFixed(2);
-        addSubmitButton.disabled = Math.abs(total - 400) > Number.EPSILON;
-
-        console.log("Add Modal Submit Button Disabled:", addSubmitButton.disabled);
-    } catch (error) {
-        console.error("Error in calculateAddTotalScore:", error);
+// Add new assessment field for Add/Edit Modal
+function addAssessmentField(containerId, name = '', score = '') {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Container ${containerId} not found`);
+        return;
     }
+
+    const index = container.querySelectorAll('.assessment-row').length;
+    const row = document.createElement('div');
+    row.className = 'assessment-row d-flex gap-2 mb-2';
+    row.innerHTML = `
+        <div class="flex-grow-1">
+            <input type="text" name="assessments[${index}][name]" class="form-control assessment-name" placeholder="Assessment Name (e.g., CA1, Exam)" value="${name}" required>
+        </div>
+        <div class="flex-shrink-0" style="width: 100px;">
+            <input type="number" name="assessments[${index}][max_score]" class="form-control assessment-score" placeholder="Max Score" value="${score}" min="0" step="0.01" required>
+        </div>
+        <div class="flex-shrink-0">
+            <button type="button" class="btn btn-sm btn-outline-danger remove-assessment-btn"><i class="ph-trash"></i></button>
+        </div>
+    `;
+    container.appendChild(row);
+
+    // Add event listeners for new fields
+    const removeBtn = row.querySelector('.remove-assessment-btn');
+    removeBtn.addEventListener('click', () => {
+        row.remove();
+        // Reindex assessments
+        reindexAssessments(containerId);
+        // Update submit button state
+        updateSubmitButtonState(containerId);
+    });
+
+    updateSubmitButtonState(containerId);
 }
 
-// Calculate total score for Edit Modal
-function calculateEditTotalScore() {
-    try {
-        if (!editCa1ScoreField || !editCa2ScoreField || !editCa3ScoreField || !editExamScoreField || !editTotalScoreField || !editSubmitButton) {
-            console.error("Edit modal fields missing:", {
-                editCa1ScoreField: !!editCa1ScoreField,
-                editCa2ScoreField: !!editCa2ScoreField,
-                editCa3ScoreField: !!editCa3ScoreField,
-                editExamScoreField: !!editExamScoreField,
-                editTotalScoreField: !!editTotalScoreField,
-                editSubmitButton: !!editSubmitButton
-            });
-            return;
-        }
+// Reindex assessment fields to maintain correct array indices
+function reindexAssessments(containerId) {
+    const container = document.getElementById(containerId);
+    const rows = container.querySelectorAll('.assessment-row');
+    rows.forEach((row, index) => {
+        const nameInput = row.querySelector('.assessment-name');
+        const scoreInput = row.querySelector('.assessment-score');
+        nameInput.name = `assessments[${index}][name]`;
+        scoreInput.name = `assessments[${index}][max_score]`;
+    });
+}
 
-        const ca1 = parseFloat(editCa1ScoreField.value) || 0;
-        const ca2 = parseFloat(editCa2ScoreField.value) || 0;
-        const ca3 = parseFloat(editCa3ScoreField.value) || 0;
-        const exam = parseFloat(editExamScoreField.value) || 0;
-        const total = ca1 + ca2 + ca3 + exam;
-
-        console.log("Edit Modal Scores:", {
-            ca1: ca1.toFixed(2),
-            ca2: ca2.toFixed(2),
-            ca3: ca3.toFixed(2),
-            exam: exam.toFixed(2),
-            total: total.toFixed(2)
-        });
-
-        editTotalScoreField.value = total.toFixed(2);
-        editSubmitButton.disabled = Math.abs(total - 400) > Number.EPSILON;
-
-        console.log("Edit Modal Submit Button Disabled:", editSubmitButton.disabled);
-    } catch (error) {
-        console.error("Error in calculateEditTotalScore:", error);
+// Update submit button state
+function updateSubmitButtonState(containerId) {
+    const container = document.getElementById(containerId);
+    const submitButton = containerId === 'add-assessments-container' ? addSubmitButton : editSubmitButton;
+    const assessments = container.querySelectorAll('.assessment-row');
+    if (submitButton) {
+        submitButton.disabled = assessments.length === 0;
     }
 }
 
@@ -329,10 +292,6 @@ function handleEditClick(e) {
 
     if (editIdField) editIdField.value = itemId;
     if (editCategoryField) editCategoryField.value = tr.querySelector(".category")?.innerText || "";
-    if (editCa1ScoreField) editCa1ScoreField.value = tr.querySelector(".ca1score")?.innerText || "0";
-    if (editCa2ScoreField) editCa2ScoreField.value = tr.querySelector(".ca2score")?.innerText || "0";
-    if (editCa3ScoreField) editCa3ScoreField.value = tr.querySelector(".ca3score")?.innerText || "0";
-    if (editExamScoreField) editExamScoreField.value = tr.querySelector(".examscore")?.innerText || "0";
 
     // Set is_senior radio buttons
     const isSeniorAttr = tr.querySelector(".gradetype")?.getAttribute("data-issenior");
@@ -352,7 +311,17 @@ function handleEditClick(e) {
         }
     }
 
-    calculateEditTotalScore();
+    // Populate assessments
+    const assessments = tr.querySelector(".assessments")?.getAttribute("data-assessments");
+    const assessmentsContainer = document.getElementById("edit-assessments-container");
+    if (assessmentsContainer && assessments) {
+        assessmentsContainer.innerHTML = ''; // Clear existing fields
+        JSON.parse(assessments).forEach(assessment => {
+            addAssessmentField('edit-assessments-container', assessment.name, assessment.max_score);
+        });
+    }
+
+    updateSubmitButtonState('edit-assessments-container');
 
     try {
         const modal = new bootstrap.Modal(document.getElementById("editModal"));
@@ -373,23 +342,19 @@ function handleEditClick(e) {
 function clearAddFields() {
     if (addIdField) addIdField.value = "";
     if (addCategoryField) addCategoryField.value = "";
-    if (addCa1ScoreField) addCa1ScoreField.value = "";
-    if (addCa2ScoreField) addCa2ScoreField.value = "";
-    if (addCa3ScoreField) addCa3ScoreField.value = "";
-    if (addExamScoreField) addExamScoreField.value = "";
-    if (addTotalScoreField) addTotalScoreField.value = "";
     if (addSubmitButton) addSubmitButton.disabled = true;
+    const addAssessmentsContainer = document.getElementById("add-assessments-container");
+    if (addAssessmentsContainer) addAssessmentsContainer.innerHTML = "";
+    // Add one default assessment field
+    addAssessmentField('add-assessments-container');
 }
 
 function clearEditFields() {
     if (editIdField) editIdField.value = "";
     if (editCategoryField) editCategoryField.value = "";
-    if (editCa1ScoreField) editCa1ScoreField.value = "";
-    if (editCa2ScoreField) editCa2ScoreField.value = "";
-    if (editCa3ScoreField) editCa3ScoreField.value = "";
-    if (editExamScoreField) editExamScoreField.value = "";
-    if (editTotalScoreField) editTotalScoreField.value = "";
     if (editSubmitButton) editSubmitButton.disabled = true;
+    const editAssessmentsContainer = document.getElementById("edit-assessments-container");
+    if (editAssessmentsContainer) editAssessmentsContainer.innerHTML = "";
     const editCategoryForm = document.getElementById("edit-category-form");
     if (editCategoryForm) {
         const juniorRadio = editCategoryForm.querySelector("#edit-junior");
@@ -397,6 +362,8 @@ function clearEditFields() {
         if (juniorRadio) juniorRadio.checked = true; // Default to Junior
         if (seniorRadio) seniorRadio.checked = false;
     }
+    // Add one default assessment field
+    addAssessmentField('edit-assessments-container');
 }
 
 // Delete multiple categories
@@ -461,7 +428,7 @@ function initializeListJs() {
     if (categoryListContainer && document.querySelectorAll('#categoryList tbody tr').length > 0) {
         try {
             categoryList = new List('categoryList', {
-                valueNames: ['categoryid', 'category', 'ca1score', 'ca2score', 'ca3score', 'examscore', 'datereg'],
+                valueNames: ['categoryid', 'category', 'assessments', 'datereg'],
                 page: 1000,
                 pagination: false,
                 listClass: 'list'
@@ -492,7 +459,7 @@ function filterData() {
     const searchValue = searchInput ? searchInput.value : "";
     console.log("Filtering with search:", searchValue);
     if (categoryList) {
-        categoryList.search(searchValue, ['category', 'ca1score', 'ca2score', 'ca3score', 'examscore']);
+        categoryList.search(searchValue, ['category', 'assessments']);
     }
 }
 
@@ -504,39 +471,32 @@ function initializeAddCategoryForm() {
             e.preventDefault();
             const errorMsg = document.getElementById("alert-error-msg");
             if (errorMsg) errorMsg.classList.add("d-none");
+
             const formData = new FormData(addCategoryForm);
             const category = formData.get('category');
-            const ca1score = parseFloat(formData.get('ca1score')) || 0;
-            const ca2score = parseFloat(formData.get('ca2score')) || 0;
-            const ca3score = parseFloat(formData.get('ca3score')) || 0;
-            const examscore = parseFloat(formData.get('examscore')) || 0;
             const is_senior = parseInt(formData.get('is_senior')) || 0;
-            const totalScore = ca1score + ca2score + ca3score + examscore;
+            const assessments = [];
+            const assessmentRows = document.querySelectorAll('#add-assessments-container .assessment-row');
 
-            if (!category || !ca1score || !ca2score || !ca3score || !examscore || is_senior === null) {
+            assessmentRows.forEach((row, index) => {
+                const name = row.querySelector(`input[name="assessments[${index}][name]"]`).value;
+                const max_score = parseFloat(row.querySelector(`input[name="assessments[${index}][max_score]"]`).value) || 0;
+                assessments.push({ name, max_score });
+            });
+
+            if (!category || assessments.length === 0 || isNaN(is_senior)) {
                 if (errorMsg) {
-                    errorMsg.innerHTML = "Please fill in all required fields, including Grade Type";
+                    errorMsg.innerHTML = "Please fill in all required fields, including Grade Type and at least one assessment";
                     errorMsg.classList.remove("d-none");
                 }
                 return;
             }
 
-            if (Math.abs(totalScore - 400) > Number.EPSILON) {
-                if (errorMsg) {
-                    errorMsg.innerHTML = "The sum of CA1, CA2, CA3, and Exam scores must be exactly 400";
-                    errorMsg.classList.remove("d-none");
-                }
-                return;
-            }
-
-            console.log("Submitting Add Category:", { category, ca1score, ca2score, ca3score, examscore, is_senior, totalScore });
+            console.log("Submitting Add Category:", { category, is_senior, assessments });
             axios.post('/classcategories', {
-                category: category,
-                ca1score: ca1score,
-                ca2score: ca2score,
-                ca3score: ca3score,
-                examscore: examscore,
-                is_senior: is_senior
+                category,
+                is_senior,
+                assessments
             }, {
                 headers: { 'Content-Type': 'application/json' }
             }).then(function (response) {
@@ -589,50 +549,30 @@ function initializeEditCategoryForm() {
 
             const formData = new FormData(editCategoryForm);
             const category = formData.get('category');
-            const ca1score = parseFloat(formData.get('ca1score')) || 0;
-            const ca2score = parseFloat(formData.get('ca2score')) || 0;
-            const ca3score = parseFloat(formData.get('ca3score')) || 0;
-            const examscore = parseFloat(formData.get('examscore')) || 0;
             const is_senior = parseInt(formData.get('is_senior'));
-            const totalScore = ca1score + ca2score + ca3score + examscore;
+            const assessments = [];
+            const assessmentRows = document.querySelectorAll('#edit-assessments-container .assessment-row');
 
-            console.log("Edit Category Form Data:", {
-                id,
-                category,
-                ca1score,
-                ca2score,
-                ca3score,
-                examscore,
-                is_senior,
-                totalScore
+            assessmentRows.forEach((row, index) => {
+                const name = row.querySelector(`input[name="assessments[${index}][name]"]`).value;
+                const max_score = parseFloat(row.querySelector(`input[name="assessments[${index}][max_score]"]`).value) || 0;
+                assessments.push({ name, max_score });
             });
 
-            if (!category || !ca1score || !ca2score || !ca3score || !examscore || isNaN(is_senior)) {
+            if (!category || assessments.length === 0 || isNaN(is_senior)) {
                 console.warn("Edit Category: Invalid form data");
                 if (errorMsg) {
-                    errorMsg.innerHTML = "Please fill in all required fields, including Grade Type";
+                    errorMsg.innerHTML = "Please fill in all required fields, including Grade Type and at least one assessment";
                     errorMsg.classList.remove("d-none");
                 }
                 return;
             }
 
-            if (Math.abs(totalScore - 400) > Number.EPSILON) {
-                console.warn("Edit Category: Total score not 400");
-                if (errorMsg) {
-                    errorMsg.innerHTML = "The sum of CA1, CA2, CA3, and Exam scores must be exactly 400";
-                    errorMsg.classList.remove("d-none");
-                }
-                return;
-            }
-
-            console.log("Submitting Edit Category:", { id, category, ca1score, ca2score, ca3score, examscore, is_senior, totalScore });
+            console.log("Submitting Edit Category:", { id, category, is_senior, assessments });
             axios.put(`/classcategories/${id}`, {
-                category: category,
-                ca1score: ca1score,
-                ca2score: ca2score,
-                ca3score: ca3score,
-                examscore: examscore,
-                is_senior: is_senior
+                category,
+                is_senior,
+                assessments
             }, {
                 headers: { 'Content-Type': 'application/json' }
             }).then(function (response) {
@@ -677,7 +617,7 @@ function initializeModals() {
                 if (modalLabel) modalLabel.innerHTML = "Add Class Category";
                 if (addBtn) addBtn.innerHTML = "Add Category";
             }
-            calculateAddTotalScore();
+            updateSubmitButtonState('add-assessments-container');
         });
         addModal.addEventListener("hidden.bs.modal", function () {
             console.log("Add modal closed");
@@ -694,7 +634,7 @@ function initializeModals() {
             const updateBtn = document.getElementById("update-btn");
             if (modalLabel) modalLabel.innerHTML = "Edit Class Category";
             if (updateBtn) updateBtn.innerHTML = "Update";
-            calculateEditTotalScore();
+            updateSubmitButtonState('edit-assessments-container');
         });
         editModal.addEventListener("hidden.bs.modal", function () {
             console.log("Edit modal closed");
@@ -707,29 +647,15 @@ function initializeModals() {
 // Initialize event listeners
 function initializeEventListeners() {
     try {
-        // Add event listeners for Add Modal score inputs
-        const addScoreFields = [addCa1ScoreField, addCa2ScoreField, addCa3ScoreField, addExamScoreField];
-        addScoreFields.forEach((field, index) => {
-            if (field) {
-                field.removeEventListener('input', handleAddScoreInput);
-                field.addEventListener('input', handleAddScoreInput);
-                console.log(`Added input listener for Add Modal field: ${field.id}`);
-            } else {
-                console.warn(`Add Modal score field ${index} not found`);
-            }
-        });
-
-        // Add event listeners for Edit Modal score inputs
-        const editScoreFields = [editCa1ScoreField, editCa2ScoreField, editCa3ScoreField, editExamScoreField];
-        editScoreFields.forEach((field, index) => {
-            if (field) {
-                field.removeEventListener('input', handleEditScoreInput);
-                field.addEventListener('input', handleEditScoreInput);
-                console.log(`Added input listener for Edit Modal field: ${field.id}`);
-            } else {
-                console.warn(`Edit Modal score field ${index} not found`);
-            }
-        });
+        // Add assessment buttons
+        const addAssessmentBtn = document.getElementById("add-assessment-btn");
+        if (addAssessmentBtn) {
+            addAssessmentBtn.addEventListener("click", () => addAssessmentField('add-assessments-container'));
+        }
+        const editAssessmentBtn = document.getElementById("edit-assessment-btn");
+        if (editAssessmentBtn) {
+            editAssessmentBtn.addEventListener("click", () => addAssessmentField('edit-assessments-container'));
+        }
 
         // Event delegation for edit and remove buttons
         document.addEventListener('click', function (e) {
@@ -762,17 +688,6 @@ function initializeEventListeners() {
     }
 }
 
-// Handlers for score input changes
-function handleAddScoreInput(e) {
-    console.log(`Input changed for ${e.target.id}: ${e.target.value}`);
-    calculateAddTotalScore();
-}
-
-function handleEditScoreInput(e) {
-    console.log(`Input changed for ${e.target.id}: ${e.target.value}`);
-    calculateEditTotalScore();
-}
-
 // Initialize everything
 function initializeApp() {
     if (!checkDependencies()) return;
@@ -784,6 +699,8 @@ function initializeApp() {
     initializeAddCategoryForm();
     initializeEditCategoryForm();
     initializeModals();
+    // Add initial assessment field
+    addAssessmentField('add-assessments-container');
 }
 
 // Use window.onload to ensure all assets are loaded

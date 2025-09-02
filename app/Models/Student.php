@@ -4,13 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Schoolterm;
-use App\Models\Schoolsession;
 
 class Student extends Model
 {
     use HasFactory;
-    protected $table = "studentRegistration";
+
+    protected $table = 'studentRegistration';
 
     protected $fillable = [
         'userid',
@@ -20,6 +19,7 @@ class Student extends Model
         'othername',
         'nationality',
         'gender',
+        'phone_number',
         'home_address',
         'home_address2',
         'placeofbirth',
@@ -34,29 +34,40 @@ class Student extends Model
         'statusId',
         'batchid',
         'student_category',
+        'student_status',
         'nin_number',
         'blood_group',
         'mother_tongue',
         'reason_for_leaving',
+        'admissionNo',
+        'admission_date', // Added
+        'admissionYear', // Added (optional, remove if not needed)
+        'present_address', // Added
+        'permanent_address', // Added
+        'sport_house', // Added (from the store method)
+        'email', // Added (from the store method)
+        'city', // Added (from the store method)
     ];
 
-    public function class()
+    protected $casts = [
+        'dateofbirth' => 'date',
+        'admission_date' => 'date', // Added
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function picture()
     {
-        return $this->belongsTo(SchoolClass::class, 'class_id');
+        return $this->hasOne(Studentpicture::class, 'studentid', 'id');
     }
 
-    public function term()
-    {
-        return $this->belongsTo(SchoolTerm::class, 'term_id');
-    }
-
-    public function session()
-    {
-        return $this->belongsTo(Schoolsession::class, 'session_id');
-    }
-
-    public function studentClass()
+    public function schoolClass()
     {
         return $this->hasOne(Studentclass::class, 'studentId', 'id');
+    }
+
+    public function parent()
+    {
+        return $this->hasOne(ParentRegistration::class, 'studentId', 'id');
     }
 }

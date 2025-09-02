@@ -51,7 +51,7 @@
                                 <div class="row g-3">
                                     <div class="col-xxl-3">
                                         <div class="search-box">
-                                            <input type="text" class="form-control search" placeholder="Search categories">
+                                            <input type="text" class="form-control search" placeholder="Search categories or assessments">
                                             <i class="ri-search-line search-icon"></i>
                                         </div>
                                     </div>
@@ -89,10 +89,7 @@
                                                 </th>
                                                 <th class="min-w-50px sort cursor-pointer" data-sort="categoryid">SN</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="category">Class Category</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="ca1score">CA 1 Score</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="ca2score">CA 2 Score</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="ca3score">CA 3 Score</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="examscore">Exam Score</th>
+                                                <th class="min-w-200px sort cursor-pointer" data-sort="assessments">Assessments</th>
                                                 <th class="min-w-100px sort cursor-pointer" data-sort="gradetype">Grade Type</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="datereg">Date Updated</th>
                                                 <th class="min-w-100px">Actions</th>
@@ -109,10 +106,11 @@
                                                     </td>
                                                     <td class="categoryid">{{ ++$i }}</td>
                                                     <td class="category" data-category="{{ $sc->category }}">{{ $sc->category }}</td>
-                                                    <td class="ca1score" data-ca1score="{{ $sc->ca1score }}">{{ $sc->ca1score }}</td>
-                                                    <td class="ca2score" data-ca2score="{{ $sc->ca2score }}">{{ $sc->ca2score }}</td>
-                                                    <td class="ca3score" data-ca3score="{{ $sc->ca3score }}">{{ $sc->ca3score }}</td>
-                                                    <td class="examscore" data-examscore="{{ $sc->examscore }}">{{ $sc->examscore }}</td>
+                                                    <td class="assessments" data-assessments="{{ json_encode($sc->assessments->map(fn($a) => ['name' => $a->name, 'max_score' => $a->max_score])) }}">
+                                                        @foreach ($sc->assessments as $assessment)
+                                                            {{ $assessment->name }} ({{ number_format($assessment->max_score, 2) }})@if (!$loop->last), @endif
+                                                        @endforeach
+                                                    </td>
                                                     <td class="gradetype" data-issenior="{{ $sc->is_senior ? 1 : 0 }}">
                                                         <span class="badge bg-{{ $sc->is_senior ? 'success' : 'primary' }}-subtle text-{{ $sc->is_senior ? 'success' : 'primary' }}">
                                                             {{ $sc->is_senior ? 'Senior' : 'Junior' }}
@@ -136,7 +134,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="10" class="noresult" style="display: block;">No results found</td>
+                                                    <td colspan="7" class="noresult" style="display: block;">No results found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -181,31 +179,19 @@
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="ca1score" class="form-label">CA 1 Score</label>
-                                    <input type="number" name="ca1score" id="ca1score" class="form-control score-input" placeholder="Enter CA 1 score" required min="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="ca2score" class="form-label">CA 2 Score</label>
-                                    <input type="number" name="ca2score" id="ca2score" class="form-control score-input" placeholder="Enter CA 2 score" required min="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="ca3score" class="form-label">CA 3 Score</label>
-                                    <input type="number" name="ca3score" id="ca3score" class="form-control score-input" placeholder="Enter CA 3 score" required min="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="examscore" class="form-label">Exam Score</label>
-                                    <input type="number" name="examscore" id="examscore" class="form-control score-input" placeholder="Enter exam score" required min="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="total_score" class="form-label">Total Score</label>
-                                    <input type="number" name="total_score" id="total_score" class="form-control" readonly>
-                                    <small class="form-text text-muted">Total must be exactly 400</small>
+                                    <label class="form-label">Assessments</label>
+                                    <div id="add-assessments-container">
+                                        <!-- Dynamic assessment fields will be added here -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-assessment-btn">
+                                        <i class="bi bi-plus-circle me-1"></i>Add Assessment
+                                    </button>
                                 </div>
                                 <div class="alert alert-danger d-none" id="alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn btn-primary" id="add-btn" disabled>Add Category</button>
+                                <button type="submit" class="btn btn-primary" id="add-btn">Add Category</button>
                             </div>
                         </form>
                     </div>
@@ -245,31 +231,19 @@
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="edit-ca1score" class="form-label">CA 1 Score</label>
-                                    <input type="number" name="ca1score" id="edit-ca1score" class="form-control score-input" placeholder="Enter CA 1 score" required min="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit-ca2score" class="form-label">CA 2 Score</label>
-                                    <input type="number" name="ca2score" id="edit-ca2score" class="form-control score-input" placeholder="Enter CA 2 score" required min="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit-ca3score" class="form-label">CA 3 Score</label>
-                                    <input type="number" name="ca3score" id="edit-ca3score" class="form-control score-input" placeholder="Enter CA 3 score" required min="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit-examscore" class="form-label">Exam Score</label>
-                                    <input type="number" name="examscore" id="edit-examscore" class="form-control score-input" placeholder="Enter exam score" required min="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit-total_score" class="form-label">Total Score</label>
-                                    <input type="number" name="total_score" id="edit-total_score" class="form-control" readonly>
-                                    <small class="form-text text-muted">Total must be exactly 400</small>
+                                    <label class="form-label">Assessments</label>
+                                    <div id="edit-assessments-container">
+                                        <!-- Dynamic assessment fields will be added here -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="edit-assessment-btn">
+                                        <i class="bi bi-plus-circle me-1"></i>Add Assessment
+                                    </button>
                                 </div>
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn btn-primary" id="update-btn" disabled>Update</button>
+                                <button type="submit" class="btn btn-primary" id="update-btn">Update</button>
                             </div>
                         </form>
                     </div>
@@ -301,5 +275,5 @@
         <script src="{{ asset('theme/layouts/assets/js/sweetalert2.min.js') }}"></script>
         <script src="{{ asset('js/classcategory.init.js') }}?v={{ time() }}"></script> --}}
     </div>
-</div
+</div>
 @endsection
