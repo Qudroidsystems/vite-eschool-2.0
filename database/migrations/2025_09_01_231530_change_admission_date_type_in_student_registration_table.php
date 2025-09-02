@@ -1,14 +1,14 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
 
-class ChangeAdmissionDateTypeInStudentRegistrationTable extends Migration
+class ChangeAdmissionDateTypeInstudentRegistrationTable extends Migration
 {
     public function up()
     {
-        Schema::table('studentregistration', function (Blueprint $table) {
+        Schema::table('studentRegistration', function (Blueprint $table) {
             // Change admission_date to date type
             $table->date('admission_date')->nullable()->change();
         });
@@ -16,7 +16,7 @@ class ChangeAdmissionDateTypeInStudentRegistrationTable extends Migration
 
     public function down()
     {
-        Schema::table('studentregistration', function (Blueprint $table) {
+        Schema::table('studentRegistration', function (Blueprint $table) {
             $table->string('admission_date', 255)->nullable()->change();
         });
     }

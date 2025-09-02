@@ -1,14 +1,14 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
 
-class AddMissingColumnsToStudentRegistrationTable extends Migration
+class AddMissingColumnsTostudentRegistrationTable extends Migration
 {
     public function up()
     {
-        Schema::table('studentregistration', function (Blueprint $table) {
+        Schema::table('studentRegistration', function (Blueprint $table) {
             $table->string('blood_group')->nullable()->after('age');
             $table->string('mother_tongue')->nullable()->after('blood_group');
             $table->string('sport_house')->nullable()->after('religion');
@@ -21,7 +21,7 @@ class AddMissingColumnsToStudentRegistrationTable extends Migration
 
     public function down()
     {
-        Schema::table('studentregistration', function (Blueprint $table) {
+        Schema::table('studentRegistration', function (Blueprint $table) {
             $table->dropColumn([
                 'blood_group',
                 'mother_tongue',
