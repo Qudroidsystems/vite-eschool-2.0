@@ -9,8 +9,8 @@ class AddMissingColumnsTostudentRegistrationTable extends Migration
     public function up()
     {
         Schema::table('studentRegistration', function (Blueprint $table) {
-            $table->string('admisionYear')->nullable()->after('admisionNo');
-            $table->string('admission_date')->nullable()->after('admisionYear');
+            $table->string('admissionYear')->nullable()->after('admissionNo');
+            $table->string('admission_date')->nullable()->after('admissionYear');
             $table->string('blood_group')->nullable()->after('age');
             $table->string('mother_tongue')->nullable()->after('blood_group');
             $table->string('sport_house')->nullable()->after('religion');
