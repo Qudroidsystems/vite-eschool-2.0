@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Schemaation;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprintprint;
 use Illuminate\Database\Migrations\Migrationchema;
 
