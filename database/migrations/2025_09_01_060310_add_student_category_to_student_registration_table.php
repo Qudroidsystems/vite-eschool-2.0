@@ -8,14 +8,14 @@ use Illuminate\Database\Migrations\Migration;;
      {
          public function up(): void
          {
-             Schema::table('', function (Blueprint $table) {
+             Schema::table('studentRegistratio', function (Blueprint $table) {
                  $table->string('student_category', 50)->nullable()->after('statusId');
              });
          }
 
          public function down(): void
          {
-             Schema::table('', function (Blueprint $table) {
+             Schema::table('studentRegistratio', function (Blueprint $table) {
                  $table->dropColumn('student_category');
              });
          }
