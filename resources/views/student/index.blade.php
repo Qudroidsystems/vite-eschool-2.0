@@ -1538,9 +1538,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.querySelector('#totalStudents').textContent = allStudents.length;
                 document.querySelector('#totalCount').textContent = allStudents.length;
                 renderStudents(allStudents);
-                initializeList();
-                // Temporarily comment out filterData to ensure raw data is displayed
-                // filterData();
             })
             .catch((error) => {
                 console.error('Error fetching students:', {
@@ -1565,9 +1562,23 @@ document.addEventListener('DOMContentLoaded', function () {
         const tbody = document.getElementById('studentTableBody');
         if (!tbody) {
             console.error('studentTableBody element not found');
+            Swal.fire({
+                title: "Error!",
+                text: "Table body element not found",
+                icon: "error",
+                confirmButtonClass: "btn btn-primary",
+                buttonsStyling: true
+            });
             return;
         }
         tbody.innerHTML = '';
+        if (students.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td colspan="8" class="text-center">No students found</td>`;
+            tbody.appendChild(row);
+            initializeList(); // Initialize List.js even for empty table
+            return;
+        }
         students.forEach(student => {
             console.log('Rendering student:', student);
             const studentImage = student.picture 
@@ -1617,6 +1628,7 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             tbody.appendChild(row);
         });
+        initializeList();
         initializeCheckboxes();
     }
 
@@ -1635,15 +1647,42 @@ document.addEventListener('DOMContentLoaded', function () {
         const options = {
             valueNames: ['name', 'admissionNo', 'class', 'status', 'gender', 'datereg'],
             page: itemsPerPage,
-            pagination: true
+            pagination: true,
+            item: `
+                <tr>
+                    <td class="id">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="chk_child">
+                        </div>
+                    </td>
+                    <td class="name"></td>
+                    <td class="admissionNo"></td>
+                    <td class="class"></td>
+                    <td class="status"></td>
+                    <td class="gender"></td>
+                    <td class="datereg"></td>
+                    <td><ul class="d-flex gap-2 list-unstyled mb-0"></ul></td>
+                </tr>
+            `
         };
-        studentList = new List('studentList', options);
-        studentList.on('updated', function () {
-            updatePagination();
-            document.getElementById('showingCount').textContent = studentList.visibleItems.length;
-            document.getElementById('totalCount').textContent = studentList.items.length;
-            document.getElementById('totalStudents').textContent = studentList.items.length;
-        });
+        try {
+            studentList = new List('studentList', options);
+            studentList.on('updated', function () {
+                updatePagination();
+                document.getElementById('showingCount').textContent = studentList.visibleItems.length;
+                document.getElementById('totalCount').textContent = studentList.items.length;
+                document.getElementById('totalStudents').textContent = studentList.items.length;
+            });
+        } catch (error) {
+            console.error('List.js initialization error:', error.message);
+            Swal.fire({
+                title: "Error!",
+                text: "Failed to initialize table. Check console for details.",
+                icon: "error",
+                confirmButtonClass: "btn btn-primary",
+                buttonsStyling: true
+            });
+        }
     }
 
     function updatePagination() {
@@ -1681,8 +1720,8 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('Filtering with:', { search, classId, statusId, gender, studentStatus });
 
         studentList.filter(item => {
-            const name = item.values().name.toLowerCase();
-            const admissionNo = item.values().admissionNo.toLowerCase();
+            const name = item.values().name?.toLowerCase() || '';
+            const admissionNo = item.values().admissionNo?.toLowerCase() || '';
             const classValue = item.elm.querySelector('.class')?.dataset.class || '';
             const statusValue = item.elm.querySelector('.status')?.dataset.status || '';
             const genderValue = item.elm.querySelector('.gender')?.dataset.gender || '';
@@ -1834,7 +1873,6 @@ document.addEventListener('DOMContentLoaded', function () {
         populateStates('editState', 'editLocal');
         fetchStudents();
 
-        // Update filter IDs to match HTML
         document.querySelector('#search-input')?.addEventListener('input', filterData);
         document.getElementById('schoolclass-filter')?.addEventListener('change', filterData);
         document.getElementById('status-filter')?.addEventListener('change', filterData);
@@ -2147,7 +2185,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
-        // Add event listener for image view modal
         document.getElementById('imageViewModal')?.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const imageSrc = button.getAttribute('data-image');
