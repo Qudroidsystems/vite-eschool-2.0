@@ -74,14 +74,14 @@ use Spatie\Permission\Models\Role;
                 .muslim-card { background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%); color: white; }
                 .other-religion-card { background: linear-gradient(135deg, #e3ffe7 0%, #d9e7ff 100%); color: #333; }
                 
-                body {
+                /* body {
                     background-color: #f8f9fa;
                     padding: 20px;
                 }
                 
                 .container {
                     max-width: 1200px;
-                }
+                } */
             </style>
         </head>
         <body>
@@ -1473,6 +1473,691 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Failed to generate PDF');
         });
     };
+});
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Ensure Axios and CSRF token are available
+    function ensureAxios() {
+        if (typeof axios === 'undefined') {
+            console.error('Error: Axios is not defined');
+            Swal.fire({
+                title: "Error!",
+                text: "Axios library is missing",
+                icon: "error",
+                confirmButtonClass: "btn btn-primary",
+                buttonsStyling: true
+            });
+            return false;
+        }
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (!csrfToken) {
+            console.error('Error: CSRF token not found');
+            Swal.fire({
+                title: "Error!",
+                text: "CSRF token is missing",
+                icon: "error",
+                confirmButtonClass: "btn btn-primary",
+                buttonsStyling: true
+            });
+            return false;
+        }
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+        return true;
+    }
+
+    let studentList;
+    let allStudents = [];
+    const itemsPerPage = 10;
+
+    function fetchStudents() {
+        if (!ensureAxios()) return;
+        console.log('Fetching students from /students/data');
+        axios.get('/students/data')
+            .then((response) => {
+                console.log('Students data received:', response.data);
+                if (!response.data.success || !Array.isArray(response.data.students)) {
+                    throw new Error(response.data.message || 'Invalid response format');
+                }
+                allStudents = response.data.students.map(student => ({
+                    id: student.id || '',
+                    admissionNo: student.admissionNo || '',
+                    firstname: student.firstname || '',
+                    lastname: student.lastname || '',
+                    othername: student.othername || '',
+                    gender: student.gender || '',
+                    statusId: student.statusId || '',
+                    student_status: student.student_status || '',
+                    created_at: student.created_at || '',
+                    picture: student.picture || '',
+                    schoolclass: student.schoolclass || '',
+                    arm: student.arm || '',
+                    schoolclassid: student.schoolclassid || ''
+                }));
+                console.log('Processed students:', allStudents);
+                document.querySelector('#totalStudents').textContent = allStudents.length;
+                document.querySelector('#totalCount').textContent = allStudents.length;
+                renderStudents(allStudents);
+                initializeList();
+                // Temporarily comment out filterData to ensure raw data is displayed
+                // filterData();
+            })
+            .catch((error) => {
+                console.error('Error fetching students:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    data: error.response?.data,
+                    url: '/students/data'
+                });
+                Swal.fire({
+                    title: "Error!",
+                    text: error.response?.data?.message || error.message || "Failed to load students. Check console for details.",
+                    icon: "error",
+                    confirmButtonClass: "btn btn-primary",
+                    buttonsStyling: true
+                });
+                renderStudents([]);
+            });
+    }
+
+    function renderStudents(students) {
+        console.log('Rendering students:', students);
+        const tbody = document.getElementById('studentTableBody');
+        if (!tbody) {
+            console.error('studentTableBody element not found');
+            return;
+        }
+        tbody.innerHTML = '';
+        students.forEach(student => {
+            console.log('Rendering student:', student);
+            const studentImage = student.picture 
+                ? '/storage/' + student.picture 
+                : '/storage/student_avatars/unnamed.jpg';
+            const row = document.createElement('tr');
+            const actionButtons = [];
+            if (window.appPermissions?.canShowStudent) {
+                actionButtons.push(`<li><a href="/student/${student.id}" class="btn btn-subtle-primary btn-icon btn-sm"><i class="ph-eye"></i></a></li>`);
+            }
+            if (window.appPermissions?.canUpdateStudent) {
+                actionButtons.push(`<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-bs-toggle="modal" data-bs-target="#editStudentModal" data-id="${student.id}"><i class="ph-pencil"></i></a></li>`);
+            }
+            if (window.appPermissions?.canDeleteStudent) {
+                actionButtons.push(`<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}"><i class="ph-trash"></i></a></li>`);
+            }
+            row.innerHTML = `
+                <td class="id" data-id="${student.id}">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="chk_child">
+                    </div>
+                </td>
+                <td class="name" data-name="${student.lastname} ${student.firstname} ${student.othername}">
+                    <div class="d-flex align-items-center">
+                        <div class="symbol symbol-50px me-3">
+                            <img src="${studentImage}" alt="" class="rounded-circle avatar-sm student-image" style="object-fit:cover;" data-bs-toggle="modal" data-bs-target="#imageViewModal" data-image="${studentImage}"/>
+                        </div>
+                        <div>
+                            <h6 class="mb-0">
+                                <a href="/student/${student.id}" class="text-reset products">
+                                    <b>${student.lastname}</b> ${student.firstname} ${student.othername}
+                                </a>
+                            </h6>
+                        </div>
+                    </div>
+                </td>
+                <td class="admissionNo" data-admissionNo="${student.admissionNo}">${student.admissionNo}</td>
+                <td class="class" data-class="${student.schoolclassid}">${student.schoolclass} - ${student.arm}</td>
+                <td class="status" data-status="${student.statusId}">${student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : ''}</td>
+                <td class="gender" data-gender="${student.gender}">${student.gender}</td>
+                <td class="datereg">${student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : ''}</td>
+                <td>
+                    <ul class="d-flex gap-2 list-unstyled mb-0">
+                        ${actionButtons.join('')}
+                    </ul>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        initializeCheckboxes();
+    }
+
+    function initializeList() {
+        if (typeof List === 'undefined') {
+            console.error('List.js is not loaded');
+            Swal.fire({
+                title: "Error!",
+                text: "List.js library is missing",
+                icon: "error",
+                confirmButtonClass: "btn btn-primary",
+                buttonsStyling: true
+            });
+            return;
+        }
+        const options = {
+            valueNames: ['name', 'admissionNo', 'class', 'status', 'gender', 'datereg'],
+            page: itemsPerPage,
+            pagination: true
+        };
+        studentList = new List('studentList', options);
+        studentList.on('updated', function () {
+            updatePagination();
+            document.getElementById('showingCount').textContent = studentList.visibleItems.length;
+            document.getElementById('totalCount').textContent = studentList.items.length;
+            document.getElementById('totalStudents').textContent = studentList.items.length;
+        });
+    }
+
+    function updatePagination() {
+        if (!studentList) return;
+        const totalItems = studentList.items.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const currentPage = studentList.page ? Math.ceil(studentList.i / itemsPerPage) : 1;
+        const paginationLinks = document.getElementById('paginationLinks');
+        paginationLinks.innerHTML = '';
+
+        for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="javascript:void(0);">${i}</a>`;
+            li.addEventListener('click', () => {
+                studentList.show((i - 1) * itemsPerPage + 1, itemsPerPage);
+            });
+            paginationLinks.appendChild(li);
+        }
+
+        document.getElementById('prevPage').classList.toggle('disabled', currentPage === 1);
+        document.getElementById('nextPage').classList.toggle('disabled', currentPage === totalPages);
+        document.getElementById('prevPage').onclick = currentPage > 1 ? () => studentList.show((currentPage - 2) * itemsPerPage + 1, itemsPerPage) : null;
+        document.getElementById('nextPage').onclick = currentPage < totalPages ? () => studentList.show(currentPage * itemsPerPage + 1, itemsPerPage) : null;
+    }
+
+    function filterData() {
+        if (!studentList) return;
+        const search = document.querySelector('#search-input')?.value.toLowerCase() || '';
+        const classId = document.getElementById('schoolclass-filter')?.value || 'all';
+        const statusId = document.getElementById('status-filter')?.value || 'all';
+        const gender = document.getElementById('gender-filter')?.value || 'all';
+        const studentStatus = document.getElementById('student-status-filter')?.value || 'all';
+
+        console.log('Filtering with:', { search, classId, statusId, gender, studentStatus });
+
+        studentList.filter(item => {
+            const name = item.values().name.toLowerCase();
+            const admissionNo = item.values().admissionNo.toLowerCase();
+            const classValue = item.elm.querySelector('.class')?.dataset.class || '';
+            const statusValue = item.elm.querySelector('.status')?.dataset.status || '';
+            const genderValue = item.elm.querySelector('.gender')?.dataset.gender || '';
+            const studentStatusValue = item.elm.querySelector('.status')?.dataset.student_status || '';
+
+            const matchesSearch = name.includes(search) || admissionNo.includes(search);
+            const matchesClass = classId === 'all' || classValue === classId;
+            const matchesStatus = statusId === 'all' || statusValue === statusId;
+            const matchesGender = gender === 'all' || genderValue === gender;
+            const matchesStudentStatus = studentStatus === 'all' || studentStatusValue === studentStatus;
+
+            return matchesSearch && matchesClass && matchesStatus && matchesGender && matchesStudentStatus;
+        });
+    }
+
+    function deleteMultiple() {
+        const ids = Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
+            .map(checkbox => checkbox.closest('tr').querySelector('.id').dataset.id);
+
+        if (ids.length === 0) {
+            Swal.fire({
+                title: "Error!",
+                text: "Please select at least one student",
+                icon: "error",
+                confirmButtonClass: "btn btn-primary",
+                buttonsStyling: true
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: "Are you sure?",
+            text: "You won't be able to revert this!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonClass: "btn btn-primary",
+            cancelButtonClass: "btn btn-light",
+            buttonsStyling: true
+        }).then((result) => {
+            if (result.isConfirmed && ensureAxios()) {
+                axios.post('/students/destroy-multiple', { ids }).then(() => {
+                    ids.forEach(id => {
+                        const row = document.querySelector(`tr[data-id="${id}"]`);
+                        if (row) row.remove();
+                    });
+                    studentList.reIndex();
+                    Swal.fire({
+                        title: "Deleted!",
+                        text: "Students have been deleted",
+                        icon: "success",
+                        confirmButtonClass: "btn btn-primary",
+                        buttonsStyling: true
+                    });
+                    document.getElementById('checkAll').checked = false;
+                    document.getElementById('remove-actions').classList.add('d-none');
+                }).catch((error) => {
+                    console.error('Error deleting students:', error);
+                    Swal.fire({
+                        title: "Error!",
+                        text: error.response?.data?.message || "Failed to delete students",
+                        icon: "error",
+                        confirmButtonClass: "btn btn-primary",
+                        buttonsStyling: true
+                    });
+                });
+            }
+        });
+    }
+
+    function initializeCheckboxes() {
+        const checkAll = document.getElementById('checkAll');
+        if (!checkAll) return;
+        checkAll.addEventListener('change', function () {
+            document.querySelectorAll('input[name="chk_child"]').forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            document.getElementById('remove-actions').classList.toggle('d-none', !this.checked);
+        });
+
+        document.querySelectorAll('input[name="chk_child"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const allChecked = document.querySelectorAll('input[name="chk_child"]').length ===
+                    document.querySelectorAll('input[name="chk_child"]:checked').length;
+                checkAll.checked = allChecked;
+                document.getElementById('remove-actions').classList.toggle('d-none',
+                    document.querySelectorAll('input[name="chk_child"]:checked').length === 0);
+            });
+        });
+    }
+
+    function populateStates(stateSelectId, lgaSelectId) {
+        fetch('/states_lgas.json')
+            .then(response => response.json())
+            .then(data => {
+                const stateSelect = document.getElementById(stateSelectId);
+                const lgaSelect = document.getElementById(lgaSelectId);
+                if (!stateSelect || !lgaSelect) return;
+
+                stateSelect.innerHTML = '<option value="">Select State</option>';
+                data.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state.state;
+                    option.textContent = state.state;
+                    stateSelect.appendChild(option);
+                });
+
+                stateSelect.addEventListener('change', function () {
+                    lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                    const selectedState = data.find(state => state.state === this.value);
+                    if (selectedState) {
+                        selectedState.lgas.forEach(lga => {
+                            const option = document.createElement('option');
+                            option.value = lga;
+                            option.textContent = lga;
+                            lgaSelect.appendChild(option);
+                        });
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading states and LGAs:', error);
+            });
+    }
+
+    function populateLGAs(state, lgaSelectId) {
+        fetch('/states_lgas.json')
+            .then(response => response.json())
+            .then(data => {
+                const lgaSelect = document.getElementById(lgaSelectId);
+                if (!lgaSelect) return;
+                lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                const selectedState = data.find(s => s.state === state);
+                if (selectedState) {
+                    selectedState.lgas.forEach(lga => {
+                        const option = document.createElement('option');
+                        option.value = lga;
+                        option.textContent = lga;
+                        lgaSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading LGAs:', error);
+            });
+    }
+
+    function initializeStudentList() {
+        populateStates('addState', 'addLocal');
+        populateStates('editState', 'editLocal');
+        fetchStudents();
+
+        // Update filter IDs to match HTML
+        document.querySelector('#search-input')?.addEventListener('input', filterData);
+        document.getElementById('schoolclass-filter')?.addEventListener('change', filterData);
+        document.getElementById('status-filter')?.addEventListener('change', filterData);
+        document.getElementById('gender-filter')?.addEventListener('change', filterData);
+        document.getElementById('student-status-filter')?.addEventListener('change', filterData);
+
+        document.getElementById('avatar')?.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('addStudentAvatar');
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "File size exceeds 2MB limit.",
+                        icon: "error",
+                        confirmButtonClass: "btn btn-info",
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.style.display = 'none';
+                    return;
+                }
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                if (!allowedTypes.includes(file.type)) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "Only PNG, JPG, and JPEG files are allowed.",
+                        icon: "error",
+                        confirmButtonClass: "btn btn-info",
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.style.display = 'none';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = '/theme/layouts/assets/media/avatars/blank.png';
+                preview.style.display = 'none';
+            }
+        });
+
+        document.getElementById('editAvatar')?.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('editStudentAvatar');
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "File size exceeds 2MB limit.",
+                        icon: "error",
+                        confirmButtonClass: "btn btn-info",
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = preview.getAttribute('data-original-src') || '/theme/layouts/assets/media/avatars/blank.png';
+                    return;
+                }
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                if (!allowedTypes.includes(file.type)) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "Only PNG, JPG, and JPEG files are allowed.",
+                        icon: "error",
+                        confirmButtonClass: "btn btn-info",
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = preview.getAttribute('data-original-src') || '/theme/layouts/assets/media/avatars/blank.png';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = preview.getAttribute('data-original-src') || '/theme/layouts/assets/media/avatars/blank.png';
+            }
+        });
+
+        document.getElementById('studentTableBody')?.addEventListener('click', function(e) {
+            if (e.target.closest('.edit-item-btn')) {
+                const button = e.target.closest('.edit-item-btn');
+                const id = button.getAttribute("data-id");
+                console.log("Edit button clicked for student ID:", id);
+                if (!ensureAxios()) return;
+
+                axios.get(`/student/${id}/edit`).then((response) => {
+                    console.log("Student data received:", response.data);
+                    const student = response.data.student;
+                    if (!student) {
+                        throw new Error("Student data is empty");
+                    }
+
+                    const fields = [
+                        { id: "editStudentId", value: student.id },
+                        { id: "editAdmissionNo", value: student.admissionNo },
+                        { id: "editAdmissionYear", value: student.admissionYear },
+                        { id: "editTittle", value: student.title || '' },
+                        { id: "editFirstname", value: student.firstname },
+                        { id: "editLastname", value: student.lastname },
+                        { id: "editOthername", value: student.othername || '' },
+                        { id: "editHomeAddress", value: student.present_address },
+                        { id: "editHomeAddress2", value: student.permanent_address },
+                        { id: "editDOB", value: student.dateofbirth },
+                        { id: "editPlaceofbirth", value: student.placeofbirth || '' },
+                        { id: "editNationality", value: student.nationality || '' },
+                        { id: "editReligion", value: student.religion || '' },
+                        { id: "editLastSchool", value: student.last_school || '' },
+                        { id: "editLastClass", value: student.last_class || '' },
+                        { id: "editSchoolclassid", value: student.schoolclassid || '' },
+                        { id: "editTermid", value: student.termid || '' },
+                        { id: "editSessionid", value: student.sessionid || '' },
+                        { id: "editPhoneNumber", value: student.phone_number || '' },
+                        { id: "editNinNumber", value: student.nin_number || '' },
+                        { id: "editBloodGroup", value: student.blood_group || '' },
+                        { id: "editMotherTongue", value: student.mother_tongue || '' },
+                        { id: "editFatherTitle", value: student.father_title || '' },
+                        { id: "editFather", value: student.father_name || '' },
+                        { id: "editFatherPhone", value: student.father_phone || '' },
+                        { id: "editFatherOccupation", value: student.father_occupation || '' },
+                        { id: "editMotherTitle", value: student.mother_title || '' },
+                        { id: "editMother", value: student.mother_name || '' },
+                        { id: "editMotherPhone", value: student.mother_phone || '' },
+                        { id: "editParentAddress", value: student.parent_address || '' },
+                        { id: "editOfficeAddress", value: student.office_address || '' },
+                        { id: "editStudentCategory", value: student.student_category || '' },
+                        { id: "editReasonForLeaving", value: student.reason_for_leaving || '' }
+                    ];
+
+                    fields.forEach(({ id, value }) => {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.value = value || '';
+                        } else {
+                            console.warn(`Element with ID '${id}' not found`);
+                        }
+                    });
+
+                    const genderRadios = document.querySelectorAll('input[name="gender"]');
+                    genderRadios.forEach(radio => {
+                        radio.checked = (radio.value === student.gender);
+                    });
+
+                    const statusRadios = document.querySelectorAll('input[name="statusId"]');
+                    statusRadios.forEach(radio => {
+                        radio.checked = (parseInt(radio.value) === parseInt(student.statusId));
+                    });
+
+                    const studentStatusRadios = document.querySelectorAll('input[name="student_status"]');
+                    studentStatusRadios.forEach(radio => {
+                        radio.checked = (radio.value === student.student_status);
+                    });
+
+                    const avatarElement = document.getElementById("editStudentAvatar");
+                    if (avatarElement) {
+                        avatarElement.src = student.picture ? `/storage/${student.picture}` : '/storage/student_avatars/unnamed.jpg';
+                        avatarElement.setAttribute('data-original-src', student.picture ? `/storage/${student.picture}` : '/storage/student_avatars/unnamed.jpg');
+                    }
+
+                    const stateSelect = document.getElementById("editState");
+                    const lgaSelect = document.getElementById("editLocal");
+                    if (student.state && stateSelect) {
+                        stateSelect.value = student.state;
+                        setTimeout(() => {
+                            populateLGAs(student.state, 'editLocal');
+                            setTimeout(() => {
+                                if (lgaSelect) {
+                                    lgaSelect.value = student.local || '';
+                                }
+                            }, 200);
+                        }, 100);
+                    } else if (lgaSelect) {
+                        lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                    }
+
+                    if (student.dateofbirth) {
+                        showage(student.dateofbirth, 'editAge');
+                    }
+
+                    const form = document.getElementById('editStudentForm');
+                    if (form) {
+                        form.action = `/student/${id}`;
+                    }
+                }).catch((error) => {
+                    console.error("Error fetching student:", {
+                        message: error.message,
+                        status: error.response?.status,
+                        data: error.response?.data
+                    });
+                    Swal.fire({
+                        title: "Error!",
+                        text: error.response?.data?.message || "Failed to load student data. Check console for details.",
+                        icon: "error",
+                        confirmButtonClass: "btn btn-primary",
+                        buttonsStyling: false
+                    });
+                });
+            }
+
+            if (e.target.closest('.remove-item-btn')) {
+                const button = e.target.closest('.remove-item-btn');
+                const id = button.getAttribute('data-id');
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "You won't be able to revert this!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonClass: "btn btn-primary",
+                    cancelButtonClass: "btn btn-light",
+                    buttonsStyling: true
+                }).then((result) => {
+                    if (result.isConfirmed && ensureAxios()) {
+                        axios.delete(`/student/${id}/destroy`).then(() => {
+                            const row = button.closest('tr');
+                            if (row) row.remove();
+                            studentList.reIndex();
+                            Swal.fire({
+                                title: "Deleted!",
+                                text: "Student has been deleted",
+                                icon: "success",
+                                confirmButtonClass: "btn btn-primary",
+                                buttonsStyling: true
+                            });
+                        }).catch((error) => {
+                            console.error('Error deleting student:', error);
+                            Swal.fire({
+                                title: "Error!",
+                                text: error.response?.data?.message || "Failed to delete student",
+                                icon: "error",
+                                confirmButtonClass: "btn btn-primary",
+                                buttonsStyling: true
+                            });
+                        });
+                    }
+                });
+            }
+        });
+
+        document.getElementById('addStudentForm')?.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!ensureAxios()) return;
+
+            const formData = new FormData(this);
+            for (let pair of formData.entries()) {
+                console.log(`${pair[0]}: ${pair[1]}`);
+            }
+
+            axios.post(this.action, formData).then((response) => {
+                Swal.fire({
+                    title: "Success!",
+                    text: "Student added successfully",
+                    icon: "success",
+                    confirmButtonClass: "btn btn-primary",
+                    buttonsStyling: true
+                }).then(() => {
+                    fetchStudents();
+                    document.getElementById('addStudentModal').querySelector('.btn-close').click();
+                });
+            }).catch((error) => {
+                console.error('Error adding student:', error.response?.data);
+                Swal.fire({
+                    title: "Error!",
+                    text: error.response?.data?.message || "Failed to add student",
+                    icon: "error",
+                    confirmButtonClass: "btn btn-primary",
+                    buttonsStyling: true
+                });
+            });
+        });
+
+        document.getElementById('editStudentForm')?.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!ensureAxios()) return;
+
+            const id = document.getElementById('editStudentId').value;
+            const formData = new FormData(this);
+            for (let pair of formData.entries()) {
+                console.log(`${pair[0]}: ${pair[1]}`);
+            }
+
+            axios.post(this.action, formData, {
+                headers: { 'X-HTTP-Method-Override': 'PATCH' }
+            }).then((response) => {
+                Swal.fire({
+                    title: "Success!",
+                    text: "Student updated successfully",
+                    icon: "success",
+                    confirmButtonClass: "btn btn-primary",
+                    buttonsStyling: true
+                }).then(() => {
+                    fetchStudents();
+                    document.getElementById('editStudentModal').querySelector('.btn-close').click();
+                });
+            }).catch((error) => {
+                console.error('Error updating student:', error.response?.data);
+                Swal.fire({
+                    title: "Error!",
+                    text: error.response?.data?.message || "Failed to update student",
+                    icon: "error",
+                    confirmButtonClass: "btn btn-primary",
+                    buttonsStyling: true
+                });
+            });
+        });
+
+        // Add event listener for image view modal
+        document.getElementById('imageViewModal')?.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const imageSrc = button.getAttribute('data-image');
+            const modalImage = this.querySelector('#enlargedImage');
+            modalImage.src = imageSrc;
+        });
+    }
+
+    // Initialize the student list
+    initializeStudentList();
 });
 </script>
 
