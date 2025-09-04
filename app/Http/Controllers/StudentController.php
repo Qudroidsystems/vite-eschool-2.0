@@ -234,8 +234,6 @@ class StudentController extends Controller
             $student->placeofbirth = $request->placeofbirth;
             $student->home_address = $request->present_address;
             $student->home_address2 = $request->permanent_address;
-            $student->present_address = $request->present_address;
-            $student->permanent_address = $request->permanent_address;
             $student->student_category = $request->student_category;
             $student->statusId = $request->statusId;
             $student->student_status = $request->student_status;
