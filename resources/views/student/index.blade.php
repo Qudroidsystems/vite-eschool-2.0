@@ -1485,8 +1485,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Error!",
                 text: "Axios library is missing",
                 icon: "error",
-                confirmButtonClass: "btn btn-primary",
-                buttonsStyling: true
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
             });
             return false;
         }
@@ -1497,8 +1497,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Error!",
                 text: "CSRF token is missing",
                 icon: "error",
-                confirmButtonClass: "btn btn-primary",
-                buttonsStyling: true
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
             });
             return false;
         }
@@ -1550,8 +1550,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     title: "Error!",
                     text: error.response?.data?.message || error.message || "Failed to load students. Check console for details.",
                     icon: "error",
-                    confirmButtonClass: "btn btn-primary",
-                    buttonsStyling: true
+                    customClass: { confirmButton: "btn btn-primary" },
+                    buttonsStyling: false
                 });
                 renderStudents([]);
             });
@@ -1566,8 +1566,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Error!",
                 text: "Table body element not found",
                 icon: "error",
-                confirmButtonClass: "btn btn-primary",
-                buttonsStyling: true
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
             });
             return;
         }
@@ -1576,7 +1576,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const row = document.createElement('tr');
             row.innerHTML = `<td colspan="8" class="text-center">No students found</td>`;
             tbody.appendChild(row);
-            initializeList(); // Initialize List.js even for empty table
+            initializeList();
             return;
         }
         students.forEach(student => {
@@ -1639,8 +1639,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Error!",
                 text: "List.js library is missing",
                 icon: "error",
-                confirmButtonClass: "btn btn-primary",
-                buttonsStyling: true
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
             });
             return;
         }
@@ -1679,8 +1679,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Error!",
                 text: "Failed to initialize table. Check console for details.",
                 icon: "error",
-                confirmButtonClass: "btn btn-primary",
-                buttonsStyling: true
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
             });
         }
     }
@@ -1746,8 +1746,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Error!",
                 text: "Please select at least one student",
                 icon: "error",
-                confirmButtonClass: "btn btn-primary",
-                buttonsStyling: true
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
             });
             return;
         }
@@ -1757,9 +1757,8 @@ document.addEventListener('DOMContentLoaded', function () {
             text: "You won't be able to revert this!",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonClass: "btn btn-primary",
-            cancelButtonClass: "btn btn-light",
-            buttonsStyling: true
+            customClass: { confirmButton: "btn btn-primary", cancelButton: "btn btn-light" },
+            buttonsStyling: false
         }).then((result) => {
             if (result.isConfirmed && ensureAxios()) {
                 axios.post('/students/destroy-multiple', { ids }).then(() => {
@@ -1772,8 +1771,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         title: "Deleted!",
                         text: "Students have been deleted",
                         icon: "success",
-                        confirmButtonClass: "btn btn-primary",
-                        buttonsStyling: true
+                        customClass: { confirmButton: "btn btn-primary" },
+                        buttonsStyling: false
                     });
                     document.getElementById('checkAll').checked = false;
                     document.getElementById('remove-actions').classList.add('d-none');
@@ -1783,8 +1782,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         title: "Error!",
                         text: error.response?.data?.message || "Failed to delete students",
                         icon: "error",
-                        confirmButtonClass: "btn btn-primary",
-                        buttonsStyling: true
+                        customClass: { confirmButton: "btn btn-primary" },
+                        buttonsStyling: false
                     });
                 });
             }
@@ -1888,7 +1887,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         title: "Error!",
                         text: "File size exceeds 2MB limit.",
                         icon: "error",
-                        confirmButtonClass: "btn btn-info",
+                        customClass: { confirmButton: "btn btn-info" },
                         buttonsStyling: false
                     });
                     event.target.value = '';
@@ -1901,7 +1900,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         title: "Error!",
                         text: "Only PNG, JPG, and JPEG files are allowed.",
                         icon: "error",
-                        confirmButtonClass: "btn btn-info",
+                        customClass: { confirmButton: "btn btn-info" },
                         buttonsStyling: false
                     });
                     event.target.value = '';
@@ -1929,7 +1928,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         title: "Error!",
                         text: "File size exceeds 2MB limit.",
                         icon: "error",
-                        confirmButtonClass: "btn btn-info",
+                        customClass: { confirmButton: "btn btn-info" },
                         buttonsStyling: false
                     });
                     event.target.value = '';
@@ -1942,7 +1941,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         title: "Error!",
                         text: "Only PNG, JPG, and JPEG files are allowed.",
                         icon: "error",
-                        confirmButtonClass: "btn btn-info",
+                        customClass: { confirmButton: "btn btn-info" },
                         buttonsStyling: false
                     });
                     event.target.value = '';
@@ -2073,7 +2072,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         title: "Error!",
                         text: error.response?.data?.message || "Failed to load student data. Check console for details.",
                         icon: "error",
-                        confirmButtonClass: "btn btn-primary",
+                        customClass: { confirmButton: "btn btn-primary" },
                         buttonsStyling: false
                     });
                 });
@@ -2087,9 +2086,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     text: "You won't be able to revert this!",
                     icon: "warning",
                     showCancelButton: true,
-                    confirmButtonClass: "btn btn-primary",
-                    cancelButtonClass: "btn btn-light",
-                    buttonsStyling: true
+                    customClass: { confirmButton: "btn btn-primary", cancelButton: "btn btn-light" },
+                    buttonsStyling: false
                 }).then((result) => {
                     if (result.isConfirmed && ensureAxios()) {
                         axios.delete(`/student/${id}/destroy`).then(() => {
@@ -2100,8 +2098,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 title: "Deleted!",
                                 text: "Student has been deleted",
                                 icon: "success",
-                                confirmButtonClass: "btn btn-primary",
-                                buttonsStyling: true
+                                customClass: { confirmButton: "btn btn-primary" },
+                                buttonsStyling: false
                             });
                         }).catch((error) => {
                             console.error('Error deleting student:', error);
@@ -2109,8 +2107,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 title: "Error!",
                                 text: error.response?.data?.message || "Failed to delete student",
                                 icon: "error",
-                                confirmButtonClass: "btn btn-primary",
-                                buttonsStyling: true
+                                customClass: { confirmButton: "btn btn-primary" },
+                                buttonsStyling: false
                             });
                         });
                     }
@@ -2123,29 +2121,39 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!ensureAxios()) return;
 
             const formData = new FormData(this);
+            console.log('Submitting addStudentForm with data:');
             for (let pair of formData.entries()) {
                 console.log(`${pair[0]}: ${pair[1]}`);
             }
 
-            axios.post(this.action, formData).then((response) => {
+            axios.post(this.action, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            }).then((response) => {
+                console.log('Add student response:', response.data);
                 Swal.fire({
                     title: "Success!",
                     text: "Student added successfully",
                     icon: "success",
-                    confirmButtonClass: "btn btn-primary",
-                    buttonsStyling: true
+                    customClass: { confirmButton: "btn btn-primary" },
+                    buttonsStyling: false
                 }).then(() => {
                     fetchStudents();
+                    document.getElementById('addStudentForm').reset();
+                    document.getElementById('addStudentAvatar').src = '/theme/layouts/assets/media/avatars/blank.png';
                     document.getElementById('addStudentModal').querySelector('.btn-close').click();
                 });
             }).catch((error) => {
-                console.error('Error adding student:', error.response?.data);
+                console.error('Error adding student:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    data: error.response?.data
+                });
                 Swal.fire({
                     title: "Error!",
-                    text: error.response?.data?.message || "Failed to add student",
+                    text: error.response?.data?.message || "Failed to add student. Check console for details.",
                     icon: "error",
-                    confirmButtonClass: "btn btn-primary",
-                    buttonsStyling: true
+                    customClass: { confirmButton: "btn btn-primary" },
+                    buttonsStyling: false
                 });
             });
         });
@@ -2156,31 +2164,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const id = document.getElementById('editStudentId').value;
             const formData = new FormData(this);
+            console.log('Submitting editStudentForm with data:');
             for (let pair of formData.entries()) {
                 console.log(`${pair[0]}: ${pair[1]}`);
             }
 
             axios.post(this.action, formData, {
-                headers: { 'X-HTTP-Method-Override': 'PATCH' }
+                headers: { 'X-HTTP-Method-Override': 'PATCH', 'Content-Type': 'multipart/form-data' }
             }).then((response) => {
+                console.log('Edit student response:', response.data);
                 Swal.fire({
                     title: "Success!",
                     text: "Student updated successfully",
                     icon: "success",
-                    confirmButtonClass: "btn btn-primary",
-                    buttonsStyling: true
+                    customClass: { confirmButton: "btn btn-primary" },
+                    buttonsStyling: false
                 }).then(() => {
                     fetchStudents();
                     document.getElementById('editStudentModal').querySelector('.btn-close').click();
                 });
             }).catch((error) => {
-                console.error('Error updating student:', error.response?.data);
+                console.error('Error updating student:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    data: error.response?.data
+                });
                 Swal.fire({
                     title: "Error!",
-                    text: error.response?.data?.message || "Failed to update student",
+                    text: error.response?.data?.message || "Failed to update student. Check console for details.",
                     icon: "error",
-                    confirmButtonClass: "btn btn-primary",
-                    buttonsStyling: true
+                    customClass: { confirmButton: "btn btn-primary" },
+                    buttonsStyling: false
                 });
             });
         });
