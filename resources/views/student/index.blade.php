@@ -1506,9 +1506,19 @@ document.addEventListener('DOMContentLoaded', function () {
         return true;
     }
 
+    // Ensure Choices.js is available
+    function ensureChoices() {
+        if (typeof Choices === 'undefined') {
+            console.warn('Choices.js is not defined, using basic select');
+            return false;
+        }
+        return true;
+    }
+
     let studentList;
     let allStudents = [];
     const itemsPerPage = 10;
+    const defaultAvatar = 'https://viteeschool.qudroid.co/theme/layouts/assets/media/avatars/blank.png';
 
     function fetchStudents() {
         if (!ensureAxios()) return;
@@ -1581,9 +1591,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         students.forEach(student => {
             console.log('Rendering student:', student);
-            const studentImage = student.picture 
-                ? '/storage/' + student.picture 
-                : '/storage/student_avatars/unnamed.jpg';
+            const studentImage = student.picture ? `/storage/${student.picture}` : defaultAvatar;
             const row = document.createElement('tr');
             const actionButtons = [];
             if (window.appPermissions?.canShowStudent) {
@@ -1812,13 +1820,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function populateStates(stateSelectId, lgaSelectId) {
+        const stateSelect = document.getElementById(stateSelectId);
+        const lgaSelect = document.getElementById(lgaSelectId);
+        if (!stateSelect || !lgaSelect) return;
+
         fetch('/states_lgas.json')
             .then(response => response.json())
             .then(data => {
-                const stateSelect = document.getElementById(stateSelectId);
-                const lgaSelect = document.getElementById(lgaSelectId);
-                if (!stateSelect || !lgaSelect) return;
-
                 stateSelect.innerHTML = '<option value="">Select State</option>';
                 data.forEach(state => {
                     const option = document.createElement('option');
@@ -1826,6 +1834,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     option.textContent = state.state;
                     stateSelect.appendChild(option);
                 });
+
+                if (ensureChoices()) {
+                    const choicesState = new Choices(stateSelect, { searchEnabled: true });
+                    const choicesLga = new Choices(lgaSelect, { searchEnabled: true });
+                }
 
                 stateSelect.addEventListener('change', function () {
                     lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
@@ -1837,6 +1850,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             option.textContent = lga;
                             lgaSelect.appendChild(option);
                         });
+                        if (ensureChoices()) {
+                            new Choices(lgaSelect, { searchEnabled: true });
+                        }
                     }
                 });
             })
@@ -1846,11 +1862,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function populateLGAs(state, lgaSelectId) {
+        const lgaSelect = document.getElementById(lgaSelectId);
+        if (!lgaSelect) return;
+
         fetch('/states_lgas.json')
             .then(response => response.json())
             .then(data => {
-                const lgaSelect = document.getElementById(lgaSelectId);
-                if (!lgaSelect) return;
                 lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
                 const selectedState = data.find(s => s.state === state);
                 if (selectedState) {
@@ -1860,6 +1877,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         option.textContent = lga;
                         lgaSelect.appendChild(option);
                     });
+                    if (ensureChoices()) {
+                        new Choices(lgaSelect, { searchEnabled: true });
+                    }
                 }
             })
             .catch(error => {
@@ -1914,7 +1934,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
                 reader.readAsDataURL(file);
             } else {
-                preview.src = '/theme/layouts/assets/media/avatars/blank.png';
+                preview.src = defaultAvatar;
                 preview.style.display = 'none';
             }
         });
@@ -1932,7 +1952,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         buttonsStyling: false
                     });
                     event.target.value = '';
-                    preview.src = preview.getAttribute('data-original-src') || '/theme/layouts/assets/media/avatars/blank.png';
+                    preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
                     return;
                 }
                 const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
@@ -1945,7 +1965,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         buttonsStyling: false
                     });
                     event.target.value = '';
-                    preview.src = preview.getAttribute('data-original-src') || '/theme/layouts/assets/media/avatars/blank.png';
+                    preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
                     return;
                 }
                 const reader = new FileReader();
@@ -1954,7 +1974,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
                 reader.readAsDataURL(file);
             } else {
-                preview.src = preview.getAttribute('data-original-src') || '/theme/layouts/assets/media/avatars/blank.png';
+                preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
             }
         });
 
@@ -2034,8 +2054,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     const avatarElement = document.getElementById("editStudentAvatar");
                     if (avatarElement) {
-                        avatarElement.src = student.picture ? `/storage/${student.picture}` : '/storage/student_avatars/unnamed.jpg';
-                        avatarElement.setAttribute('data-original-src', student.picture ? `/storage/${student.picture}` : '/storage/student_avatars/unnamed.jpg');
+                        avatarElement.src = student.picture ? `/storage/${student.picture}` : defaultAvatar;
+                        avatarElement.setAttribute('data-original-src', student.picture ? `/storage/${student.picture}` : defaultAvatar);
                     }
 
                     const stateSelect = document.getElementById("editState");
@@ -2047,6 +2067,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             setTimeout(() => {
                                 if (lgaSelect) {
                                     lgaSelect.value = student.local || '';
+                                    if (ensureChoices()) {
+                                        new Choices(lgaSelect, { searchEnabled: true });
+                                    }
                                 }
                             }, 200);
                         }, 100);
@@ -2126,20 +2149,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log(`${pair[0]}: ${pair[1]}`);
             }
 
-            axios.post(this.action, formData, {
+            axios.post('/student', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             }).then((response) => {
                 console.log('Add student response:', response.data);
+                if (!response.data.success) {
+                    throw new Error(response.data.message || 'Failed to add student');
+                }
                 Swal.fire({
                     title: "Success!",
-                    text: "Student added successfully",
+                    text: response.data.message || "Student added successfully",
                     icon: "success",
                     customClass: { confirmButton: "btn btn-primary" },
                     buttonsStyling: false
                 }).then(() => {
                     fetchStudents();
                     document.getElementById('addStudentForm').reset();
-                    document.getElementById('addStudentAvatar').src = '/theme/layouts/assets/media/avatars/blank.png';
+                    document.getElementById('addStudentAvatar').src = defaultAvatar;
                     document.getElementById('addStudentModal').querySelector('.btn-close').click();
                 });
             }).catch((error) => {
@@ -2148,9 +2174,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     status: error.response?.status,
                     data: error.response?.data
                 });
+                let errorMessage = error.response?.data?.message || "Failed to add student. Check console for details.";
+                if (error.response?.status === 422 && error.response?.data?.errors) {
+                    errorMessage = Object.values(error.response.data.errors).flat().join('\n');
+                }
                 Swal.fire({
                     title: "Error!",
-                    text: error.response?.data?.message || "Failed to add student. Check console for details.",
+                    text: errorMessage,
                     icon: "error",
                     customClass: { confirmButton: "btn btn-primary" },
                     buttonsStyling: false
@@ -2169,13 +2199,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log(`${pair[0]}: ${pair[1]}`);
             }
 
-            axios.post(this.action, formData, {
+            axios.post(`/student/${id}`, formData, {
                 headers: { 'X-HTTP-Method-Override': 'PATCH', 'Content-Type': 'multipart/form-data' }
             }).then((response) => {
                 console.log('Edit student response:', response.data);
+                if (!response.data.success) {
+                    throw new Error(response.data.message || 'Failed to update student');
+                }
                 Swal.fire({
                     title: "Success!",
-                    text: "Student updated successfully",
+                    text: response.data.message || "Student updated successfully",
                     icon: "success",
                     customClass: { confirmButton: "btn btn-primary" },
                     buttonsStyling: false
@@ -2189,9 +2222,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     status: error.response?.status,
                     data: error.response?.data
                 });
+                let errorMessage = error.response?.data?.message || "Failed to update student. Check console for details.";
+                if (error.response?.status === 422 && error.response?.data?.errors) {
+                    errorMessage = Object.values(error.response.data.errors).flat().join('\n');
+                }
                 Swal.fire({
                     title: "Error!",
-                    text: error.response?.data?.message || "Failed to update student. Check console for details.",
+                    text: errorMessage,
                     icon: "error",
                     customClass: { confirmButton: "btn btn-primary" },
                     buttonsStyling: false

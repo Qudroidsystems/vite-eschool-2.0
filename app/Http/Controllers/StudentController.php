@@ -2,37 +2,38 @@
 
 namespace App\Http\Controllers;
 
-use App\Imports\StudentsImport;
-use App\Models\Broadsheet;
-use App\Models\BroadsheetRecord;
-use App\Models\BroadsheetRecordMock;
-use App\Models\Broadsheets;
-use App\Models\BroadsheetsMock;
-use App\Models\ParentRegistration;
-use App\Models\PromotionStatus;
-use App\Models\Schoolclass;
-use App\Models\Schoolsession;
-use App\Models\Schoolterm;
+use Carbon\Carbon;
 use App\Models\Student;
-use App\Models\StudentBatchModel;
-use App\Models\StudentBillPayment;
-use App\Models\StudentBillPaymentBook;
+use App\Models\Broadsheet;
+use App\Models\Schoolterm;
+use App\Models\Broadsheets;
+use App\Models\Schoolclass;
 use App\Models\Studentclass;
 use App\Models\Studenthouse;
-use App\Models\Studentpersonalityprofile;
-use App\Models\Studentpicture;
 use App\Models\Subjectclass;
-use App\Models\SubjectRegistrationStatus;
-use App\Traits\ImageManager as TraitsImageManager;
-use Carbon\Carbon;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\Schoolsession;
+use App\Models\Studentpicture;
+use App\Imports\StudentsImport;
+use App\Models\BroadsheetsMock;
+use App\Models\PromotionStatus;
+use App\Models\BroadsheetRecord;
+use App\Models\StudentBatchModel;
+use Illuminate\Http\JsonResponse;
+use App\Models\ParentRegistration;
+use App\Models\StudentBillPayment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Validator;
+use App\Http\Controllers\Controller;
+use App\Models\BroadsheetRecordMock;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\StudentBillPaymentBook;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use App\Models\Studentpersonalityprofile;
+use App\Models\SubjectRegistrationStatus;
+use Illuminate\Support\Facades\Validator;
+use App\Traits\ImageManager as TraitsImageManager;
 
 class StudentController extends Controller
 {
@@ -124,9 +125,210 @@ class StudentController extends Controller
         ));
     }
 
+
+    public function store(Request $request)
+    {
+        Log::debug('Creating new student', $request->all());
+
+        try {
+            $statesLgas = json_decode(file_get_contents(public_path('states_lgas.json')), true);
+            $states = array_column($statesLgas, 'state');
+            $lgas = collect($statesLgas)->pluck('lgas', 'state')->toArray();
+
+            $validator = Validator::make($request->all(), [
+                'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'admissionMode' => 'required|in:auto,manual',
+                'title' => 'nullable|in:Master,Miss',
+                'admissionNo' => 'required|string|max:255|unique:studentRegistration,admissionNo',
+                'admissionYear' => 'required|integer|min:1900|max:' . date('Y'),
+                'admissionDate' => 'required|date|before_or_equal:today',
+                'firstname' => 'required|string|max:255',
+                'lastname' => 'required|string|max:255',
+                'othername' => 'nullable|string|max:255',
+                'gender' => 'required|in:Male,Female',
+                'dateofbirth' => 'required|date|before:today',
+                'placeofbirth' => 'required|string|max:255',
+                'nationality' => 'required|string|max:255',
+                'age' => 'required|integer|min:1|max:100',
+                'blood_group' => 'nullable|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
+                'mother_tongue' => 'nullable|string|max:255',
+                'religion' => 'required|in:Christianity,Islam,Others',
+                'sport_house' => 'nullable|string|max:255',
+                'phone_number' => 'nullable|string|max:20',
+                'email' => 'nullable|email|max:255',
+                'nin_number' => 'nullable|string|max:20',
+                'city' => 'nullable|string|max:255',
+                'state' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) use ($states) {
+                    if (!in_array($value, $states)) {
+                        $fail('The selected state is invalid.');
+                    }
+                }],
+                'local' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) use ($request, $lgas) {
+                    $state = $request->input('state');
+                    if (!isset($lgas[$state]) || !in_array($value, $lgas[$state])) {
+                        $fail('The selected local government is invalid for the chosen state.');
+                    }
+                }],
+                'present_address' => 'required|string|max:255',
+                'permanent_address' => 'required|string|max:255',
+                'student_category' => 'required|in:Day,Boarding',
+                'schoolclassid' => 'required|exists:schoolclass,id',
+                'termid' => 'required|exists:schoolterm,id',
+                'sessionid' => 'required|exists:schoolsession,id',
+                'statusId' => 'required|in:1,2',
+                'student_status' => 'required|in:Active,Inactive',
+                'father_title' => 'nullable|in:Mr,Dr,Prof',
+                'mother_title' => 'nullable|in:Mrs,Dr,Prof',
+                'father_name' => 'nullable|string|max:255',
+                'mother_name' => 'nullable|string|max:255',
+                'father_occupation' => 'nullable|string|max:255',
+                'father_city' => 'nullable|string|max:255',
+                'office_address' => 'nullable|string|max:255',
+                'father_phone' => 'nullable|string|max:20',
+                'mother_phone' => 'nullable|string|max:20',
+                'parent_email' => 'nullable|email|max:255',
+                'parent_address' => 'nullable|string|max:255',
+                'last_school' => 'nullable|string|max:255',
+                'last_class' => 'nullable|string|max:255',
+                'reason_for_leaving' => 'nullable|string|max:500',
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('Validation failed for student creation', ['errors' => $validator->errors()->toArray()]);
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validation failed',
+                        'errors' => $validator->errors(),
+                    ], 422);
+                }
+                return redirect()->route('student.index')
+                    ->withErrors($validator)
+                    ->withInput();
+            }
+
+            DB::beginTransaction();
+
+            $student = new Student();
+            $student->admissionNo = $request->admissionMode === 'auto' ? $this->generateAdmissionNumber() : $request->admissionNo;
+            $student->admission_date = $request->admissionDate;
+            $student->title = $request->title;
+            $student->admissionYear = $request->admissionYear;
+            $student->firstname = $request->firstname;
+            $student->lastname = $request->lastname;
+            $student->othername = $request->othername;
+            $student->gender = $request->gender;
+            $student->dateofbirth = $request->dateofbirth;
+            $student->age = $request->age;
+            $student->blood_group = $request->blood_group;
+            $student->mother_tongue = $request->mother_tongue;
+            $student->religion = $request->religion;
+            $student->sport_house = $request->sport_house;
+            $student->phone_number = $request->phone_number;
+            $student->email = $request->email;
+            $student->nin_number = $request->nin_number;
+            $student->city = $request->city;
+            $student->state = $request->state;
+            $student->local = $request->local;
+            $student->nationality = $request->nationality;
+            $student->placeofbirth = $request->placeofbirth;
+            $student->home_address = $request->present_address;
+            $student->home_address2 = $request->permanent_address;
+            $student->present_address = $request->present_address;
+            $student->permanent_address = $request->permanent_address;
+            $student->student_category = $request->student_category;
+            $student->statusId = $request->statusId;
+            $student->student_status = $request->student_status;
+            $student->last_school = $request->last_school;
+            $student->last_class = $request->last_class;
+            $student->reason_for_leaving = $request->reason_for_leaving;
+            $student->registeredBy = auth()->user()->id;
+            $student->save();
+
+            $studentId = $student->id;
+
+            $studentClass = new Studentclass();
+            $studentClass->studentId = $studentId;
+            $studentClass->schoolclassid = $request->schoolclassid;
+            $studentClass->termid = $request->termid;
+            $studentClass->sessionid = $request->sessionid;
+            $studentClass->save();
+
+            $promotion = new PromotionStatus();
+            $promotion->studentId = $studentId;
+            $promotion->schoolclassid = $request->schoolclassid;
+            $promotion->termid = $request->termid;
+            $promotion->sessionid = $request->sessionid;
+            $promotion->promotionStatus = 'PROMOTED';
+            $promotion->classstatus = 'CURRENT';
+            $promotion->save();
+
+            $parent = new ParentRegistration();
+            $parent->studentId = $studentId;
+            $parent->father_title = $request->father_title;
+            $parent->mother_title = $request->mother_title;
+            $parent->father = $request->father_name;
+            $parent->mother = $request->mother_name;
+            $parent->father_phone = $request->father_phone;
+            $parent->mother_phone = $request->mother_phone;
+            $parent->father_occupation = $request->father_occupation;
+            $parent->father_city = $request->father_city;
+            $parent->office_address = $request->office_address;
+            $parent->parent_email = $request->parent_email;
+            $parent->parent_address = $request->parent_address;
+            $parent->save();
+
+            $picture = new Studentpicture();
+            $picture->studentid = $studentId;
+            if ($request->hasFile('avatar')) {
+                $path = $request->file('avatar')->store('student_avatars', 'public');
+                $picture->picture = $path;
+            }
+            $picture->save();
+
+            $studenthouse = new Studenthouse();
+            $studenthouse->studentid = $studentId;
+            $studenthouse->termid = $request->termid;
+            $studenthouse->sessionid = $request->sessionid;
+            $studenthouse->save();
+
+            $studentpersonalityprofile = new Studentpersonalityprofile();
+            $studentpersonalityprofile->studentid = $studentId;
+            $studentpersonalityprofile->schoolclassid = $request->schoolclassid;
+            $studentpersonalityprofile->termid = $request->termid;
+            $studentpersonalityprofile->sessionid = $request->sessionid;
+            $studentpersonalityprofile->save();
+
+            DB::commit();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Student created successfully',
+                    'student' => $student,
+                ], 201);
+            }
+
+            return redirect()->route('student.index')
+                ->with('success', 'Student created successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Error creating student: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create student: ' . $e->getMessage(),
+                ], 500);
+            }
+            return redirect()->route('student.index')
+                ->with('error', 'Failed to create student: ' . $e->getMessage());
+        }
+    }
+
     public function data(Request $request): JsonResponse
     {
         try {
+            Log::debug('Fetching students data');
             $students = Student::leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
                 ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
                 ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
@@ -144,22 +346,46 @@ class StudentController extends Controller
                     'studentpicture.picture',
                     'schoolclass.schoolclass',
                     'schoolarm.arm',
-                    'studentclass.schoolclassid'
+                    'studentclass.schoolclassid',
                 ])
                 ->latest()
                 ->get();
 
+            Log::debug('Students fetched', ['count' => $students->count()]);
+
             return response()->json([
                 'success' => true,
-                'students' => $students
+                'students' => $students,
             ], 200);
         } catch (\Exception $e) {
             Log::error("Error fetching students: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch students: ' . $e->getMessage()
+                'message' => 'Failed to fetch students: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    // Ensure storeImage method is defined
+    protected function storeImage($file, $directory)
+    {
+        try {
+            $path = $file->store($directory, 'public');
+            Log::debug('Image stored', ['path' => $path]);
+            return $path;
+        } catch (\Exception $e) {
+            Log::error("Error storing image: {$e->getMessage()}");
+            throw $e;
+        }
+    }
+
+    // Example generateAdmissionNumber (adjust as per your implementation)
+    protected function generateAdmissionNumber()
+    {
+        $lastAdmission = Student::max('admissionNo');
+        $year = date('Y');
+        $number = $lastAdmission ? (int)substr($lastAdmission, -4) + 1 : 1;
+        return sprintf('CSSK/STD/%04d', $number);
     }
 
     public function show($id)
@@ -247,201 +473,7 @@ class StudentController extends Controller
         return view('student.create', compact('schoolclasses', 'schoolterms', 'schoolsessions', 'currentSession', 'pagetitle'));
     }
 
-    public function store(Request $request)
-    {
-        Log::debug('Creating new student', $request->all());
-    
-        try {
-            $statesLgas = json_decode(file_get_contents(public_path('states_lgas.json')), true);
-            $states = array_column($statesLgas, 'state');
-            $lgas = collect($statesLgas)->pluck('lgas', 'state')->toArray();
-    
-            $validator = Validator::make($request->all(), [
-                'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-                'admissionMode' => 'required|in:auto,manual',
-                'title' => 'nullable|in:Master,Miss',
-                'admissionNo' => 'required|string|max:255|unique:studentRegistration,admissionNo',
-                'admissionYear' => 'required|integer|min:1900|max:' . date('Y'),
-                'admissionDate' => 'required|date|before_or_equal:today',
-                'firstname' => 'required|string|max:255',
-                'lastname' => 'required|string|max:255',
-                'othername' => 'nullable|string|max:255',
-                'gender' => 'required|in:Male,Female',
-                'dateofbirth' => 'required|date|before:today',
-                'placeofbirth' => 'required|string|max:255',
-                'nationality' => 'required|string|max:255',
-                'age' => 'required|integer|min:1|max:100',
-                'blood_group' => 'nullable|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
-                'mother_tongue' => 'nullable|string|max:255',
-                'religion' => 'required|in:Christianity,Islam,Others',
-                'sport_house' => 'nullable|string|max:255',
-                'phone_number' => 'nullable|string|max:20',
-                'email' => 'nullable|email|max:255',
-                'nin_number' => 'nullable|string|max:20',
-                'city' => 'nullable|string|max:255',
-                'state' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) use ($states) {
-                    if (!in_array($value, $states)) {
-                        $fail('The selected state is invalid.');
-                    }
-                }],
-                'local' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) use ($request, $lgas) {
-                    $state = $request->input('state');
-                    if (!isset($lgas[$state]) || !in_array($value, $lgas[$state])) {
-                        $fail('The selected local government is invalid for the chosen state.');
-                    }
-                }],
-                'present_address' => 'required|string|max:255',
-                'permanent_address' => 'required|string|max:255',
-                'student_category' => 'required|in:Day,Boarding',
-                'schoolclassid' => 'required|exists:schoolclass,id',
-                'termid' => 'required|exists:schoolterm,id',
-                'sessionid' => 'required|exists:schoolsession,id',
-                'statusId' => 'required|in:1,2',
-                'student_status' => 'required|in:Active,Inactive',
-                'father_title' => 'nullable|in:Mr,Dr,Prof',
-                'mother_title' => 'nullable|in:Mrs,Dr,Prof',
-                'father_name' => 'nullable|string|max:255',
-                'mother_name' => 'nullable|string|max:255',
-                'father_occupation' => 'nullable|string|max:255',
-                'father_city' => 'nullable|string|max:255',
-                'office_address' => 'nullable|string|max:255',
-                'father_phone' => 'nullable|string|max:20',
-                'mother_phone' => 'nullable|string|max:20',
-                'parent_email' => 'nullable|email|max:255',
-                'parent_address' => 'nullable|string|max:255',
-                'last_school' => 'nullable|string|max:255',
-                'last_class' => 'nullable|string|max:255',
-                'reason_for_leaving' => 'nullable|string|max:500',
-            ]);
-    
-            if ($validator->fails()) {
-                return redirect()->route('student.index')
-                    ->withErrors($validator)
-                    ->withInput();
-            }
-    
-            DB::beginTransaction();
-    
-            $student = new Student();
-            $student->admissionNo = $request->admissionMode === 'auto' ? $this->generateAdmissionNumber() : $request->admissionNo;
-            $student->admission_date = $request->admissionDate; // Use camelCase from form, snake_case in DB
-            $student->title = $request->title;
-            $student->admissionYear = $request->admissionYear;
-            $student->firstname = $request->firstname;
-            $student->lastname = $request->lastname;
-            $student->othername = $request->othername;
-            $student->gender = $request->gender;
-            $student->dateofbirth = $request->dateofbirth;
-            $student->age = $request->age;
-            $student->blood_group = $request->blood_group;
-            $student->mother_tongue = $request->mother_tongue;
-            $student->religion = $request->religion;
-            $student->sport_house = $request->sport_house;
-            $student->phone_number = $request->phone_number;
-            $student->email = $request->email;
-            $student->nin_number = $request->nin_number;
-            $student->city = $request->city;
-            $student->state = $request->state;
-            $student->local = $request->local;
-            $student->nationality = $request->nationality;
-            $student->placeofbirth = $request->placeofbirth;
-            $student->home_address = $request->present_address;
-            $student->home_address2 = $request->permanent_address;
-            $student->present_address = $request->present_address;
-            $student->permanent_address = $request->permanent_address;
-            $student->student_category = $request->student_category;
-            $student->statusId = $request->statusId;
-            $student->student_status = $request->student_status;
-            $student->last_school = $request->last_school;
-            $student->last_class = $request->last_class;
-            $student->reason_for_leaving = $request->reason_for_leaving;
-            $student->registeredBy = auth()->user()->id;
-            $student->save();
-    
-            $studentId = $student->id;
-    
-            $studentClass = new Studentclass();
-            $studentClass->studentId = $studentId;
-            $studentClass->schoolclassid = $request->schoolclassid;
-            $studentClass->termid = $request->termid;
-            $studentClass->sessionid = $request->sessionid;
-            $studentClass->save();
-    
-            $promotion = new PromotionStatus();
-            $promotion->studentId = $studentId;
-            $promotion->schoolclassid = $request->schoolclassid;
-            $promotion->termid = $request->termid;
-            $promotion->sessionid = $request->sessionid;
-            $promotion->promotionStatus = 'PROMOTED';
-            $promotion->classstatus = 'CURRENT';
-            $promotion->save();
-    
-            $parent = new ParentRegistration();
-            $parent->studentId = $studentId;
-            $parent->father_title = $request->father_title;
-            $parent->mother_title = $request->mother_title;
-            $parent->father = $request->father_name;
-            $parent->mother = $request->mother_name;
-            $parent->father_phone = $request->father_phone;
-            $parent->mother_phone = $request->mother_phone;
-            $parent->father_occupation = $request->father_occupation;
-            $parent->father_city = $request->father_city;
-            $parent->office_address = $request->office_address;
-            $parent->parent_email = $request->parent_email;
-            $parent->parent_address = $request->parent_address;
-            $parent->save();
-    
-            $picture = new Studentpicture();
-            $picture->studentid = $studentId;
-            if ($request->hasFile('avatar')) {
-                $path = $this->storeImage($request->file('avatar'), 'student_avatars');
-                $picture->picture = $path;
-            }
-            $picture->save();
-            
-    
-            $studenthouse = new Studenthouse();
-            $studenthouse->studentid = $studentId;
-            $studenthouse->termid = $request->termid;
-            $studenthouse->sessionid = $request->sessionid;
-            // $studenthouse->schoolhouseid = $request->sport_house ? DB::table('schoolhouses')->where('house', $request->sport_house)->value('id') : null;
-            $studenthouse->save();
-    
-            $studentpersonalityprofile = new Studentpersonalityprofile();
-            $studentpersonalityprofile->studentid = $studentId;
-            $studentpersonalityprofile->schoolclassid = $request->schoolclassid;
-            $studentpersonalityprofile->termid = $request->termid;
-            $studentpersonalityprofile->sessionid = $request->sessionid;
-            $studentpersonalityprofile->save();
-    
-            DB::commit();
-    
-            return redirect()->route('student.index')
-                ->with('success', 'Student created successfully');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Error creating student: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-            return redirect()->route('student.index')
-                ->with('error', 'Failed to create student: ' . $e->getMessage());
-        }
-    }
 
-    private function storeImage($file, $directory)
-    {
-        if ($file->isValid()) {
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs($directory, $filename, 'public');
-            Log::debug('Image stored', [
-                'filename' => $filename,
-                'path' => $path,
-                'full_path' => storage_path('app/public/' . $path),
-                'url' => asset('storage/' . $path)
-            ]);
-            return $path;
-        }
-        Log::error('Invalid file uploaded');
-        throw new \Exception('Invalid file uploaded');
-    }
 
 
     public function edit($student)
@@ -1079,11 +1111,4 @@ class StudentController extends Controller
         }
     }
 
-    private function generateAdmissionNumber()
-    {
-        $lastStudent = Student::orderBy('id', 'desc')->first();
-        $lastNumber = $lastStudent ? (int)preg_replace('/[^0-9]/', '', explode('/', $lastStudent->admissionNo)[2]) : 0;
-        $nextNumber = $lastNumber + 1;
-        return sprintf('CSSK/STD/%04d', $nextNumber);
-    }
 }
