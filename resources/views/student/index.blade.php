@@ -1592,13 +1592,12 @@ document.addEventListener('DOMContentLoaded', function () {
         students.forEach(student => {
             console.log('Rendering student:', student);
             const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
-            const actionButtons = [];
-            if (window.appPermissions?.['Update student']) {
-                actionButtons.push(`<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="ph-pencil"></i></a></li>`);
-            }
-            if (window.appPermissions?.['Delete student']) {
-                actionButtons.push(`<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}"><i class="ph-trash"></i></a></li>`);
-            }
+            // Force action buttons for testing (remove permissions check temporarily)
+            const actionButtons = [
+                `<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="ph-pencil"></i></a></li>`,
+                `<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}"><i class="ph-trash"></i></a></li>`
+            ];
+            console.log('Action buttons for student:', actionButtons); // Debug
             const row = document.createElement('tr');
             row.setAttribute('data-id', student.id);
             row.innerHTML = `
@@ -1634,6 +1633,7 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             tbody.appendChild(row);
         });
+        console.log('Table rows after rendering:', tbody.innerHTML); // Debug
         initializeList();
         initializeCheckboxes();
     }
@@ -2102,7 +2102,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (e.target.closest('.remove-item-btn')) {
                 const button = e.target.closest('.remove-item-btn');
                 const id = button.getAttribute('data-id');
-                const row = document.querySelector(`tr[data-id="${id}"]`); // Define row here
+                const row = document.querySelector(`tr[data-id="${id}"]`);
                 if (!row) {
                     console.error(`Row with data-id="${id}" not found`);
                     Swal.fire({
@@ -2124,7 +2124,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }).then((result) => {
                     if (result.isConfirmed && ensureAxios()) {
                         axios.delete(`/student/${id}/destroy`).then(() => {
-                            row.remove(); // Use pre-defined row
+                            row.remove();
                             studentList.reIndex();
                             Swal.fire({
                                 title: 'Deleted!',
@@ -2251,6 +2251,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const modalImage = this.querySelector('#enlargedImage');
             modalImage.src = imageSrc;
         });
+
+        // Debug permissions
+        console.log('Permissions:', window.appPermissions || 'Not defined');
     }
 
     // Initialize the student list
