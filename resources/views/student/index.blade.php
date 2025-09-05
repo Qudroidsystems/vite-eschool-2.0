@@ -1477,7 +1477,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Ensure Axios and CSRF token are available
+    // Ensure Axios and CSRF token
     function ensureAxios() {
         if (typeof axios === 'undefined') {
             console.error('Error: Axios is not defined');
@@ -1506,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return true;
     }
 
-    // Ensure Choices.js is available
+    // Ensure Choices.js
     function ensureChoices() {
         if (typeof Choices === 'undefined') {
             console.warn('Choices.js is not defined, using basic select');
@@ -1518,7 +1518,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let studentList;
     let allStudents = [];
     const itemsPerPage = 10;
-    const defaultAvatar = 'https://viteeschool.qudroid.co/theme/layouts/assets/media/avatars/blank.png';
+    const defaultAvatar = '/storage/images/student_avatars/unnamed.jpg';
 
     function fetchStudents() {
         if (!ensureAxios()) return;
@@ -1591,16 +1591,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         students.forEach(student => {
             console.log('Rendering student:', student);
-            const studentImage = student.picture ? `/storage/${student.picture}` : defaultAvatar;
-            const row = document.createElement('tr');
+            const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
             const actionButtons = [];
-            if (window.appPermissions?.canShowStudent) {
-                actionButtons.push(`<li><a href="/student/${student.id}" class="btn btn-subtle-primary btn-icon btn-sm"><i class="ph-eye"></i></a></li>`);
+            // Client-side permission checks (if server-side Blade rendering isn't used)
+            if (window.appPermissions?.['Update student']) {
+                actionButtons.push(`<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="ph-pencil"></i></a></li>`);
             }
-            if (window.appPermissions?.canUpdateStudent) {
-                actionButtons.push(`<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-bs-toggle="modal" data-bs-target="#editStudentModal" data-id="${student.id}"><i class="ph-pencil"></i></a></li>`);
-            }
-            if (window.appPermissions?.canDeleteStudent) {
+            if (window.appPermissions?.['Delete student']) {
                 actionButtons.push(`<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}"><i class="ph-trash"></i></a></li>`);
             }
             row.innerHTML = `
@@ -1981,51 +1978,51 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('studentTableBody')?.addEventListener('click', function(e) {
             if (e.target.closest('.edit-item-btn')) {
                 const button = e.target.closest('.edit-item-btn');
-                const id = button.getAttribute("data-id");
-                console.log("Edit button clicked for student ID:", id);
+                const id = button.getAttribute('data-id');
+                console.log('Edit button clicked for student ID:', id);
                 if (!ensureAxios()) return;
 
                 axios.get(`/student/${id}/edit`).then((response) => {
-                    console.log("Student data received:", response.data);
+                    console.log('Student data received:', response.data);
                     const student = response.data.student;
                     if (!student) {
-                        throw new Error("Student data is empty");
+                        throw new Error('Student data is empty');
                     }
 
                     const fields = [
-                        { id: "editStudentId", value: student.id },
-                        { id: "editAdmissionNo", value: student.admissionNo },
-                        { id: "editAdmissionYear", value: student.admissionYear },
-                        { id: "editTittle", value: student.title || '' },
-                        { id: "editFirstname", value: student.firstname },
-                        { id: "editLastname", value: student.lastname },
-                        { id: "editOthername", value: student.othername || '' },
-                        { id: "editHomeAddress", value: student.present_address },
-                        { id: "editHomeAddress2", value: student.permanent_address },
-                        { id: "editDOB", value: student.dateofbirth },
-                        { id: "editPlaceofbirth", value: student.placeofbirth || '' },
-                        { id: "editNationality", value: student.nationality || '' },
-                        { id: "editReligion", value: student.religion || '' },
-                        { id: "editLastSchool", value: student.last_school || '' },
-                        { id: "editLastClass", value: student.last_class || '' },
-                        { id: "editSchoolclassid", value: student.schoolclassid || '' },
-                        { id: "editTermid", value: student.termid || '' },
-                        { id: "editSessionid", value: student.sessionid || '' },
-                        { id: "editPhoneNumber", value: student.phone_number || '' },
-                        { id: "editNinNumber", value: student.nin_number || '' },
-                        { id: "editBloodGroup", value: student.blood_group || '' },
-                        { id: "editMotherTongue", value: student.mother_tongue || '' },
-                        { id: "editFatherTitle", value: student.father_title || '' },
-                        { id: "editFather", value: student.father_name || '' },
-                        { id: "editFatherPhone", value: student.father_phone || '' },
-                        { id: "editFatherOccupation", value: student.father_occupation || '' },
-                        { id: "editMotherTitle", value: student.mother_title || '' },
-                        { id: "editMother", value: student.mother_name || '' },
-                        { id: "editMotherPhone", value: student.mother_phone || '' },
-                        { id: "editParentAddress", value: student.parent_address || '' },
-                        { id: "editOfficeAddress", value: student.office_address || '' },
-                        { id: "editStudentCategory", value: student.student_category || '' },
-                        { id: "editReasonForLeaving", value: student.reason_for_leaving || '' }
+                        { id: 'editStudentId', value: student.id },
+                        { id: 'editAdmissionNo', value: student.admissionNo },
+                        { id: 'editAdmissionYear', value: student.admissionYear },
+                        { id: 'editTittle', value: student.title || '' },
+                        { id: 'editFirstname', value: student.firstname },
+                        { id: 'editLastname', value: student.lastname },
+                        { id: 'editOthername', value: student.othername || '' },
+                        { id: 'editHomeAddress', value: student.present_address },
+                        { id: 'editHomeAddress2', value: student.permanent_address },
+                        { id: 'editDOB', value: student.dateofbirth },
+                        { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
+                        { id: 'editNationality', value: student.nationality || '' },
+                        { id: 'editReligion', value: student.religion || '' },
+                        { id: 'editLastSchool', value: student.last_school || '' },
+                        { id: 'editLastClass', value: student.last_class || '' },
+                        { id: 'editSchoolclassid', value: student.schoolclassid || '' },
+                        { id: 'editTermid', value: student.termid || '' },
+                        { id: 'editSessionid', value: student.sessionid || '' },
+                        { id: 'editPhoneNumber', value: student.phone_number || '' },
+                        { id: 'editNinNumber', value: student.nin_number || '' },
+                        { id: 'editBloodGroup', value: student.blood_group || '' },
+                        { id: 'editMotherTongue', value: student.mother_tongue || '' },
+                        { id: 'editFatherTitle', value: student.father_title || '' },
+                        { id: 'editFather', value: student.father_name || '' },
+                        { id: 'editFatherPhone', value: student.father_phone || '' },
+                        { id: 'editFatherOccupation', value: student.father_occupation || '' },
+                        { id: 'editMotherTitle', value: student.mother_title || '' },
+                        { id: 'editMother', value: student.mother_name || '' },
+                        { id: 'editMotherPhone', value: student.mother_phone || '' },
+                        { id: 'editParentAddress', value: student.parent_address || '' },
+                        { id: 'editOfficeAddress', value: student.office_address || '' },
+                        { id: 'editStudentCategory', value: student.student_category || '' },
+                        { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
                     ];
 
                     fields.forEach(({ id, value }) => {
@@ -2052,14 +2049,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         radio.checked = (radio.value === student.student_status);
                     });
 
-                    const avatarElement = document.getElementById("editStudentAvatar");
+                    const avatarElement = document.getElementById('editStudentAvatar');
                     if (avatarElement) {
-                        avatarElement.src = student.picture ? `/storage/${student.picture}` : defaultAvatar;
-                        avatarElement.setAttribute('data-original-src', student.picture ? `/storage/${student.picture}` : defaultAvatar);
+                        avatarElement.src = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+                        avatarElement.setAttribute('data-original-src', student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar);
                     }
 
-                    const stateSelect = document.getElementById("editState");
-                    const lgaSelect = document.getElementById("editLocal");
+                    const stateSelect = document.getElementById('editState');
+                    const lgaSelect = document.getElementById('editLocal');
                     if (student.state && stateSelect) {
                         stateSelect.value = student.state;
                         setTimeout(() => {
@@ -2086,16 +2083,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         form.action = `/student/${id}`;
                     }
                 }).catch((error) => {
-                    console.error("Error fetching student:", {
+                    console.error('Error fetching student:', {
                         message: error.message,
                         status: error.response?.status,
                         data: error.response?.data
                     });
                     Swal.fire({
-                        title: "Error!",
-                        text: error.response?.data?.message || "Failed to load student data. Check console for details.",
-                        icon: "error",
-                        customClass: { confirmButton: "btn btn-primary" },
+                        title: 'Error!',
+                        text: error.response?.data?.message || 'Failed to load student data. Check console for details.',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
                         buttonsStyling: false
                     });
                 });
@@ -2105,11 +2102,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 const button = e.target.closest('.remove-item-btn');
                 const id = button.getAttribute('data-id');
                 Swal.fire({
-                    title: "Are you sure?",
+                    title: 'Are you sure?',
                     text: "You won't be able to revert this!",
-                    icon: "warning",
+                    icon: 'warning',
                     showCancelButton: true,
-                    customClass: { confirmButton: "btn btn-primary", cancelButton: "btn btn-light" },
+                    customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' },
                     buttonsStyling: false
                 }).then((result) => {
                     if (result.isConfirmed && ensureAxios()) {
@@ -2118,19 +2115,19 @@ document.addEventListener('DOMContentLoaded', function () {
                             if (row) row.remove();
                             studentList.reIndex();
                             Swal.fire({
-                                title: "Deleted!",
-                                text: "Student has been deleted",
-                                icon: "success",
-                                customClass: { confirmButton: "btn btn-primary" },
+                                title: 'Deleted!',
+                                text: 'Student has been deleted',
+                                icon: 'success',
+                                customClass: { confirmButton: 'btn btn-primary' },
                                 buttonsStyling: false
                             });
                         }).catch((error) => {
                             console.error('Error deleting student:', error);
                             Swal.fire({
-                                title: "Error!",
-                                text: error.response?.data?.message || "Failed to delete student",
-                                icon: "error",
-                                customClass: { confirmButton: "btn btn-primary" },
+                                title: 'Error!',
+                                text: error.response?.data?.message || 'Failed to delete student',
+                                icon: 'error',
+                                customClass: { confirmButton: 'btn btn-primary' },
                                 buttonsStyling: false
                             });
                         });
@@ -2157,10 +2154,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     throw new Error(response.data.message || 'Failed to add student');
                 }
                 Swal.fire({
-                    title: "Success!",
-                    text: response.data.message || "Student added successfully",
-                    icon: "success",
-                    customClass: { confirmButton: "btn btn-primary" },
+                    title: 'Success!',
+                    text: response.data.message || 'Student added successfully',
+                    icon: 'success',
+                    customClass: { confirmButton: 'btn btn-primary' },
                     buttonsStyling: false
                 }).then(() => {
                     fetchStudents();
@@ -2174,15 +2171,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     status: error.response?.status,
                     data: error.response?.data
                 });
-                let errorMessage = error.response?.data?.message || "Failed to add student. Check console for details.";
+                let errorMessage = error.response?.data?.message || 'Failed to add student. Check console for details.';
                 if (error.response?.status === 422 && error.response?.data?.errors) {
                     errorMessage = Object.values(error.response.data.errors).flat().join('\n');
                 }
                 Swal.fire({
-                    title: "Error!",
+                    title: 'Error!',
                     text: errorMessage,
-                    icon: "error",
-                    customClass: { confirmButton: "btn btn-primary" },
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
                     buttonsStyling: false
                 });
             });
@@ -2207,10 +2204,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     throw new Error(response.data.message || 'Failed to update student');
                 }
                 Swal.fire({
-                    title: "Success!",
-                    text: response.data.message || "Student updated successfully",
-                    icon: "success",
-                    customClass: { confirmButton: "btn btn-primary" },
+                    title: 'Success!',
+                    text: response.data.message || 'Student updated successfully',
+                    icon: 'success',
+                    customClass: { confirmButton: 'btn btn-primary' },
                     buttonsStyling: false
                 }).then(() => {
                     fetchStudents();
@@ -2222,15 +2219,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     status: error.response?.status,
                     data: error.response?.data
                 });
-                let errorMessage = error.response?.data?.message || "Failed to update student. Check console for details.";
+                let errorMessage = error.response?.data?.message || 'Failed to update student. Check console for details.';
                 if (error.response?.status === 422 && error.response?.data?.errors) {
                     errorMessage = Object.values(error.response.data.errors).flat().join('\n');
                 }
                 Swal.fire({
-                    title: "Error!",
+                    title: 'Error!',
                     text: errorMessage,
-                    icon: "error",
-                    customClass: { confirmButton: "btn btn-primary" },
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
                     buttonsStyling: false
                 });
             });
