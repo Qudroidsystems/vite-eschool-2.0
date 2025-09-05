@@ -1593,13 +1593,14 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('Rendering student:', student);
             const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
             const actionButtons = [];
-            // Client-side permission checks (if server-side Blade rendering isn't used)
             if (window.appPermissions?.['Update student']) {
                 actionButtons.push(`<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="ph-pencil"></i></a></li>`);
             }
             if (window.appPermissions?.['Delete student']) {
                 actionButtons.push(`<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}"><i class="ph-trash"></i></a></li>`);
             }
+            const row = document.createElement('tr');
+            row.setAttribute('data-id', student.id);
             row.innerHTML = `
                 <td class="id" data-id="${student.id}">
                     <div class="form-check">
@@ -2101,6 +2102,18 @@ document.addEventListener('DOMContentLoaded', function () {
             if (e.target.closest('.remove-item-btn')) {
                 const button = e.target.closest('.remove-item-btn');
                 const id = button.getAttribute('data-id');
+                const row = document.querySelector(`tr[data-id="${id}"]`); // Define row here
+                if (!row) {
+                    console.error(`Row with data-id="${id}" not found`);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Table row not found for deletion',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
                 Swal.fire({
                     title: 'Are you sure?',
                     text: "You won't be able to revert this!",
@@ -2111,8 +2124,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }).then((result) => {
                     if (result.isConfirmed && ensureAxios()) {
                         axios.delete(`/student/${id}/destroy`).then(() => {
-                            const row = button.closest('tr');
-                            if (row) row.remove();
+                            row.remove(); // Use pre-defined row
                             studentList.reIndex();
                             Swal.fire({
                                 title: 'Deleted!',
