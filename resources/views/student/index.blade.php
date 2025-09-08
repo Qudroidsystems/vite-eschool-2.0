@@ -488,7 +488,7 @@ use Spatie\Permission\Models\Role;
                                                 <select id="termid" name="termid" class="form-control" required>
                                                     <option value="">Select Term</option>
                                                     @foreach ($schoolterms as $term)
-                                                        <option value="{{ $term->id }}">{{ $term->term }}</option>
+                                                        <option value="{{ $term->id }}">{{ $term->name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -499,7 +499,7 @@ use Spatie\Permission\Models\Role;
                                                 <select id="sessionid" name="sessionid" class="form-control" required>
                                                     <option value="">Select Session</option>
                                                     @foreach ($schoolsessions as $session)
-                                                        <option value="{{ $session->id }}">{{ $session->session }}</option>
+                                                        <option value="{{ $session->id }}">{{ $session->name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -691,13 +691,14 @@ use Spatie\Permission\Models\Role;
                                 <div class="card-header bg-success text-white">
                                     <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Additional Information</h6>
                                 </div>
-                                <div class="mb-3">
-                                    <label for="placeofbirth" class="form-label">Nationality</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-primary text-white">
-                                            <i class="fas fa-envelope"></i>
-                                        </span>
-                                        <input type="input" id="nataionality" name="nationality" class="form-control" placeholder="Nationality">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-10">
+                                            <div class="mb-3">
+                                                <label for="nationality" class="form-label">Nationality</label>
+                                                <input type="text" id="nataionality" name="nationality" class="form-control" placeholder="Nationality" required>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="card-body">
@@ -1099,7 +1100,7 @@ use Spatie\Permission\Models\Role;
                                 <select id="editTermid" name="termid" class="form-control" required>
                                     <option value="">Select Term</option>
                                     @foreach ($schoolterms as $term)
-                                        <option value="{{ $term->id }}">{{ $term->term }}</option>
+                                        <option value="{{ $term->id }}">{{ $term->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -1108,7 +1109,7 @@ use Spatie\Permission\Models\Role;
                                 <select id="editSessionid" name="sessionid" class="form-control" required>
                                     <option value="">Select Session</option>
                                     @foreach ($schoolsessions as $session)
-                                        <option value="{{ $session->id }}">{{ $session->session }}</option>
+                                        <option value="{{ $session->id }}">{{ $session->name }}</option>
                                     @endforeach
                                 </select>
                             </div>

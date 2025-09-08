@@ -8,11 +8,12 @@ use App\Models\Broadsheet;
 use App\Models\Schoolterm;
 use App\Models\Broadsheets;
 use App\Models\Schoolclass;
+use App\Models\Schoolhouse;
 use App\Models\Studentclass;
-use App\Models\Studenthouse;
 use App\Models\Subjectclass;
 use Illuminate\Http\Request;
 use App\Models\Schoolsession;
+use App\Models\Studenthouses;
 use App\Models\Studentpicture;
 use App\Imports\StudentsImport;
 use App\Models\BroadsheetsMock;
@@ -30,9 +31,9 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Models\StudentBillPaymentBook;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use App\Models\Studentpersonalityprofile;
 use App\Models\SubjectRegistrationStatus;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Studentpersonalityprofiles;
 use App\Traits\ImageManager as TraitsImageManager;
 
 class StudentController extends Controller
@@ -60,6 +61,7 @@ class StudentController extends Controller
         $schoolterms = Schoolterm::select('id', 'term as name')->get();
         $schoolsessions = Schoolsession::select('id', 'session as name')->get();
         $currentSession = Schoolsession::where('status', 'Current')->first();
+        $schoolhouses = Schoolhouse::all(); // Fetch all school houses
 
         // Status counts
         $status_counts = Student::groupBy('statusId')
@@ -114,6 +116,7 @@ class StudentController extends Controller
             'schoolclasses',
             'schoolterms',
             'schoolsessions',
+            'schoolhouses',
             'currentSession',
             'status_counts',
             'student_status_counts',
@@ -124,7 +127,6 @@ class StudentController extends Controller
             'staff_count'
         ));
     }
-
 
     public function store(Request $request)
     {
@@ -284,18 +286,18 @@ class StudentController extends Controller
             }
             $picture->save();
 
-            $studenthouse = new Studenthouse();
-            $studenthouse->studentid = $studentId;
-            $studenthouse->termid = $request->termid;
-            $studenthouse->sessionid = $request->sessionid;
-            $studenthouse->save();
+            $studenthouses = new Studenthouses();
+            $studenthouses->studentid = $studentId;
+            $studenthouses->termid = $request->termid;
+            $studenthouses->sessionid = $request->sessionid;
+            $studenthouses->save();
 
-            $studentpersonalityprofile = new Studentpersonalityprofile();
-            $studentpersonalityprofile->studentid = $studentId;
-            $studentpersonalityprofile->schoolclassid = $request->schoolclassid;
-            $studentpersonalityprofile->termid = $request->termid;
-            $studentpersonalityprofile->sessionid = $request->sessionid;
-            $studentpersonalityprofile->save();
+            $studentpersonalityprofiles = new Studentpersonalityprofiles();
+            $studentpersonalityprofiles->studentid = $studentId;
+            $studentpersonalityprofiles->schoolclassid = $request->schoolclassid;
+            $studentpersonalityprofiles->termid = $request->termid;
+            $studentpersonalityprofiles->sessionid = $request->sessionid;
+            $studentpersonalityprofiles->save();
 
             DB::commit();
 
@@ -364,7 +366,6 @@ class StudentController extends Controller
         }
     }
 
-    // Ensure storeImage method is defined
     protected function storeImage($file, $directory)
     {
         try {
@@ -377,7 +378,6 @@ class StudentController extends Controller
         }
     }
 
-    // Example generateAdmissionNumber (adjust as per your implementation)
     protected function generateAdmissionNumber()
     {
         $lastAdmission = Student::max('admissionNo');
@@ -397,9 +397,9 @@ class StudentController extends Controller
                 ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
                 ->leftJoin('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
-                ->leftJoin('studenthouse', 'studenthouse.studentId', '=', 'studentRegistration.id')
-                ->leftJoin('schoolhouse', 'schoolhouse.id', '=', 'studenthouse.schoolhouseid')
-                ->leftJoin('studentpersonalityprofile', 'studentpersonalityprofile.studentId', '=', 'studentRegistration.id')
+                ->leftJoin('studenthouses', 'studenthouses.studentId', '=', 'studentRegistration.id')
+                ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
+                ->leftJoin('studentpersonalityprofiles', 'studentpersonalityprofiles.studentId', '=', 'studentRegistration.id')
                 ->where('schoolsession.status', 'Current')
                 ->select([
                     'studentRegistration.id as id',
@@ -438,11 +438,8 @@ class StudentController extends Controller
                     'schoolarm.arm as arm',
                     'schoolterm.term as term',
                     'schoolsession.session as session',
-                    'schoolhouse.schoolhouse as schoolhouse',
-                    'studentpersonalityprofile.traits as traits',
-                    'studentpersonalityprofile.strengths as strengths',
-                    'studentpersonalityprofile.weaknesses as weaknesses',
-                    'studentpersonalityprofile.comments as comments',
+                    'schoolhouses.house as schoolhouse',
+       
                 ])
                 ->firstOrFail();
 
@@ -471,9 +468,6 @@ class StudentController extends Controller
         return view('student.create', compact('schoolclasses', 'schoolterms', 'schoolsessions', 'currentSession', 'pagetitle'));
     }
 
-
-
-
     public function edit($student)
     {
         try {
@@ -481,11 +475,18 @@ class StudentController extends Controller
                 ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
                 ->leftJoin('studentclass', 'studentRegistration.id', '=', 'studentclass.studentId')
                 ->leftJoin('parentRegistration', 'studentRegistration.id', '=', 'parentRegistration.studentId')
+                ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+                ->leftJoin('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
+                ->leftJoin('studenthouses', 'studenthouses.studentId', '=', 'studentRegistration.id')
+                ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
+                ->leftJoin('studentpersonalityprofiles', 'studentpersonalityprofiles.studentId', '=', 'studentRegistration.id')
                 ->select([
                     'studentRegistration.id',
                     'studentRegistration.admissionNo',
                     'studentRegistration.admissionYear',
-                    'studentRegistration.admission_date',
+                    'studentRegistration.admission_date as admissionDate',
+                    'studentRegistration.title',
                     'studentRegistration.firstname',
                     'studentRegistration.lastname',
                     'studentRegistration.othername',
@@ -502,8 +503,10 @@ class StudentController extends Controller
                     'studentRegistration.city',
                     'studentRegistration.state',
                     'studentRegistration.local',
-                    'studentRegistration.present_address',
-                    'studentRegistration.permanent_address',
+                    'studentRegistration.nationality',
+                    'studentRegistration.placeofbirth',
+                    'studentRegistration.home_address as present_address',
+                    'studentRegistration.home_address2 as permanent_address',
                     'studentRegistration.student_category',
                     'studentRegistration.statusId',
                     'studentRegistration.student_status',
@@ -513,26 +516,41 @@ class StudentController extends Controller
                     'studentclass.schoolclassid',
                     'studentclass.termid',
                     'studentclass.sessionid',
-                    'parentRegistration.father_name',
-                    'parentRegistration.mother_name',
+                    'parentRegistration.father_title',
+                    'parentRegistration.mother_title',
+                    'parentRegistration.father as father_name',
+                    'parentRegistration.mother as mother_name',
                     'parentRegistration.father_occupation',
                     'parentRegistration.father_city',
+                    'parentRegistration.office_address',
                     'parentRegistration.father_phone',
                     'parentRegistration.mother_phone',
-                    'parentRegistration.email as parent_email',
-                    'parentRegistration.address as parent_address',
-                    'studentpicture.picture'
+                    'parentRegistration.parent_email',
+                    'parentRegistration.parent_address',
+                    'studentpicture.picture',
+                    'studenthouses.schoolhouse',
+              
                 ])
                 ->first();
 
             if (!$studentData) {
+                Log::warning("Student ID {$student} not found");
                 return response()->json(['success' => false, 'message' => 'Student not found'], 404);
             }
 
-            return response()->json(['success' => true, 'student' => $studentData]);
+            // Convert picture path to URL if exists
+            $studentData->picture = $studentData->picture ? asset('storage/' . $studentData->picture) : null;
+
+            return response()->json([
+                'success' => true,
+                'student' => $studentData
+            ], 200);
         } catch (\Exception $e) {
-            Log::error('Error fetching student ID ' . $student . ': ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+            Log::error("Error fetching student ID {$student}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+            return response()->json([
+                'success' => false,
+                'message' => 'Server error: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -692,17 +710,17 @@ class StudentController extends Controller
                 ]
             );
 
-            DB::table('studenthouses')->updateOrInsert(
+            DB::table('studenthousess')->updateOrInsert(
                 ['studentid' => $student],
                 [
                     'termid' => $request->termid,
                     'sessionid' => $request->sessionid,
-                    'schoolhouseid' => $request->sport_house ? DB::table('schoolhouse')->where('schoolhouse', $request->sport_house)->value('id') : null,
+                    'schoolhousesid' => $request->sport_house ? DB::table('schoolhouses')->where('schoolhouses', $request->sport_house)->value('id') : null,
                     'updated_at' => now(),
                 ]
             );
 
-            DB::table('studentpersonalityprofiles')->updateOrInsert(
+            DB::table('studentpersonalityprofiless')->updateOrInsert(
                 ['studentid' => $student],
                 [
                     'schoolclassid' => $request->schoolclassid,
@@ -755,8 +773,8 @@ class StudentController extends Controller
                 $record->delete();
             }
             SubjectRegistrationStatus::where('studentId', $id)->delete();
-            Studenthouse::where('studentid', $id)->delete();
-            Studentpersonalityprofile::where('studentid', $id)->delete();
+            Studenthouses::where('studentid', $id)->delete();
+            Studentpersonalityprofiles::where('studentid', $id)->delete();
             $student->delete();
 
             DB::commit();
@@ -795,8 +813,8 @@ class StudentController extends Controller
                 Studentpicture::where('studentid', $id)->delete();
                 Broadsheet::where('studentId', $id)->delete();
                 SubjectRegistrationStatus::where('studentId', $id)->delete();
-                Studenthouse::where('studentid', $id)->delete();
-                Studentpersonalityprofile::where('studentid', $id)->delete();
+                Studenthouses::where('studentid', $id)->delete();
+                Studentpersonalityprofiles::where('studentid', $id)->delete();
             }
 
             Student::whereIn('id', $ids)->delete();
@@ -863,8 +881,8 @@ class StudentController extends Controller
                 ParentRegistration::where('studentId', $studentId)->delete();
                 Studentpicture::where('studentid', $studentId)->delete();
                 SubjectRegistrationStatus::where('studentId', $studentId)->delete();
-                Studenthouse::where('studentid', $studentId)->delete();
-                Studentpersonalityprofile::where('studentid', $studentId)->delete();
+                Studenthouses::where('studentid', $studentId)->delete();
+                Studentpersonalityprofiles::where('studentid', $studentId)->delete();
             }
 
             Student::where('batchid', $batch->id)->delete();
@@ -1108,5 +1126,4 @@ class StudentController extends Controller
             ], 500);
         }
     }
-
 }
