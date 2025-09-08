@@ -281,8 +281,10 @@ class StudentController extends Controller
             $picture = new Studentpicture();
             $picture->studentid = $studentId;
             if ($request->hasFile('avatar')) {
-                $path = $request->file('avatar')->store('student_avatars', 'public');
-                $picture->picture = $path;
+                $path = $this->storeImage($request->file('avatar'), 'images/student_avatars');
+                $picture->picture = basename($path); // Store only the filename
+            } else {
+                $picture->picture = 'unnamed.jpg'; // Default avatar
             }
             $picture->save();
 
@@ -305,7 +307,46 @@ class StudentController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Student created successfully',
-                    'student' => $student,
+                    'student' => [
+                        'id' => $student->id,
+                        'admissionNo' => $student->admissionNo,
+                        'admissionYear' => $student->admissionYear,
+                        'title' => $student->title,
+                        'firstname' => $student->firstname,
+                        'lastname' => $student->lastname,
+                        'othername' => $student->othername,
+                        'gender' => $student->gender,
+                        'dateofbirth' => $student->dateofbirth,
+                        'placeofbirth' => $student->placeofbirth,
+                        'nationality' => $student->nationality,
+                        'religion' => $student->religion,
+                        'last_school' => $student->last_school,
+                        'last_class' => $student->last_class,
+                        'schoolclassid' => $student->schoolclassid,
+                        'termid' => $student->termid,
+                        'sessionid' => $student->sessionid,
+                        'phone_number' => $student->phone_number,
+                        'nin_number' => $student->nin_number,
+                        'blood_group' => $student->blood_group,
+                        'mother_tongue' => $student->mother_tongue,
+                        'father_name' => $request->father_name,
+                        'father_phone' => $request->father_phone,
+                        'father_occupation' => $request->father_occupation,
+                        'mother_name' => $request->mother_name,
+                        'mother_phone' => $request->mother_phone,
+                        'parent_address' => $request->parent_address,
+                        'student_category' => $student->student_category,
+                        'reason_for_leaving' => $student->reason_for_leaving,
+                        'picture' => $picture->picture,
+                        'state' => $student->state,
+                        'local' => $student->local,
+                        'statusId' => $student->statusId,
+                        'student_status' => $student->student_status,
+                        'present_address' => $student->home_address,
+                        'permanent_address' => $student->home_address2,
+                        'schoolclass' => $studentClass->schoolclass->name ?? '',
+                        'arm' => $studentClass->schoolclass->arm ?? ''
+                    ]
                 ], 201);
             }
 
@@ -322,6 +363,18 @@ class StudentController extends Controller
             }
             return redirect()->route('student.index')
                 ->with('error', 'Failed to create student: ' . $e->getMessage());
+        }
+    }
+
+    protected function storeImage($file, $directory)
+    {
+        try {
+            $path = $file->store($directory, 'public');
+            Log::debug('Image stored', ['path' => $path]);
+            return $path;
+        } catch (\Exception $e) {
+            Log::error("Error storing image: {$e->getMessage()}");
+            throw $e;
         }
     }
 
@@ -366,17 +419,7 @@ class StudentController extends Controller
         }
     }
 
-    protected function storeImage($file, $directory)
-    {
-        try {
-            $path = $file->store($directory, 'public');
-            Log::debug('Image stored', ['path' => $path]);
-            return $path;
-        } catch (\Exception $e) {
-            Log::error("Error storing image: {$e->getMessage()}");
-            throw $e;
-        }
-    }
+   
 
     protected function generateAdmissionNumber()
     {

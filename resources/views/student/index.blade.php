@@ -1046,284 +1046,479 @@ use Spatie\Permission\Models\Role;
     }
 </script>
 
-        <!-- Edit Student Modal -->
-        <div id="editStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 id="exampleModalLabel" class="modal-title">Edit Student</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form class="tablelist-form" id="editStudentForm" enctype="multipart/form-data" autocomplete="true" method="POST" action="{{ route('student.update', ':id') }}">
-                        @csrf
-                        @method('PATCH')
-                        <div class="modal-body">
-                            <input type="hidden" id="editStudentId" name="id">
-                            <!-- Section A: Academic Details -->
-                            <h6 class="mb-3">Section A: Academic Details</h6>
-                            <div class="mb-3">
-                                <label class="form-label">Admission Number Mode <span class="text-danger">*</span></label>
-                                <div class="d-flex align-items-center">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="admissionMode" id="editAdmissionAuto" value="auto" required onchange="toggleAdmissionInput('edit')">
-                                        <label class="form-check-label" for="editAdmissionAuto">Auto</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="admissionMode" id="editAdmissionManual" value="manual" required onchange="toggleAdmissionInput('edit')">
-                                        <label class="form-check-label" for="editAdmissionManual">Manual</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editAdmissionNo" class="form-label">Admission No <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <select class="form-control" id="editAdmissionYear" name="admissionYear" required>
-                                        @for ($year = date('Y'); $year >= date('Y') - 5; $year--)
-                                            <option value="{{ $year }}" {{ $year == date('Y') ? 'selected' : '' }}>{{ $year }}</option>
-                                        @endfor
-                                    </select>
-                                    <span class="input-group-text">CSSK/STD/</span>
-                                    <input type="text" id="editAdmissionNo" name="admissionNo" class="form-control" placeholder="Enter number (e.g., 001)" required>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editSchoolclassid" class="form-label">Class <span class="text-danger">*</span></label>
-                                <select id="editSchoolclassid" name="schoolclassid" class="form-control" required>
-                                    <option value="">Select Class</option>
-                                    @foreach ($schoolclasses as $class)
-                                        <option value="{{ $class->id }}">{{ $class->schoolclass }} - {{ $class->arm }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editTermid" class="form-label">Term <span class="text-danger">*</span></label>
-                                <select id="editTermid" name="termid" class="form-control" required>
-                                    <option value="">Select Term</option>
-                                    @foreach ($schoolterms as $term)
-                                        <option value="{{ $term->id }}">{{ $term->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editSessionid" class="form-label">Session <span class="text-danger">*</span></label>
-                                <select id="editSessionid" name="sessionid" class="form-control" required>
-                                    <option value="">Select Session</option>
-                                    @foreach ($schoolsessions as $session)
-                                        <option value="{{ $session->id }}">{{ $session->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Student Status <span class="text-danger">*</span></label>
-                                <div class="d-flex align-items-center">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="statusId" id="editStatusOld" value="1" required>
-                                        <label class="form-check-label" for="editStatusOld">Old Student</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="statusId" id="editStatusNew" value="2" required>
-                                        <label class="form-check-label" for="editStatusNew">New Student</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editStudentCategory" class="form-label">Student Category <span class="text-danger">*</span></label>
-                                <select id="editStudentCategory" name="student_category" class="form-control" required>
-                                    <option value="">Select Category</option>
-                                    <option value="Day">Day</option>
-                                    <option value="Boarding">Boarding</option>
-                                </select>
-                            </div>
+       
 
-                            <!-- Section B: Student’s Details -->
-                            <h6 class="mb-3 mt-4">Section B: Student’s Details</h6>
-                            <div class="mb-3">
-                                <label for="editAvatar" class="form-label">Avatar</label>
-                                <input type="file" id="editAvatar" name="avatar" class="form-control" accept=".png,.jpg,.jpeg">
-                                <img id="editStudentAvatar" src="{{ asset('theme/layouts/assets/media/avatars/blank.png') }}" alt="Avatar Preview" style="max-width: 100px; margin-top: 10px;" />
-                                <div class="form-text">Allowed file types: png, jpg, jpeg. Max size: 2MB.</div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editTittle" class="form-label">Title <span class="text-danger">*</span></label>
-                                <select id="editTittle" name="title" class="form-control" required>
-                                    <option value="">Select Title</option>
-                                    <option value="Mr">Mr</option>
-                                    <option value="Mrs">Mrs</option>
-                                    <option value="Miss">Miss</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <input type="text" id="editFirstname" name="firstname" class="form-control" placeholder="Enter first name" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <input type="text" id="editLastname" name="lastname" class="form-control" placeholder="Enter last name" required>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editOthername" class="form-label">Other Names</label>
-                                <input type="text" id="editOthername" name="othername" class="form-control" placeholder="Enter other names">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Gender <span class="text-danger">*</span></label>
-                                <div class="d-flex align-items-center">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="gender" id="editGenderMale" value="Male" required>
-                                        <label class="form-check-label" for="editGenderMale">Male</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="gender" id="editGenderFemale" value="Female" required>
-                                        <label class="form-check-label" for="editGenderFemale">Female</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editPhoneNumber" class="form-label">Phone Number</label>
-                                <input type="text" id="editPhoneNumber" name="phone_number" class="form-control" placeholder="Enter phone number">
-                            </div>
-                            <div class="mb-3">
-                                <label for="editHomeAddress" class="form-label">Home Address 1 <span class="text-danger">*</span></label>
-                                <input type="text" id="editHomeAddress" name="home_address" class="form-control" placeholder="Enter home address" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editHomeAddress2" class="form-label">Home Address 2 <span class="text-danger">*</span></label>
-                                <input type="text" id="editHomeAddress2" name="home_address2" class="form-control" placeholder="Enter home address 2" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editDOB" class="form-label">Date of Birth <span class="text-danger">*</span></label>
-                                <input type="date" id="editDOB" name="dateofbirth" class="form-control" required onchange="showage(this.value, 'editAge')">
-                                <input type="hidden" id="editAgeInput" name="age">
-                                <span id="editAge" class="text-muted"></span>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editPlaceofbirth" class="form-label">Place of Birth <span class="text-danger">*</span></label>
-                                <input type="text" id="editPlaceofbirth" name="placeofbirth" class="form-control" placeholder="Enter place of birth" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editNationality" class="form-label">Nationality <span class="text-danger">*</span></label>
-                                <input type="text" id="editNationality" name="nationality" class="form-control" placeholder="Enter nationality" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editState" class="form-label">State of Origin <span class="text-danger">*</span></label>
-                                <select id="editState" name="state" class="form-control" required>
-                                    <option value="">Select State</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editLocal" class="form-label">Local Government <span class="text-danger">*</span></label>
-                                <select id="editLocal" name="local" class="form-control" required>
-                                    <option value="">Select Local Government</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editReligion" class="form-label">Religion <span class="text-danger">*</span></label>
-                                <select id="editReligion" name="religion" class="form-control" required>
-                                    <option value="">Select Religion</option>
-                                    <option value="Christianity">Christianity</option>
-                                    <option value="Islam">Islam</option>
-                                    <option value="Others">Others</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editNinNumber" class="form-label">NIN Number</label>
-                                <input type="text" id="editNinNumber" name="nin_number" class="form-control" placeholder="Enter NIN number (11 digits)">
-                            </div>
-                            <div class="mb-3">
-                                <label for="editBloodGroup" class="form-label">Blood Group <span class="text-danger">*</span></label>
-                                <select id="editBloodGroup" name="blood_group" class="form-control" required>
-                                    <option value="">Select Blood Group</option>
-                                    <option value="A+">A+</option>
-                                    <option value="A-">A-</option>
-                                    <option value="B+">B+</option>
-                                    <option value="B-">B-</option>
-                                    <option value="AB+">AB+</option>
-                                    <option value="AB-">AB-</option>
-                                    <option value="O+">O+</option>
-                                    <option value="O-">O-</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editMotherTongue" class="form-label">Mother Tongue <span class="text-danger">*</span></label>
-                                <input type="text" id="editMotherTongue" name="mother_tongue" class="form-control" placeholder="Enter mother tongue" required>
-                            </div>
-
-                            <!-- Section C: Parent's Details/Guardian's Details -->
-                            <h6 class="mb-3 mt-4">Section C: Parent's Details/Guardian's Details</h6>
-                            <div class="mb-3">
-                                <label for="editFatherTitle" class="form-label">Father's Title</label>
-                                <select id="editFatherTitle" name="father_title" class="form-control">
-                                    <option value="">Select Title</option>
-                                    <option value="Mr">Mr</option>
-                                    <option value="Dr">Dr</option>
-                                    <option value="Prof">Prof</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editFather" class="form-label">Father's Name</label>
-                                <input type="text" id="editFather" name="father" class="form-control" placeholder="Enter father's name">
-                            </div>
-                            <div class="mb-3">
-                                <label for="editFatherPhone" class="form-label">Father's Phone</label>
-                                <input type="text" id="editFatherPhone" name="father_phone" class="form-control" placeholder="Enter father's phone">
-                            </div>
-                            <div class="mb-3">
-                                <label for="editFatherOccupation" class="form-label">Father's Occupation</label>
-                                <input type="text" id="editFatherOccupation" name="father_occupation" class="form-control" placeholder="Enter father's occupation">
-                            </div>
-                            <div class="mb-3">
-                                <label for="editMotherTitle" class="form-label">Mother's Title</label>
-                                <select id="editMotherTitle" name="mother_title" class="form-control">
-                                    <option value="">Select Title</option>
-                                    <option value="Mrs">Mrs</option>
-                                    <option value="Dr">Dr</option>
-                                    <option value="Prof">Prof</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editMother" class="form-label">Mother's Name</label>
-                                <input type="text" id="editMother" name="mother" class="form-control" placeholder="Enter mother's name">
-                            </div>
-                            <div class="mb-3">
-                                <label for="editMotherPhone" class="form-label">Mother's Phone</label>
-                                <input type="text" id="editMotherPhone" name="mother_phone" class="form-control" placeholder="Enter mother's phone">
-                            </div>
-                            <div class="mb-3">
-                                <label for="editParentAddress" class="form-label">Parent's Address</label>
-                                <input type="text" id="editParentAddress" name="parent_address" class="form-control" placeholder="Enter parent's address">
-                            </div>
-                            <div class="mb-3">
-                                <label for="editOfficeAddress" class="form-label">Office Address</label>
-                                <input type="text" id="editOfficeAddress" name="office_address" class="form-control" placeholder="Enter office address">
-                            </div>
-
-                            <!-- Section D: Previous School’s Details -->
-                            <h6 class="mb-3 mt Commodore Sans Serif-4">Section D: Previous School’s Details</h6>
-                            <div class="mb-3">
-                                <label for="editReasonForLeaving" class="form-label">Reason for Leaving Previous School <span class="text-danger">*</span></label>
-                                <input type="text" id="editReasonForLeaving" name="reason_for_leaving" class="form-control" placeholder="Enter reason for leaving" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editLastSchool" class="form-label">Last School Attended <span class="text-danger">*</span></label>
-                                <input type="text" id="editLastSchool" name="last_school" class="form-control" placeholder="Enter last school attended" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editLastClass" class="form-label">Last Class Attended <span class="text-danger">*</span></label>
-                                <input type="text" id="editLastClass" name="last_class" class="form-control" placeholder="Enter last class attended" required>
-                            </div>
-                            <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary" id="edit-btn">Update Student</button>
-                            <button type="button" class="btn btn-success" onclick="printStudentDetails('edit')">Print PDF</button>
-                        </div>
-                    </form>
-                </div>
+<div id="editStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-edit me-2"></i>Edit Student
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <form class="tablelist-form" id="editStudentForm" enctype="multipart/form-data" autocomplete="off" method="POST" action="{{ route('student.update', ':id') }}">
+                @csrf
+                @method('PATCH')
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editStudentId" name="id">
+                    
+                    <!-- Progress Steps -->
+                    <div class="progress-steps mb-4">
+                        <div class="step active">1</div>
+                        <div class="step">2</div>
+                        <div class="step">3</div>
+                        <div class="step">4</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <!-- Section A: Academic Details -->
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>Academic Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Admission Number Mode <span class="text-danger">*</span></label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="admissionMode" id="editAdmissionAuto" value="auto" required onchange="toggleAdmissionInput('edit')">
+                                                <label class="form-check-label" for="editAdmissionAuto">
+                                                    <i class="fas fa-magic me-1"></i>Auto Generate
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="admissionMode" id="editAdmissionManual" value="manual" required onchange="toggleAdmissionInput('edit')">
+                                                <label class="form-check-label" for="editAdmissionManual">
+                                                    <i class="fas fa-edit me-1"></i>Manual Entry
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editAdmissionNo" class="form-label">Admission Number <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <select class="form-control" id="editAdmissionYear" name="admissionYear" required>
+                                                @for ($year = date('Y'); $year >= date('Y') - 5; $year--)
+                                                    <option value="{{ $year }}" {{ $year == date('Y') ? 'selected' : '' }}>{{ $year }}</option>
+                                                @endfor
+                                            </select>
+                                            <span class="input-group-text bg-primary text-white">CSSK/STD/</span>
+                                            <input type="text" id="editAdmissionNo" name="admissionNo" class="form-control" placeholder="001" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editAdmissionDate" class="form-label">Admission Date <span class="text-danger">*</span></label>
+                                        <input type="date" id="editAdmissionDate" name="admissionDate" class="form-control" required max="{{ date('Y-m-d') }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editSchoolclassid" class="form-label">Class <span class="text-danger">*</span></label>
+                                        <select id="editSchoolclassid" name="schoolclassid" class="form-control" required>
+                                            <option value="">Select Class</option>
+                                            @foreach ($schoolclasses as $class)
+                                                <option value="{{ $class->id }}">{{ $class->schoolclass }} - {{ $class->arm }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editTermid" class="form-label">Term <span class="text-danger">*</span></label>
+                                                <select id="editTermid" name="termid" class="form-control" required>
+                                                    <option value="">Select Term</option>
+                                                    @foreach ($schoolterms as $term)
+                                                        <option value="{{ $term->id }}">{{ $term->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editSessionid" class="form-label">Session <span class="text-danger">*</span></label>
+                                                <select id="editSessionid" name="sessionid" class="form-control" required>
+                                                    <option value="">Select Session</option>
+                                                    @foreach ($schoolsessions as $session)
+                                                        <option value="{{ $session->id }}">{{ $session->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Student Status <span class="text-danger">*</span></label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="statusId" id="editStatusOld" value="1" required>
+                                                <label class="form-check-label" for="editStatusOld">
+                                                    <i class="fas fa-user-clock me-1"></i>Old Student
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="statusId" id="editStatusNew" value="2" required>
+                                                <label class="form-check-label" for="editStatusNew">
+                                                    <i class="fas fa-user-plus me-1"></i>New Student
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Student Activity Status <span class="text-danger">*</span></label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="student_status" id="editStatusActive" value="Active" required>
+                                                <label class="form-check-label" for="editStatusActive">
+                                                    <i class="fas fa-check-circle text-success me-1"></i>Active
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="student_status" id="editStatusInactive" value="Inactive" required>
+                                                <label class="form-check-label" for="editStatusInactive">
+                                                    <i class="fas fa-pause-circle text-warning me-1"></i>Inactive
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editStudentCategory" class="form-label">Student Category <span class="text-danger">*</span></label>
+                                        <select id="editStudentCategory" name="student_category" class="form-control" required>
+                                            <option value="">Select Category</option>
+                                            <option value="Day">Day Student</option>
+                                            <option value="Boarding">Boarding Student</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <!-- Section B: Personal Details -->
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Personal Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3 text-center">
+                                        <div class="upload-area border border-2 border-dashed border-primary rounded p-3">
+                                            <img id="editStudentAvatar" src="{{ asset('theme/layouts/assets/media/avatars/blank.png') }}" alt="Avatar Preview" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #667eea; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+                                            <div>
+                                                <label for="editAvatar" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-camera me-1"></i>Choose Photo
+                                                </label>
+                                                <input type="file" id="editAvatar" name="avatar" class="d-none" accept=".png,.jpg,.jpeg" onchange="previewImage(this, 'editStudentAvatar')">
+                                                <div class="form-text mt-2">Max 2MB (PNG, JPG, JPEG)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="editTitle" class="form-label">Title</label>
+                                                <select id="editTitle" name="title" class="form-control">
+                                                    <option value="">Select</option>
+                                                    <option value="Master">Master</option>
+                                                    <option value="Miss">Miss</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="editFirstname" class="form-label">First Name <span class="text-danger">*</span></label>
+                                                <input type="text" id="editFirstname" name="firstname" class="form-control" placeholder="First name" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="editLastname" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                                <input type="text" id="editLastname" name="lastname" class="form-control" placeholder="Last name" required>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editOthername" class="form-label">Other Names</label>
+                                        <input type="text" id="editOthername" name="othername" class="form-control" placeholder="Middle name(s)">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Gender <span class="text-danger">*</span></label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="gender" id="editGenderMale" value="Male" required>
+                                                <label class="form-check-label" for="editGenderMale">
+                                                    <i class="fas fa-male text-primary me-1"></i>Male
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="gender" id="editGenderFemale" value="Female" required>
+                                                <label class="form-check-label" for="editGenderFemale">
+                                                    <i class="fas fa-female text-danger me-1"></i>Female
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editDOB" class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                                                <input type="date" id="editDOB" name="dateofbirth" class="form-control" required onchange="calculateAge(this.value, 'editAgeInput')">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Age <span class="text-danger">*</span></label>
+                                                <input type="number" id="editAgeInput" name="age" class="form-control" readonly required>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editPhoneNumber" class="form-label">Phone Number</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-primary text-white">
+                                                <i class="fas fa-phone"></i>
+                                            </span>
+                                            <input type="text" id="editPhoneNumber" name="phone_number" class="form-control" placeholder="+234 xxx xxx xxxx">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editPlaceofbirth" class="form-label">Place of Birth</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-primary text-white">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                            </span>
+                                            <input type="text" id="editPlaceofbirth" name="placeofbirth" class="form-control" placeholder="Place of birth">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editEmail" class="form-label">Email</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-primary text-white">
+                                                <i class="fas fa-envelope"></i>
+                                            </span>
+                                            <input type="email" id="editEmail" name="email" class="form-control" placeholder="student@example.com">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editPresentAddress" class="form-label">Present Address <span class="text-danger">*</span></label>
+                                        <textarea id="editPresentAddress" name="present_address" class="form-control" rows="2" placeholder="Enter current address" required></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editPermanentAddress" class="form-label">Permanent Address <span class="text-danger">*</span></label>
+                                        <textarea id="editPermanentAddress" name="permanent_address" class="form-control" rows="2" placeholder="Enter permanent address" required></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <!-- Section C: Additional Information -->
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Additional Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-10">
+                                            <div class="mb-3">
+                                                <label for="editNationality" class="form-label">Nationality</label>
+                                                <input type="text" id="editNationality" name="nationality" class="form-control" placeholder="Nationality" required>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editState" class="form-label">State of Origin <span class="text-danger">*</span></label>
+                                                <select id="editState" name="state" class="form-control" required>
+                                                    <option value="">Select State</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editLocal" class="form-label">Local Government <span class="text-danger">*</span></label>
+                                                <select id="editLocal" name="local" class="form-control" required>
+                                                    <option value="">Select LGA</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editCity" class="form-label">City</label>
+                                                <input type="text" id="editCity" name="city" class="form-control" placeholder="Enter city">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editReligion" class="form-label">Religion <span class="text-danger">*</span></label>
+                                                <select id="editReligion" name="religion" class="form-control" required>
+                                                    <option value="">Select Religion</option>
+                                                    <option value="Christianity">Christianity</option>
+                                                    <option value="Islam">Islam</option>
+                                                    <option value="Others">Others</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editBloodGroup" class="form-label">Blood Group</label>
+                                                <select id="editBloodGroup" name="blood_group" class="form-control">
+                                                    <option value="">Select Blood Group</option>
+                                                    <option value="A+">A+</option>
+                                                    <option value="A-">A-</option>
+                                                    <option value="B+">B+</option>
+                                                    <option value="B-">B-</option>
+                                                    <option value="AB+">AB+</option>
+                                                    <option value="AB-">AB-</option>
+                                                    <option value="O+">O+</option>
+                                                    <option value="O-">O-</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editMotherTongue" class="form-label">Mother Tongue</label>
+                                                <input type="text" id="editMotherTongue" name="mother_tongue" class="form-control" placeholder="Native language">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editNinNumber" class="form-label">NIN Number</label>
+                                                <input type="text" id="editNinNumber" name="nin_number" class="form-control" placeholder="11-digit NIN" maxlength="11">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editSportHouse" class="form-label">Sport House</label>
+                                                <input type="text" id="editSportHouse" name="sport_house" class="form-control" placeholder="House name">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section D: Parent/Guardian Details -->
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="fas fa-users me-2"></i>Parent/Guardian Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="editFatherName" class="form-label">Father's Name</label>
+                                        <input type="text" id="editFatherName" name="father_name" class="form-control" placeholder="Father's full name">
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editFatherPhone" class="form-label">Father's Phone</label>
+                                                <input type="text" id="editFatherPhone" name="father_phone" class="form-control" placeholder="+234 xxx xxx xxxx">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="editFatherOccupation" class="form-label">Father's Occupation</label>
+                                                <input type="text" id="editFatherOccupation" name="father_occupation" class="form-control" placeholder="Occupation">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editFatherCity" class="form-label">Father's City</label>
+                                        <input type="text" id="editFatherCity" name="father_city" class="form-control" placeholder="City of residence">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editMotherName" class="form-label">Mother's Name</label>
+                                        <input type="text" id="editMotherName" name="mother_name" class="form-control" placeholder="Mother's full name">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editMotherPhone" class="form-label">Mother's Phone</label>
+                                        <input type="text" id="editMotherPhone" name="mother_phone" class="form-control" placeholder="+234 xxx xxx xxxx">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editParentEmail" class="form-label">Parent's Email</label>
+                                        <input type="email" id="editParentEmail" name="parent_email" class="form-control" placeholder="parent@example.com">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editParentAddress" class="form-label">Parent's Address</label>
+                                        <textarea id="editParentAddress" name="parent_address" class="form-control" rows="2" placeholder="Parent's address"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section E: Previous School Details -->
+                            <div class="card">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-school me-2"></i>Previous School Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="editLastSchool" class="form-label">Last School Attended</label>
+                                        <input type="text" id="editLastSchool" name="last_school" class="form-control" placeholder="Previous school name">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editLastClass" class="form-label">Last Class Attended</label>
+                                        <input type="text" id="editLastClass" name="last_class" class="form-control" placeholder="e.g., JSS 2">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="editReasonForLeaving" class="form-label">Reason for Leaving</label>
+                                        <textarea id="editReasonForLeaving" name="reason_for_leaving" class="form-control" rows="2" placeholder="Reason for leaving previous school"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
+                </div>
+                
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="edit-btn">
+                        <i class="fas fa-save me-1"></i>Update Student
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="printStudentDetails('edit')">
+                        <i class="fas fa-print me-1"></i>Print PDF
+                    </button>
+                </div>
+            </form>
         </div>
+    </div>
+</div>
+
+
     </div>
 </div>
 
@@ -1519,8 +1714,9 @@ document.addEventListener('DOMContentLoaded', function () {
     let studentList;
     let allStudents = [];
     const itemsPerPage = 10;
-    const defaultAvatar = '/storage/images/student_avatars/unnamed.jpg';
+    const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
 
+    // Fetch students from the server
     function fetchStudents() {
         if (!ensureAxios()) return;
         console.log('Fetching students from /students/data');
@@ -1568,6 +1764,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    // Render students in the table
     function renderStudents(students) {
         console.log('Rendering students:', students);
         const tbody = document.getElementById('studentTableBody');
@@ -1593,12 +1790,11 @@ document.addEventListener('DOMContentLoaded', function () {
         students.forEach(student => {
             console.log('Rendering student:', student);
             const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
-            // Force action buttons for testing (remove permissions check temporarily)
             const actionButtons = [
                 `<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="ph-pencil"></i></a></li>`,
                 `<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}"><i class="ph-trash"></i></a></li>`
             ];
-            console.log('Action buttons for student:', actionButtons); // Debug
+            console.log('Action buttons for student:', actionButtons);
             const row = document.createElement('tr');
             row.setAttribute('data-id', student.id);
             row.innerHTML = `
@@ -1634,11 +1830,12 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             tbody.appendChild(row);
         });
-        console.log('Table rows after rendering:', tbody.innerHTML); // Debug
+        console.log('Table rows after rendering:', tbody.innerHTML);
         initializeList();
         initializeCheckboxes();
     }
 
+    // Initialize List.js for pagination and sorting
     function initializeList() {
         if (typeof List === 'undefined') {
             console.error('List.js is not loaded');
@@ -1692,6 +1889,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // Update pagination controls
     function updatePagination() {
         if (!studentList) return;
         const totalItems = studentList.items.length;
@@ -1716,6 +1914,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('nextPage').onclick = currentPage < totalPages ? () => studentList.show(currentPage * itemsPerPage + 1, itemsPerPage) : null;
     }
 
+    // Filter students based on search and dropdowns
     function filterData() {
         if (!studentList) return;
         const search = document.querySelector('#search-input')?.value.toLowerCase() || '';
@@ -1732,7 +1931,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const classValue = item.elm.querySelector('.class')?.dataset.class || '';
             const statusValue = item.elm.querySelector('.status')?.dataset.status || '';
             const genderValue = item.elm.querySelector('.gender')?.dataset.gender || '';
-            const studentStatusValue = item.elm.querySelector('.status')?.dataset.student_status || '';
+            const studentStatusValue = item.values().student_status || '';
 
             const matchesSearch = name.includes(search) || admissionNo.includes(search);
             const matchesClass = classId === 'all' || classValue === classId;
@@ -1744,6 +1943,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Delete multiple students
     function deleteMultiple() {
         const ids = Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
             .map(checkbox => checkbox.closest('tr').querySelector('.id').dataset.id);
@@ -1797,6 +1997,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Initialize checkboxes for multiple selection
     function initializeCheckboxes() {
         const checkAll = document.getElementById('checkAll');
         if (!checkAll) return;
@@ -1818,6 +2019,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Populate states and LGAs
     function populateStates(stateSelectId, lgaSelectId) {
         const stateSelect = document.getElementById(stateSelectId);
         const lgaSelect = document.getElementById(lgaSelectId);
@@ -1860,6 +2062,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    // Populate LGAs based on selected state
     function populateLGAs(state, lgaSelectId) {
         const lgaSelect = document.getElementById(lgaSelectId);
         if (!lgaSelect) return;
@@ -1886,17 +2089,111 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    // Age calculation function
+    window.showage = function (date, displayId = 'addAge') {
+        if (date) {
+            const dateString = date.includes('T') ? date.split('T')[0] : date;
+            const dob = new Date(dateString);
+            const today = new Date();
+            let age = today.getFullYear() - dob.getFullYear();
+            const monthDiff = today.getMonth() - dob.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                age--;
+            }
+            const ageInputId = displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput';
+            const ageInput = document.getElementById(ageInputId);
+            if (ageInput) {
+                ageInput.value = age;
+            } else {
+                console.warn(`Age input element with ID '${ageInputId}' not found`);
+            }
+        } else {
+            const ageInputId = displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput';
+            const ageInput = document.getElementById(ageInputId);
+            if (ageInput) {
+                ageInput.value = '';
+            } else {
+                console.warn(`Age input element with ID '${ageInputId}' not found`);
+            }
+        }
+    };
+
+    // Toggle admission input based on mode
+    window.toggleAdmissionInput = function (prefix = '') {
+        const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`).value;
+        const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+        const admissionYearSelect = document.getElementById(`${prefix}admissionYear`);
+
+        if (admissionMode === 'auto') {
+            admissionNoInput.readOnly = true;
+            fetch('/students/last-admission-number', {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    admissionNoInput.value = data.admissionNo;
+                } else {
+                    alert('Error generating admission number: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to generate admission number');
+            });
+        } else {
+            admissionNoInput.readOnly = false;
+            admissionNoInput.value = '';
+        }
+    };
+
+    // Print student details
+    window.printStudentDetails = function (prefix = '') {
+        const form = document.getElementById(`${prefix}StudentForm`);
+        const formData = new FormData(form);
+        fetch('/generate-student-pdf', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'student_details.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Failed to generate PDF');
+        });
+    };
+
+    // Initialize student list and event listeners
     function initializeStudentList() {
+        // Populate states and LGAs
         populateStates('addState', 'addLocal');
         populateStates('editState', 'editLocal');
         fetchStudents();
 
+        // Filter event listeners
         document.querySelector('#search-input')?.addEventListener('input', filterData);
         document.getElementById('schoolclass-filter')?.addEventListener('change', filterData);
         document.getElementById('status-filter')?.addEventListener('change', filterData);
         document.getElementById('gender-filter')?.addEventListener('change', filterData);
         document.getElementById('student-status-filter')?.addEventListener('change', filterData);
 
+        // Avatar upload for Add Student modal
         document.getElementById('avatar')?.addEventListener('change', function(event) {
             const file = event.target.files[0];
             const preview = document.getElementById('addStudentAvatar');
@@ -1910,7 +2207,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         buttonsStyling: false
                     });
                     event.target.value = '';
-                    preview.style.display = 'none';
+                    preview.src = defaultAvatar;
                     return;
                 }
                 const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
@@ -1923,7 +2220,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         buttonsStyling: false
                     });
                     event.target.value = '';
-                    preview.style.display = 'none';
+                    preview.src = defaultAvatar;
                     return;
                 }
                 const reader = new FileReader();
@@ -1934,10 +2231,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 reader.readAsDataURL(file);
             } else {
                 preview.src = defaultAvatar;
-                preview.style.display = 'none';
+                preview.style.display = 'block';
             }
         });
 
+        // Avatar upload for Edit Student modal
         document.getElementById('editAvatar')?.addEventListener('change', function(event) {
             const file = event.target.files[0];
             const preview = document.getElementById('editStudentAvatar');
@@ -1977,6 +2275,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        // Table row click events (Edit/Delete)
         document.getElementById('studentTableBody')?.addEventListener('click', function(e) {
             if (e.target.closest('.edit-item-btn')) {
                 const button = e.target.closest('.edit-item-btn');
@@ -1995,13 +2294,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         { id: 'editStudentId', value: student.id },
                         { id: 'editAdmissionNo', value: student.admissionNo },
                         { id: 'editAdmissionYear', value: student.admissionYear },
-                        { id: 'editTittle', value: student.title || '' },
+                        { id: 'editTitle', value: student.title || '' },
                         { id: 'editFirstname', value: student.firstname },
                         { id: 'editLastname', value: student.lastname },
                         { id: 'editOthername', value: student.othername || '' },
-                        { id: 'editHomeAddress', value: student.present_address },
-                        { id: 'editHomeAddress2', value: student.permanent_address },
-                        { id: 'editDOB', value: student.dateofbirth },
+                        { id: 'editPresentAddress', value: student.present_address || '' },
+                        { id: 'editPermanentAddress', value: student.permanent_address || '' },
+                        { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
                         { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
                         { id: 'editNationality', value: student.nationality || '' },
                         { id: 'editReligion', value: student.religion || '' },
@@ -2014,15 +2313,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         { id: 'editNinNumber', value: student.nin_number || '' },
                         { id: 'editBloodGroup', value: student.blood_group || '' },
                         { id: 'editMotherTongue', value: student.mother_tongue || '' },
-                        { id: 'editFatherTitle', value: student.father_title || '' },
-                        { id: 'editFather', value: student.father_name || '' },
+                        { id: 'editFatherName', value: student.father_name || '' },
                         { id: 'editFatherPhone', value: student.father_phone || '' },
                         { id: 'editFatherOccupation', value: student.father_occupation || '' },
-                        { id: 'editMotherTitle', value: student.mother_title || '' },
-                        { id: 'editMother', value: student.mother_name || '' },
+                        { id: 'editMotherName', value: student.mother_name || '' },
                         { id: 'editMotherPhone', value: student.mother_phone || '' },
                         { id: 'editParentAddress', value: student.parent_address || '' },
-                        { id: 'editOfficeAddress', value: student.office_address || '' },
                         { id: 'editStudentCategory', value: student.student_category || '' },
                         { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
                     ];
@@ -2055,6 +2351,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (avatarElement) {
                         avatarElement.src = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
                         avatarElement.setAttribute('data-original-src', student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar);
+                    } else {
+                        console.warn('Avatar element with ID "editStudentAvatar" not found');
                     }
 
                     const stateSelect = document.getElementById('editState');
@@ -2149,6 +2447,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        // Add Student form submission
         document.getElementById('addStudentForm')?.addEventListener('submit', function (e) {
             e.preventDefault();
             if (!ensureAxios()) return;
@@ -2198,6 +2497,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
+        // Edit Student form submission
         document.getElementById('editStudentForm')?.addEventListener('submit', function (e) {
             e.preventDefault();
             if (!ensureAxios()) return;
@@ -2246,6 +2546,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
+        // Image view modal
         document.getElementById('imageViewModal')?.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const imageSrc = button.getAttribute('data-image');
