@@ -403,9 +403,7 @@ use Spatie\Permission\Models\Role;
             </div>
         </div>
 
-        <!-- Add Student Modal -->
-    
-<div id="addStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div id="addStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
@@ -418,7 +416,6 @@ use Spatie\Permission\Models\Role;
             <form class="tablelist-form" id="addStudentForm" enctype="multipart/form-data" autocomplete="off" method="POST" action="{{ route('student.store') }}">
                 @csrf
                 <div class="modal-body p-4">
-                    
                     <!-- Progress Steps -->
                     <div class="progress-steps mb-4">
                         <div class="step active">1</div>
@@ -456,16 +453,16 @@ use Spatie\Permission\Models\Role;
                                     <div class="mb-3">
                                         <label for="admissionNo" class="form-label">Admission Number <span class="text-danger">*</span></label>
                                         <div class="input-group">
-                                            <select class="form-control" id="admissionYear" name="admissionYear" required>
+                                            <select class="form-control" id="admissionYear" name="admissionYear" required onchange="updateAdmissionNumber()">
                                                 @for ($year = date('Y'); $year >= date('Y') - 5; $year--)
                                                     <option value="{{ $year }}" {{ $year == date('Y') ? 'selected' : '' }}>{{ $year }}</option>
                                                 @endfor
                                             </select>
-                                            <span class="input-group-text bg-primary text-white">CSSK/STD/</span>
-                                            <input type="text" id="admissionNo" name="admissionNo" class="form-control" placeholder="001" required>
+                                            <input type="text" id="admissionNo" name="admissionNo" class="form-control" placeholder="CSSK/STD/YYYY/001" required>
                                         </div>
                                     </div>
 
+                                    <!-- Rest of the Academic Details section remains unchanged -->
                                     <div class="mb-3">
                                         <label for="admissionDate" class="form-label">Admission Date <span class="text-danger">*</span></label>
                                         <input type="date" id="admissionDate" name="admissionDate" class="form-control" required max="{{ date('Y-m-d') }}">
@@ -554,6 +551,7 @@ use Spatie\Permission\Models\Role;
                             </div>
                         </div>
 
+                        <!-- Personal Details and other sections remain unchanged -->
                         <div class="col-md-6">
                             <!-- Section B: Student's Personal Details -->
                             <div class="card">
@@ -657,9 +655,6 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                     </div>
 
-                                    
-
-
                                     <div class="mb-3">
                                         <label for="email" class="form-label">Email</label>
                                         <div class="input-group">
@@ -684,6 +679,7 @@ use Spatie\Permission\Models\Role;
                         </div>
                     </div>
 
+                    <!-- Additional Information, Parent/Guardian Details, and Previous School Details remain unchanged -->
                     <div class="row">
                         <div class="col-md-6">
                             <!-- Section C: Additional Details -->
@@ -696,16 +692,14 @@ use Spatie\Permission\Models\Role;
                                         <div class="col-md-10">
                                             <div class="mb-3">
                                                 <label for="nationality" class="form-label">Nationality</label>
-                                                <input type="text" id="nataionality" name="nationality" class="form-control" placeholder="Nationality" required>
+                                                <input type="text" id="nationality" name="nationality" class="form-control" placeholder="Nationality" required>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="mb-3">
-                                                <label for="state" class="form-label">State of Origin <span class="text-danger">*</span></label>
+                                                <label for="addState" class="form-label">State of Origin <span class="text-danger">*</span></label>
                                                 <select id="addState" name="state" class="form-control" required>
                                                     <option value="">Select State</option>
                                                 </select>
@@ -713,7 +707,7 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                         <div class="col-md-6">
                                             <div class="mb-3">
-                                                <label for="local" class="form-label">Local Government <span class="text-danger">*</span></label>
+                                                <label for="addLocal" class="form-label">Local Government <span class="text-danger">*</span></label>
                                                 <select id="addLocal" name="local" class="form-control" required>
                                                     <option value="">Select LGA</option>
                                                 </select>
@@ -865,7 +859,7 @@ use Spatie\Permission\Models\Role;
 
                     <div class="alert alert-danger d-none" id="alert-error-msg"></div>
                 </div>
-                
+
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i>Cancel
@@ -882,172 +876,7 @@ use Spatie\Permission\Models\Role;
     </div>
 </div>
 
-<!-- CSS Styles -->
-<style>
-    .modal-xl {
-        max-width: 90%;
-    }
-    .form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
-    .form-check-input:checked {
-        background-color: #667eea;
-        border-color: #667eea;
-    }
-    .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-    }
-    .btn-primary:hover {
-        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    .upload-area:hover {
-        background-color: #f8f9ff;
-        border-color: #5a67d8 !important;
-    }
-    .input-group-text {
-        border-color: #667eea;
-    }
-    .modal-body {
-        max-height: 70vh;
-        overflow-y: auto;
-    }
-    .progress-steps {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 30px;
-        position: relative;
-    }
-    .progress-steps::before {
-        content: '';
-        position: absolute;
-        top: 12px;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background-color: #e9ecef;
-        z-index: -1;
-    }
-    .step {
-        background-color: #e9ecef;
-        color: #6c757d;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        font-weight: bold;
-        position: relative;
-        background-color: white;
-        border: 2px solid #e9ecef;
-    }
-    .step.active {
-        background-color: #667eea;
-        color: white;
-        border-color: #667eea;
-    }
-    .step.completed {
-        background-color: #28a745;
-        color: white;
-        border-color: #28a745;
-    }
-    .card {
-        border: none;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
-</style>
-
-<!-- JavaScript Functions -->
-<script>
-    // Image preview function
-    function previewImage(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('addStudentAvatar').src = e.target.result;
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
-    // Age calculation function
-    function calculateAge(dateOfBirth) {
-        const today = new Date();
-        const birthDate = new Date(dateOfBirth);
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-        
-        document.getElementById('addAgeInput').value = age;
-    }
-
-    // Toggle admission input based on mode
-    function toggleAdmissionInput() {
-        const autoMode = document.getElementById('admissionAuto').checked;
-        const admissionNoInput = document.getElementById('admissionNo');
-        
-        if (autoMode) {
-            admissionNoInput.disabled = true;
-            admissionNoInput.value = 'AUTO';
-            admissionNoInput.placeholder = 'Will be auto-generated';
-        } else {
-            admissionNoInput.disabled = false;
-            admissionNoInput.value = '';
-            admissionNoInput.placeholder = 'Enter number (e.g., 001)';
-        }
-    }
-
-    // Load states and LGAs
-    document.addEventListener('DOMContentLoaded', function() {
-        fetch('/states_lgas.json')
-            .then(response => response.json())
-            .then(data => {
-                const stateSelect = document.getElementById('addState');
-                const localSelect = document.getElementById('addLocal');
-
-                data.forEach(state => {
-                    const option = document.createElement('option');
-                    option.value = state.state;
-                    option.textContent = state.state;
-                    stateSelect.appendChild(option);
-                });
-
-                stateSelect.addEventListener('change', function() {
-                    localSelect.innerHTML = '<option value="">Select LGA</option>';
-                    const selectedState = data.find(state => state.state === this.value);
-                    if (selectedState) {
-                        selectedState.lgas.forEach(lga => {
-                            const option = document.createElement('option');
-                            option.value = lga;
-                            option.textContent = lga;
-                            localSelect.appendChild(option);
-                        });
-                    }
-                });
-            })
-            .catch(error => {
-                console.error('Error loading states and LGAs:', error);
-            });
-    });
-
-    // Print student details function
-    function printStudentDetails() {
-        // Implementation for printing student details
-        alert('Print functionality would be implemented here');
-    }
-</script>
-
-       
-
+<!-- Edit Student Modal -->
 <div id="editStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
@@ -1100,13 +929,12 @@ use Spatie\Permission\Models\Role;
                                     <div class="mb-3">
                                         <label for="editAdmissionNo" class="form-label">Admission Number <span class="text-danger">*</span></label>
                                         <div class="input-group">
-                                            <select class="form-control" id="editAdmissionYear" name="admissionYear" required>
+                                            <select class="form-control" id="editAdmissionYear" name="admissionYear" required onchange="updateAdmissionNumber('edit')">
                                                 @for ($year = date('Y'); $year >= date('Y') - 5; $year--)
                                                     <option value="{{ $year }}" {{ $year == date('Y') ? 'selected' : '' }}>{{ $year }}</option>
                                                 @endfor
                                             </select>
-                                            <span class="input-group-text bg-primary text-white">CSSK/STD/</span>
-                                            <input type="text" id="editAdmissionNo" name="admissionNo" class="form-control" placeholder="001" required>
+                                            <input type="text" id="editAdmissionNo" name="admissionNo" class="form-control" placeholder="CSSK/STD/YYYY/001" required>
                                         </div>
                                     </div>
 
@@ -1198,6 +1026,7 @@ use Spatie\Permission\Models\Role;
                             </div>
                         </div>
 
+                        <!-- Personal Details and other sections remain unchanged -->
                         <div class="col-md-6">
                             <!-- Section B: Personal Details -->
                             <div class="card">
@@ -1518,11 +1347,302 @@ use Spatie\Permission\Models\Role;
     </div>
 </div>
 
+<!-- CSS Styles -->
+<style>
+    .modal-xl {
+        max-width: 90%;
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .upload-area:hover {
+        background-color: #f8f9ff;
+        border-color: #5a67d8 !important;
+    }
+    .input-group-text {
+        border-color: #667eea;
+    }
+    .modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    .progress-steps {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        position: relative;
+    }
+    .progress-steps::before {
+        content: '';
+        position: absolute;
+        top: 12px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #e9ecef;
+        z-index: -1;
+    }
+    .step {
+        background-color: #e9ecef;
+        color: #6c757d;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        position: relative;
+        background-color: white;
+        border: 2px solid #e9ecef;
+    }
+    .step.active {
+        background-color: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    .step.completed {
+        background-color: #28a745;
+        color: white;
+        border-color: #28a745;
+    }
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+</style>
+
+<!-- JavaScript Functions -->
+<script>
+    // Image preview function
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('addStudentAvatar').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Age calculation function
+    function calculateAge(dateOfBirth) {
+        const today = new Date();
+        const birthDate = new Date(dateOfBirth);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
+        document.getElementById('addAgeInput').value = age;
+    }
+
+    // Toggle admission input based on mode
+    function toggleAdmissionInput() {
+        const autoMode = document.getElementById('admissionAuto').checked;
+        const admissionNoInput = document.getElementById('admissionNo');
+        
+        if (autoMode) {
+            admissionNoInput.disabled = true;
+            admissionNoInput.value = 'AUTO';
+            admissionNoInput.placeholder = 'Will be auto-generated';
+        } else {
+            admissionNoInput.disabled = false;
+            admissionNoInput.value = '';
+            admissionNoInput.placeholder = 'Enter number (e.g., 001)';
+        }
+    }
+
+    // Load states and LGAs
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/states_lgas.json')
+            .then(response => response.json())
+            .then(data => {
+                const stateSelect = document.getElementById('addState');
+                const localSelect = document.getElementById('addLocal');
+
+                data.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state.state;
+                    option.textContent = state.state;
+                    stateSelect.appendChild(option);
+                });
+
+                stateSelect.addEventListener('change', function() {
+                    localSelect.innerHTML = '<option value="">Select LGA</option>';
+                    const selectedState = data.find(state => state.state === this.value);
+                    if (selectedState) {
+                        selectedState.lgas.forEach(lga => {
+                            const option = document.createElement('option');
+                            option.value = lga;
+                            option.textContent = lga;
+                            localSelect.appendChild(option);
+                        });
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading states and LGAs:', error);
+            });
+    });
+
+    // Print student details function
+    function printStudentDetails() {
+        // Implementation for printing student details
+        alert('Print functionality would be implemented here');
+    }
+</script>
+
+       
+
+
 
     </div>
 </div>
 
 <script>
+
+    // Initialize admission number on page load
+    updateAdmissionNumber();
+    updateAdmissionNumber('edit');
+
+    // Update admission number based on year selection
+    function updateAdmissionNumber(prefix = '') {
+        const yearSelect = document.getElementById(`${prefix}admissionYear`);
+        const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+        const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
+        
+        if (!yearSelect || !admissionNoInput) return;
+
+        const year = yearSelect.value;
+        const baseFormat = `CSSK/STD/${year}/`;
+        
+        if (admissionMode && admissionMode.value === 'auto') {
+            admissionNoInput.readOnly = true;
+            fetch('/students/last-admission-number', {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Assuming backend returns the numeric part (e.g., '002')
+                    const numericPart = parseInt(data.admissionNo || '0') + 1;
+                    const formattedNumber = numericPart.toString().padStart(3, '0');
+                    admissionNoInput.value = `${baseFormat}${formattedNumber}`;
+                } else {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: data.message || 'Failed to generate admission number',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Failed to generate admission number',
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                });
+            });
+        } else {
+            admissionNoInput.readOnly = false;
+            if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
+                admissionNoInput.value = `${baseFormat}001`;
+            } else if (!admissionNoInput.value.startsWith(baseFormat)) {
+                const numericPart = admissionNoInput.value.split('/').pop() || '001';
+                admissionNoInput.value = `${baseFormat}${numericPart.padStart(3, '0')}`;
+            }
+        }
+    }
+
+    // Toggle admission input based on mode
+    window.toggleAdmissionInput = function(prefix = '') {
+        const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
+        const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+        const yearSelect = document.getElementById(`${prefix}admissionYear`);
+        
+        if (!admissionMode || !admissionNoInput || !yearSelect) return;
+
+        const year = yearSelect.value;
+        const baseFormat = `CSSK/STD/${year}/`;
+
+        if (admissionMode.value === 'auto') {
+            admissionNoInput.readOnly = true;
+            fetch('/students/last-admission-number', {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const numericPart = parseInt(data.admissionNo || '0') + 1;
+                    const formattedNumber = numericPart.toString().padStart(3, '0');
+                    admissionNoInput.value = `${baseFormat}${formattedNumber}`;
+                } else {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: data.message || 'Failed to generate admission number',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Failed to generate admission number',
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                });
+            });
+        } else {
+            admissionNoInput.readOnly = false;
+            if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
+                admissionNoInput.value = `${baseFormat}001`;
+            } else if (!admissionNoInput.value.startsWith(baseFormat)) {
+                const numericPart = admissionNoInput.value.split('/').pop() || '001';
+                admissionNoInput.value = `${baseFormat}${numericPart.padStart(3, '0')}`;
+            }
+        }
+    };
+
+    // Add event listeners for year selection
+    document.getElementById('admissionYear')?.addEventListener('change', () => updateAdmissionNumber());
+    document.getElementById('editAdmissionYear')?.addEventListener('change', () => updateAdmissionNumber('edit'));
+
 document.addEventListener('DOMContentLoaded', function () {
     // Fetch states and LGAs
     fetch('/states_lgas.json')
