@@ -1247,9 +1247,14 @@ use Spatie\Permission\Models\Role;
                                             </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="editSportHouse" class="form-label">Sport House</label>
-                                                <input type="text" id="editSportHouse" name="sport_house" class="form-control" placeholder="House name">
+                                             <div class="mb-3">
+                                                <label for="sport_house" class="form-label">School House</label>
+                                                <select id="schoolclassid" name="schoolclassid" class="form-control" required>
+                                                    <option value="">Select School House</option>
+                                                    @foreach ($schoolhouses as $schoolhouse)
+                                                        <option value="{{ $schoolhouse->id }}">{{ $schoolhouse->house }}</option>
+                                                    @endforeach
+                                                </select>
                                             </div>
                                         </div>
                                     </div>
