@@ -403,7 +403,7 @@ use Spatie\Permission\Models\Role;
             </div>
         </div>
 
-            <div id="addStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+<div id="addStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
@@ -769,10 +769,16 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                         <div class="col-md-6">
                                             <div class="mb-3">
-                                                <label for="sport_house" class="form-label">Sport House</label>
-                                                <input type="text" id="sport_house" name="sport_house" class="form-control" placeholder="House name">
+                                                <label for="sport_house" class="form-label">School House</label>
+                                                <select id="schoolclassid" name="schoolclassid" class="form-control" required>
+                                                    <option value="">Select School House</option>
+                                                    @foreach ($schoolhouses as $schoolhouse)
+                                                        <option value="{{ $schoolhouse->id }}">{{ $schoolhouse->house }}</option>
+                                                    @endforeach
+                                                </select>
                                             </div>
                                         </div>
+                                        
                                     </div>
                                 </div>
                             </div>
@@ -1524,120 +1530,121 @@ use Spatie\Permission\Models\Role;
     updateAdmissionNumber();
     updateAdmissionNumber('edit');
 
-    // Update admission number based on year selection
-    function updateAdmissionNumber(prefix = '') {
-        const yearSelect = document.getElementById(`${prefix}admissionYear`);
-        const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
-        const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
-        
-        if (!yearSelect || !admissionNoInput) return;
+// Update admission number based on year selection
+function updateAdmissionNumber(prefix = '') {
+    const yearSelect = document.getElementById(`${prefix}admissionYear`);
+    const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+    const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
+    
+    if (!yearSelect || !admissionNoInput) return;
 
-        const year = yearSelect.value;
-        const baseFormat = `CSSK/STD/${year}/`;
-        
-        if (admissionMode && admissionMode.value === 'auto') {
-            admissionNoInput.readOnly = true;
-            fetch('/students/last-admission-number', {
-                method: 'GET',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Assuming backend returns the numeric part (e.g., '002')
-                    const numericPart = parseInt(data.admissionNo || '0') + 1;
-                    const formattedNumber = numericPart.toString().padStart(3, '0');
-                    admissionNoInput.value = `${baseFormat}${formattedNumber}`;
-                } else {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: data.message || 'Failed to generate admission number',
-                        icon: 'error',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
+    const year = yearSelect.value;
+    const baseFormat = `CSSK/STD/${year}/`;
+    
+    if (admissionMode && admissionMode.value === 'auto') {
+        admissionNoInput.readOnly = true;
+        fetch(`/students/last-admission-number?year=${year}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Backend returns the full admission number (e.g., CSSK/STD/2025/001)
+                admissionNoInput.value = data.admissionNo;
+            } else {
                 Swal.fire({
                     title: 'Error!',
-                    text: 'Failed to generate admission number',
+                    text: data.message || 'Failed to generate admission number',
                     icon: 'error',
                     customClass: { confirmButton: 'btn btn-primary' },
                     buttonsStyling: false
                 });
-            });
-        } else {
-            admissionNoInput.readOnly = false;
-            if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
-                admissionNoInput.value = `${baseFormat}001`;
-            } else if (!admissionNoInput.value.startsWith(baseFormat)) {
-                const numericPart = admissionNoInput.value.split('/').pop() || '001';
-                admissionNoInput.value = `${baseFormat}${numericPart.padStart(3, '0')}`;
+                admissionNoInput.value = `${baseFormat}001`; // Fallback
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to generate admission number',
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
+            admissionNoInput.value = `${baseFormat}001`; // Fallback
+        });
+    } else {
+        admissionNoInput.readOnly = false;
+        if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
+            admissionNoInput.value = `${baseFormat}001`;
+        } else if (!admissionNoInput.value.startsWith(baseFormat)) {
+            const numericPart = admissionNoInput.value.split('/').pop() || '001';
+            admissionNoInput.value = `${baseFormat}${numericPart.padStart(3, '0')}`;
         }
     }
+}
 
-    // Toggle admission input based on mode
-    window.toggleAdmissionInput = function(prefix = '') {
-        const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
-        const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
-        const yearSelect = document.getElementById(`${prefix}admissionYear`);
-        
-        if (!admissionMode || !admissionNoInput || !yearSelect) return;
+// Toggle admission input based on mode
+window.toggleAdmissionInput = function(prefix = '') {
+    const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
+    const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+    const yearSelect = document.getElementById(`${prefix}admissionYear`);
+    
+    if (!admissionMode || !admissionNoInput || !yearSelect) return;
 
-        const year = yearSelect.value;
-        const baseFormat = `CSSK/STD/${year}/`;
+    const year = yearSelect.value;
+    const baseFormat = `CSSK/STD/${year}/`;
 
-        if (admissionMode.value === 'auto') {
-            admissionNoInput.readOnly = true;
-            fetch('/students/last-admission-number', {
-                method: 'GET',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const numericPart = parseInt(data.admissionNo || '0') + 1;
-                    const formattedNumber = numericPart.toString().padStart(3, '0');
-                    admissionNoInput.value = `${baseFormat}${formattedNumber}`;
-                } else {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: data.message || 'Failed to generate admission number',
-                        icon: 'error',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
+    if (admissionMode.value === 'auto') {
+        admissionNoInput.readOnly = true;
+        fetch(`/students/last-admission-number?year=${year}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Backend returns the full admission number (e.g., CSSK/STD/2025/001)
+                admissionNoInput.value = data.admissionNo;
+            } else {
                 Swal.fire({
                     title: 'Error!',
-                    text: 'Failed to generate admission number',
+                    text: data.message || 'Failed to generate admission number',
                     icon: 'error',
                     customClass: { confirmButton: 'btn btn-primary' },
                     buttonsStyling: false
                 });
-            });
-        } else {
-            admissionNoInput.readOnly = false;
-            if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
-                admissionNoInput.value = `${baseFormat}001`;
-            } else if (!admissionNoInput.value.startsWith(baseFormat)) {
-                const numericPart = admissionNoInput.value.split('/').pop() || '001';
-                admissionNoInput.value = `${baseFormat}${numericPart.padStart(3, '0')}`;
+                admissionNoInput.value = `${baseFormat}001`; // Fallback
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to generate admission number',
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
+            admissionNoInput.value = `${baseFormat}001`; // Fallback
+        });
+    } else {
+        admissionNoInput.readOnly = false;
+        if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
+            admissionNoInput.value = `${baseFormat}001`;
+        } else if (!admissionNoInput.value.startsWith(baseFormat)) {
+            const numericPart = admissionNoInput.value.split('/').pop() || '001';
+            admissionNoInput.value = `${baseFormat}${numericPart.padStart(3, '0')}`;
         }
-    };
+    }
+};
 
     // Add event listeners for year selection
     document.getElementById('admissionYear')?.addEventListener('change', () => updateAdmissionNumber());

@@ -1187,34 +1187,44 @@ class StudentController extends Controller
         }
     }
 
-    public function getLastAdmissionNumber()
-    {
-        try {
-            $lastStudent = Student::orderBy('id', 'desc')->first();
-            $lastNumber = 0;
-    
-            if ($lastStudent && $lastStudent->admissionNo) {
-                $parts = explode('/', $lastStudent->admissionNo);
-                if (count($parts) === 3 && is_numeric($parts[2])) {
-                    $lastNumber = (int)$parts[2];
-                } else {
-                    Log::warning("Invalid admission number format: {$lastStudent->admissionNo}");
-                }
-            }
-    
-            $nextNumber = $lastNumber + 1;
-            $admissionNo = sprintf('CSSK/STD/2025/%04d', $nextNumber);
-    
-            return response()->json([
-                'success' => true,
-                'admissionNo' => $admissionNo
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error("Error generating admission number: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+    public function getLastAdmissionNumber(Request $request)
+{
+    try {
+        $year = $request->query('year', date('Y'));
+        if (!preg_match('/^\d{4}$/', $year)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate admission number'
-            ], 500);
+                'message' => 'Invalid year format'
+            ], 400);
         }
+
+        $lastStudent = Student::where('admissionNo', 'LIKE', "CSSK/STD/{$year}/%")
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $lastNumber = 0;
+        if ($lastStudent && $lastStudent->admissionNo) {
+            $parts = explode('/', $lastStudent->admissionNo);
+            if (count($parts) === 4 && $parts[0] === 'CSSK' && $parts[1] === 'STD' && $parts[2] === $year && is_numeric($parts[3])) {
+                $lastNumber = (int)$parts[3];
+            } else {
+                Log::warning("Invalid admission number format: {$lastStudent->admissionNo}");
+            }
+        }
+
+        $nextNumber = $lastNumber + 1;
+        $admissionNo = sprintf('CSSK/STD/%s/%03d', $year, $nextNumber);
+
+        return response()->json([
+            'success' => true,
+            'admissionNo' => $admissionNo
+        ], 200);
+    } catch (\Exception $e) {
+        Log::error("Error generating admission number: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to generate admission number'
+        ], 500);
     }
+}
 }
