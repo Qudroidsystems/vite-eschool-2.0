@@ -544,7 +544,7 @@ use Spatie\Permission\Models\Role;
                                         <select id="student_category" name="student_category" class="form-control" required>
                                             <option value="">Select Category</option>
                                             <option value="Day">Day Student</option>
-                                            <option value="Border">Boarding Student</option>
+                                            <option value="Boarding">Boarding Student</option>
                                         </select>
                                     </div>
                                 </div>
@@ -665,9 +665,9 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label for="present_address" class="form-label">Present Address <span class="text-danger">*</span></label>
-                                        <textarea id="present_address" name="present_address" class="form-control" rows="2" placeholder="Enter current address" required></textarea>
+                                   <div class="mb-3">
+                                        <label for="future_ambition" class="form-label">Future Ambition <span class="text-danger">*</span></label>
+                                        <textarea id="future_ambition" name="future_ambition" class="form-control" rows="2" placeholder="Enter future ambition" required></textarea>
                                     </div>
 
                                     <div class="mb-3">
