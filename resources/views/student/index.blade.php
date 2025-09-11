@@ -666,15 +666,14 @@ use Spatie\Permission\Models\Role;
                                     </div>
 
                                     <div class="mb-3">
-                                        <label for="future_ambition" class="form-label">Future Ambition <span class="text-danger">*</span></label>
-                                        <textarea id="future_ambition" name="future_ambition" class="form-control" rows="2" placeholder="Enter future ambition" required></textarea>
+                                        <label for="present_address" class="form-label">Present Address <span class="text-danger">*</span></label>
+                                        <textarea id="present_address" name="present_address" class="form-control" rows="2" placeholder="Enter current address" required></textarea>
                                     </div>
 
                                     <div class="mb-3">
                                         <label for="permanent_address" class="form-label">Permanent Address <span class="text-danger">*</span></label>
                                         <textarea id="permanent_address" name="permanent_address" class="form-control" rows="2" placeholder="Enter permanent address" required></textarea>
                                     </div>
-                                                                        
                                 </div>
                             </div>
                         </div>
@@ -708,7 +707,7 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                         <div class="col-md-6">
                                             <div class="mb-3">
-                                                <label for="addLocal" class="form-label">LGA of Origin<span class="text-danger">*</span></label>
+                                                <label for="addLocal" class="form-label">Local Government <span class="text-danger">*</span></label>
                                                 <select id="addLocal" name="local" class="form-control" required>
                                                     <option value="">Select LGA</option>
                                                 </select>
@@ -1147,16 +1146,16 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                     </div>
 
-                                  <div class="mb-3">
-                                    <label for="editFutureAmbition" class="form-label">Future Ambition <span class="text-danger">*</span></label>
-                                    <textarea id="editFutureAmbition" name="future_ambition" class="form-control" rows="2" placeholder="Enter future ambition" required></textarea>
-                                </div>
+                                   <div class="mb-3">
+                                        <label for="editFutureAmbition" class="form-label">Future Ambition <span class="text-danger">*</span></label>
+                                        <textarea id="editFutureAmbition" name="future_ambition" class="form-control" rows="2" placeholder="Enter future ambition" required></textarea>
+                                    </div>
 
-                                <div class="mb-3">
-                                    <label for="editPermanentAddress" class="form-label">Permanent Address <span class="text-danger">*</span></label>
-                                    <textarea id="editPermanentAddress" name="permanent_address" class="form-control" rows="2" placeholder="Enter permanent address" required></textarea>
-                                </div>
-                                                                </div>
+                                    <div class="mb-3">
+                                        <label for="editPermanentAddress" class="form-label">Permanent Address <span class="text-danger">*</span></label>
+                                        <textarea id="editPermanentAddress" name="permanent_address" class="form-control" rows="2" placeholder="Enter permanent address" required></textarea>
+                                    </div>
+                                 </div>
                             </div>
                         </div>
 
@@ -1187,7 +1186,7 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                         <div class="col-md-6">
                                             <div class="mb-3">
-                                                <label for="editLocal" class="form-label">LGA of Origin<span class="text-danger">*</span></label>
+                                                <label for="editLocal" class="form-label">Local Government of Origin<span class="text-danger">*</span></label>
                                                 <select id="editLocal" name="local" class="form-control" required>
                                                     <option value="">Select LGA</option>
                                                 </select>
@@ -1530,50 +1529,23 @@ use Spatie\Permission\Models\Role;
     </div>
 </div>
 
-
 <script>
-// Default avatar
-const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
 
-// Initialize admission number on page load
-document.addEventListener('DOMContentLoaded', function () {
+    // Initialize admission number on page load
     updateAdmissionNumber();
-    document.getElementById('editStudentModal').addEventListener('shown.bs.modal', function () {
-        updateAdmissionNumber('edit');
-    });
-});
+    updateAdmissionNumber('edit');
 
-// Ensure Choices.js
-function ensureChoices() {
-    if (typeof Choices === 'undefined') {
-        console.warn('Choices.js is not defined, using basic select');
-        return false;
-    }
-    return true;
-}
-
-// Initialize Choices.js
-function initializeChoices(selectId) {
-    const select = document.getElementById(selectId);
-    if (select && ensureChoices()) {
-        new Choices(select, { searchEnabled: true, placeholderValue: 'Select an option' });
-    }
-}
-
-// Update admission number
+// Update admission number based on year selection
 function updateAdmissionNumber(prefix = '') {
     const yearSelect = document.getElementById(`${prefix}admissionYear`);
     const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
     const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
-
-    if (!yearSelect || !admissionNoInput) {
-        console.warn(`Missing elements: yearSelect=${yearSelect}, admissionNoInput=${admissionNoInput}`);
-        return;
-    }
+    
+    if (!yearSelect || !admissionNoInput) return;
 
     const year = yearSelect.value;
     const baseFormat = `CSSK/STD/${year}/`;
-
+    
     if (admissionMode && admissionMode.value === 'auto') {
         admissionNoInput.readOnly = true;
         fetch(`/students/last-admission-number?year=${year}`, {
@@ -1585,11 +1557,22 @@ function updateAdmissionNumber(prefix = '') {
         })
         .then(response => response.json())
         .then(data => {
-            admissionNoInput.value = data.success ? data.admissionNo : `${baseFormat}001`;
+            if (data.success) {
+                // Backend returns the full admission number (e.g., CSSK/STD/2025/001)
+                admissionNoInput.value = data.admissionNo;
+            } else {
+                Swal.fire({
+                    title: 'Error!',
+                    text: data.message || 'Failed to generate admission number',
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                });
+                admissionNoInput.value = `${baseFormat}001`; // Fallback
+            }
         })
         .catch(error => {
-            console.error('Error fetching admission number:', error);
-            admissionNoInput.value = `${baseFormat}001`;
+            console.error('Error:', error);
             Swal.fire({
                 title: 'Error!',
                 text: 'Failed to generate admission number',
@@ -1597,6 +1580,7 @@ function updateAdmissionNumber(prefix = '') {
                 customClass: { confirmButton: 'btn btn-primary' },
                 buttonsStyling: false
             });
+            admissionNoInput.value = `${baseFormat}001`; // Fallback
         });
     } else {
         admissionNoInput.readOnly = false;
@@ -1609,18 +1593,15 @@ function updateAdmissionNumber(prefix = '') {
     }
 }
 
-// Toggle admission input
+// Toggle admission input based on mode
 window.toggleAdmissionInput = function(prefix = '') {
     const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
     const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
-    const admissionYearSelect = document.getElementById(`${prefix}admissionYear`);
+    const yearSelect = document.getElementById(`${prefix}admissionYear`);
+    
+    if (!admissionMode || !admissionNoInput || !yearSelect) return;
 
-    if (!admissionMode || !admissionNoInput || !admissionYearSelect) {
-        console.warn(`Missing elements: admissionMode=${admissionMode}, admissionNoInput=${admissionNoInput}, admissionYearSelect=${admissionYearSelect}`);
-        return;
-    }
-
-    const year = admissionYearSelect.value;
+    const year = yearSelect.value;
     const baseFormat = `CSSK/STD/${year}/`;
 
     if (admissionMode.value === 'auto') {
@@ -1634,11 +1615,22 @@ window.toggleAdmissionInput = function(prefix = '') {
         })
         .then(response => response.json())
         .then(data => {
-            admissionNoInput.value = data.success ? data.admissionNo : `${baseFormat}001`;
+            if (data.success) {
+                // Backend returns the full admission number (e.g., CSSK/STD/2025/001)
+                admissionNoInput.value = data.admissionNo;
+            } else {
+                Swal.fire({
+                    title: 'Error!',
+                    text: data.message || 'Failed to generate admission number',
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                });
+                admissionNoInput.value = `${baseFormat}001`; // Fallback
+            }
         })
         .catch(error => {
-            console.error('Error fetching admission number:', error);
-            admissionNoInput.value = `${baseFormat}001`;
+            console.error('Error:', error);
             Swal.fire({
                 title: 'Error!',
                 text: 'Failed to generate admission number',
@@ -1646,157 +1638,172 @@ window.toggleAdmissionInput = function(prefix = '') {
                 customClass: { confirmButton: 'btn btn-primary' },
                 buttonsStyling: false
             });
+            admissionNoInput.value = `${baseFormat}001`; // Fallback
         });
     } else {
         admissionNoInput.readOnly = false;
         if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
             admissionNoInput.value = `${baseFormat}001`;
+        } else if (!admissionNoInput.value.startsWith(baseFormat)) {
+            const numericPart = admissionNoInput.value.split('/').pop() || '001';
+            admissionNoInput.value = `${baseFormat}${numericPart.padStart(3, '0')}`;
         }
     }
 };
 
-// Populate states and LGAs
-function populateStates(stateSelectId, lgaSelectId) {
-    const stateSelect = document.getElementById(stateSelectId);
-    const lgaSelect = document.getElementById(lgaSelectId);
-    if (!stateSelect || !lgaSelect) return;
+    // Add event listeners for year selection
+    document.getElementById('admissionYear')?.addEventListener('change', () => updateAdmissionNumber());
+    document.getElementById('editAdmissionYear')?.addEventListener('change', () => updateAdmissionNumber('edit'));
 
+document.addEventListener('DOMContentLoaded', function () {
+    // Fetch states and LGAs
     fetch('/states_lgas.json')
         .then(response => response.json())
         .then(data => {
-            stateSelect.innerHTML = '<option value="">Select State</option>';
+            const stateSelect = document.getElementById('addState');
+            const localSelect = document.getElementById('addLocal');
+            const editStateSelect = document.getElementById('editState');
+            const editLocalSelect = document.getElementById('editLocal');
+
             data.forEach(state => {
                 const option = document.createElement('option');
                 option.value = state.state;
                 option.textContent = state.state;
                 stateSelect.appendChild(option);
+                editStateSelect.appendChild(option.cloneNode(true));
             });
 
-            initializeChoices(stateSelectId);
-
             stateSelect.addEventListener('change', function () {
-                lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                localSelect.innerHTML = '<option value="">Select Local Government</option>';
                 const selectedState = data.find(state => state.state === this.value);
                 if (selectedState) {
                     selectedState.lgas.forEach(lga => {
                         const option = document.createElement('option');
                         option.value = lga;
                         option.textContent = lga;
-                        lgaSelect.appendChild(option);
+                        localSelect.appendChild(option);
                     });
-                    initializeChoices(lgaSelectId);
                 }
             });
-        })
-        .catch(error => console.error('Error loading states and LGAs:', error));
-}
 
-function populateLGAs(state, lgaSelectId) {
-    const lgaSelect = document.getElementById(lgaSelectId);
-    if (!lgaSelect) return;
+            editStateSelect.addEventListener('change', function () {
+                editLocalSelect.innerHTML = '<option value="">Select Local Government</option>';
+                const selectedState = data.find(state => state.state === this.value);
+                if (selectedState) {
+                    selectedState.lgas.forEach(lga => {
+                        const option = document.createElement('option');
+                        option.value = lga;
+                        option.textContent = lga;
+                        editLocalSelect.appendChild(option);
+                    });
+                }
+            });
+        });
 
-    fetch('/states_lgas.json')
-        .then(response => response.json())
-        .then(data => {
-            lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
-            const selectedState = data.find(s => s.state === state);
-            if (selectedState) {
-                selectedState.lgas.forEach(lga => {
-                    const option = document.createElement('option');
-                    option.value = lga;
-                    option.textContent = lga;
-                    lgaSelect.appendChild(option);
-                });
-                initializeChoices(lgaSelectId);
+    // Avatar preview
+    document.getElementById('avatar').addEventListener('change', function (e) {
+        const addStudentAvatar = document.getElementById('addStudentAvatar');
+        if (e.target.files && e.target.files[0]) {
+            addStudentAvatar.src = URL.createObjectURL(e.target.files[0]);
+            addStudentAvatar.style.display = 'block';
+        } else {
+            addStudentAvatar.src = "{{ asset('theme/layouts/assets/media/avatars/blank.png') }}";
+            addStudentAvatar.style.display = 'none';
+        }
+    });
+
+    document.getElementById('editAvatar').addEventListener('change', function (e) {
+        const editStudentAvatar = document.getElementById('editStudentAvatar');
+        if (e.target.files && e.target.files[0]) {
+            editStudentAvatar.src = URL.createObjectURL(e.target.files[0]);
+            editStudentAvatar.style.display = 'block';
+        } else {
+            editStudentAvatar.src = "{{ asset('theme/layouts/assets/media/avatars/blank.png') }}";
+            editStudentAvatar.style.display = 'block';
+        }
+    });
+
+    // Age calculation
+    window.showage = function (date, displayId = 'addAge') {
+        if (date) {
+            const dob = new Date(date);
+            const today = new Date();
+            let age = today.getFullYear() - dob.getFullYear();
+            const monthDiff = today.getMonth() - dob.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                age--;
+            }
+            document.getElementById(displayId).textContent = age + ' years';
+            document.getElementById(displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput').value = age;
+        } else {
+            document.getElementById(displayId).textContent = '';
+            document.getElementById(displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput').value = '';
+        }
+    };
+
+    // Admission number handling
+    window.toggleAdmissionInput = function (prefix = '') {
+    const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`).value;
+    const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+    const admissionYearSelect = document.getElementById(`${prefix}admissionYear`);
+
+    if (admissionMode === 'auto') {
+        admissionNoInput.readOnly = true;
+        fetch('/students/last-admission-number', {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
             }
         })
-        .catch(error => console.error('Error loading LGAs:', error));
-}
-
-// Avatar preview
-document.getElementById('avatar')?.addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    const preview = document.getElementById('addStudentAvatar');
-    if (file) {
-        if (file.size > 2 * 1024 * 1024) {
-            Swal.fire({
-                title: "Error!",
-                text: "File size exceeds 2MB limit.",
-                icon: "error",
-                customClass: { confirmButton: "btn btn-info" },
-                buttonsStyling: false
-            });
-            event.target.value = '';
-            preview.src = defaultAvatar;
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                admissionNoInput.value = data.admissionNo;
+            } else {
+                alert('Error generating admission number: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to generate admission number');
+        });
     } else {
-        preview.src = defaultAvatar;
-        preview.style.display = 'block';
-    }
-});
-
-document.getElementById('editAvatar')?.addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    const preview = document.getElementById('editStudentAvatar');
-    if (file) {
-        if (file.size > 2 * 1024 * 1024) {
-            Swal.fire({
-                title: "Error!",
-                text: "File size exceeds 2MB limit.",
-                icon: "error",
-                customClass: { confirmButton: "btn btn-info" },
-                buttonsStyling: false
-            });
-            event.target.value = '';
-            preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    } else {
-        preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
-        preview.style.display = 'block';
-    }
-});
-
-// Age calculation
-window.showage = function(date, displayId = 'addAge') {
-    const ageInputId = displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput';
-    const ageInput = document.getElementById(ageInputId);
-    if (!ageInput) {
-        console.warn(`Age input element with ID '${ageInputId}' not found`);
-        return;
-    }
-
-    if (date) {
-        const dateString = date.includes('T') ? date.split('T')[0] : date;
-        const dob = new Date(dateString);
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const monthDiff = today.getMonth() - dob.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-            age--;
-        }
-        ageInput.value = age;
-        document.getElementById(displayId).textContent = age + ' years';
-    } else {
-        ageInput.value = '';
-        document.getElementById(displayId).textContent = '';
+        admissionNoInput.readOnly = false;
+        admissionNoInput.value = '';
     }
 };
 
-// Initialize student list and event listeners
+    // Print student details
+    window.printStudentDetails = function (prefix = '') {
+        const form = document.getElementById(`${prefix}StudentForm`);
+        const formData = new FormData(form);
+        fetch('/generate-student-pdf', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'student_details.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Failed to generate PDF');
+        });
+    };
+});
+
+
 document.addEventListener('DOMContentLoaded', function () {
     // Ensure Axios and CSRF token
     function ensureAxios() {
@@ -1827,15 +1834,27 @@ document.addEventListener('DOMContentLoaded', function () {
         return true;
     }
 
+    // Ensure Choices.js
+    function ensureChoices() {
+        if (typeof Choices === 'undefined') {
+            console.warn('Choices.js is not defined, using basic select');
+            return false;
+        }
+        return true;
+    }
+
     let studentList;
     let allStudents = [];
     const itemsPerPage = 10;
+    const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
 
-    // Fetch students
+    // Fetch students from the server
     function fetchStudents() {
         if (!ensureAxios()) return;
+        console.log('Fetching students from /students/data');
         axios.get('/students/data')
-            .then(response => {
+            .then((response) => {
+                console.log('Students data received:', response.data);
                 if (!response.data.success || !Array.isArray(response.data.students)) {
                     throw new Error(response.data.message || 'Invalid response format');
                 }
@@ -1854,15 +1873,21 @@ document.addEventListener('DOMContentLoaded', function () {
                     arm: student.arm || '',
                     schoolclassid: student.schoolclassid || ''
                 }));
+                console.log('Processed students:', allStudents);
                 document.querySelector('#totalStudents').textContent = allStudents.length;
                 document.querySelector('#totalCount').textContent = allStudents.length;
                 renderStudents(allStudents);
             })
-            .catch(error => {
-                console.error('Error fetching students:', error);
+            .catch((error) => {
+                console.error('Error fetching students:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    data: error.response?.data,
+                    url: '/students/data'
+                });
                 Swal.fire({
                     title: "Error!",
-                    text: error.response?.data?.message || "Failed to load students.",
+                    text: error.response?.data?.message || error.message || "Failed to load students. Check console for details.",
                     icon: "error",
                     customClass: { confirmButton: "btn btn-primary" },
                     buttonsStyling: false
@@ -1871,18 +1896,37 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    // Render students
+    // Render students in the table
     function renderStudents(students) {
+        console.log('Rendering students:', students);
         const tbody = document.getElementById('studentTableBody');
-        if (!tbody) return;
+        if (!tbody) {
+            console.error('studentTableBody element not found');
+            Swal.fire({
+                title: "Error!",
+                text: "Table body element not found",
+                icon: "error",
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
+            });
+            return;
+        }
         tbody.innerHTML = '';
         if (students.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center">No students found</td></tr>`;
+            const row = document.createElement('tr');
+            row.innerHTML = `<td colspan="8" class="text-center">No students found</td>`;
+            tbody.appendChild(row);
             initializeList();
             return;
         }
         students.forEach(student => {
+            console.log('Rendering student:', student);
             const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+            const actionButtons = [
+                `<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="ph-pencil"></i></a></li>`,
+                `<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}"><i class="ph-trash"></i></a></li>`
+            ];
+            console.log('Action buttons for student:', actionButtons);
             const row = document.createElement('tr');
             row.setAttribute('data-id', student.id);
             row.innerHTML = `
@@ -1907,23 +1951,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 </td>
                 <td class="admissionNo" data-admissionNo="${student.admissionNo}">${student.admissionNo}</td>
                 <td class="class" data-class="${student.schoolclassid}">${student.schoolclass} - ${student.arm}</td>
-                <td class="status" data-status="${student.statusId}">${student.statusId == 1 ? 'Old Student' : 'New Student'}</td>
+                <td class="status" data-status="${student.statusId}">${student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : ''}</td>
                 <td class="gender" data-gender="${student.gender}">${student.gender}</td>
                 <td class="datereg">${student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : ''}</td>
                 <td>
                     <ul class="d-flex gap-2 list-unstyled mb-0">
-                        <li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="ph-pencil"></i></a></li>
-                        <li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}"><i class="ph-trash"></i></a></li>
+                        ${actionButtons.join('')}
                     </ul>
                 </td>
             `;
             tbody.appendChild(row);
         });
+        console.log('Table rows after rendering:', tbody.innerHTML);
         initializeList();
         initializeCheckboxes();
     }
 
-    // Initialize List.js
+    // Initialize List.js for pagination and sorting
     function initializeList() {
         if (typeof List === 'undefined') {
             console.error('List.js is not loaded');
@@ -1939,18 +1983,45 @@ document.addEventListener('DOMContentLoaded', function () {
         const options = {
             valueNames: ['name', 'admissionNo', 'class', 'status', 'gender', 'datereg'],
             page: itemsPerPage,
-            pagination: true
+            pagination: true,
+            item: `
+                <tr>
+                    <td class="id">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="chk_child">
+                        </div>
+                    </td>
+                    <td class="name"></td>
+                    <td class="admissionNo"></td>
+                    <td class="class"></td>
+                    <td class="status"></td>
+                    <td class="gender"></td>
+                    <td class="datereg"></td>
+                    <td><ul class="d-flex gap-2 list-unstyled mb-0"></ul></td>
+                </tr>
+            `
         };
-        studentList = new List('studentList', options);
-        studentList.on('updated', function () {
-            updatePagination();
-            document.getElementById('showingCount').textContent = studentList.visibleItems.length;
-            document.getElementById('totalCount').textContent = studentList.items.length;
-            document.getElementById('totalStudents').textContent = studentList.items.length;
-        });
+        try {
+            studentList = new List('studentList', options);
+            studentList.on('updated', function () {
+                updatePagination();
+                document.getElementById('showingCount').textContent = studentList.visibleItems.length;
+                document.getElementById('totalCount').textContent = studentList.items.length;
+                document.getElementById('totalStudents').textContent = studentList.items.length;
+            });
+        } catch (error) {
+            console.error('List.js initialization error:', error.message);
+            Swal.fire({
+                title: "Error!",
+                text: "Failed to initialize table. Check console for details.",
+                icon: "error",
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
+            });
+        }
     }
 
-    // Update pagination
+    // Update pagination controls
     function updatePagination() {
         if (!studentList) return;
         const totalItems = studentList.items.length;
@@ -1963,7 +2034,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const li = document.createElement('li');
             li.className = `page-item ${i === currentPage ? 'active' : ''}`;
             li.innerHTML = `<a class="page-link" href="javascript:void(0);">${i}</a>`;
-            li.addEventListener('click', () => studentList.show((i - 1) * itemsPerPage + 1, itemsPerPage));
+            li.addEventListener('click', () => {
+                studentList.show((i - 1) * itemsPerPage + 1, itemsPerPage);
+            });
             paginationLinks.appendChild(li);
         }
 
@@ -1973,7 +2046,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('nextPage').onclick = currentPage < totalPages ? () => studentList.show(currentPage * itemsPerPage + 1, itemsPerPage) : null;
     }
 
-    // Filter students
+    // Filter students based on search and dropdowns
     function filterData() {
         if (!studentList) return;
         const search = document.querySelector('#search-input')?.value.toLowerCase() || '';
@@ -1981,6 +2054,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const statusId = document.getElementById('status-filter')?.value || 'all';
         const gender = document.getElementById('gender-filter')?.value || 'all';
         const studentStatus = document.getElementById('student-status-filter')?.value || 'all';
+
+        console.log('Filtering with:', { search, classId, statusId, gender, studentStatus });
 
         studentList.filter(item => {
             const name = item.values().name?.toLowerCase() || '';
@@ -1990,11 +2065,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const genderValue = item.elm.querySelector('.gender')?.dataset.gender || '';
             const studentStatusValue = item.values().student_status || '';
 
-            return (name.includes(search) || admissionNo.includes(search)) &&
-                   (classId === 'all' || classValue === classId) &&
-                   (statusId === 'all' || statusValue === statusId) &&
-                   (gender === 'all' || genderValue === gender) &&
-                   (studentStatus === 'all' || studentStatusValue === studentStatus);
+            const matchesSearch = name.includes(search) || admissionNo.includes(search);
+            const matchesClass = classId === 'all' || classValue === classId;
+            const matchesStatus = statusId === 'all' || statusValue === statusId;
+            const matchesGender = gender === 'all' || genderValue === gender;
+            const matchesStudentStatus = studentStatus === 'all' || studentStatusValue === studentStatus;
+
+            return matchesSearch && matchesClass && matchesStatus && matchesGender && matchesStudentStatus;
         });
     }
 
@@ -2021,37 +2098,38 @@ document.addEventListener('DOMContentLoaded', function () {
             showCancelButton: true,
             customClass: { confirmButton: "btn btn-primary", cancelButton: "btn btn-light" },
             buttonsStyling: false
-        }).then(result => {
+        }).then((result) => {
             if (result.isConfirmed && ensureAxios()) {
-                axios.post('/students/destroy-multiple', { ids })
-                    .then(() => {
-                        ids.forEach(id => document.querySelector(`tr[data-id="${id}"]`)?.remove());
-                        studentList.reIndex();
-                        Swal.fire({
-                            title: "Deleted!",
-                            text: "Students have been deleted",
-                            icon: "success",
-                            customClass: { confirmButton: "btn btn-primary" },
-                            buttonsStyling: false
-                        });
-                        document.getElementById('checkAll').checked = false;
-                        document.getElementById('remove-actions').classList.add('d-none');
-                    })
-                    .catch(error => {
-                        console.error('Error deleting students:', error);
-                        Swal.fire({
-                            title: "Error!",
-                            text: error.response?.data?.message || "Failed to delete students",
-                            icon: "error",
-                            customClass: { confirmButton: "btn btn-primary" },
-                            buttonsStyling: false
-                        });
+                axios.post('/students/destroy-multiple', { ids }).then(() => {
+                    ids.forEach(id => {
+                        const row = document.querySelector(`tr[data-id="${id}"]`);
+                        if (row) row.remove();
                     });
+                    studentList.reIndex();
+                    Swal.fire({
+                        title: "Deleted!",
+                        text: "Students have been deleted",
+                        icon: "success",
+                        customClass: { confirmButton: "btn btn-primary" },
+                        buttonsStyling: false
+                    });
+                    document.getElementById('checkAll').checked = false;
+                    document.getElementById('remove-actions').classList.add('d-none');
+                }).catch((error) => {
+                    console.error('Error deleting students:', error);
+                    Swal.fire({
+                        title: "Error!",
+                        text: error.response?.data?.message || "Failed to delete students",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-primary" },
+                        buttonsStyling: false
+                    });
+                });
             }
         });
     }
 
-    // Initialize checkboxes
+    // Initialize checkboxes for multiple selection
     function initializeCheckboxes() {
         const checkAll = document.getElementById('checkAll');
         if (!checkAll) return;
@@ -2073,26 +2151,286 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Edit student handler
-    document.getElementById('studentTableBody')?.addEventListener('click', function(e) {
-        if (e.target.closest('.edit-item-btn')) {
-            const id = e.target.closest('.edit-item-btn').getAttribute('data-id');
-            if (!ensureAxios()) return;
+    // Populate states and LGAs
+    function populateStates(stateSelectId, lgaSelectId) {
+        const stateSelect = document.getElementById(stateSelectId);
+        const lgaSelect = document.getElementById(lgaSelectId);
+        if (!stateSelect || !lgaSelect) return;
 
-            axios.get(`/student/${id}/edit`)
-                .then(response => {
+        fetch('/states_lgas.json')
+            .then(response => response.json())
+            .then(data => {
+                stateSelect.innerHTML = '<option value="">Select State</option>';
+                data.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state.state;
+                    option.textContent = state.state;
+                    stateSelect.appendChild(option);
+                });
+
+                if (ensureChoices()) {
+                    const choicesState = new Choices(stateSelect, { searchEnabled: true });
+                    const choicesLga = new Choices(lgaSelect, { searchEnabled: true });
+                }
+
+                stateSelect.addEventListener('change', function () {
+                    lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                    const selectedState = data.find(state => state.state === this.value);
+                    if (selectedState) {
+                        selectedState.lgas.forEach(lga => {
+                            const option = document.createElement('option');
+                            option.value = lga;
+                            option.textContent = lga;
+                            lgaSelect.appendChild(option);
+                        });
+                        if (ensureChoices()) {
+                            new Choices(lgaSelect, { searchEnabled: true });
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading states and LGAs:', error);
+            });
+    }
+
+    // Populate LGAs based on selected state
+    function populateLGAs(state, lgaSelectId) {
+        const lgaSelect = document.getElementById(lgaSelectId);
+        if (!lgaSelect) return;
+
+        fetch('/states_lgas.json')
+            .then(response => response.json())
+            .then(data => {
+                lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                const selectedState = data.find(s => s.state === state);
+                if (selectedState) {
+                    selectedState.lgas.forEach(lga => {
+                        const option = document.createElement('option');
+                        option.value = lga;
+                        option.textContent = lga;
+                        lgaSelect.appendChild(option);
+                    });
+                    if (ensureChoices()) {
+                        new Choices(lgaSelect, { searchEnabled: true });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading LGAs:', error);
+            });
+    }
+
+    // Age calculation function
+    window.showage = function (date, displayId = 'addAge') {
+        if (date) {
+            const dateString = date.includes('T') ? date.split('T')[0] : date;
+            const dob = new Date(dateString);
+            const today = new Date();
+            let age = today.getFullYear() - dob.getFullYear();
+            const monthDiff = today.getMonth() - dob.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                age--;
+            }
+            const ageInputId = displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput';
+            const ageInput = document.getElementById(ageInputId);
+            if (ageInput) {
+                ageInput.value = age;
+            } else {
+                console.warn(`Age input element with ID '${ageInputId}' not found`);
+            }
+        } else {
+            const ageInputId = displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput';
+            const ageInput = document.getElementById(ageInputId);
+            if (ageInput) {
+                ageInput.value = '';
+            } else {
+                console.warn(`Age input element with ID '${ageInputId}' not found`);
+            }
+        }
+    };
+
+    // Toggle admission input based on mode
+    window.toggleAdmissionInput = function (prefix = '') {
+        const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`).value;
+        const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+        const admissionYearSelect = document.getElementById(`${prefix}admissionYear`);
+
+        if (admissionMode === 'auto') {
+            admissionNoInput.readOnly = true;
+            fetch('/students/last-admission-number', {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    admissionNoInput.value = data.admissionNo;
+                } else {
+                    alert('Error generating admission number: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to generate admission number');
+            });
+        } else {
+            admissionNoInput.readOnly = false;
+            admissionNoInput.value = '';
+        }
+    };
+
+    // Print student details
+    window.printStudentDetails = function (prefix = '') {
+        const form = document.getElementById(`${prefix}StudentForm`);
+        const formData = new FormData(form);
+        fetch('/generate-student-pdf', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'student_details.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Failed to generate PDF');
+        });
+    };
+
+    // Initialize student list and event listeners
+    function initializeStudentList() {
+        // Populate states and LGAs
+        populateStates('addState', 'addLocal');
+        populateStates('editState', 'editLocal');
+        fetchStudents();
+
+        // Filter event listeners
+        document.querySelector('#search-input')?.addEventListener('input', filterData);
+        document.getElementById('schoolclass-filter')?.addEventListener('change', filterData);
+        document.getElementById('status-filter')?.addEventListener('change', filterData);
+        document.getElementById('gender-filter')?.addEventListener('change', filterData);
+        document.getElementById('student-status-filter')?.addEventListener('change', filterData);
+
+        // Avatar upload for Add Student modal
+        document.getElementById('avatar')?.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('addStudentAvatar');
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "File size exceeds 2MB limit.",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-info" },
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = defaultAvatar;
+                    return;
+                }
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                if (!allowedTypes.includes(file.type)) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "Only PNG, JPG, and JPEG files are allowed.",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-info" },
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = defaultAvatar;
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = defaultAvatar;
+                preview.style.display = 'block';
+            }
+        });
+
+        // Avatar upload for Edit Student modal
+        document.getElementById('editAvatar')?.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('editStudentAvatar');
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "File size exceeds 2MB limit.",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-info" },
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
+                    return;
+                }
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                if (!allowedTypes.includes(file.type)) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "Only PNG, JPG, and JPEG files are allowed.",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-info" },
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
+            }
+        });
+
+        // Table row click events (Edit/Delete)
+        document.getElementById('studentTableBody')?.addEventListener('click', function(e) {
+            if (e.target.closest('.edit-item-btn')) {
+                const button = e.target.closest('.edit-item-btn');
+                const id = button.getAttribute('data-id');
+                console.log('Edit button clicked for student ID:', id);
+                if (!ensureAxios()) return;
+
+                axios.get(`/student/${id}/edit`).then((response) => {
+                    console.log('Student data received:', response.data);
                     const student = response.data.student;
-                    if (!student) throw new Error('Student data is empty');
+                    if (!student) {
+                        throw new Error('Student data is empty');
+                    }
 
                     const fields = [
                         { id: 'editStudentId', value: student.id },
                         { id: 'editAdmissionNo', value: student.admissionNo },
-                        { id: 'editAdmissionYear', value: student.admissionNo ? student.admissionNo.split('/')[2] : '' },
+                        { id: 'editAdmissionYear', value: student.admissionYear },
                         { id: 'editTitle', value: student.title || '' },
                         { id: 'editFirstname', value: student.firstname },
                         { id: 'editLastname', value: student.lastname },
                         { id: 'editOthername', value: student.othername || '' },
-                        { id: 'editFutureAmbition', value: student.future_ambition || '' },
+                        { id: 'editPresentAddress', value: student.present_address || '' },
                         { id: 'editPermanentAddress', value: student.permanent_address || '' },
                         { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
                         { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
@@ -2114,157 +2452,246 @@ document.addEventListener('DOMContentLoaded', function () {
                         { id: 'editMotherPhone', value: student.mother_phone || '' },
                         { id: 'editParentAddress', value: student.parent_address || '' },
                         { id: 'editStudentCategory', value: student.student_category || '' },
-                        { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' },
-                        { id: 'editSportHouse', value: student.sport_house || '' }
+                        { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
                     ];
 
                     fields.forEach(({ id, value }) => {
                         const element = document.getElementById(id);
-                        if (element) element.value = value || '';
-                        else console.warn(`Element with ID '${id}' not found`);
+                        if (element) {
+                            element.value = value || '';
+                        } else {
+                            console.warn(`Element with ID '${id}' not found`);
+                        }
                     });
 
-                    document.querySelectorAll('input[name="gender"]').forEach(radio => {
-                        radio.checked = radio.value === student.gender;
+                    const genderRadios = document.querySelectorAll('input[name="gender"]');
+                    genderRadios.forEach(radio => {
+                        radio.checked = (radio.value === student.gender);
                     });
 
-                    document.querySelectorAll('input[name="statusId"]').forEach(radio => {
-                        radio.checked = parseInt(radio.value) === parseInt(student.statusId);
+                    const statusRadios = document.querySelectorAll('input[name="statusId"]');
+                    statusRadios.forEach(radio => {
+                        radio.checked = (parseInt(radio.value) === parseInt(student.statusId));
                     });
 
-                    document.querySelectorAll('input[name="student_status"]').forEach(radio => {
-                        radio.checked = radio.value === student.student_status;
+                    const studentStatusRadios = document.querySelectorAll('input[name="student_status"]');
+                    studentStatusRadios.forEach(radio => {
+                        radio.checked = (radio.value === student.student_status);
                     });
 
                     const avatarElement = document.getElementById('editStudentAvatar');
                     if (avatarElement) {
-                        avatarElement.src = student.picture || defaultAvatar;
-                        avatarElement.setAttribute('data-original-src', student.picture || defaultAvatar);
+                        avatarElement.src = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+                        avatarElement.setAttribute('data-original-src', student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar);
+                    } else {
+                        console.warn('Avatar element with ID "editStudentAvatar" not found');
                     }
 
                     const stateSelect = document.getElementById('editState');
                     const lgaSelect = document.getElementById('editLocal');
                     if (student.state && stateSelect) {
                         stateSelect.value = student.state;
-                        populateLGAs(student.state, 'editLocal');
                         setTimeout(() => {
-                            if (lgaSelect) lgaSelect.value = student.local || '';
-                            initializeChoices('editLocal');
-                        }, 200);
+                            populateLGAs(student.state, 'editLocal');
+                            setTimeout(() => {
+                                if (lgaSelect) {
+                                    lgaSelect.value = student.local || '';
+                                    if (ensureChoices()) {
+                                        new Choices(lgaSelect, { searchEnabled: true });
+                                    }
+                                }
+                            }, 200);
+                        }, 100);
+                    } else if (lgaSelect) {
+                        lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
                     }
 
-                    if (student.dateofbirth) showage(student.dateofbirth, 'editAge');
+                    if (student.dateofbirth) {
+                        showage(student.dateofbirth, 'editAge');
+                    }
 
                     const form = document.getElementById('editStudentForm');
-                    if (form) form.action = `/student/${id}`;
-
-                    document.getElementById('editAdmissionManual').checked = true;
-                    toggleAdmissionInput('edit');
-                })
-                .catch(error => {
-                    console.error('Error fetching student:', error);
+                    if (form) {
+                        form.action = `/student/${id}`;
+                    }
+                }).catch((error) => {
+                    console.error('Error fetching student:', {
+                        message: error.message,
+                        status: error.response?.status,
+                        data: error.response?.data
+                    });
                     Swal.fire({
                         title: 'Error!',
-                        text: error.response?.data?.message || 'Failed to load student data.',
+                        text: error.response?.data?.message || 'Failed to load student data. Check console for details.',
                         icon: 'error',
                         customClass: { confirmButton: 'btn btn-primary' },
                         buttonsStyling: false
                     });
                 });
-        }
-    });
-
-    // Form submissions
-    document.getElementById('addStudentForm')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (!ensureAxios()) return;
-
-        const formData = new FormData(this);
-        axios.post('/student', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        .then(response => {
-            if (!response.data.success) throw new Error(response.data.message);
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message,
-                icon: 'success',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
-            }).then(() => {
-                fetchStudents();
-                this.reset();
-                document.getElementById('addStudentAvatar').src = defaultAvatar;
-                document.getElementById('addStudentModal').querySelector('.btn-close').click();
-            });
-        })
-        .catch(error => {
-            let errorMessage = error.response?.data?.message || 'Failed to add student.';
-            if (error.response?.status === 422) {
-                errorMessage = Object.values(error.response.data.errors).flat().join('\n');
             }
-            Swal.fire({
-                title: 'Error!',
-                text: errorMessage,
-                icon: 'error',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
+
+            if (e.target.closest('.remove-item-btn')) {
+                const button = e.target.closest('.remove-item-btn');
+                const id = button.getAttribute('data-id');
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                if (!row) {
+                    console.error(`Row with data-id="${id}" not found`);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Table row not found for deletion',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You won't be able to revert this!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed && ensureAxios()) {
+                        axios.delete(`/student/${id}/destroy`).then(() => {
+                            row.remove();
+                            studentList.reIndex();
+                            Swal.fire({
+                                title: 'Deleted!',
+                                text: 'Student has been deleted',
+                                icon: 'success',
+                                customClass: { confirmButton: 'btn btn-primary' },
+                                buttonsStyling: false
+                            });
+                        }).catch((error) => {
+                            console.error('Error deleting student:', error);
+                            Swal.fire({
+                                title: 'Error!',
+                                text: error.response?.data?.message || 'Failed to delete student',
+                                icon: 'error',
+                                customClass: { confirmButton: 'btn btn-primary' },
+                                buttonsStyling: false
+                            });
+                        });
+                    }
+                });
+            }
+        });
+
+        // Add Student form submission
+        document.getElementById('addStudentForm')?.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!ensureAxios()) return;
+
+            const formData = new FormData(this);
+            console.log('Submitting addStudentForm with data:');
+            for (let pair of formData.entries()) {
+                console.log(`${pair[0]}: ${pair[1]}`);
+            }
+
+            axios.post('/student', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            }).then((response) => {
+                console.log('Add student response:', response.data);
+                if (!response.data.success) {
+                    throw new Error(response.data.message || 'Failed to add student');
+                }
+                Swal.fire({
+                    title: 'Success!',
+                    text: response.data.message || 'Student added successfully',
+                    icon: 'success',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                }).then(() => {
+                    fetchStudents();
+                    document.getElementById('addStudentForm').reset();
+                    document.getElementById('addStudentAvatar').src = defaultAvatar;
+                    document.getElementById('addStudentModal').querySelector('.btn-close').click();
+                });
+            }).catch((error) => {
+                console.error('Error adding student:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    data: error.response?.data
+                });
+                let errorMessage = error.response?.data?.message || 'Failed to add student. Check console for details.';
+                if (error.response?.status === 422 && error.response?.data?.errors) {
+                    errorMessage = Object.values(error.response.data.errors).flat().join('\n');
+                }
+                Swal.fire({
+                    title: 'Error!',
+                    text: errorMessage,
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                });
             });
         });
-    });
 
-    document.getElementById('editStudentForm')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (!ensureAxios()) return;
+        // Edit Student form submission
+        document.getElementById('editStudentForm')?.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!ensureAxios()) return;
 
-        const id = document.getElementById('editStudentId').value;
-        const formData = new FormData(this);
-        axios.post(`/student/${id}`, formData, {
-            headers: { 'X-HTTP-Method-Override': 'PATCH', 'Content-Type': 'multipart/form-data' }
-        })
-        .then(response => {
-            if (!response.data.success) throw new Error(response.data.message);
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message,
-                icon: 'success',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
-            }).then(() => {
-                fetchStudents();
-                document.getElementById('editStudentModal').querySelector('.btn-close').click();
-            });
-        })
-        .catch(error => {
-            let errorMessage = error.response?.data?.message || 'Failed to update student.';
-            if (error.response?.status === 422) {
-                errorMessage = Object.values(error.response.data.errors).flat().join('\n');
+            const id = document.getElementById('editStudentId').value;
+            const formData = new FormData(this);
+            console.log('Submitting editStudentForm with data:');
+            for (let pair of formData.entries()) {
+                console.log(`${pair[0]}: ${pair[1]}`);
             }
-            Swal.fire({
-                title: 'Error!',
-                text: errorMessage,
-                icon: 'error',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
+
+            axios.post(`/student/${id}`, formData, {
+                headers: { 'X-HTTP-Method-Override': 'PATCH', 'Content-Type': 'multipart/form-data' }
+            }).then((response) => {
+                console.log('Edit student response:', response.data);
+                if (!response.data.success) {
+                    throw new Error(response.data.message || 'Failed to update student');
+                }
+                Swal.fire({
+                    title: 'Success!',
+                    text: response.data.message || 'Student updated successfully',
+                    icon: 'success',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                }).then(() => {
+                    fetchStudents();
+                    document.getElementById('editStudentModal').querySelector('.btn-close').click();
+                });
+            }).catch((error) => {
+                console.error('Error updating student:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    data: error.response?.data
+                });
+                let errorMessage = error.response?.data?.message || 'Failed to update student. Check console for details.';
+                if (error.response?.status === 422 && error.response?.data?.errors) {
+                    errorMessage = Object.values(error.response.data.errors).flat().join('\n');
+                }
+                Swal.fire({
+                    title: 'Error!',
+                    text: errorMessage,
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                });
             });
         });
-    });
 
-    // Initialize
-    populateStates('addState', 'addLocal');
-    populateStates('editState', 'editLocal');
-    fetchStudents();
-    document.querySelector('#search-input')?.addEventListener('input', filterData);
-    document.getElementById('schoolclass-filter')?.addEventListener('change', filterData);
-    document.getElementById('status-filter')?.addEventListener('change', filterData);
-    document.getElementById('gender-filter')?.addEventListener('change', filterData);
-    document.getElementById('student-status-filter')?.addEventListener('change', filterData);
-    document.getElementById('editStudentModal').addEventListener('show.bs.modal', function () {
-        document.getElementById('layout-wrapper').removeAttribute('aria-hidden');
-    });
-    document.getElementById('editStudentModal').addEventListener('hide.bs.modal', function () {
-        document.getElementById('layout-wrapper').setAttribute('aria-hidden', 'true');
-    });
+        // Image view modal
+        document.getElementById('imageViewModal')?.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const imageSrc = button.getAttribute('data-image');
+            const modalImage = this.querySelector('#enlargedImage');
+            modalImage.src = imageSrc;
+        });
+
+        // Debug permissions
+        console.log('Permissions:', window.appPermissions || 'Not defined');
+    }
+
+    // Initialize the student list
+    initializeStudentList();
 });
 </script>
 
