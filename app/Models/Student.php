@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Student extends Model
 {
@@ -20,7 +20,7 @@ class Student extends Model
         'nationality',
         'gender',
         'phone_number',
-        'home_address',
+       'future_ambition', // Updated from home_address
         'home_address2',
         'placeofbirth',
         'dateofbirth',

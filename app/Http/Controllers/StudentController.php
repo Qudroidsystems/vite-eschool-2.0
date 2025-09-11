@@ -173,7 +173,7 @@ class StudentController extends Controller
                         $fail('The selected local government is invalid for the chosen state.');
                     }
                 }],
-                'present_address' => 'required|string|max:255',
+                'future_ambition' => 'required|string|max:500', // Changed from present_address
                 'permanent_address' => 'required|string|max:255',
                 'student_category' => 'required|in:Day,Boarding',
                 'schoolclassid' => 'required|exists:schoolclass,id',
@@ -236,7 +236,7 @@ class StudentController extends Controller
             $student->local = $request->local;
             $student->nationality = $request->nationality;
             $student->placeofbirth = $request->placeofbirth;
-            $student->home_address = $request->present_address;
+            $student->future_ambition = $request->future_ambition; // Changed from home_address
             $student->home_address2 = $request->permanent_address;
             $student->student_category = $request->student_category;
             $student->statusId = $request->statusId;
@@ -284,9 +284,9 @@ class StudentController extends Controller
             $picture->studentid = $studentId;
             if ($request->hasFile('avatar')) {
                 $path = $this->storeImage($request->file('avatar'), 'images/student_avatars');
-                $picture->picture = basename($path); // Store only the filename
+                $picture->picture = basename($path);
             } else {
-                $picture->picture = 'unnamed.jpg'; // Default avatar
+                $picture->picture = 'unnamed.jpg';
             }
             $picture->save();
 
@@ -344,7 +344,7 @@ class StudentController extends Controller
                         'local' => $student->local,
                         'statusId' => $student->statusId,
                         'student_status' => $student->student_status,
-                        'present_address' => $student->home_address,
+                        'future_ambition' => $student->future_ambition, // Changed from present_address
                         'permanent_address' => $student->home_address2,
                         'schoolclass' => $studentClass->schoolclass->name ?? '',
                         'arm' => $studentClass->schoolclass->arm ?? ''
@@ -550,7 +550,7 @@ class StudentController extends Controller
                     'studentRegistration.local',
                     'studentRegistration.nationality',
                     'studentRegistration.placeofbirth',
-                    'studentRegistration.home_address as present_address',
+                    'studentRegistration.future_ambition', // Changed from home_address as present_address
                     'studentRegistration.home_address2 as permanent_address',
                     'studentRegistration.student_category',
                     'studentRegistration.statusId',
@@ -599,6 +599,7 @@ class StudentController extends Controller
         }
     }
 
+    
     public function update(Request $request, $id): JsonResponse
     {
         Log::debug('Updating student', ['id' => $id, 'data' => $request->all()]);
@@ -642,7 +643,7 @@ class StudentController extends Controller
                         $fail('The selected local government is invalid for the chosen state.');
                     }
                 }],
-                'present_address' => 'required|string|max:255',
+                'future_ambition' => 'required|string|max:500', // Changed from present_address
                 'permanent_address' => 'required|string|max:255',
                 'student_category' => 'required|in:Day,Boarding',
                 'schoolclassid' => 'required|exists:schoolclass,id',
@@ -700,7 +701,7 @@ class StudentController extends Controller
             $student->local = $request->local;
             $student->nationality = $request->nationality;
             $student->placeofbirth = $request->placeofbirth;
-            $student->home_address = $request->present_address;
+            $student->future_ambition = $request->future_ambition; // Changed from home_address
             $student->home_address2 = $request->permanent_address;
             $student->student_category = $request->student_category;
             $student->statusId = $request->statusId;
@@ -801,7 +802,7 @@ class StudentController extends Controller
                     'local' => $student->local,
                     'statusId' => $student->statusId,
                     'student_status' => $student->student_status,
-                    'present_address' => $student->home_address,
+                    'future_ambition' => $student->future_ambition, // Changed from present_address
                     'permanent_address' => $student->home_address2,
                     'schoolclass' => $studentClass->schoolclass->name ?? '',
                     'arm' => $studentClass->schoolclass->arm ?? ''
@@ -816,8 +817,7 @@ class StudentController extends Controller
             ], 500);
         }
     }
-
-    // protected function storeImage($file, $directory)
+        // protected function storeImage($file, $directory)
     // {
     //     try {
     //         $path = $file->store($directory, 'public');
