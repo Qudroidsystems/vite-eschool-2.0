@@ -14893,7 +14893,7 @@ namespace App\Models {
      * @property string $age
      * @property \Illuminate\Support\Carbon $dateofbirth
      * @property string $home_address2
-     * @property string $home_address
+     * @property string $future_ambition
      * @property string|null $city
      * @property string|null $nin_number
      * @property string|null $email
@@ -14923,7 +14923,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereEmail($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereNinNumber($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereCity($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereHomeAddress($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereFutureAmbition($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereHomeAddress2($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereDateofbirth($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereAge($value)

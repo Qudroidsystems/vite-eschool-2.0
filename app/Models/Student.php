@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Studentclass;
+use App\Models\Studentpicture;
+use App\Models\ParentRegistration;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 

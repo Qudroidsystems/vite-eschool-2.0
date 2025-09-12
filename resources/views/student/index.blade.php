@@ -1658,12 +1658,12 @@ use Spatie\Permission\Models\Role;
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-2"></i>Close
                     </button>
-                    <button type="button" class="btn btn-success" onclick="downloadPDF()">
+                    {{-- <button type="button" class="btn btn-success" onclick="downloadPDF()">
                         <i class="fas fa-download me-2"></i>Download PDF
                     </button>
                     <button type="button" class="btn btn-primary" onclick="printForm()">
                         <i class="fas fa-print me-2"></i>Print Form
-                    </button>
+                    </button> --}}
                 </div>
             </div>
         </div>
