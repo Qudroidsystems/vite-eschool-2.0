@@ -1362,6 +1362,445 @@ use Spatie\Permission\Models\Role;
     </div>
 </div>
 
+
+
+<!-- View Student Modal - Add this after the Edit Student Modal -->
+<div id="viewStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2"></i>
+                    Student Registration Form
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="registration-form">
+                    <!-- Header -->
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold mb-3">STUDENT'S REGISTRATION FORM</h2>
+                        <div class="student-photo-container mb-3">
+                            <img id="viewStudentPhoto" src="" alt="Student Photo" class="rounded border" style="width: 120px; height: 120px; object-fit: cover;">
+                        </div>
+                    </div>
+
+                    <!-- Section A: Academic Details -->
+                    <div class="section-container mb-4">
+                        <div class="section-header">
+                            <h5 class="fw-bold mb-3">Section A: Academic Details</h5>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Academic Year:</label>
+                                    <span class="underline-field" id="viewAcademicYear">_______________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Registration No:</label>
+                                    <span class="underline-field" id="viewRegistrationNo">_________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Admission Date:</label>
+                                    <span class="underline-field" id="viewAdmissionDate">______________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Class:</label>
+                                    <span class="underline-field" id="viewClass">__________________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Term:</label>
+                                    <span class="underline-field" id="viewTerm">_______________________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Category:</label>
+                                    <span class="checkbox-field">
+                                        <input type="checkbox" id="viewCategoryDay" disabled> Day
+                                        <input type="checkbox" id="viewCategoryBorder" disabled class="ms-3"> Border
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section B: Student's Details -->
+                    <div class="section-container mb-4">
+                        <div class="section-header">
+                            <h5 class="fw-bold mb-3">Section B: Student's Details</h5>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Surname:</label>
+                                    <span class="underline-field" id="viewSurname">___________________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">First Name:</label>
+                                    <span class="underline-field" id="viewFirstName">_____________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Middle Name:</label>
+                                    <span class="underline-field" id="viewMiddleName">_______________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Gender:</label>
+                                    <span class="underline-field" id="viewGender">________________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Blood Group:</label>
+                                    <span class="underline-field" id="viewBloodGroup">________________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Date of Birth:</label>
+                                    <span class="underline-field" id="viewDateOfBirth">____________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Mother Tongue:</label>
+                                    <span class="underline-field" id="viewMotherTongue">______________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Religion:</label>
+                                    <span class="underline-field" id="viewReligion">________________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Sport House:</label>
+                                    <span class="underline-field" id="viewSportHouse">________________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Mobile Number:</label>
+                                    <span class="underline-field" id="viewMobileNumber">_________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">E-Mail:</label>
+                                    <span class="underline-field" id="viewEmail">______________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">NIN:</label>
+                                    <span class="underline-field" id="viewNIN">_______________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">City:</label>
+                                    <span class="underline-field" id="viewCity">_______________________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">State:</label>
+                                    <span class="underline-field" id="viewState">___________________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Present Address:</label>
+                                    <div class="underline-field-long" id="viewPresentAddress">_________________________________________________________________________</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Permanent Address:</label>
+                                    <div class="underline-field-long" id="viewPermanentAddress">______________________________________________________________________</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section C: Guardian's Details -->
+                    <div class="section-container mb-4">
+                        <div class="section-header">
+                            <h5 class="fw-bold mb-3">Section C: Guardian's Details</h5>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Father's Name:</label>
+                                    <span class="underline-field" id="viewFatherName">_____________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Mother's Name:</label>
+                                    <span class="underline-field" id="viewMotherName">__________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Occupation:</label>
+                                    <span class="underline-field" id="viewOccupation">________________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">City:</label>
+                                    <span class="underline-field" id="viewParentCity">___________________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Mobile Number:</label>
+                                    <span class="underline-field" id="viewParentMobile">____________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">E-Mail:</label>
+                                    <span class="underline-field" id="viewParentEmail">_________________________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Address:</label>
+                                    <div class="underline-field-long" id="viewParentAddress">________________________________________________________________________________</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section D: Previous School's Details -->
+                    <div class="section-container mb-4">
+                        <div class="section-header">
+                            <h5 class="fw-bold mb-3">Section D: Previous School's Details</h5>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">School Name:</label>
+                                    <div class="underline-field-long" id="viewSchoolName">____________________________________________________________________________</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Previous Class:</label>
+                                    <div class="underline-field-long" id="viewPreviousClass">__________________________________________________________________________</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Reason for Leaving:</label>
+                                    <div class="underline-field-long" id="viewReasonLeaving">______________________________________________________________________</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Official Use Only Section -->
+                    <div class="section-container mb-4">
+                        <div class="section-header">
+                            <h5 class="fw-bold mb-3">Official Use Only</h5>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Class Teacher's Name:</label>
+                                    <span class="underline-field">_________________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Signature & Date:</label>
+                                    <span class="underline-field">___________________</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Principal's Comment:</label>
+                                    <div class="underline-field-long">_____________________________________________________________________</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Principal's Name:</label>
+                                    <span class="underline-field">____________________________________</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-field">
+                                    <label class="form-label fw-bold">Signature & Date:</label>
+                                    <span class="underline-field">___________________</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="printRegistrationForm()">
+                    <i class="fas fa-print me-1"></i>Print Form
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSS Styles for the Registration Form -->
+<style>
+.registration-form {
+    font-family: 'Times New Roman', serif;
+    line-height: 1.6;
+    color: #000;
+}
+
+.section-container {
+    border: 2px solid #000;
+    padding: 20px;
+    margin-bottom: 20px;
+    background: #fff;
+}
+
+.section-header {
+    border-bottom: 1px solid #000;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+}
+
+.form-field {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.form-field label {
+    margin-right: 10px;
+    min-width: 120px;
+    color: #000;
+}
+
+.underline-field {
+    border-bottom: 1px solid #000;
+    min-height: 20px;
+    flex-grow: 1;
+    padding: 2px 5px;
+    display: inline-block;
+    min-width: 200px;
+    color: #000;
+    font-weight: 500;
+}
+
+.underline-field-long {
+    border-bottom: 1px solid #000;
+    min-height: 20px;
+    width: 100%;
+    padding: 2px 5px;
+    margin-top: 5px;
+    color: #000;
+    font-weight: 500;
+}
+
+.checkbox-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkbox-field input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+.student-photo-container {
+    border: 2px solid #000;
+    padding: 10px;
+    display: inline-block;
+}
+
+@media print {
+    .modal-header, .modal-footer {
+        display: none !important;
+    }
+    
+    .registration-form {
+        font-size: 12pt;
+    }
+    
+    .section-container {
+        page-break-inside: avoid;
+        border: 2px solid #000 !important;
+    }
+}
+
+/* Override modal styles for better printing */
+#viewStudentModal .modal-body {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+#viewStudentModal .modal-xl {
+    max-width: 95%;
+}
+</style>
+
+
+
 <!-- CSS Styles -->
 <style>
     .modal-xl {
@@ -1926,9 +2365,13 @@ document.addEventListener('DOMContentLoaded', function () {
         students.forEach(student => {
             console.log('Rendering student:', student);
             const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+           
+
+            // Update the renderStudents function - find this section and replace the actionButtons array:
             const actionButtons = [
-                `<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="ph-pencil"></i></a></li>`,
-                `<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}"><i class="ph-trash"></i></a></li>`
+                `<li><a href="javascript:void(0);" class="btn btn-subtle-info btn-icon btn-sm view-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#viewStudentModal" title="View Details"><i class="ph-eye"></i></a></li>`,
+                `<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal" title="Edit"><i class="ph-pencil"></i></a></li>`,
+                `<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}" title="Delete"><i class="ph-trash"></i></a></li>`
             ];
             console.log('Action buttons for student:', actionButtons);
             const row = document.createElement('tr');
@@ -2413,6 +2856,110 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Table row click events (Edit/Delete)
         document.getElementById('studentTableBody')?.addEventListener('click', function(e) {
+          if (e.target.closest('.view-item-btn')) {
+                const button = e.target.closest('.view-item-btn');
+                const id = button.getAttribute('data-id');
+                console.log('View button clicked for student ID:', id);
+                if (!ensureAxios()) return;
+
+                // Try to get more detailed student data with relationships
+                axios.get(`/student/${id}/view`).then((response) => {
+                    console.log('Student data received for view:', response.data);
+                    const student = response.data.student || response.data;
+                    if (!student) {
+                        throw new Error('Student data is empty');
+                    }
+
+                    // Populate the view modal with student data
+                    populateViewModal(student);
+                    
+                }).catch((error) => {
+                    console.error('View endpoint failed, trying edit endpoint:', error);
+                    // Fallback to edit endpoint if view endpoint doesn't exist
+                    axios.get(`/student/${id}/edit`).then((response) => {
+                        console.log('Student data received for view (fallback):', response.data);
+                        const student = response.data.student;
+                        if (!student) {
+                            throw new Error('Student data is empty');
+                        }
+
+                        // Enhanced data merging from multiple sources
+                        const currentStudent = allStudents.find(s => s.id == id);
+                        if (currentStudent) {
+                            student.schoolclass = student.schoolclass || currentStudent.schoolclass;
+                            student.arm = student.arm || currentStudent.arm;
+                        }
+
+                        // Try to get term name from the terms dropdown data
+                        const termSelect = document.getElementById('termid') || document.getElementById('editTermid');
+                        if (termSelect && student.termid) {
+                            const termOption = termSelect.querySelector(`option[value="${student.termid}"]`);
+                            if (termOption) {
+                                student.term_name = termOption.textContent;
+                                console.log('Found term name from dropdown:', student.term_name);
+                            }
+                        }
+
+                        // Try to get school house name from the houses dropdown data
+                        const houseSelects = [
+                            document.getElementById('school_house'),
+                            document.getElementById('sport_house'),
+                            document.querySelector('select[name="school_house"]'),
+                            document.querySelector('select[name="sport_house"]')
+                        ];
+                        
+                        for (const houseSelect of houseSelects) {
+                            if (houseSelect && (student.school_house_id || student.sport_house_id)) {
+                                const houseId = student.school_house_id || student.sport_house_id;
+                                const houseOption = houseSelect.querySelector(`option[value="${houseId}"]`);
+                                if (houseOption) {
+                                    student.school_house = houseOption.textContent;
+                                    console.log('Found house name from dropdown:', student.school_house);
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Log all available student data for debugging
+                        console.log('Complete student data for debugging:', student);
+                        console.log('Available term-related fields:', {
+                            termid: student.termid,
+                            term_name: student.term_name,
+                            term: student.term,
+                            schoolterm_name: student.schoolterm_name,
+                            schoolterm: student.schoolterm
+                        });
+                        console.log('Available house-related fields:', {
+                            school_house_id: student.school_house_id,
+                            sport_house_id: student.sport_house_id,
+                            school_house: student.school_house,
+                            sport_house: student.sport_house,
+                            house: student.house,
+                            schoolhouse: student.schoolhouse
+                        });
+
+                        // Populate the view modal with student data
+                        populateViewModal(student);
+                        
+                    }).catch((fallbackError) => {
+                        console.error('Error fetching student for view:', {
+                            message: fallbackError.message,
+                            status: fallbackError.response?.status,
+                            data: fallbackError.response?.data
+                        });
+                        Swal.fire({
+                            title: 'Error!',
+                            text: fallbackError.response?.data?.message || 'Failed to load student data. Check console for details.',
+                            icon: 'error',
+                            customClass: { confirmButton: 'btn btn-primary' },
+                            buttonsStyling: false
+                        });
+                    });
+                });
+            }
+
+
+
             if (e.target.closest('.edit-item-btn')) {
                 const button = e.target.closest('.edit-item-btn');
                 const id = button.getAttribute('data-id');
@@ -2505,77 +3052,77 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
 
                    // ENHANCED STATE AND LGA HANDLING
-// This is the critical part that needs to be done properly
-const stateSelect = document.getElementById('editState');
-const lgaSelect = document.getElementById('editLocal');
+                    // This is the critical part that needs to be done properly
+                    const stateSelect = document.getElementById('editState');
+                    const lgaSelect = document.getElementById('editLocal');
 
-if (stateSelect && lgaSelect) {
-    // First, load the states/LGA data
-    fetch('/states_lgas.json')
-        .then(response => response.json())
-        .then(data => {
-            // Clear and populate states
-            stateSelect.innerHTML = '<option value="">Select State</option>';
-            data.forEach(state => {
-                const option = document.createElement('option');
-                option.value = state.state;
-                option.textContent = state.state;
-                stateSelect.appendChild(option);
-            });
+                    if (stateSelect && lgaSelect) {
+                        // First, load the states/LGA data
+                        fetch('/states_lgas.json')
+                            .then(response => response.json())
+                            .then(data => {
+                                // Clear and populate states
+                                stateSelect.innerHTML = '<option value="">Select State</option>';
+                                data.forEach(state => {
+                                    const option = document.createElement('option');
+                                    option.value = state.state;
+                                    option.textContent = state.state;
+                                    stateSelect.appendChild(option);
+                                });
 
-            // Set the student's state if available
-            if (student.state) {
-                stateSelect.value = student.state;
-                
-                // Find the selected state's LGAs
-                const selectedStateData = data.find(state => state.state === student.state);
-                if (selectedStateData) {
-                    // Clear and populate LGAs for the selected state
-                    lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
-                    selectedStateData.lgas.forEach(lga => {
-                        const option = document.createElement('option');
-                        option.value = lga;
-                        option.textContent = lga;
-                        lgaSelect.appendChild(option);
-                    });
-                    
-                    // Set the student's LGA if available
-                    if (student.local) {
-                        lgaSelect.value = student.local;
+                                // Set the student's state if available
+                                if (student.state) {
+                                    stateSelect.value = student.state;
+                                    
+                                    // Find the selected state's LGAs
+                                    const selectedStateData = data.find(state => state.state === student.state);
+                                    if (selectedStateData) {
+                                        // Clear and populate LGAs for the selected state
+                                        lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                                        selectedStateData.lgas.forEach(lga => {
+                                            const option = document.createElement('option');
+                                            option.value = lga;
+                                            option.textContent = lga;
+                                            lgaSelect.appendChild(option);
+                                        });
+                                        
+                                        // Set the student's LGA if available
+                                        if (student.local) {
+                                            lgaSelect.value = student.local;
+                                        }
+                                    }
+                                } else {
+                                    // If no state is selected, clear LGAs
+                                    lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                                }
+
+                                // Add event listener for state changes
+                                stateSelect.addEventListener('change', function() {
+                                    lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                                    const selectedState = data.find(state => state.state === this.value);
+                                    if (selectedState) {
+                                        selectedState.lgas.forEach(lga => {
+                                            const option = document.createElement('option');
+                                            option.value = lga;
+                                            option.textContent = lga;
+                                            lgaSelect.appendChild(option);
+                                        });
+                                    }
+                                });
+                            })
+                            .catch(error => {
+                                console.error('Error loading states and LGAs for edit modal:', error);
+                                Swal.fire({
+                                    title: 'Warning!',
+                                    text: 'Could not load states and LGAs data',
+                                    icon: 'warning',
+                                    customClass: { confirmButton: 'btn btn-primary' },
+                                    buttonsStyling: false
+                                });
+                            });
+                    } else {
+                        console.warn('State or LGA select elements not found in edit modal');
                     }
-                }
-            } else {
-                // If no state is selected, clear LGAs
-                lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
-            }
-
-            // Add event listener for state changes
-            stateSelect.addEventListener('change', function() {
-                lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
-                const selectedState = data.find(state => state.state === this.value);
-                if (selectedState) {
-                    selectedState.lgas.forEach(lga => {
-                        const option = document.createElement('option');
-                        option.value = lga;
-                        option.textContent = lga;
-                        lgaSelect.appendChild(option);
-                    });
-                }
-            });
-        })
-        .catch(error => {
-            console.error('Error loading states and LGAs for edit modal:', error);
-            Swal.fire({
-                title: 'Warning!',
-                text: 'Could not load states and LGAs data',
-                icon: 'warning',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
-            });
-        });
-} else {
-    console.warn('State or LGA select elements not found in edit modal');
-}
 
                     if (student.dateofbirth) {
                         showage(student.dateofbirth, 'editAge');
@@ -2761,9 +3308,77 @@ if (stateSelect && lgaSelect) {
         console.log('Permissions:', window.appPermissions || 'Not defined');
     }
 
+
+// Function to populate the view modal
+function populateViewModal(student) {
+    // Student Photo
+    const photoElement = document.getElementById('viewStudentPhoto');
+    if (photoElement) {
+        photoElement.src = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+    }
+
+    // Section A: Academic Details
+    document.getElementById('viewAcademicYear').textContent = student.admissionYear || '';
+    document.getElementById('viewRegistrationNo').textContent = student.admissionNo || '';
+    document.getElementById('viewAdmissionDate').textContent = student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : '';
+    document.getElementById('viewClass').textContent = (student.schoolclass && student.arm) ? `${student.schoolclass} - ${student.arm}` : '';
+    document.getElementById('viewTerm').textContent = student.term_name || '';
+    
+    // Category checkboxes
+    const categoryDay = document.getElementById('viewCategoryDay');
+    const categoryBorder = document.getElementById('viewCategoryBorder');
+    if (categoryDay && categoryBorder) {
+        categoryDay.checked = student.student_category === 'Day';
+        categoryBorder.checked = student.student_category === 'Boarding';
+    }
+
+    // Section B: Student Details
+    document.getElementById('viewSurname').textContent = student.lastname || '';
+    document.getElementById('viewFirstName').textContent = student.firstname || '';
+    document.getElementById('viewMiddleName').textContent = student.othername || '';
+    document.getElementById('viewGender').textContent = student.gender || '';
+    document.getElementById('viewBloodGroup').textContent = student.blood_group || '';
+    document.getElementById('viewDateOfBirth').textContent = student.dateofbirth ? new Date(student.dateofbirth).toLocaleDateString() : '';
+    document.getElementById('viewMotherTongue').textContent = student.mother_tongue || '';
+    document.getElementById('viewReligion').textContent = student.religion || '';
+    document.getElementById('viewSportHouse').textContent = student.school_house || student.sport_house || '';
+    document.getElementById('viewMobileNumber').textContent = student.phone_number || '';
+    document.getElementById('viewEmail').textContent = student.email || '';
+    document.getElementById('viewNIN').textContent = student.nin_number || '';
+    document.getElementById('viewCity').textContent = student.city || '';
+    document.getElementById('viewState').textContent = student.state || '';
+    document.getElementById('viewPresentAddress').textContent = student.present_address || '';
+    document.getElementById('viewPermanentAddress').textContent = student.permanent_address || '';
+
+    // Section C: Guardian Details
+    document.getElementById('viewFatherName').textContent = student.father_name || '';
+    document.getElementById('viewMotherName').textContent = student.mother_name || '';
+    document.getElementById('viewOccupation').textContent = student.father_occupation || '';
+    document.getElementById('viewParentCity').textContent = student.father_city || '';
+    document.getElementById('viewParentMobile').textContent = student.father_phone || student.mother_phone || '';
+    document.getElementById('viewParentEmail').textContent = student.parent_email || '';
+    document.getElementById('viewParentAddress').textContent = student.parent_address || '';
+
+    // Section D: Previous School Details
+    document.getElementById('viewSchoolName').textContent = student.last_school || '';
+    document.getElementById('viewPreviousClass').textContent = student.last_class || '';
+    document.getElementById('viewReasonLeaving').textContent = student.reason_for_leaving || '';
+}
+
+// Print function for the registration form
+function printRegistrationForm() {
+    window.print();
+}
+
     // Initialize the student list
     initializeStudentList();
 });
+
+
+
+
+
+
 </script>
 
 @endsection
