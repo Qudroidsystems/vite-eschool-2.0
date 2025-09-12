@@ -1364,438 +1364,722 @@ use Spatie\Permission\Models\Role;
 
 
 
-<!-- View Student Modal - Add this after the Edit Student Modal -->
+<!-- Modern Student Registration Modal -->
 <div id="viewStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-eye me-2"></i>
-                    Student Registration Form
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-lg-down modal-xl">
+        <div class="modal-content modern-modal">
+            <!-- Header with Gradient -->
+            <div class="modal-header modern-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="header-text">
+                        <h4 class="modal-title mb-0">Student Registration Form</h4>
+                        <p class="header-subtitle mb-0">Comprehensive Student Information</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close modern-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body p-4">
+            
+            <div class="modal-body modern-body">
                 <div class="registration-form">
-                    <!-- Header -->
-                    <div class="text-center mb-4">
-                        <h2 class="fw-bold mb-3">STUDENT'S REGISTRATION FORM</h2>
-                        <div class="student-photo-container mb-3">
-                            <img id="viewStudentPhoto" src="" alt="Student Photo" class="rounded border" style="width: 120px; height: 120px; object-fit: cover;">
+                    <!-- Student Photo Section -->
+                    <div class="student-header">
+                        <div class="photo-container">
+                            <div class="photo-frame">
+                                <img id="viewStudentPhoto" src="https://via.placeholder.com/150x150/6366f1/ffffff?text=PHOTO" alt="Student Photo" class="student-photo">
+                                <div class="photo-overlay">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            </div>
                         </div>
+                        {{-- <div class="student-basic-info">
+                            <h3 class="student-name" id="displayStudentName">Student Name</h3>
+                            <div class="student-meta">
+                                <span class="meta-item">
+                                    <i class="fas fa-id-card"></i>
+                                    <span id="displayRegNo">Registration No.</span>
+                                </span>
+                                <span class="meta-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span id="displayAcademicYear">Academic Year</span>
+                                </span>
+                                <span class="meta-item">
+                                    <i class="fas fa-users"></i>
+                                    <span id="displayClass">Class</span>
+                                </span>
+                            </div>
+                        </div> --}}
                     </div>
 
-                    <!-- Section A: Academic Details -->
-                    <div class="section-container mb-4">
-                        <div class="section-header">
-                            <h5 class="fw-bold mb-3">Section A: Academic Details</h5>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Academic Year:</label>
-                                    <span class="underline-field" id="viewAcademicYear">_______________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Registration No:</label>
-                                    <span class="underline-field" id="viewRegistrationNo">_________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Admission Date:</label>
-                                    <span class="underline-field" id="viewAdmissionDate">______________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Class:</label>
-                                    <span class="underline-field" id="viewClass">__________________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Term:</label>
-                                    <span class="underline-field" id="viewTerm">_______________________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Category:</label>
-                                    <span class="checkbox-field">
-                                        <input type="checkbox" id="viewCategoryDay" disabled> Day
-                                        <input type="checkbox" id="viewCategoryBorder" disabled class="ms-3"> Border
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Progressive Tabs Navigation -->
+                    <div class="form-navigation">
+                        <nav class="nav nav-pills nav-justified modern-tabs" id="pills-tab" role="tablist">
+                            <button class="nav-link active" id="academic-tab" data-bs-toggle="pill" data-bs-target="#academic" type="button" role="tab">
+                                <i class="fas fa-school"></i>
+                                <span>Academic</span>
+                                <div class="tab-progress"></div>
+                            </button>
+                            <button class="nav-link" id="personal-tab" data-bs-toggle="pill" data-bs-target="#personal" type="button" role="tab">
+                                <i class="fas fa-user"></i>
+                                <span>Personal</span>
+                                <div class="tab-progress"></div>
+                            </button>
+                            <button class="nav-link" id="guardian-tab" data-bs-toggle="pill" data-bs-target="#guardian" type="button" role="tab">
+                                <i class="fas fa-users"></i>
+                                <span>Guardian</span>
+                                <div class="tab-progress"></div>
+                            </button>
+                            <button class="nav-link" id="previous-tab" data-bs-toggle="pill" data-bs-target="#previous" type="button" role="tab">
+                                <i class="fas fa-history"></i>
+                                <span>Previous</span>
+                                <div class="tab-progress"></div>
+                            </button>
+                        </nav>
                     </div>
 
-                    <!-- Section B: Student's Details -->
-                    <div class="section-container mb-4">
-                        <div class="section-header">
-                            <h5 class="fw-bold mb-3">Section B: Student's Details</h5>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Surname:</label>
-                                    <span class="underline-field" id="viewSurname">___________________________________</span>
+                    <!-- Tab Content -->
+                    <div class="tab-content modern-tabs-content" id="pills-tabContent">
+                        
+                        <!-- Academic Details Tab -->
+                        <div class="tab-pane fade show active" id="academic" role="tabpanel">
+                            <div class="form-section">
+                                <div class="section-header">
+                                    <h5><i class="fas fa-school me-2"></i>Academic Information</h5>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">First Name:</label>
-                                    <span class="underline-field" id="viewFirstName">_____________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Middle Name:</label>
-                                    <span class="underline-field" id="viewMiddleName">_______________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Gender:</label>
-                                    <span class="underline-field" id="viewGender">________________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Blood Group:</label>
-                                    <span class="underline-field" id="viewBloodGroup">________________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Date of Birth:</label>
-                                    <span class="underline-field" id="viewDateOfBirth">____________________________</span>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Academic Year</label>
+                                        <div class="form-value" id="viewAcademicYear">2023-2024</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Registration No.</label>
+                                        <div class="form-value highlight" id="viewRegistrationNo">REG001234</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Admission Date</label>
+                                        <div class="form-value" id="viewAdmissionDate">15/08/2023</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Class</label>
+                                        <div class="form-value class-badge" id="viewClass">Grade 10-</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Term</label>
+                                        <div class="form-value" id="viewTerm"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Category</label>
+                                        <div class="category-badges">
+                                            <span class="category-badge day active" id="dayBadge">
+                                                <i class="fas fa-sun"></i> Day Student
+                                            </span>
+                                            <span class="category-badge boarding" id="boardingBadge">
+                                                <i class="fas fa-home"></i> Boarding
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Mother Tongue:</label>
-                                    <span class="underline-field" id="viewMotherTongue">______________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Religion:</label>
-                                    <span class="underline-field" id="viewReligion">________________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Sport House:</label>
-                                    <span class="underline-field" id="viewSportHouse">________________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Mobile Number:</label>
-                                    <span class="underline-field" id="viewMobileNumber">_________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">E-Mail:</label>
-                                    <span class="underline-field" id="viewEmail">______________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">NIN:</label>
-                                    <span class="underline-field" id="viewNIN">_______________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">City:</label>
-                                    <span class="underline-field" id="viewCity">_______________________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">State:</label>
-                                    <span class="underline-field" id="viewState">___________________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Present Address:</label>
-                                    <div class="underline-field-long" id="viewPresentAddress">_________________________________________________________________________</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Permanent Address:</label>
-                                    <div class="underline-field-long" id="viewPermanentAddress">______________________________________________________________________</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Section C: Guardian's Details -->
-                    <div class="section-container mb-4">
-                        <div class="section-header">
-                            <h5 class="fw-bold mb-3">Section C: Guardian's Details</h5>
+                        <!-- Personal Details Tab -->
+                        <div class="tab-pane fade" id="personal" role="tabpanel">
+                            <div class="form-section">
+                                <div class="section-header">
+                                    <h5><i class="fas fa-user me-2"></i>Personal Information</h5>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group full-width">
+                                        <div class="name-container">
+                                            <div class="name-part">
+                                                <label class="form-label">Surname</label>
+                                                <div class="form-value" id="viewSurname"></div>
+                                            </div>
+                                            <div class="name-part">
+                                                <label class="form-label">First Name</label>
+                                                <div class="form-value" id="viewFirstName"></div>
+                                            </div>
+                                            <div class="name-part">
+                                                <label class="form-label">Middle Name</label>
+                                                <div class="form-value" id="viewMiddleName"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Gender</label>
+                                        <div class="form-value gender-badge" id="viewGender">
+                                            <i class="fas fa-male"></i> 
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Date of Birth</label>
+                                        <div class="form-value" id="viewDateOfBirth"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Blood Group</label>
+                                        <div class="form-value blood-group" id="viewBloodGroup"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Mother Tongue</label>
+                                        <div class="form-value" id="viewMotherTongue"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Religion</label>
+                                        <div class="form-value" id="viewReligion"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Sport House</label>
+                                        <div class="form-value " id="viewSportHouse"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Mobile Number</label>
+                                        <div class="form-value contact" id="viewMobileNumber">
+                                            <i class="fas fa-phone"></i> 
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Email</label>
+                                        <div class="form-value contact" id="viewEmail">
+                                            <i class="fas fa-envelope"></i> 
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">NIN</label>
+                                        <div class="form-value" id="viewNIN"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">City</label>
+                                        <div class="form-value" id="viewCity"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">State</label>
+                                        <div class="form-value" id="viewState"></div>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Permanent Address</label>
+                                        <div class="form-value address-field" id="viewPermanentAddress">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Future Ambition</label>
+                                        <div class="form-value address-field" id="viewFutureAmbition">
+                                          
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Father's Name:</label>
-                                    <span class="underline-field" id="viewFatherName">_____________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Mother's Name:</label>
-                                    <span class="underline-field" id="viewMotherName">__________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Occupation:</label>
-                                    <span class="underline-field" id="viewOccupation">________________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">City:</label>
-                                    <span class="underline-field" id="viewParentCity">___________________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Mobile Number:</label>
-                                    <span class="underline-field" id="viewParentMobile">____________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">E-Mail:</label>
-                                    <span class="underline-field" id="viewParentEmail">_________________________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Address:</label>
-                                    <div class="underline-field-long" id="viewParentAddress">________________________________________________________________________________</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Section D: Previous School's Details -->
-                    <div class="section-container mb-4">
-                        <div class="section-header">
-                            <h5 class="fw-bold mb-3">Section D: Previous School's Details</h5>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">School Name:</label>
-                                    <div class="underline-field-long" id="viewSchoolName">____________________________________________________________________________</div>
+                        <!-- Guardian Details Tab -->
+                        <div class="tab-pane fade" id="guardian" role="tabpanel">
+                            <div class="form-section">
+                                <div class="section-header">
+                                    <h5><i class="fas fa-users me-2"></i>Guardian Information</h5>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Father's Name</label>
+                                        <div class="form-value" id="viewFatherName"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Mother's Name</label>
+                                        <div class="form-value" id="viewMotherName"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Occupation</label>
+                                        <div class="form-value occupation-badge" id="viewOccupation"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">City</label>
+                                        <div class="form-value" id="viewParentCity"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Mobile Number</label>
+                                        <div class="form-value contact" id="viewParentMobile">
+                                            <i class="fas fa-phone"></i> 
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Email</label>
+                                        <div class="form-value contact" id="viewParentEmail">
+                                            <i class="fas fa-envelope"></i> 
+                                        </div>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Address</label>
+                                        <div class="form-value address-field" id="viewParentAddress">
+                                           
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Previous Class:</label>
-                                    <div class="underline-field-long" id="viewPreviousClass">__________________________________________________________________________</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Reason for Leaving:</label>
-                                    <div class="underline-field-long" id="viewReasonLeaving">______________________________________________________________________</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Official Use Only Section -->
-                    <div class="section-container mb-4">
-                        <div class="section-header">
-                            <h5 class="fw-bold mb-3">Official Use Only</h5>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Class Teacher's Name:</label>
-                                    <span class="underline-field">_________________________________</span>
+                        <!-- Previous School Tab -->
+                        <div class="tab-pane fade" id="previous" role="tabpanel">
+                            <div class="form-section">
+                                <div class="section-header">
+                                    <h5><i class="fas fa-history me-2"></i>Previous School Information</h5>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group full-width">
+                                        <label class="form-label">School Name</label>
+                                        <div class="form-value school-name" id="viewSchoolName">
+                                            <i class="fas fa-school"></i> 
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Previous Class</label>
+                                        <div class="form-value class-badge" id="viewPreviousClass"></div>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Reason for Leaving</label>
+                                        <div class="form-value reason-field" id="viewReasonLeaving">
+                                           
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Signature & Date:</label>
-                                    <span class="underline-field">___________________</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Principal's Comment:</label>
-                                    <div class="underline-field-long">_____________________________________________________________________</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Principal's Name:</label>
-                                    <span class="underline-field">____________________________________</span>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-field">
-                                    <label class="form-label fw-bold">Signature & Date:</label>
-                                    <span class="underline-field">___________________</span>
-                                </div>
-                            </div>
+
+                            
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Close
-                </button>
-                <button type="button" class="btn btn-primary" onclick="printRegistrationForm()">
-                    <i class="fas fa-print me-1"></i>Print Form
-                </button>
+
+            <!-- Modern Footer -->
+            <div class="modal-footer modern-footer">
+                <div class="footer-actions">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Close
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="downloadPDF()">
+                        <i class="fas fa-download me-2"></i>Download PDF
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="printForm()">
+                        <i class="fas fa-print me-2"></i>Print Form
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- CSS Styles for the Registration Form -->
+
+
 <style>
-.registration-form {
-    font-family: 'Times New Roman', serif;
-    line-height: 1.6;
-    color: #000;
+
+.modern-modal {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    backdrop-filter: blur(16px);
 }
 
-.section-container {
-    border: 2px solid #000;
-    padding: 20px;
-    margin-bottom: 20px;
-    background: #fff;
+.modern-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 24px 32px;
+    color: white;
+    position: relative;
+    overflow: hidden;
 }
 
-.section-header {
-    border-bottom: 1px solid #000;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
+.modern-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="20" cy="80" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    pointer-events: none;
 }
 
-.form-field {
-    margin-bottom: 15px;
+.header-content {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
 }
 
-.form-field label {
-    margin-right: 10px;
-    min-width: 120px;
-    color: #000;
-}
-
-.underline-field {
-    border-bottom: 1px solid #000;
-    min-height: 20px;
-    flex-grow: 1;
-    padding: 2px 5px;
-    display: inline-block;
-    min-width: 200px;
-    color: #000;
-    font-weight: 500;
-}
-
-.underline-field-long {
-    border-bottom: 1px solid #000;
-    min-height: 20px;
-    width: 100%;
-    padding: 2px 5px;
-    margin-top: 5px;
-    color: #000;
-    font-weight: 500;
-}
-
-.checkbox-field {
+.header-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    font-size: 24px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.checkbox-field input[type="checkbox"] {
-    margin-right: 5px;
+.header-subtitle {
+    opacity: 0.9;
+    font-size: 14px;
+    font-weight: 400;
 }
 
-.student-photo-container {
-    border: 2px solid #000;
-    padding: 10px;
-    display: inline-block;
+.modern-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
 }
 
-@media print {
-    .modal-header, .modal-footer {
-        display: none !important;
-    }
-    
-    .registration-form {
-        font-size: 12pt;
-    }
-    
-    .section-container {
-        page-break-inside: avoid;
-        border: 2px solid #000 !important;
-    }
+.modern-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
 }
 
-/* Override modal styles for better printing */
-#viewStudentModal .modal-body {
+.modern-body {
+    padding: 0;
+    background: #f8fafc;
     max-height: 80vh;
     overflow-y: auto;
 }
 
-#viewStudentModal .modal-xl {
-    max-width: 95%;
+.student-header {
+    background: white;
+    padding: 32px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 0;
+}
+
+.photo-container {
+    position: relative;
+}
+
+.photo-frame {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 4px;
+}
+
+.student-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    background: white;
+}
+
+.photo-overlay {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 32px;
+    opacity: 0.8;
+}
+
+.student-basic-info {
+    flex: 1;
+}
+
+.student-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 12px;
+}
+
+.student-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f1f5f9;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+}
+
+.meta-item i {
+    color: #6366f1;
+}
+
+.form-navigation {
+    background: white;
+    padding: 0 32px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modern-tabs {
+    border: none;
+    gap: 0;
+}
+
+.modern-tabs .nav-link {
+    border: none;
+    border-radius: 0;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+    font-weight: 500;
+    position: relative;
+    background: none;
+    transition: all 0.3s ease;
+}
+
+.modern-tabs .nav-link i {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.modern-tabs .nav-link.active {
+    color: #6366f1;
+    background: none;
+}
+
+.tab-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #6366f1;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+    border-radius: 3px 3px 0 0;
+}
+
+.modern-tabs .nav-link.active .tab-progress {
+    transform: scaleX(1);
+}
+
+.modern-tabs-content {
+    background: #f8fafc;
+}
+
+.form-section {
+    background: white;
+    margin: 24px 32px;
+    padding: 32px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.section-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.section-header h5 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+}
+
+.section-header i {
+    color: #6366f1;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.form-value {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1e293b;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.form-value.highlight {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-color: #f59e0b;
+    color: #92400e;
+}
+
+.form-value.class-badge {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    border-color: #3b82f6;
+    color: #1e40af;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.form-value.gender-badge {
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+    border-color: #6366f1;
+    color: #4338ca;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.form-value.blood-group {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    border-color: #ef4444;
+    color: #dc2626;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.form-value.house-badge {
+    color: white;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.form-value.house-badge.red {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-color: #dc2626;
+}
+
+.form-value.contact {
+    background: #f0fdf4;
+    border-color: #22c55e;
+    color: #166534;
+    gap: 8px;
+}
+
+.form-value.contact i {
+    color: #22c55e;
+}
+
+.form-value.occupation-badge {
+    background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
+    border-color: #8b5cf6;
+    color: #6b21a8;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.form-value.school-name {
+    background: #fef7ff;
+    border-color: #d946ef;
+    color: #a21caf;
+    gap: 12px;
+    font-weight: 600;
+}
+
+.address-field, .reason-field {
+    min-height: 72px;
+    align-items: flex-start;
+    line-height: 1.6;
+}
+
+.name-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.category-badges {
+    display: flex;
+    gap: 12px;
+}
+
+.category-badge {
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.category-badge.day {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #f59e0b;
+}
+
+.category-badge.boarding {
+    background: #e0f2fe;
+    color: #0e7490;
+    border-color: #0891b2;
+    opacity: 0.5;
+}
+
+.category-badge.active {
+    opacity: 1;
+    transform: scale(1.02);
+}
+
+.official-section {
+    background: #fafafa;
+    border: 2px solid #e5e7eb;
+}
+
+.official-grid {
+    display: flex;
+    flex-direction: column;
 }
 </style>
 
@@ -3341,14 +3625,14 @@ function populateViewModal(student) {
     document.getElementById('viewDateOfBirth').textContent = student.dateofbirth ? new Date(student.dateofbirth).toLocaleDateString() : '';
     document.getElementById('viewMotherTongue').textContent = student.mother_tongue || '';
     document.getElementById('viewReligion').textContent = student.religion || '';
-    document.getElementById('viewSportHouse').textContent = student.school_house || student.sport_house || '';
+    document.getElementById('viewSportHouse').textContent = student.schoolhouse || student.sport_house || '';
     document.getElementById('viewMobileNumber').textContent = student.phone_number || '';
     document.getElementById('viewEmail').textContent = student.email || '';
     document.getElementById('viewNIN').textContent = student.nin_number || '';
     document.getElementById('viewCity').textContent = student.city || '';
     document.getElementById('viewState').textContent = student.state || '';
-    document.getElementById('viewPresentAddress').textContent = student.present_address || '';
     document.getElementById('viewPermanentAddress').textContent = student.permanent_address || '';
+    document.getElementById('viewFutureAmbition').textContent = student.future_ambition || '';
 
     // Section C: Guardian Details
     document.getElementById('viewFatherName').textContent = student.father_name || '';
