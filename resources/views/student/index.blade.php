@@ -908,7 +908,7 @@ use Spatie\Permission\Models\Role;
 
                     <div class="row">
                         <div class="col-md-6">
-                            <!-- Section A: Academic Details -->
+                           <!-- Updated Academic Details section in Edit Student Modal -->
                             <div class="card">
                                 <div class="card-header bg-primary text-white">
                                     <h6 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>Academic Details</h6>
@@ -944,6 +944,7 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                     </div>
 
+                                    <!-- MISSING FIELD: Admission Date -->
                                     <div class="mb-3">
                                         <label for="editAdmissionDate" class="form-label">Admission Date <span class="text-danger">*</span></label>
                                         <input type="date" id="editAdmissionDate" name="admissionDate" class="form-control" required max="{{ date('Y-m-d') }}">
@@ -1030,236 +1031,239 @@ use Spatie\Permission\Models\Role;
                                     </div>
                                 </div>
                             </div>
+
                         </div>
 
                         <!-- Personal Details and other sections remain unchanged -->
                         <div class="col-md-6">
-                            <!-- Section B: Personal Details -->
-                            <div class="card">
-                                <div class="card-header bg-info text-white">
-                                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Personal Details</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-3 text-center">
-                                        <div class="upload-area border border-2 border-dashed border-primary rounded p-3">
-                                            <img id="editStudentAvatar" src="{{ asset('theme/layouts/assets/media/avatars/blank.png') }}" alt="Avatar Preview" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #667eea; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
-                                            <div>
-                                                <label for="editAvatar" class="btn btn-outline-primary btn-sm">
-                                                    <i class="fas fa-camera me-1"></i>Choose Photo
-                                                </label>
-                                                <input type="file" id="editAvatar" name="avatar" class="d-none" accept=".png,.jpg,.jpeg" onchange="previewImage(this, 'editStudentAvatar')">
-                                                <div class="form-text mt-2">Max 2MB (PNG, JPG, JPEG)</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="mb-3">
-                                                <label for="editTitle" class="form-label">Title</label>
-                                                <select id="editTitle" name="title" class="form-control">
-                                                    <option value="">Select</option>
-                                                    <option value="Master">Master</option>
-                                                    <option value="Miss">Miss</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="mb-3">
-                                                <label for="editFirstname" class="form-label">First Name <span class="text-danger">*</span></label>
-                                                <input type="text" id="editFirstname" name="firstname" class="form-control" placeholder="First name" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="mb-3">
-                                                <label for="editLastname" class="form-label">Last Name <span class="text-danger">*</span></label>
-                                                <input type="text" id="editLastname" name="lastname" class="form-control" placeholder="Last name" required>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="editOthername" class="form-label">Other Names</label>
-                                        <input type="text" id="editOthername" name="othername" class="form-control" placeholder="Middle name(s)">
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Gender <span class="text-danger">*</span></label>
-                                        <div class="d-flex gap-3">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="gender" id="editGenderMale" value="Male" required>
-                                                <label class="form-check-label" for="editGenderMale">
-                                                    <i class="fas fa-male text-primary me-1"></i>Male
-                                                </label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="gender" id="editGenderFemale" value="Female" required>
-                                                <label class="form-check-label" for="editGenderFemale">
-                                                    <i class="fas fa-female text-danger me-1"></i>Female
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="editDOB" class="form-label">Date of Birth <span class="text-danger">*</span></label>
-                                                <input type="date" id="editDOB" name="dateofbirth" class="form-control" required onchange="calculateAge(this.value, 'editAgeInput')">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label">Age <span class="text-danger">*</span></label>
-                                                <input type="number" id="editAgeInput" name="age" class="form-control" readonly required>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="editPhoneNumber" class="form-label">Phone Number</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-primary text-white">
-                                                <i class="fas fa-phone"></i>
-                                            </span>
-                                            <input type="text" id="editPhoneNumber" name="phone_number" class="form-control" placeholder="+234 xxx xxx xxxx">
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="editPlaceofbirth" class="form-label">Place of Birth</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-primary text-white">
-                                                <i class="fas fa-map-marker-alt"></i>
-                                            </span>
-                                            <input type="text" id="editPlaceofbirth" name="placeofbirth" class="form-control" placeholder="Place of birth">
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="editEmail" class="form-label">Email</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-primary text-white">
-                                                <i class="fas fa-envelope"></i>
-                                            </span>
-                                            <input type="email" id="editEmail" name="email" class="form-control" placeholder="student@example.com">
-                                        </div>
-                                    </div>
-
-                                   <div class="mb-3">
-                                        <label for="editFutureAmbition" class="form-label">Future Ambition <span class="text-danger">*</span></label>
-                                        <textarea id="editFutureAmbition" name="future_ambition" class="form-control" rows="2" placeholder="Enter future ambition" required></textarea>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="editPermanentAddress" class="form-label">Permanent Address <span class="text-danger">*</span></label>
-                                        <textarea id="editPermanentAddress" name="permanent_address" class="form-control" rows="2" placeholder="Enter permanent address" required></textarea>
-                                    </div>
-                                 </div>
+                         <!-- Updated Personal Details section with Future Ambition -->
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-user me-2"></i>Personal Details</h6>
                             </div>
+                            <div class="card-body">
+                                <div class="mb-3 text-center">
+                                    <div class="upload-area border border-2 border-dashed border-primary rounded p-3">
+                                        <img id="editStudentAvatar" src="{{ asset('theme/layouts/assets/media/avatars/blank.png') }}" alt="Avatar Preview" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #667eea; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+                                        <div>
+                                            <label for="editAvatar" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-camera me-1"></i>Choose Photo
+                                            </label>
+                                            <input type="file" id="editAvatar" name="avatar" class="d-none" accept=".png,.jpg,.jpeg" onchange="previewImage(this, 'editStudentAvatar')">
+                                            <div class="form-text mt-2">Max 2MB (PNG, JPG, JPEG)</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="editTitle" class="form-label">Title</label>
+                                            <select id="editTitle" name="title" class="form-control">
+                                                <option value="">Select</option>
+                                                <option value="Master">Master</option>
+                                                <option value="Miss">Miss</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="editFirstname" class="form-label">First Name <span class="text-danger">*</span></label>
+                                            <input type="text" id="editFirstname" name="firstname" class="form-control" placeholder="First name" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="editLastname" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                            <input type="text" id="editLastname" name="lastname" class="form-control" placeholder="Last name" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="editOthername" class="form-label">Other Names</label>
+                                    <input type="text" id="editOthername" name="othername" class="form-control" placeholder="Middle name(s)">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Gender <span class="text-danger">*</span></label>
+                                    <div class="d-flex gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="gender" id="editGenderMale" value="Male" required>
+                                            <label class="form-check-label" for="editGenderMale">
+                                                <i class="fas fa-male text-primary me-1"></i>Male
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="gender" id="editGenderFemale" value="Female" required>
+                                            <label class="form-check-label" for="editGenderFemale">
+                                                <i class="fas fa-female text-danger me-1"></i>Female
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editDOB" class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                                            <input type="date" id="editDOB" name="dateofbirth" class="form-control" required onchange="calculateAge(this.value, 'editAgeInput')">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Age <span class="text-danger">*</span></label>
+                                            <input type="number" id="editAgeInput" name="age" class="form-control" readonly required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="editPhoneNumber" class="form-label">Phone Number</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white">
+                                            <i class="fas fa-phone"></i>
+                                        </span>
+                                        <input type="text" id="editPhoneNumber" name="phone_number" class="form-control" placeholder="+234 xxx xxx xxxx">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="editPlaceofbirth" class="form-label">Place of Birth</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                        </span>
+                                        <input type="text" id="editPlaceofbirth" name="placeofbirth" class="form-control" placeholder="Place of birth">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="editEmail" class="form-label">Email</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white">
+                                            <i class="fas fa-envelope"></i>
+                                        </span>
+                                        <input type="email" id="editEmail" name="email" class="form-control" placeholder="student@example.com">
+                                    </div>
+                                </div>
+
+                                <!-- MISSING FIELD: Future Ambition -->
+                                <div class="mb-3">
+                                    <label for="editFutureAmbition" class="form-label">Future Ambition <span class="text-danger">*</span></label>
+                                    <textarea id="editFutureAmbition" name="future_ambition" class="form-control" rows="2" placeholder="Enter future ambition" required></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="editPermanentAddress" class="form-label">Permanent Address <span class="text-danger">*</span></label>
+                                    <textarea id="editPermanentAddress" name="permanent_address" class="form-control" rows="2" placeholder="Enter permanent address" required></textarea>
+                                </div>
+                            </div>
+                        </div>
                         </div>
 
                         <div class="col-md-6">
-                            <!-- Section C: Additional Information -->
-                            <div class="card">
-                                <div class="card-header bg-success text-white">
-                                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Additional Information</h6>
+                    <!-- Updated Additional Information section with School House -->
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Additional Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-10">
+                                        <div class="mb-3">
+                                            <label for="editNationality" class="form-label">Nationality</label>
+                                            <input type="text" id="editNationality" name="nationality" class="form-control" placeholder="Nationality" required>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-10">
-                                            <div class="mb-3">
-                                                <label for="editNationality" class="form-label">Nationality</label>
-                                                <input type="text" id="editNationality" name="nationality" class="form-control" placeholder="Nationality" required>
-                                            </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editState" class="form-label">State of Origin <span class="text-danger">*</span></label>
+                                            <select id="editState" name="state" class="form-control" required>
+                                                <option value="">Select State</option>
+                                            </select>
                                         </div>
                                     </div>
-
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="editState" class="form-label">State of Origin <span class="text-danger">*</span></label>
-                                                <select id="editState" name="state" class="form-control" required>
-                                                    <option value="">Select State</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="editLocal" class="form-label">Local Government of Origin<span class="text-danger">*</span></label>
-                                                <select id="editLocal" name="local" class="form-control" required>
-                                                    <option value="">Select LGA</option>
-                                                </select>
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editLocal" class="form-label">Local Government of Origin<span class="text-danger">*</span></label>
+                                            <select id="editLocal" name="local" class="form-control" required>
+                                                <option value="">Select LGA</option>
+                                            </select>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="editCity" class="form-label">City</label>
-                                                <input type="text" id="editCity" name="city" class="form-control" placeholder="Enter city">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="editReligion" class="form-label">Religion <span class="text-danger">*</span></label>
-                                                <select id="editReligion" name="religion" class="form-control" required>
-                                                    <option value="">Select Religion</option>
-                                                    <option value="Christianity">Christianity</option>
-                                                    <option value="Islam">Islam</option>
-                                                    <option value="Others">Others</option>
-                                                </select>
-                                            </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editCity" class="form-label">City</label>
+                                            <input type="text" id="editCity" name="city" class="form-control" placeholder="Enter city">
                                         </div>
                                     </div>
-
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="editBloodGroup" class="form-label">Blood Group</label>
-                                                <select id="editBloodGroup" name="blood_group" class="form-control">
-                                                    <option value="">Select Blood Group</option>
-                                                    <option value="A+">A+</option>
-                                                    <option value="A-">A-</option>
-                                                    <option value="B+">B+</option>
-                                                    <option value="B-">B-</option>
-                                                    <option value="AB+">AB+</option>
-                                                    <option value="AB-">AB-</option>
-                                                    <option value="O+">O+</option>
-                                                    <option value="O-">O-</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="editMotherTongue" class="form-label">Mother Tongue</label>
-                                                <input type="text" id="editMotherTongue" name="mother_tongue" class="form-control" placeholder="Native language">
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editReligion" class="form-label">Religion <span class="text-danger">*</span></label>
+                                            <select id="editReligion" name="religion" class="form-control" required>
+                                                <option value="">Select Religion</option>
+                                                <option value="Christianity">Christianity</option>
+                                                <option value="Islam">Islam</option>
+                                                <option value="Others">Others</option>
+                                            </select>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="editNinNumber" class="form-label">NIN Number</label>
-                                                <input type="text" id="editNinNumber" name="nin_number" class="form-control" placeholder="11-digit NIN" maxlength="11">
-                                            </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editBloodGroup" class="form-label">Blood Group</label>
+                                            <select id="editBloodGroup" name="blood_group" class="form-control">
+                                                <option value="">Select Blood Group</option>
+                                                <option value="A+">A+</option>
+                                                <option value="A-">A-</option>
+                                                <option value="B+">B+</option>
+                                                <option value="B-">B-</option>
+                                                <option value="AB+">AB+</option>
+                                                <option value="AB-">AB-</option>
+                                                <option value="O+">O+</option>
+                                                <option value="O-">O-</option>
+                                            </select>
                                         </div>
-                                        <div class="col-md-6">
-                                             <div class="mb-3">
-                                                <label for="sport_house" class="form-label">School House</label>
-                                                <select id="schoolclassid" name="schoolclassid" class="form-control" required>
-                                                    <option value="">Select School House</option>
-                                                    @foreach ($schoolhouses as $schoolhouse)
-                                                        <option value="{{ $schoolhouse->id }}">{{ $schoolhouse->house }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editMotherTongue" class="form-label">Mother Tongue</label>
+                                            <input type="text" id="editMotherTongue" name="mother_tongue" class="form-control" placeholder="Native language">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editNinNumber" class="form-label">NIN Number</label>
+                                            <input type="text" id="editNinNumber" name="nin_number" class="form-control" placeholder="11-digit NIN" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- MISSING FIELD: School House -->
+                                        <div class="mb-3">
+                                            <label for="editSchoolHouse" class="form-label">School House</label>
+                                            <select id="editSchoolHouse" name="school_house" class="form-control">
+                                                <option value="">Select School House</option>
+                                                @foreach ($schoolhouses as $schoolhouse)
+                                                    <option value="{{ $schoolhouse->id }}">{{ $schoolhouse->house }}</option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
                             <!-- Section D: Parent/Guardian Details -->
                             <div class="card">
@@ -2422,10 +2426,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         throw new Error('Student data is empty');
                     }
 
+                   // Updated fields array with the missing fields
                     const fields = [
                         { id: 'editStudentId', value: student.id },
                         { id: 'editAdmissionNo', value: student.admissionNo },
                         { id: 'editAdmissionYear', value: student.admissionYear },
+                        { id: 'editAdmissionDate', value: student.admissionDate ? student.admissionDate.split('T')[0] : '' }, // ADDED
                         { id: 'editTitle', value: student.title || '' },
                         { id: 'editFirstname', value: student.firstname },
                         { id: 'editLastname', value: student.lastname },
@@ -2442,18 +2448,29 @@ document.addEventListener('DOMContentLoaded', function () {
                         { id: 'editTermid', value: student.termid || '' },
                         { id: 'editSessionid', value: student.sessionid || '' },
                         { id: 'editPhoneNumber', value: student.phone_number || '' },
+                        { id: 'editEmail', value: student.email || '' }, // ADDED
+                        { id: 'editFutureAmbition', value: student.future_ambition || '' }, // ADDED
+                        { id: 'editCity', value: student.city || '' }, // ADDED
+                        { id: 'editState', value: student.state || '' }, // ADDED - State field
+                        { id: 'editLocal', value: student.local || '' }, // ADDED - Local Government field
                         { id: 'editNinNumber', value: student.nin_number || '' },
                         { id: 'editBloodGroup', value: student.blood_group || '' },
                         { id: 'editMotherTongue', value: student.mother_tongue || '' },
                         { id: 'editFatherName', value: student.father_name || '' },
                         { id: 'editFatherPhone', value: student.father_phone || '' },
                         { id: 'editFatherOccupation', value: student.father_occupation || '' },
+                        { id: 'editFatherCity', value: student.father_city || '' }, // ADDED
                         { id: 'editMotherName', value: student.mother_name || '' },
                         { id: 'editMotherPhone', value: student.mother_phone || '' },
+                        { id: 'editParentEmail', value: student.parent_email || '' }, // ADDED
                         { id: 'editParentAddress', value: student.parent_address || '' },
                         { id: 'editStudentCategory', value: student.student_category || '' },
-                        { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
+                        { id: 'editLastSchool', value: student.last_school || '' },
+                        { id: 'editLastClass', value: student.last_class || '' },
+                        { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' },
+                        { id: 'editSchoolHouse', value: student.school_house || student.sport_house || '' } // ADDED
                     ];
+
 
                     fields.forEach(({ id, value }) => {
                         const element = document.getElementById(id);
@@ -2487,24 +2504,78 @@ document.addEventListener('DOMContentLoaded', function () {
                         console.warn('Avatar element with ID "editStudentAvatar" not found');
                     }
 
-                    const stateSelect = document.getElementById('editState');
-                    const lgaSelect = document.getElementById('editLocal');
-                    if (student.state && stateSelect) {
-                        stateSelect.value = student.state;
-                        setTimeout(() => {
-                            populateLGAs(student.state, 'editLocal');
-                            setTimeout(() => {
-                                if (lgaSelect) {
-                                    lgaSelect.value = student.local || '';
-                                    if (ensureChoices()) {
-                                        new Choices(lgaSelect, { searchEnabled: true });
-                                    }
-                                }
-                            }, 200);
-                        }, 100);
-                    } else if (lgaSelect) {
-                        lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                   // ENHANCED STATE AND LGA HANDLING
+// This is the critical part that needs to be done properly
+const stateSelect = document.getElementById('editState');
+const lgaSelect = document.getElementById('editLocal');
+
+if (stateSelect && lgaSelect) {
+    // First, load the states/LGA data
+    fetch('/states_lgas.json')
+        .then(response => response.json())
+        .then(data => {
+            // Clear and populate states
+            stateSelect.innerHTML = '<option value="">Select State</option>';
+            data.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state.state;
+                option.textContent = state.state;
+                stateSelect.appendChild(option);
+            });
+
+            // Set the student's state if available
+            if (student.state) {
+                stateSelect.value = student.state;
+                
+                // Find the selected state's LGAs
+                const selectedStateData = data.find(state => state.state === student.state);
+                if (selectedStateData) {
+                    // Clear and populate LGAs for the selected state
+                    lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                    selectedStateData.lgas.forEach(lga => {
+                        const option = document.createElement('option');
+                        option.value = lga;
+                        option.textContent = lga;
+                        lgaSelect.appendChild(option);
+                    });
+                    
+                    // Set the student's LGA if available
+                    if (student.local) {
+                        lgaSelect.value = student.local;
                     }
+                }
+            } else {
+                // If no state is selected, clear LGAs
+                lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+            }
+
+            // Add event listener for state changes
+            stateSelect.addEventListener('change', function() {
+                lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
+                const selectedState = data.find(state => state.state === this.value);
+                if (selectedState) {
+                    selectedState.lgas.forEach(lga => {
+                        const option = document.createElement('option');
+                        option.value = lga;
+                        option.textContent = lga;
+                        lgaSelect.appendChild(option);
+                    });
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error loading states and LGAs for edit modal:', error);
+            Swal.fire({
+                title: 'Warning!',
+                text: 'Could not load states and LGAs data',
+                icon: 'warning',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
+        });
+} else {
+    console.warn('State or LGA select elements not found in edit modal');
+}
 
                     if (student.dateofbirth) {
                         showage(student.dateofbirth, 'editAge');
