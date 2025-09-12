@@ -589,6 +589,7 @@ use Spatie\Permission\Models\Role;
                                                 <label for="lastname" class="form-label">Last Name <span class="text-danger">*</span></label>
                                                 <input type="text" id="lastname" name="lastname" class="form-control" placeholder="Last name" required>
                                             </div>
+                                             </div>
                                         </div>
                                             <div class="mb-3">
                                                 <label for="firstname" class="form-label">First Name <span class="text-danger">*</span></label>
@@ -596,7 +597,7 @@ use Spatie\Permission\Models\Role;
                                             </div>
                                         </div>
                                        
-                                    </div>
+                                   
 
                                     <div class="mb-3">
                                         <label for="othername" class="form-label">Other Names</label>
