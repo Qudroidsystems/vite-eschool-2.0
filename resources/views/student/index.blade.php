@@ -1845,7 +1845,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let studentList;
     let allStudents = [];
-    const itemsPerPage = 10;
+    const itemsPerPage = 1;
     const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
 
     // Fetch students from the server
