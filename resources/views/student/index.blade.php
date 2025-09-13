@@ -2260,9 +2260,9 @@ use Spatie\Permission\Models\Role;
 
 <script>
 
-    // Initialize admission number on page load
-    updateAdmissionNumber();
-    updateAdmissionNumber('edit');
+// Initialize admission number on page load
+updateAdmissionNumber();
+updateAdmissionNumber('edit');
 
 // Update admission number based on year selection
 function updateAdmissionNumber(prefix = '') {
@@ -2287,7 +2287,7 @@ function updateAdmissionNumber(prefix = '') {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Backend returns the full admission number (e.g., CSSK/STD/2025/001)
+                // Backend returns the full admission number (e.g., CSSK/STD/2025/0871)
                 admissionNoInput.value = data.admissionNo;
             } else {
                 Swal.fire({
@@ -2297,7 +2297,7 @@ function updateAdmissionNumber(prefix = '') {
                     customClass: { confirmButton: 'btn btn-primary' },
                     buttonsStyling: false
                 });
-                admissionNoInput.value = `${baseFormat}001`; // Fallback
+                admissionNoInput.value = `${baseFormat}0871`; // Fallback to 0871
             }
         })
         .catch(error => {
@@ -2309,15 +2309,16 @@ function updateAdmissionNumber(prefix = '') {
                 customClass: { confirmButton: 'btn btn-primary' },
                 buttonsStyling: false
             });
-            admissionNoInput.value = `${baseFormat}001`; // Fallback
+            admissionNoInput.value = `${baseFormat}0871`; // Fallback to 0871
         });
     } else {
         admissionNoInput.readOnly = false;
         if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
-            admissionNoInput.value = `${baseFormat}001`;
+            admissionNoInput.value = `${baseFormat}0871`;
         } else if (!admissionNoInput.value.startsWith(baseFormat)) {
-            const numericPart = admissionNoInput.value.split('/').pop() || '001';
-            admissionNoInput.value = `${baseFormat}${numericPart.padStart(3, '0')}`;
+            const numericPart = admissionNoInput.value.split('/').pop() || '0871';
+            const numericValue = Math.max(871, parseInt(numericPart) || 871);
+            admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
         }
     }
 }
@@ -2345,7 +2346,7 @@ window.toggleAdmissionInput = function(prefix = '') {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Backend returns the full admission number (e.g., CSSK/STD/2025/001)
+                // Backend returns the full admission number (e.g., CSSK/STD/2025/0871)
                 admissionNoInput.value = data.admissionNo;
             } else {
                 Swal.fire({
@@ -2355,7 +2356,7 @@ window.toggleAdmissionInput = function(prefix = '') {
                     customClass: { confirmButton: 'btn btn-primary' },
                     buttonsStyling: false
                 });
-                admissionNoInput.value = `${baseFormat}001`; // Fallback
+                admissionNoInput.value = `${baseFormat}0871`; // Fallback to 0871
             }
         })
         .catch(error => {
@@ -2367,22 +2368,23 @@ window.toggleAdmissionInput = function(prefix = '') {
                 customClass: { confirmButton: 'btn btn-primary' },
                 buttonsStyling: false
             });
-            admissionNoInput.value = `${baseFormat}001`; // Fallback
+            admissionNoInput.value = `${baseFormat}0871`; // Fallback to 0871
         });
     } else {
         admissionNoInput.readOnly = false;
         if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
-            admissionNoInput.value = `${baseFormat}001`;
+            admissionNoInput.value = `${baseFormat}0871`;
         } else if (!admissionNoInput.value.startsWith(baseFormat)) {
-            const numericPart = admissionNoInput.value.split('/').pop() || '001';
-            admissionNoInput.value = `${baseFormat}${numericPart.padStart(3, '0')}`;
+            const numericPart = admissionNoInput.value.split('/').pop() || '0871';
+            const numericValue = Math.max(871, parseInt(numericPart) || 871);
+            admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
         }
     }
 };
 
-    // Add event listeners for year selection
-    document.getElementById('admissionYear')?.addEventListener('change', () => updateAdmissionNumber());
-    document.getElementById('editAdmissionYear')?.addEventListener('change', () => updateAdmissionNumber('edit'));
+// Add event listeners for year selection
+document.getElementById('admissionYear')?.addEventListener('change', () => updateAdmissionNumber());
+document.getElementById('editAdmissionYear')?.addEventListener('change', () => updateAdmissionNumber('edit'));
 
 document.addEventListener('DOMContentLoaded', function () {
     // Fetch states and LGAs
@@ -3595,66 +3597,66 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-// Function to populate the view modal
-function populateViewModal(student) {
-    // Student Photo
-    const photoElement = document.getElementById('viewStudentPhoto');
-    if (photoElement) {
-        photoElement.src = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+    // Function to populate the view modal
+    function populateViewModal(student) {
+        // Student Photo
+        const photoElement = document.getElementById('viewStudentPhoto');
+        if (photoElement) {
+            photoElement.src = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+        }
+
+        // Section A: Academic Details
+        document.getElementById('viewAcademicYear').textContent = student.admissionYear || '';
+        document.getElementById('viewRegistrationNo').textContent = student.admissionNo || '';
+        document.getElementById('viewAdmissionDate').textContent = student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : '';
+        document.getElementById('viewClass').textContent = (student.schoolclass && student.arm) ? `${student.schoolclass} - ${student.arm}` : '';
+        document.getElementById('viewTerm').textContent = student.term_name || '';
+        
+        // Category checkboxes
+        const categoryDay = document.getElementById('viewCategoryDay');
+        const categoryBorder = document.getElementById('viewCategoryBorder');
+        if (categoryDay && categoryBorder) {
+            categoryDay.checked = student.student_category === 'Day';
+            categoryBorder.checked = student.student_category === 'Boarding';
+        }
+
+        // Section B: Student Details
+        document.getElementById('viewSurname').textContent = student.lastname || '';
+        document.getElementById('viewFirstName').textContent = student.firstname || '';
+        document.getElementById('viewMiddleName').textContent = student.othername || '';
+        document.getElementById('viewGender').textContent = student.gender || '';
+        document.getElementById('viewBloodGroup').textContent = student.blood_group || '';
+        document.getElementById('viewDateOfBirth').textContent = student.dateofbirth ? new Date(student.dateofbirth).toLocaleDateString() : '';
+        document.getElementById('viewMotherTongue').textContent = student.mother_tongue || '';
+        document.getElementById('viewReligion').textContent = student.religion || '';
+        document.getElementById('viewSportHouse').textContent = student.schoolhouse || student.sport_house || '';
+        document.getElementById('viewMobileNumber').textContent = student.phone_number || '';
+        document.getElementById('viewEmail').textContent = student.email || '';
+        document.getElementById('viewNIN').textContent = student.nin_number || '';
+        document.getElementById('viewCity').textContent = student.city || '';
+        document.getElementById('viewState').textContent = student.state || '';
+        document.getElementById('viewPermanentAddress').textContent = student.permanent_address || '';
+        document.getElementById('viewFutureAmbition').textContent = student.future_ambition || '';
+
+        // Section C: Guardian Details
+        document.getElementById('viewFatherName').textContent = student.father_name || '';
+        document.getElementById('viewMotherName').textContent = student.mother_name || '';
+        document.getElementById('viewOccupation').textContent = student.father_occupation || '';
+        document.getElementById('viewParentCity').textContent = student.father_city || '';
+        document.getElementById('viewParentMobile').textContent = student.father_phone || student.mother_phone || '';
+        document.getElementById('viewParentEmail').textContent = student.parent_email || '';
+        document.getElementById('viewParentAddress').textContent = student.parent_address || '';
+
+        // Section D: Previous School Details
+        document.getElementById('viewSchoolName').textContent = student.last_school || '';
+        document.getElementById('viewPreviousClass').textContent = student.last_class || '';
+        document.getElementById('viewReasonLeaving').textContent = student.reason_for_leaving || '';
     }
 
-    // Section A: Academic Details
-    document.getElementById('viewAcademicYear').textContent = student.admissionYear || '';
-    document.getElementById('viewRegistrationNo').textContent = student.admissionNo || '';
-    document.getElementById('viewAdmissionDate').textContent = student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : '';
-    document.getElementById('viewClass').textContent = (student.schoolclass && student.arm) ? `${student.schoolclass} - ${student.arm}` : '';
-    document.getElementById('viewTerm').textContent = student.term_name || '';
-    
-    // Category checkboxes
-    const categoryDay = document.getElementById('viewCategoryDay');
-    const categoryBorder = document.getElementById('viewCategoryBorder');
-    if (categoryDay && categoryBorder) {
-        categoryDay.checked = student.student_category === 'Day';
-        categoryBorder.checked = student.student_category === 'Boarding';
+    // Print function for the registration form
+    function printRegistrationForm() {
+        window.print();
     }
-
-    // Section B: Student Details
-    document.getElementById('viewSurname').textContent = student.lastname || '';
-    document.getElementById('viewFirstName').textContent = student.firstname || '';
-    document.getElementById('viewMiddleName').textContent = student.othername || '';
-    document.getElementById('viewGender').textContent = student.gender || '';
-    document.getElementById('viewBloodGroup').textContent = student.blood_group || '';
-    document.getElementById('viewDateOfBirth').textContent = student.dateofbirth ? new Date(student.dateofbirth).toLocaleDateString() : '';
-    document.getElementById('viewMotherTongue').textContent = student.mother_tongue || '';
-    document.getElementById('viewReligion').textContent = student.religion || '';
-    document.getElementById('viewSportHouse').textContent = student.schoolhouse || student.sport_house || '';
-    document.getElementById('viewMobileNumber').textContent = student.phone_number || '';
-    document.getElementById('viewEmail').textContent = student.email || '';
-    document.getElementById('viewNIN').textContent = student.nin_number || '';
-    document.getElementById('viewCity').textContent = student.city || '';
-    document.getElementById('viewState').textContent = student.state || '';
-    document.getElementById('viewPermanentAddress').textContent = student.permanent_address || '';
-    document.getElementById('viewFutureAmbition').textContent = student.future_ambition || '';
-
-    // Section C: Guardian Details
-    document.getElementById('viewFatherName').textContent = student.father_name || '';
-    document.getElementById('viewMotherName').textContent = student.mother_name || '';
-    document.getElementById('viewOccupation').textContent = student.father_occupation || '';
-    document.getElementById('viewParentCity').textContent = student.father_city || '';
-    document.getElementById('viewParentMobile').textContent = student.father_phone || student.mother_phone || '';
-    document.getElementById('viewParentEmail').textContent = student.parent_email || '';
-    document.getElementById('viewParentAddress').textContent = student.parent_address || '';
-
-    // Section D: Previous School Details
-    document.getElementById('viewSchoolName').textContent = student.last_school || '';
-    document.getElementById('viewPreviousClass').textContent = student.last_class || '';
-    document.getElementById('viewReasonLeaving').textContent = student.reason_for_leaving || '';
-}
-
-// Print function for the registration form
-function printRegistrationForm() {
-    window.print();
-}
 
     // Initialize the student list
     initializeStudentList();
