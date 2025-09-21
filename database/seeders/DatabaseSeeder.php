@@ -5,6 +5,27 @@ namespace Database\Seeders;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Database\Seeders\RoleTableSeeder;
+use Database\Seeders\TermTableSeeder;
+use Database\Seeders\UserTableSeeder;
+use Database\Seeders\PermissionTableSeeder;
+use Database\Seeders\StudentStatusTableSeeder;
+use Database\Seeders\StudentPermissionTableSeeder;
+use Database\Seeders\ViewClassPermissionTableSeeder;
+use Database\Seeders\StudentReportPermissionTableSeeder;
+use Database\Seeders\SubjectVettedPermissionTableSeeder;
+use Database\Seeders\SubjectVettingsPermissionTableSeeder;
+use Database\Seeders\MyClassMySubjectPermissionTableSeeder;
+use Database\Seeders\MySubjectVettingsPermissionTableSeeder;
+use Database\Seeders\PrincipalscommentPermissionTableSeeder;
+use Database\Seeders\SchoolInformationPermissionTableSeeder;
+use Database\Seeders\StudentMockReportPermissionTableSeeder;
+use Database\Seeders\CompulsorySubjectsPermissionTableSeeder;
+use Database\Seeders\MockSubjectVettingsPermissionTableSeeder;
+use Database\Seeders\MyMockSubjectVettingsPermissionTableSeeder;
+use Database\Seeders\SchoolBillTermSessionPermissionTableSeeder;
+use Database\Seeders\SubjectUploadForStaffPermissionTableSeeder;
+use Database\Seeders\SubjectClassResultRoomOperationPermissionTableSeeder;
 
 class DatabaseSeeder extends Seeder
 {
