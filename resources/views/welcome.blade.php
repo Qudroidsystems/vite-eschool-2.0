@@ -129,24 +129,20 @@
                         </li>
                     </ul> --}}
                 </div>
-                <div class="bg-[#fff2f2] dark:bg-[#1D0002] relative lg:-ml-px -mb-px lg:mb-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg aspect-[335/376] lg:aspect-auto w-full lg:w-[438px] shrink-0 overflow-hidden">
-                    {{-- Laravel Logo --}}
-                    <svg class="w-full text-[#F53003] dark:text-[#F61500] transition-all translate-y-0 opacity-100 max-w-none duration-750 starting:opacity-0 starting:translate-y-6" viewBox="0 0 438 104" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M17.2036 -3H0V102.197H49.5189V86.7187H17.2036V-3Z" fill="currentColor" />
-                        <path d="M110.256 41.6337C108.061 38.1275 104.945 35.3731 100.905 33.3616C96.8647 31.3502 92.1067 30.3445 86.6316 30.3445H62.3789V102.197H86.6316C92.1067 102.197 96.8647 101.191 100.905 99.1798C104.945 97.1684 108.061 94.414 110.256 90.9078C112.451 87.4016 113.548 83.3787 113.548 78.8392V53.7022C113.548 49.1627 112.451 45.1398 110.256 41.6337ZM94.1916 78.8392C94.1916 81.1017 93.7948 83.1142 92.9998 84.8673C92.2048 86.6203 90.9073 88.0739 89.1073 89.228C87.3073 90.3821 84.9448 90.9592 82.0216 90.9592H81.7359V41.5827H82.0216C84.9448 41.5827 87.3073 42.1598 89.1073 43.3139C90.9073 44.468 92.2048 45.9216 92.9998 47.6746C93.7948 49.4277 94.1916 51.4402 94.1916 53.7022V78.8392Z" fill="currentColor"/>
-                        <path d="M149.596 30.3445H130.239V102.197H149.596V30.3445Z" fill="currentColor"/>
-                        <path d="M199.115 30.3445H179.758V59.321H199.115V30.3445Z" fill="currentColor"/>
-                        <path d="M199.115 69.5597H179.758V102.197H199.115V69.5597Z" fill="currentColor"/>
-                        <path d="M250.634 41.6337C248.439 38.1275 245.323 35.3731 241.283 33.3616C237.242 31.3502 232.484 30.3445 227.009 30.3445H202.756V102.197H227.009C232.484 102.197 237.242 101.191 241.283 99.1798C245.323 97.1684 248.439 94.414 250.634 90.9078C252.829 87.4016 253.926 83.3787 253.926 78.8392V53.7022C253.926 49.1627 252.829 45.1398 250.634 41.6337ZM231.569 78.8392C231.569 81.1017 231.172 83.1142 230.377 84.8673C229.582 86.6203 228.285 88.0739 226.485 89.228C224.685 90.3821 222.322 90.9592 219.399 90.9592H219.114V41.5827H219.399C222.322 41.5827 224.685 42.1598 226.485 43.3139C228.285 44.468 229.582 45.9216 230.377 47.6746C231.172 49.4277 231.569 51.4402 231.569 53.7022V78.8392Z" fill="currentColor"/>
-                        <path d="M286.242 30.3445H266.885V102.197H286.242V30.3445Z" fill="currentColor"/>
-                        <path d="M335.761 30.3445H316.404V59.321H335.761V30.3445Z" fill="currentColor"/>
-                        <path d="M335.761 69.5597H316.404V102.197H335.761V69.5597Z" fill="currentColor"/>
-                        <path d="M387.28 41.6337C385.085 38.1275 381.969 35.3731 377.928 33.3616C373.888 31.3502 369.13 30.3445 363.655 30.3445H339.402V102.197H363.655C369.13 102.197 373.888 101.191 377.928 99.1798C381.969 97.1684 385.085 94.414 387.28 90.9078C389.475 87.4016 390.572 83.3787 390.572 78.8392V53.7022C390.572 49.1627 389.475 45.1398 387.28 41.6337ZM368.215 78.8392C368.215 81.1017 367.818 83.1142 367.023 84.8673C366.228 86.6203 364.931 88.0739 363.131 89.228C361.331 90.3821 358.968 90.9592 356.045 90.9592H355.759V41.5827H356.045C358.968 41.5827 361.331 42.1598 363.131 43.3139C364.931 44.468 366.228 45.9216 367.023 47.6746C367.818 49.4277 368.215 51.4402 368.215 53.7022V78.8392Z" fill="currentColor"/>
-                        <path d="M423.888 30.3445H404.531V102.197H423.888V30.3445Z" fill="currentColor"/>
-                    </svg>
-                    <div class="absolute inset-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]"></div>
-                </div>
-            </main>
+              <div class="bg-[#fff2f2] dark:bg-[#1D0002] relative lg:-ml-px -mb-px lg:mb-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg aspect-[335/376] lg:aspect-auto w-full lg:w-[438px] shrink-0 overflow-hidden">
+                @php
+                    $school = App\Models\SchoolInformation::where('is_active', true)->first();
+                @endphp
+                {{-- Vite-eSchool Logo --}}
+                <svg class="w-full text-[#F53003] dark:text-[#F61500] transition-all translate-y-0 opacity-100 max-w-none duration-750 starting:opacity-0 starting:translate-y-6" viewBox="0 0 438 104" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    @if ($school && $school->school_logo)
+                        <image x="10" y="10" width="80" height="80" href="{{ asset('storage/' . $school->school_logo) }}" preserveAspectRatio="xMidYMid meet"/>
+                    @endif
+                    <text x="100" y="60" font-family="'Instrument Sans', sans-serif" font-size="40" font-weight="600" fill="currentColor">Vite-eSchool</text>
+                </svg>
+                <div class="absolute inset-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]"></div>
+            </div>
+                        </main>
         </div>
 
         @if (Route::has('login'))
