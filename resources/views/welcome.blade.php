@@ -63,7 +63,7 @@
                             <h1 class="text-lg font-medium">{{ $school->school_name }}</h1>
                         </div>
                     @endif
-                    <h2 class="mb-1 font-medium">Welcome to Vite-sSchool</h2>
+                    <h2 class="mb-1 font-medium">Powered By Vite-sSchool</h2>
                     {{-- <p class="mb-2 text-[#706f6c] dark:text-[#A1A09A]">Laravel has an incredibly rich ecosystem. <br>We suggest starting with the following.</p> --}}
                     <ul class="flex flex-col mb-4 lg:mb-6">
                         <li class="flex items-center gap-4 py-2 relative before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A] before:top-1/2 before:bottom-0 before:left-[0.4rem] before:absolute">
@@ -138,7 +138,7 @@
                     @if ($school && $school->school_logo)
                         <image x="10" y="10" width="80" height="80" href="{{ asset('storage/' . $school->school_logo) }}" preserveAspectRatio="xMidYMid meet"/>
                     @endif
-                    <text x="100" y="60" font-family="'Instrument Sans', sans-serif" font-size="40" font-weight="600" fill="currentColor">Vite-eSchool</text>
+        
                 </svg>
                 <div class="absolute inset-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]"></div>
             </div>
