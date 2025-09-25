@@ -136,7 +136,7 @@
                 {{-- Vite-eSchool Logo --}}
                 <svg class="w-full text-[#F53003] dark:text-[#F61500] transition-all translate-y-0 opacity-100 max-w-none duration-750 starting:opacity-0 starting:translate-y-6" viewBox="0 0 438 104" fill="none" xmlns="http://www.w3.org/2000/svg">
                     @if ($school && $school->school_logo)
-                        <image x="10" y="10" width="80" height="80" href="{{ asset('storage/' . $school->school_logo) }}" preserveAspectRatio="xMidYMid meet"/>
+                        <image x="10" y="10" width="300" height="400" href="{{ asset('storage/' . $school->school_logo) }}" preserveAspectRatio="xMidYMid meet"/>
                     @endif
         
                 </svg>
