@@ -1173,7 +1173,11 @@
           <div class="container-fluid">
               <div class="row">
                   <div class="col-sm-6">
-                      <script>document.write(new Date().getFullYear())</script> © Topclass College.
+                      <script>document.write(new Date().getFullYear())</script>
+                        @php
+                        $school = App\Models\SchoolInformation::where('is_active', true)->first();
+                    @endphp
+                    {{ $school->school_name }}
                   </div>
                   <div class="col-sm-6">
                       <div class="text-sm-end d-none d-sm-block">
