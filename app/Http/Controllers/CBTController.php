@@ -152,6 +152,7 @@ class CBTController extends Controller
 
     public function takeCBT($examid)
     {
+        $pagetitle = 'CBT Exams'; // Define the page title
         try {
             // Get the authenticated student
            // $student = auth()->user();
@@ -201,21 +202,42 @@ class CBTController extends Controller
             })->toArray();
 
             // Get student registration details
-            $registration = Student::where('id', $student)
-                ->with(['class', 'term', 'session'])
+            $studentReg = DB::table('studentRegistration')
+                ->where('id', $student)
+                ->select('id', 'firstname', 'lastname', 'admissionNo')
                 ->first();
 
-            if (!$registration) {
+            $studentClassData = DB::table('studentclass')
+                ->where('studentId', $student)
+                ->join('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+                ->join('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
+                ->join('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
+                ->select(
+                    'schoolclass.id as class_id',
+                    'schoolclass.schoolclass as class_name',
+                    'schoolterm.id as term_id',
+                    'schoolterm.term as term_name',
+                    'schoolsession.id as session_id',
+                    'schoolsession.session as session_name'
+                )
+                ->first();
+
+            if (!$studentClassData) {
                 return redirect()->route('cbt.index')->with('error', 'No registration found for this student.');
             }
 
+            $class = (object) ['id' => $studentClassData->class_id, 'schoolclass' => $studentClassData->class_name];
+            $term = (object) ['id' => $studentClassData->term_id, 'term' => $studentClassData->term_name];
+            $session = (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name];
+
             return view('cbt.take', [
+                'pagetitle'=>$pagetitle,
                 'exam' => $exam,
                 'questions' => $questions,
-                'student' => $registration,
-                'class' => $registration->class,
-                'term' => $registration->term,
-                'session' => $registration->session,
+                'student' => $studentReg,
+                'class' => $class,
+                'term' => $term,
+                'session' => $session,
                 'attempt' => $attempt
             ]);
 

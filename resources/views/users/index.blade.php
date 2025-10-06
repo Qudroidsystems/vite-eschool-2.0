@@ -61,6 +61,12 @@ use Spatie\Permission\Models\Role;
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
+            @if (session('student_success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('student_success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
 
             <div id="userList">
                 <div class="row">
@@ -115,6 +121,7 @@ use Spatie\Permission\Models\Role;
                                         <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
                                         @can('Create user')
                                             <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#showModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Add User</button>
+                                            <button type="button" class="btn btn-success add-btn" data-bs-toggle="modal" data-bs-target="#addStudentModal"><i class="bi bi-person-plus align-baseline me-1"></i> Add Student</button>
                                         @endcan
                                     </div>
                                 </div>
@@ -326,40 +333,124 @@ use Spatie\Permission\Models\Role;
             </div>
         </div>
 
-
-
-            <!-- Add or update this modal in your Blade template, e.g., resources/views/users.blade.php -->
-            <div class="modal fade" id="whatsappModal" tabindex="-1" aria-labelledby="whatsappModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="whatsappModalLabel">Send Credentials via WhatsApp</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <!-- Add Student Modal -->
+        <div id="addStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Student as User</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="student-select" class="form-label">Select Student</label>
+                            <select id="student-select" class="form-control" required>
+                                <option value="">Choose a student...</option>
+                                @forelse ($students ?? [] as $student)
+                                    <option value="{{ $student->id }}" data-admission="{{ $student->admissionNo }}" data-name="{{ $student->firstname }} {{ $student->lastname }}" data-email="{{ $student->email ?? '' }}">
+                                        {{ $student->firstname }} {{ $student->lastname }} ({{ $student->admissionNo }})
+                                    </option>
+                                @empty
+                                    <option value="">No students available</option>
+                                @endforelse
+                            </select>
                         </div>
-                        <div class="modal-body">
-                            <p>Enter the phone number to send the username and password via WhatsApp.</p>
-                            <div class="mb-3">
-                                <label for="whatsapp-phone" class="form-label">Phone Number (e.g., +1234567890)</label>
-                                <input type="tel" class="form-control" id="whatsapp-phone" placeholder="Enter phone number" required>
-                                <input type="hidden" id="whatsapp-user-id" value="">
-                                <input type="hidden" id="whatsapp-email" value="">
-                                <input type="hidden" id="whatsapp-password" value="">
-                            </div>
-                            <div id="whatsapp-link-container" class="mb-3 d-none">
-                                <p>Click the link below to open WhatsApp with the pre-filled message:</p>
-                                <a href="#" id="whatsapp-link" target="_blank" class="btn btn-success">Open WhatsApp</a>
-                                <p class="mt-2"><strong>Preview:</strong> <span id="whatsapp-message-preview"></span></p>
-                            </div>
+                        <div class="alert alert-info">
+                            <small>Select a student to proceed to set credentials. Username will be the admission number.</small>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" id="generate-whatsapp-link">Generate Link</button>
-                        </div>
+                        <div class="alert alert-danger d-none" id="student-select-error"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="proceed-to-credentials">Proceed to Credentials</button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            
+        <!-- Set Student Credentials Modal -->
+        <div id="setStudentCredentialsModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Set Credentials for Student</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form class="tablelist-form" autocomplete="off" id="add-student-credentials-form">
+                        <div class="modal-body">
+                            <input type="hidden" id="student-id-field" name="student_id">
+                            <input type="hidden" id="student-name-field" name="name">
+                            <div class="mb-3">
+                                <label for="student-user-email" class="form-label">Email</label>
+                                <input type="email" id="student-user-email" name="email" class="form-control" placeholder="Enter email (required)" required>
+                                <div class="form-text">Prefilled from student record if available; edit if needed.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="student-username" class="form-label">Username (Admission Number)</label>
+                                <input type="text" id="student-username" name="username" class="form-control" readonly required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="student-password" class="form-label">Temporary Password</label>
+                                <div class="input-group">
+                                    <input type="password" id="student-password" name="password" class="form-control" placeholder="Temporary password will be generated" required>
+                                    <button type="button" class="btn btn-outline-secondary" id="generate-temp-password" type="button">Generate</button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="student-password_confirmation" class="form-label">Confirm Password</label>
+                                <input type="password" id="student-password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="student-role" class="form-label">Role <span class="text-danger">*</span> (Select at least one)</label>
+                                <select id="student-role" name="roles[]" class="form-control" multiple required>
+                                    @foreach (Spatie\Permission\Models\Role::all() as $role)
+                                        <option value="{{ $role->name }}">{{ $role->name }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">Hold Ctrl/Cmd to select multiple roles.</div>
+                            </div>
+                            <div class="alert alert-danger d-none" id="student-credentials-error"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal" onclick="resetStudentCredentialsModal()">Close</button>
+                            <button type="submit" class="btn btn-primary" id="create-student-user">Create User</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- WhatsApp Modal -->
+        <div class="modal fade" id="whatsappModal" tabindex="-1" aria-labelledby="whatsappModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="whatsappModalLabel">Send Credentials via WhatsApp</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Enter the phone number to send the username and password via WhatsApp.</p>
+                        <div class="mb-3">
+                            <label for="whatsapp-phone" class="form-label">Phone Number (e.g., +1234567890)</label>
+                            <input type="tel" class="form-control" id="whatsapp-phone" placeholder="Enter phone number" required>
+                            <input type="hidden" id="whatsapp-user-id" value="">
+                            <input type="hidden" id="whatsapp-email" value="">
+                            <input type="hidden" id="whatsapp-password" value="">
+                        </div>
+                        <div id="whatsapp-link-container" class="mb-3 d-none">
+                            <p>Click the link below to open WhatsApp with the pre-filled message:</p>
+                            <a href="#" id="whatsapp-link" target="_blank" class="btn btn-success">Open WhatsApp</a>
+                            <p class="mt-2"><strong>Preview:</strong> <span id="whatsapp-message-preview"></span></p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="generate-whatsapp-link">Generate Link</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
     <!-- End Page-content -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -369,9 +460,10 @@ use Spatie\Permission\Models\Role;
     <script src="{{ asset('theme/layouts/assets/js/choices.min.js') }}" defer></script>
     <script src="{{ asset('theme/layouts/assets/js/sweetalert2.min.js') }}"></script>
     <script src="{{ asset('js/user-list.init.js') }}"></script>
-    <!-- Chart Initialization -->
+    <!-- Chart Initialization and Student Modal JS -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            // Chart.js Initialization
             var ctx = document.getElementById("usersByRoleChart").getContext("2d");
             new Chart(ctx, {
                 type: "bar",
@@ -409,6 +501,202 @@ use Spatie\Permission\Models\Role;
                     }
                 }
             });
+
+            // Student Modal JavaScript with Debugging
+            console.log('Initializing student modals...'); // Debug: Confirms script runs
+
+            const addStudentModalEl = document.getElementById('addStudentModal');
+            const setCredentialsModalEl = document.getElementById('setStudentCredentialsModal');
+            if (!addStudentModalEl || !setCredentialsModalEl) {
+                console.error('Modal elements not found!'); // Debug: Missing HTML?
+                return;
+            }
+
+            const addStudentModal = new bootstrap.Modal(addStudentModalEl);
+            const setCredentialsModal = new bootstrap.Modal(setCredentialsModalEl);
+
+            // Choices.js initialization for selects (with error handling)
+            const studentSelect = document.getElementById('student-select');
+            if (studentSelect) {
+                try {
+                    new Choices(studentSelect, {
+                        searchEnabled: true,
+                        removeItemButton: false,
+                        placeholder: true
+                    });
+                    console.log('Choices.js initialized for student select.'); // Debug
+                } catch (err) {
+                    console.error('Choices.js error:', err); // Debug
+                }
+            } else {
+                console.error('Student select element not found!'); // Debug
+            }
+
+            const studentRoleSelect = document.getElementById('student-role');
+            let roleChoices = null;
+            if (studentRoleSelect) {
+                try {
+                    roleChoices = new Choices(studentRoleSelect, {
+                        searchEnabled: true,
+                        removeItemButton: false,
+                        placeholder: true
+                    });
+                    console.log('Choices.js initialized for role select.'); // Debug
+                    // Pre-select 'student' role if it exists
+                    @if (Spatie\Permission\Models\Role::where('name', 'student')->exists())
+                    roleChoices.setChoiceByValue('student');
+                    @endif
+                } catch (err) {
+                    console.error('Choices.js role error:', err); // Debug
+                }
+            } else {
+                console.error('Student role select element not found!'); // Debug
+            }
+
+            // Proceed to credentials button with debugging
+            const proceedBtn = document.getElementById('proceed-to-credentials');
+            if (!proceedBtn) {
+                console.error('Proceed button not found!'); // Debug
+                return;
+            }
+
+          proceedBtn.addEventListener('click', function(e) {
+    console.log('Proceed button clicked!'); // Debug: Confirms click fires
+
+    // Get selected option (handle Choices.js selection only if Choices is defined)
+    let selectedOption;
+    if (studentSelect && typeof Choices !== 'undefined' && Choices.getInstance(studentSelect)) {
+        const choicesInstance = Choices.getInstance(studentSelect);
+        const selectedValue = choicesInstance.getValue(true); // true for single select
+        if (selectedValue) {
+            selectedOption = { value: selectedValue, dataset: { 
+                name: document.querySelector(`#student-select option[value="${selectedValue}"]`)?.dataset.name || '',
+                email: document.querySelector(`#student-select option[value="${selectedValue}"]`)?.dataset.email || '',
+                admission: document.querySelector(`#student-select option[value="${selectedValue}"]`)?.dataset.admission || ''
+            } };
+        }
+    } else {
+        // Fallback for native select (used when Choices.js fails to load)
+        selectedOption = studentSelect?.options[studentSelect.selectedIndex];
+        if (selectedOption) {
+            selectedOption.dataset = {
+                name: selectedOption.dataset.name || '',
+                email: selectedOption.dataset.email || '',
+                admission: selectedOption.dataset.admission || ''
+            };
+        }
+    }
+
+    if (!selectedOption || !selectedOption.value) {
+        console.warn('No student selected.'); // Debug
+        const errorEl = document.getElementById('student-select-error');
+        if (errorEl) {
+            errorEl.classList.remove('d-none');
+            errorEl.textContent = 'Please select a student.';
+        }
+        return;
+    }
+
+    console.log('Selected student:', selectedOption); // Debug: Log selection
+
+    const errorEl = document.getElementById('student-select-error');
+    if (errorEl) errorEl.classList.add('d-none');
+
+    // Populate fields
+    document.getElementById('student-id-field').value = selectedOption.value;
+    document.getElementById('student-name-field').value = selectedOption.dataset.name;
+    document.getElementById('student-user-email').value = selectedOption.dataset.email || '';
+    document.getElementById('student-username').value = (selectedOption.dataset.admission || '').replace(/\//g, '_'); // Sanitize
+
+    console.log('Fields populated, switching modals...'); // Debug
+
+    // Close first modal and open second (with timeout for smooth transition)
+    addStudentModal.hide();
+    setTimeout(() => {
+        setCredentialsModal.show();
+    }, 300); // Small delay to avoid Bootstrap glitches
+});
+
+            // Generate temporary password
+            const generateBtn = document.getElementById('generate-temp-password');
+            if (generateBtn) {
+                generateBtn.addEventListener('click', function() {
+                    console.log('Generating temp password...'); // Debug
+                    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
+                    document.getElementById('student-password').value = tempPassword;
+                    document.getElementById('student-password_confirmation').value = tempPassword;
+                });
+            }
+
+            // Reset credentials modal on close
+            function resetStudentCredentialsModal() {
+                console.log('Resetting credentials modal...'); // Debug
+                document.getElementById('student-id-field').value = '';
+                document.getElementById('student-name-field').value = '';
+                document.getElementById('student-user-email').value = '';
+                document.getElementById('student-username').value = '';
+                document.getElementById('student-password').value = '';
+                document.getElementById('student-password_confirmation').value = '';
+                if (roleChoices) {
+                    roleChoices.clearChoices();
+                    roleChoices.setChoiceByValue(''); // Clear selections
+                }
+                const errorEl = document.getElementById('student-credentials-error');
+                if (errorEl) errorEl.classList.add('d-none');
+            }
+
+            // Listen for hidden event to reset
+            setCredentialsModalEl.addEventListener('hidden.bs.modal', resetStudentCredentialsModal);
+
+            // Form submission for student user creation (unchanged, but with better error display)
+            const form = document.getElementById('add-student-credentials-form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log('Submitting student form...'); // Debug
+                    const formData = new FormData(this);
+                    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                    fetch('{{ route("users.store-student") }}', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Form response:', data); // Debug
+                        if (data.success) {
+                            Swal.fire('Success!', data.message, 'success');
+                            setCredentialsModal.hide();
+                            setTimeout(() => location.reload(), 1500); // Delay reload for UX
+                        } else {
+                            const errorEl = document.getElementById('student-credentials-error');
+                            if (errorEl) {
+                                errorEl.classList.remove('d-none');
+                                let errorHtml = '<strong>Validation Error:</strong><ul>';
+                                if (data.errors) {
+                                    Object.values(data.errors).flat().forEach(err => {
+                                        errorHtml += `<li>${err}</li>`;
+                                    });
+                                } else {
+                                    errorHtml += `<li>${data.message || 'Unknown error'}</li>`;
+                                }
+                                errorHtml += '</ul>';
+                                errorEl.innerHTML = errorHtml;
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Form submit error:', error); // Debug
+                        const errorEl = document.getElementById('student-credentials-error');
+                        if (errorEl) {
+                            errorEl.classList.remove('d-none');
+                            errorEl.textContent = 'An error occurred. Please try again.';
+                        }
+                    });
+                });
+            } else {
+                console.error('Student form not found!'); // Debug
+            }
         });
     </script>
 </div>

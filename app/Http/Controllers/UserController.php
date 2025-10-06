@@ -2,27 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\BioModel;
-use App\Models\Student;
-use App\Models\User;
 use DB;
 use Hash;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
+use App\Models\User;
+use App\Models\Student;
+use App\Models\BioModel;
 use Illuminate\View\View;
+use Illuminate\Support\Arr;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
     public function __construct()
     {
         $this->middleware('permission:View user|Create user|Update user|Delete user', ['only' => ['index', 'store']]);
-        $this->middleware('permission:Create user', ['only' => ['create', 'store']]);
+        $this->middleware('permission:Create user', ['only' => ['create', 'store', 'storeStudent']]);
         $this->middleware('permission:Update user', ['only' => ['edit', 'update']]);
         $this->middleware('permission:Delete user', ['only' => ['destroy']]);
     }
@@ -40,12 +40,17 @@ class UserController extends Controller
         }
         $role_counts['No Role'] = User::doesntHave('roles')->count();
 
+        $students = Student::select('id', 'admissionNo', 'firstname', 'lastname', 'email')
+            ->where('statusId', 2)
+            ->orderBy('admissionNo')
+            ->get();
+
         if (config('app.debug')) {
             \Log::info('Roles for select:', $roles);
             \Log::info('User roles example:', User::first()->getRoleNames()->toArray());
         }
 
-        return view('users.index', compact('data', 'roles', 'role_permissions', 'pagetitle', 'role_counts'));
+        return view('users.index', compact('data', 'roles', 'role_permissions', 'pagetitle', 'role_counts', 'students'));
     }
 
     public function roles(): JsonResponse
@@ -78,7 +83,7 @@ class UserController extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
                 'password' => 'required|min:8|confirmed',
-                'roles' => 'required|array',
+                'roles' => 'required|array|min:1',
                 'roles.*' => 'exists:roles,name',
                 'phone_number' => 'nullable|string|regex:/^\+[1-9]\d{1,14}$/', // Optional E.164 phone number
             ]);
@@ -122,6 +127,87 @@ class UserController extends Controller
         }
     }
 
+    public function storeStudent(Request $request): JsonResponse
+    {
+        \Log::debug("Creating student user", $request->all());
+
+        try {
+            if (!auth()->user()->hasPermissionTo('Create user')) {
+                \Log::warning("User ID " . auth()->user()->id . " attempted to create student user without permission");
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User does not have the right permissions',
+                ], 403);
+            }
+
+            $validated = $request->validate([
+                'student_id' => 'required|exists:studentRegistration,id',
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email',
+                'username' => 'required|string|unique:users,username|max:255',
+                'password' => 'required|min:8|confirmed',
+                'roles' => 'required|array|min:1',
+                'roles.*' => 'exists:roles,name',
+            ]);
+
+            \Log::info("Validated data for student create:", $validated);
+
+            $input = $request->all();
+            // Sanitize username (replace / with _ for safety)
+            $input['username'] = str_replace('/', '_', $input['username']);
+            $plainPassword = $input['password']; // Store plain password if needed
+            $input['password'] = Hash::make($input['password']);
+
+            $user = User::create($input);
+            $user->syncRoles($request->input('roles'));
+
+            $student = Student::findOrFail($validated['student_id']);
+
+            BioModel::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'firstname' => $student->firstname,
+                    'lastname' => $student->lastname,
+                    'othernames' => $student->othername ?? '',
+                    'phone' => $student->phone_number ?? '',
+                    'address' => $student->home_address2 ?? '',
+                    'gender' => $student->gender ?? '',
+                    'maritalstatus' => '',
+                    'nationality' => $student->nationality ?? '',
+                    'dob' => $student->dateofbirth ?? '',
+                ]
+            );
+
+            \Log::info("Student user ID: {$user->id} created successfully, roles:", $request->input('roles'));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Student user created successfully',
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'roles' => $user->roles->pluck('name')->toArray(),
+                    'password' => $plainPassword,
+                ],
+            ], 201);
+        } catch (ValidationException $e) {
+            \Log::error("Validation error creating student user: " . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error("Create student user error: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create student user: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function update(Request $request, $id): JsonResponse
     {
         \Log::debug("Updating user ID: {$id}", $request->all());
@@ -139,7 +225,7 @@ class UserController extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email,' . $id,
                 'password' => 'nullable|min:8|confirmed',
-                'roles' => 'required|array',
+                'roles' => 'required|array|min:1',
                 'roles.*' => 'exists:roles,name',
                 'phone_number' => 'nullable|string|regex:/^\+[1-9]\d{1,14}$/', // Optional E.164 phone number
             ]);
@@ -188,61 +274,6 @@ class UserController extends Controller
         }
     }
 
-    // public function store(Request $request): JsonResponse
-    // {
-    //     \Log::debug("Creating user", $request->all());
-
-    //     if (!auth()->user()->hasPermissionTo('Create user')) {
-    //         \Log::warning("User ID " . auth()->user()->id . " attempted to create user without 'Create user' permission");
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'User does not have the right permissions',
-    //         ], 403);
-    //     }
-
-    //     try {
-    //         $validated = $request->validate([
-    //             'name' => 'required|string|max:255',
-    //             'email' => 'required|email:rfc,dns|unique:users,email',
-    //             'password' => 'required|string|min:8|confirmed',
-    //             'roles' => 'required|array',
-    //             'roles.*' => 'exists:roles,name',
-    //         ]);
-
-    //         $user = User::create([
-    //             'name' => $validated['name'],
-    //             'email' => $validated['email'],
-    //             'password' => Hash::make($validated['password']),
-    //         ]);
-    //         $user->assignRole($validated['roles']);
-
-    //         \Log::debug("User created successfully: ID {$user->id}");
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'User created successfully',
-    //             'user' => [
-    //                 'id' => $user->id,
-    //                 'name' => $user->name,
-    //                 'email' => $user->email,
-    //                 'roles' => $user->roles->pluck('name')->toArray(),
-    //             ],
-    //         ], 201);
-    //     } catch (ValidationException $e) {
-    //         \Log::error("Validation error creating user: " . json_encode($e->errors()));
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Validation failed',
-    //             'errors' => $e->errors(),
-    //         ], 422);
-    //     } catch (\Exception $e) {
-    //         \Log::error("Create user error: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Failed to create user: ' . $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
-
     public function show($id): View
     {
         $pagetitle = "User Overview";
@@ -260,66 +291,11 @@ class UserController extends Controller
         return view('users.edit', compact('user', 'roles', 'userRole'));
     }
 
-    // public function update(Request $request, $id): JsonResponse
-    // {
-    //     \Log::debug("Updating user ID: {$id}", $request->all());
-
-    //     try {
-    //         $validated = $request->validate([
-    //             'name' => 'required|string|max:255',
-    //             'email' => 'required|email|unique:users,email,' . $id,
-    //             'password' => 'nullable|min:8|confirmed',
-    //             'roles' => 'required|array',
-    //             'roles.*' => 'exists:roles,name',
-    //         ]);
-
-    //         $input = $request->all();
-    //         if (!empty($input['password'])) {
-    //             $input['password'] = Hash::make($input['password']);
-    //         } else {
-    //             $input = Arr::except($input, ['password']);
-    //         }
-
-    //         $user = User::findOrFail($id);
-    //         $user->update($input);
-    //         \DB::table('model_has_roles')->where('model_id', $id)->delete();
-
-    //         \Log::debug("Roles to assign:", $request->input('roles'));
-    //         $user->assignRole($request->input('roles'));
-
-    //         \Log::debug("User ID: {$id} updated successfully");
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'User updated successfully',
-    //             'user' => [
-    //                 'id' => $user->id,
-    //                 'name' => $user->name,
-    //                 'email' => $user->email,
-    //                 'roles' => $user->roles->pluck('name')->toArray(),
-    //             ],
-    //         ], 200);
-    //     } catch (ValidationException $e) {
-    //         \Log::error("Validation error updating user ID {$id}: " . json_encode($e->errors()));
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Validation failed',
-    //             'errors' => $e->errors(),
-    //         ], 422);
-    //     } catch (\Exception $e) {
-    //         \Log::error("Update user error for ID {$id}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Failed to update user: ' . $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
-
     public function createFromStudentForm(): View
     {
         $roles = Role::pluck('name', 'name')->all();
         $students = Student::select('id', 'admissionNo', 'firstname', 'lastname')
-            ->where('statusId', 1)
+            ->where('statusId', 2)
             ->orderBy('admissionNo')
             ->get();
 
@@ -329,10 +305,10 @@ class UserController extends Controller
     public function createFromStudent(Request $request): RedirectResponse
     {
         $this->validate($request, [
-            'student_id' => 'required|exists:studentregistration,id',
+            'student_id' => 'required|exists:studentRegistration,id',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|same:confirm-password',
-            'roles' => 'required',
+            'roles' => 'required|array|min:1',
         ]);
 
         $student = Student::findOrFail($request->student_id);
@@ -353,10 +329,10 @@ class UserController extends Controller
                 'lastname' => $student->lastname,
                 'othernames' => $student->othername ?? '',
                 'phone' => '',
-                'address' => $student->home_address ?? '',
+                'address' => $student->home_address2 ?? '',
                 'gender' => $student->gender ?? '',
                 'maritalstatus' => '',
-                'nationality' => $student->nationlity ?? '',
+                'nationality' => $student->nationality ?? '',
                 'dob' => $student->dateofbirth ?? '',
             ]
         );

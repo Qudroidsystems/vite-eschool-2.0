@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Classcategory;
-use App\Models\Schoolclass;
 use App\Models\Schoolarm;
+use App\Models\Schoolclass;
 use App\Models\ClassTeacher;
 use Illuminate\Http\Request;
+use App\Models\Classcategory;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 
 class SchoolClassController extends Controller

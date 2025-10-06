@@ -14909,6 +14909,9 @@ namespace App\Models {
      * @property int $id
      * @property-read \App\Models\Studentpicture $picture
      * @property-read \App\Models\Studentclass $schoolClass
+     * @property-read \App\Models\Schoolclass $class
+     * @property-read \App\Models\Schoolterm $term
+     * @property-read \App\Models\Schoolsession $session
      * @property-read \App\Models\ParentRegistration $parent
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereAdmissionno($value)

@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Schoolterm;
+use App\Models\Schoolclass;
 use App\Models\Studentclass;
+use App\Models\Schoolsession;
 use App\Models\Studentpicture;
 use App\Models\ParentRegistration;
 use Illuminate\Database\Eloquent\Model;
@@ -67,6 +70,42 @@ class Student extends Model
     public function schoolClass()
     {
         return $this->hasOne(Studentclass::class, 'studentId', 'id');
+    }
+
+    public function class()
+    {
+        return $this->hasOneThrough(
+            Schoolclass::class,
+            Studentclass::class,
+            'studentId', // Foreign key on the intermediate model (Studentclass)
+            'id',        // Foreign key on the target model (Schoolclass)
+            'id',        // Local key on the parent model (Student)
+            'schoolclassid' // Local key on the intermediate model (Studentclass)
+        );
+    }
+
+    public function term()
+    {
+        return $this->hasOneThrough(
+            Schoolterm::class,
+            Studentclass::class,
+            'studentId', // Foreign key on the intermediate model (Studentclass)
+            'id',        // Foreign key on the target model (Schoolterm)
+            'id',        // Local key on the parent model (Student)
+            'termid'     // Local key on the intermediate model (Studentclass)
+        );
+    }
+
+    public function session()
+    {
+        return $this->hasOneThrough(
+            Schoolsession::class,
+            Studentclass::class,
+            'studentId', // Foreign key on the intermediate model (Studentclass)
+            'id',        // Foreign key on the target model (Schoolsession)
+            'id',        // Local key on the parent model (Student)
+            'sessionid'  // Local key on the intermediate model (Studentclass)
+        );
     }
 
     public function parent()

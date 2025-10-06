@@ -88,6 +88,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('users/create-from-student', [UserController::class, 'createFromStudent'])->name('users.createFromStudent');
     Route::get('/get-students', [UserController::class, 'getStudents'])->name('get.students');
 
+    Route::post('/users/store-student', [UserController::class, 'storeStudent'])->name('users.store-student');
+
     Route::resource('biodata', BiodataController::class);
     Route::get('/overview/{id}', [OverviewController::class, 'show'])->name('user.overview');
     Route::get('/settings/{id}', [BiodataController::class, 'show'])->name('user.settings');
