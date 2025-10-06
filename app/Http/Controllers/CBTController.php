@@ -170,9 +170,9 @@ class CBTController extends Controller
             $startTime = Carbon::parse($exam->start_time);
             $endTime = Carbon::parse($exam->end_time);
 
-            // if (!$now->between($startTime, $endTime)) {
-            //     return redirect()->route('cbt.index')->with('error', 'This exam is not currently available.');
-            // }
+            if (!$now->between($startTime, $endTime)) {
+                return redirect()->route('cbt.index')->with('error', 'This exam is not currently available.');
+            }
 
             // Check if student has already taken the exam
             $existingAttempt = ExamAttempt::where('student_id', $student)
