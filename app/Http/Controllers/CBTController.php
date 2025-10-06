@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use Carbon\Carbon; 
+use App\Models\Exam;
+use App\Models\Result;
 use App\Models\Student;
-use App\Models\Schoolclass;
 use App\Models\Schoolterm;
-use App\Models\Schoolsession;
-use App\Models\StudentSubjectRecord;
+use App\Models\ExamAttempt;
+use App\Models\Schoolclass;
 use App\Models\Subjectclass;
-use App\Models\Exam; 
-use App\Models\ExamAttempt;      // Add this import
-use App\Models\Result; // Explicitly import the Result model
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon; // Add this import
+use Illuminate\Http\Request;
+use App\Models\Schoolsession;
+use Illuminate\Support\Collection; // Add this import
+use Illuminate\Support\Facades\DB;      // Add this import
+use App\Http\Controllers\Controller; // Explicitly import the Result model
+use App\Models\StudentSubjectRecord;
 
 class CBTController extends Controller
 {
@@ -22,7 +24,11 @@ class CBTController extends Controller
      */
     public function index()
     {
-        $studentId = 1; // Replace with auth()->user()->student_id ?? $request->user()->id;
+
+        $pagetitle = 'Exams Management'; // Define the page title
+
+        
+        $studentId = 13; // Replace with auth()->user()->student_id ?? $request->user()->id;
 
         $studentClassData = DB::table('studentclass')
             ->where('studentId', $studentId)
@@ -38,65 +44,62 @@ class CBTController extends Controller
                 'schoolsession.session as session_name'
             )
             ->first();
-           // dd($studentClassData);
-
-            // if (!$studentClassData) {
-            //     return view('cbt.index', ['error' => 'No active class found for this student.']);
-            // }
 
         $student = DB::table('studentRegistration')
             ->where('id', $studentId)
             ->select('id', 'firstname', 'lastname', 'admissionNo')
             ->first();
 
-
         $current = 'Current';
 
-        $totalreg = DB::table('subjectclass')
-            ->where('schoolclassid', $studentClassData->class_id)
-            ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-            ->where('schoolsession.status', '=', $current)
-            ->distinct('subjectteacher.subjectid')
-            ->count('subjectteacher.subjectid');
-            //dd($totalreg);
+        $totalreg = 0;
+        $reg = 0;
+        $registeredSubjects = [];
+        $exams = collect(); // Default empty collection
 
-        $reg = DB::table('student_subject_register_record')
-            ->where('student_subject_register_record.studentId', $studentId)
-            ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
-            ->where('schoolsession.status', '=', $current)
-            ->count();
-            //dd($reg);
+        if ($studentClassData) {
+            $totalreg = DB::table('subjectclass')
+                ->where('schoolclassid', $studentClassData->class_id)
+                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+                ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+                ->where('schoolsession.status', '=', $current)
+                ->distinct('subjectteacher.subjectid')
+                ->count('subjectteacher.subjectid');
 
-        $registeredSubjects = DB::table('student_subject_register_record')
-            ->where('student_subject_register_record.studentId', $studentId)
-            ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
-            ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
-            ->where('schoolsession.status', '=', $current)
-           ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-           ->pluck('subjectteacher.id')
-           ->toArray();
-           //dd($registeredSubjects);
+            $reg = DB::table('student_subject_register_record')
+                ->where('student_subject_register_record.studentId', $studentId)
+                ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
+                ->where('schoolsession.status', '=', $current)
+                ->count();
+
+            $registeredSubjects = DB::table('student_subject_register_record')
+                ->where('student_subject_register_record.studentId', $studentId)
+                ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
+                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
+                ->where('schoolsession.status', '=', $current)
+               ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+               ->pluck('subjectteacher.id')
+               ->toArray();
 
             $exams = DB::table('exams')
-            ->whereIn('subject_id',  $registeredSubjects)
-           //->where('schoolclass_id', $studentClassData->class_id)
-          // ->where('termid', $studentClassData->term_id)
-           ->where('session', $studentClassData->session_id)
-            ->select('id', 'title', 'subject_id', 'description','duration','start_time','end_time')
-            ->get();
+                ->whereIn('subject_id',  $registeredSubjects)
+               //->where('schoolclass_id', $studentClassData->class_id)
+              // ->where('termid', $studentClassData->term_id)
+               ->where('session', $studentClassData->session_id)
+                ->select('id', 'title', 'subject_id', 'description','duration','start_time','end_time')
+                ->paginate(15);
+        }
 
-           // dd($exams);
-
-        $class = (object) ['id' => $studentClassData->class_id, 'schoolclass' => $studentClassData->class_name];
-        $term = (object) ['id' => $studentClassData->term_id, 'term' => $studentClassData->term_name];
-        $session = (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name];
+        $class = $studentClassData ? (object) ['id' => $studentClassData->class_id, 'schoolclass' => $studentClassData->class_name] : null;
+        $term = $studentClassData ? (object) ['id' => $studentClassData->term_id, 'term' => $studentClassData->term_name] : null;
+        $session = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name] : null;
 
         return view('cbt.index', [
+            'pagetitle'=>$pagetitle,
             'exams' => $exams,
             'student' => $student,
             'class' => $class,
@@ -152,7 +155,7 @@ class CBTController extends Controller
         try {
             // Get the authenticated student
            // $student = auth()->user();
-            $student = 1;
+            $student = 13;
             
             // Verify student has permission to take this exam
             $exam = Exam::where('id', $examid)
@@ -190,7 +193,7 @@ class CBTController extends Controller
             // Prepare question data for frontend
             $questions = $exam->questions->map(function ($question) {
                 return [
-                    'id' => $question,
+                    'id' => $question->id,
                     'text' => $question->question_text,
                     'options' => $question->options->pluck('option_text')->toArray(),
                     'image_url' => $question->image ? asset('storage/' . $question->image) : null // Adjust path as needed
@@ -209,7 +212,7 @@ class CBTController extends Controller
             return view('cbt.take', [
                 'exam' => $exam,
                 'questions' => $questions,
-                'student' => $student,
+                'student' => $registration,
                 'class' => $registration->class,
                 'term' => $registration->term,
                 'session' => $registration->session,
@@ -236,7 +239,7 @@ class CBTController extends Controller
                 'answers.*.notes' => 'nullable|string',
             ]);
     
-            $student=1;
+            $student=13;
             if (!$student) {
                 throw new \Exception('No authenticated student or student with ID 1 found');
             }

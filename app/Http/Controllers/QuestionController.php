@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Exam;
 use App\Models\Question;
-
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Storage;
 
 class QuestionController extends Controller
 {
@@ -118,7 +119,8 @@ class QuestionController extends Controller
     {
         // Ensure we get a single Exam instance with its questions and options
         $exam = Exam::with('questions.options')->findOrFail($id);
-        return view('question.index', compact('exam'));
+        $pagetitle = 'Questions Management'; // Define the page title
+        return view('question.index', compact('exam', 'pagetitle'));
     }
 
 
@@ -145,6 +147,7 @@ class QuestionController extends Controller
     $question->load('options'); // Eager load the options relationship
     
     return response()->json([
+        'success' => true,
         'exam_id' => $question->exam_id,
         'question_text' => $question->question_text,
         'type' => $question->type,
@@ -185,11 +188,16 @@ class QuestionController extends Controller
     
         // Handle image upload
         if ($request->hasFile('image')) {
+            if ($question->image) {
+                Storage::disk('public')->delete($question->image);
+            }
             $question->update([
                 'image' => $request->file('image')->store('question_images', 'public')
             ]);
         } elseif ($request->has('remove_image')) {
-            Storage::disk('public')->delete($question->image);
+            if ($question->image) {
+                Storage::disk('public')->delete($question->image);
+            }
             $question->update(['image' => null]);
         }
     
@@ -227,6 +235,9 @@ class QuestionController extends Controller
 
     public function destroy(Question $question)
     {
+        if ($question->image) {
+            Storage::disk('public')->delete($question->image);
+        }
         $question->options()->delete();
         $question->delete();
         return response()->json(['success' => true]);

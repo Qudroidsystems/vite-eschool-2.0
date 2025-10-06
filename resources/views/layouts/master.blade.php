@@ -502,7 +502,7 @@
                             <div class="collapse menu-dropdown" id="sidebarExams">
                                 <ul class="nav nav-sm flex-column">
                                     <li class="nav-item">
-                                        <a href="apps-ecommerce-products.html" class="nav-link" data-key="t-products">All Examinations</a>
+                                        <a href="{{ route('exams.index') }}" class="nav-link" data-key="t-products">All Examinations</a>
                                     </li>
                                 
                                 </ul>
@@ -516,7 +516,7 @@
                             <div class="collapse menu-dropdown" id="sidebarCBT">
                                 <ul class="nav nav-sm flex-column">
                                     <li class="nav-item">
-                                        <a href="apps-ecommerce-products.html" class="nav-link" data-key="t-products">CBT Exercise</a>
+                                        <a href="{{ route('cbt.index') }}" class="nav-link" data-key="t-products">CBT Exercise</a>
                                     </li>
                                 
                                 </ul>
