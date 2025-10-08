@@ -10,6 +10,14 @@ use Illuminate\Support\Facades\Storage;
 
 class QuestionController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:View question', ['only' => ['index', 'show', 'showDetails', 'edit']]);
+        $this->middleware('permission:Create question', ['only' => ['create', 'store']]);
+        $this->middleware('permission:Update question', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:Delete question', ['only' => ['destroy']]);
+    }
+
     /**
      * Display a listing of the resource.
      */

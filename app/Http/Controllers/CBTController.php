@@ -22,6 +22,13 @@ class CBTController extends Controller
     /**
      * Display a listing of the resource.
      */
+    public function __construct()
+    {
+        $this->middleware('permission:View cbt-exam', ['only' => ['index']]);
+        $this->middleware('permission:Take cbt-exam', ['only' => ['takeCBT']]);
+        $this->middleware('permission:Submit cbt-exam', ['only' => ['submit']]);
+    }
+
     public function index()
     {
 
