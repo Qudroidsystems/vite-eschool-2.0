@@ -162,8 +162,8 @@ class CBTController extends Controller
         $pagetitle = 'CBT Exams'; // Define the page title
         try {
             // Get the authenticated student
-           // $student = auth()->user();
-            $student = 13;
+           $student = auth()->user()->student_id;
+          
             
             // Verify student has permission to take this exam
             $exam = Exam::where('id', $examid)
