@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'cbt/submit',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
