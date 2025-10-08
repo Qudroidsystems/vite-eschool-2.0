@@ -92,27 +92,56 @@
                                             @forelse ($exams as $exam)
                                                 @php
                                                     $now = now();
-                                                    $start = \Carbon\Carbon::parse($exam->start_time);
-                                                    $end = \Carbon\Carbon::parse($exam->end_time);
+                                                    $rawStart = $exam->start_time ?? 'NULL';
+                                                    $rawEnd = $exam->end_time ?? 'NULL';
+                                                    $start = $rawStart ? \Carbon\Carbon::parse($rawStart) : null;
+                                                    $end = $rawEnd ? \Carbon\Carbon::parse($rawEnd) : null;
+                                                    $hasAttempted = in_array($exam->id, $attempts ?? []);
+                                                    $status = 'Unknown'; // Default
+                                                    if ($start && $end) {
+                                                        if ($hasAttempted) {
+                                                            $status = 'Completed';
+                                                        } elseif ($now->lt($start)) {
+                                                            $status = 'Upcoming';
+                                                        } elseif ($now->between($start, $end)) {
+                                                            $status = 'Ongoing';
+                                                        } else {
+                                                            $status = 'Ended';
+                                                        }
+                                                    } elseif (!$start || !$end) {
+                                                        $status = 'Invalid Dates';
+                                                    }
                                                 @endphp
+                                                <!-- Temporary Debug Row: Remove after fixing -->
+                                                <tr style="background-color: #f8f9fa; font-size: 0.8em;">
+                                                    <td colspan="8">
+                                                        DEBUG: Exam ID {{ $exam->id }} | Raw Start: {{ $rawStart }} | Raw End: {{ $rawEnd }} | Now: {{ $now->toDateTimeString() }} | Parsed Start: {{ $start?->toDateTimeString() ?? 'NULL' }} | Parsed End: {{ $end?->toDateTimeString() ?? 'NULL' }} | Has Attempted: {{ $hasAttempted ? 'Yes' : 'No' }}
+                                                    </td>
+                                                </tr>
                                                 <tr>
                                                     <td class="sn">{{ ++$i }}</td>
                                                     <td class="title">{{ $exam->title }}</td>
                                                     <td class="description">{{ Str::limit($exam->description ?? '', 50) }}</td>
                                                     <td class="duration">{{ $exam->duration }} mins</td>
-                                                    <td class="start_time">{{ $exam->start_time }}</td>
-                                                    <td class="end_time">{{ $exam->end_time }}</td>
+                                                    <td class="start_time">{{ $rawStart }}</td>
+                                                    <td class="end_time">{{ $rawEnd }}</td>
                                                     <td class="status">
-                                                        @if ($now->lt($start))
-                                                            <span class="badge badge-light-warning">Upcoming</span>
-                                                        @elseif ($now->between($start, $end))
-                                                            <span class="badge badge-light-success">Ongoing</span>
+                                                        @if ($hasAttempted)
+                                                            <span style="color: #0dcaf0; background-color: #cff4fc; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Completed</span>
+                                                        @elseif ($status === 'Upcoming')
+                                                            <span style="color: #ffc107; background-color: #fff3cd; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Upcoming</span>
+                                                        @elseif ($status === 'Ongoing')
+                                                            <span style="color: #198754; background-color: #d1e7dd; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Ongoing</span>
+                                                        @elseif ($status === 'Ended')
+                                                            <span style="color: #dc3545; background-color: #f8d7da; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Ended</span>
                                                         @else
-                                                            <span class="badge badge-light-danger">Ended</span>
+                                                            <span style="color: #6c757d; background-color: #e2e3e5; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">{{ $status }}</span>
                                                         @endif
                                                     </td>
                                                     <td class="actions">
-                                                        @if ($now->between($start, $end))
+                                                        @if ($hasAttempted)
+                                                            <span style="color: #0dcaf0; background-color: #cff4fc; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Exam Taken</span>
+                                                        @elseif ($status === 'Ongoing')
                                                             @can('Take cbt-exam')
                                                                 <a href="{{ route('cbt.take', $exam->id) }}" class="btn btn-sm btn-primary">Take Exam</a>
                                                             @else

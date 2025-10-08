@@ -68,7 +68,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'Africa/Lagos',  // Updated: UTC+1 for West Africa (e.g., Nigeria)
 
     /*
     |--------------------------------------------------------------------------
