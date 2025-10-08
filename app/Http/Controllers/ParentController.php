@@ -2,22 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Student;
+use Illuminate\Http\Request;
 use App\Models\ParentRegistration;
-
+use App\Http\Controllers\Controller;
 
 class ParentController extends Controller
 {
-
-
-    function __construct()
+    public function __construct()
     {
-         $this->middleware('permission:parent-list|parent-create|parent-edit|parent-delete', ['only' => ['index','store']]);
-         $this->middleware('permission:parent-create', ['only' => ['create','store']]);
-         $this->middleware('permission:parent-edit', ['only' => ['edit','update']]);
-         $this->middleware('permission:parent-delete', ['only' => ['destroy']]);
+        $this->middleware('permission:View parent', ['only' => ['index']]);
+        $this->middleware('permission:Create parent', ['only' => ['create', 'store']]);
+        $this->middleware('permission:Update parent', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:Delete parent', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      *
@@ -94,8 +93,7 @@ class ParentController extends Controller
         $parent = ParentRegistration::find($id);
 
       //echo $parent->mother_title;
-       return View('parent.edit')->with('student',$student)
-                             ->with('parent',$parent);
+       return view('parent.edit')->with('student',$student)->with('parent',$parent);
     }
 
     /**

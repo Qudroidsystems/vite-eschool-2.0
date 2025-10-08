@@ -3,22 +3,28 @@
 namespace App\Http\Controllers;
 
 use PDF;
-use Illuminate\Support\Facades\View;
-use App\Models\SchoolBillTermSession;
-use App\Models\Schoolclass;
-use App\Models\Schoolsession;
-use App\Models\Schoolterm;
 use App\Models\Student;
-use App\Models\StudentBillPayment;
-use App\Models\StudentBillPaymentBook;
+use App\Models\Schoolterm;
+use App\Models\Schoolclass;
 use App\Models\Studentclass;
+use Illuminate\Http\Request;
+use App\Models\Schoolsession;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
-use Illuminate\Http\Request;
+use App\Models\StudentBillPayment;
+use Illuminate\Support\Facades\View;
+use App\Models\SchoolBillTermSession;
+use App\Models\StudentBillPaymentBook;
 use Illuminate\Support\Facades\Validator;
 
 class AnalysisController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:View analysis', ['only' => ['index', 'analysisClassTermSession']]);
+        $this->middleware('permission:Export analysis', ['only' => ['exportPDF', 'schoolWidePaymentAnalysis']]);
+    }
+
     /**
      * Display a listing of the resource.
      */
