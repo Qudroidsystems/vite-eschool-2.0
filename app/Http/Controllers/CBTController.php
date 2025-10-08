@@ -35,7 +35,7 @@ class CBTController extends Controller
         $pagetitle = 'Exams Management'; // Define the page title
 
         
-        $studentId = 13; // Replace with auth()->user()->student_id ?? $request->user()->id;
+        $studentId = auth()->user()->student_id;
 
         $studentClassData = DB::table('studentclass')
             ->where('studentId', $studentId)
