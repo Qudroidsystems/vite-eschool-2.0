@@ -254,80 +254,153 @@ class CBTController extends Controller
         }
     }
 
-    public function submit(Request $request)
+    // public function submit(Request $request)
+    // {
+    //     try {
+    //         \Log::info('Submit request received', $request->all());
+    
+    //         $data = $request->validate([
+    //             'attempt_id' => 'required|exists:exam_attempts,id',
+    //             'exam_id' => 'required|exists:exams,id',
+    //             'answers' => 'required|array',
+    //             'answers.*.question_id' => '',
+    //             'answers.*.answer' => 'nullable|string',
+    //             'answers.*.notes' => 'nullable|string',
+    //         ]);
+    
+    //         $student=13;
+    //         if (!$student) {
+    //             throw new \Exception('No authenticated student or student with ID 1 found');
+    //         }
+    //         \Log::info('Student ID', ['student_id' => $student]);
+    
+    //         $attempt = ExamAttempt::findOrFail($data['attempt_id']);
+    //         \Log::info('Attempt found', ['attempt_id' => $attempt]);
+    
+    //         if ($attempt->student_id != $student || $attempt->exam_id != $data['exam_id']) {
+    //             return response()->json(['success' => false, 'message' => 'Invalid attempt or exam'], 403);
+    //         }
+    
+    //         if ($attempt->status === 'completed') {
+    //             return response()->json(['success' => true, 'message' => 'Exam already submitted']);
+    //         }
+    
+    //         $attempt->update([
+    //             'end_time' => Carbon::now(),
+    //             'status' => 'completed'
+    //         ]);
+    //         \Log::info('Attempt updated', ['attempt_id' => $attempt->id]);
+    
+    //         $exam = Exam::with(['questions.options'])->findOrFail($data['exam_id']);
+    //         $totalMarks = $exam->questions->count();
+    //         $score = 0;
+    
+    //         foreach ($data['answers'] as $submittedAnswer) {
+    //             $question = $exam->questions->firstWhere('id', $submittedAnswer['question_id']);
+    //             if ($question) {
+    //                 $correctOption = $question->options->where('is_correct', true)->first();
+    //                 if (!$correctOption) {
+    //                     \Log::warning('No correct option found for question', ['question_id' => $submittedAnswer['question_id']]);
+    //                     continue;
+    //                 }
+    //                 $correctAnswer = $correctOption->option_text;
+    //                 \Log::info('Checking answer', [
+    //                     'question_id' => $submittedAnswer['question_id'],
+    //                     'submitted_answer' => $submittedAnswer['answer'],
+    //                     'correct_answer' => $correctAnswer
+    //                 ]);
+    //                 if ($submittedAnswer['answer'] === $correctAnswer) {
+    //                     $score++;
+    //                 }
+    //             }
+    //         }
+    
+    //         Result::create([
+    //             'user_id' => $student,
+    //             'exam_id' => $data['exam_id'],
+    //             'score' => $score,
+    //             'total_marks' => $totalMarks,
+    //         ]);
+    //         \Log::info('Result saved', ['score' => $score, 'total_marks' => $totalMarks]);
+    
+    //         return response()->json(['success' => true, 'message' => 'Exam submitted successfully']);
+    
+    //     } catch (\Exception $e) {
+    //         \Log::error('Submission failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+    //         return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    //     }
+    // }
+
+
+    public function submit(Request $request): JsonResponse
     {
+        // Immediate logging to confirm request reaches here
+        Log::info('CBT Submit Reached Controller', [
+            'url' => $request->url(),
+            'method' => $request->method(),
+            'authenticated' => auth()->check(),
+            'user_id' => auth()->id(),
+            'permissions' => auth()->user()?->can('Submit cbt-exam') ? 'yes' : 'no',
+            'headers' => [
+                'user-agent' => $request->header('User-Agent'),
+                'referer' => $request->header('Referer'),
+                'x-csrf-token' => $request->header('X-CSRF-TOKEN'),
+                'content-type' => $request->header('Content-Type'),
+            ],
+            'input' => $request->all(),  // Logs JSON body
+            'session_id' => $request->session()->getId(),
+        ]);
+
+        // Explicit auth check (mirrors middleware but with logging)
+        if (!auth()->check()) {
+            Log::warning('CBT Submit: Unauthenticated user');
+            return response()->json(['success' => false, 'message' => 'Unauthorized: Please log in again.'], 401);
+        }
+
+        $user = auth()->user();
+        if (!$user->can('Submit cbt-exam')) {
+            Log::warning('CBT Submit: Insufficient permissions', ['user_id' => $user->id]);
+            return response()->json(['success' => false, 'message' => 'Forbidden: You lack permission to submit exams.'], 403);
+        }
+
+        // Validate input
+        $validated = $request->validate([
+            'attempt_id' => 'required|integer|exists:attempts,id',  // Adjust table/column
+            'exam_id' => 'required|integer|exists:exams,id',
+            'answers' => 'required|array|min:1',
+            'answers.*.question_id' => 'required|integer|exists:questions,id',
+            'answers.*.answer' => 'required|string',
+            'answers.*.notes' => 'nullable|string',
+        ]);
+
         try {
-            \Log::info('Submit request received', $request->all());
-    
-            $data = $request->validate([
-                'attempt_id' => 'required|exists:exam_attempts,id',
-                'exam_id' => 'required|exists:exams,id',
-                'answers' => 'required|array',
-                'answers.*.question_id' => '',
-                'answers.*.answer' => 'nullable|string',
-                'answers.*.notes' => 'nullable|string',
+            $attemptId = $validated['attempt_id'];
+            $examId = $validated['exam_id'];
+            $answers = $validated['answers'];
+
+            // Your submission logic here (e.g., save to DB)
+            // Example:
+            // foreach ($answers as $answerData) {
+            //     Answer::updateOrCreate(
+            //         ['attempt_id' => $attemptId, 'question_id' => $answerData['question_id']],
+            //         ['answer' => $answerData['answer'], 'notes' => $answerData['notes']]
+            //     );
+            // }
+            // Attempt::where('id', $attemptId)->update(['submitted_at' => now()]);
+
+            Log::info('CBT Submit: Success', ['attempt_id' => $attemptId, 'answers_count' => count($answers)]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Exam submitted successfully.'
             ]);
-    
-            $student=13;
-            if (!$student) {
-                throw new \Exception('No authenticated student or student with ID 1 found');
-            }
-            \Log::info('Student ID', ['student_id' => $student]);
-    
-            $attempt = ExamAttempt::findOrFail($data['attempt_id']);
-            \Log::info('Attempt found', ['attempt_id' => $attempt]);
-    
-            if ($attempt->student_id != $student || $attempt->exam_id != $data['exam_id']) {
-                return response()->json(['success' => false, 'message' => 'Invalid attempt or exam'], 403);
-            }
-    
-            if ($attempt->status === 'completed') {
-                return response()->json(['success' => true, 'message' => 'Exam already submitted']);
-            }
-    
-            $attempt->update([
-                'end_time' => Carbon::now(),
-                'status' => 'completed'
-            ]);
-            \Log::info('Attempt updated', ['attempt_id' => $attempt->id]);
-    
-            $exam = Exam::with(['questions.options'])->findOrFail($data['exam_id']);
-            $totalMarks = $exam->questions->count();
-            $score = 0;
-    
-            foreach ($data['answers'] as $submittedAnswer) {
-                $question = $exam->questions->firstWhere('id', $submittedAnswer['question_id']);
-                if ($question) {
-                    $correctOption = $question->options->where('is_correct', true)->first();
-                    if (!$correctOption) {
-                        \Log::warning('No correct option found for question', ['question_id' => $submittedAnswer['question_id']]);
-                        continue;
-                    }
-                    $correctAnswer = $correctOption->option_text;
-                    \Log::info('Checking answer', [
-                        'question_id' => $submittedAnswer['question_id'],
-                        'submitted_answer' => $submittedAnswer['answer'],
-                        'correct_answer' => $correctAnswer
-                    ]);
-                    if ($submittedAnswer['answer'] === $correctAnswer) {
-                        $score++;
-                    }
-                }
-            }
-    
-            Result::create([
-                'user_id' => $student,
-                'exam_id' => $data['exam_id'],
-                'score' => $score,
-                'total_marks' => $totalMarks,
-            ]);
-            \Log::info('Result saved', ['score' => $score, 'total_marks' => $totalMarks]);
-    
-            return response()->json(['success' => true, 'message' => 'Exam submitted successfully']);
-    
+
+        } catch (ValidationException $e) {
+            Log::error('CBT Submit: Validation failed', ['errors' => $e->errors()]);
+            return response()->json(['success' => false, 'message' => 'Validation error: ' . implode(', ', $e->errors())], 422);
         } catch (\Exception $e) {
-            \Log::error('Submission failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            Log::error('CBT Submit: Unexpected error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
     }
 
