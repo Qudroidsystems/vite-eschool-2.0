@@ -12,9 +12,10 @@ use App\Models\Schoolclass;
 use App\Models\Subjectclass;
 use Illuminate\Http\Request;
 use App\Models\Schoolsession;
-use Illuminate\Support\Collection; // Add this import
-use Illuminate\Support\Facades\DB;      // Add this import
-use App\Http\Controllers\Controller; // Explicitly import the Result model
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
 use App\Models\StudentSubjectRecord;
 
 class CBTController extends Controller
@@ -31,10 +32,8 @@ class CBTController extends Controller
 
     public function index()
     {
-
         $pagetitle = 'Exams Management'; // Define the page title
 
-        
         $studentId = auth()->user()->student_id;
 
         $studentClassData = DB::table('studentclass')
@@ -63,6 +62,7 @@ class CBTController extends Controller
         $reg = 0;
         $registeredSubjects = [];
         $exams = collect(); // Default empty collection
+        $attempts = []; // Initialize empty
 
         if ($studentClassData) {
             $totalreg = DB::table('subjectclass')
@@ -88,17 +88,25 @@ class CBTController extends Controller
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
                 ->where('schoolsession.status', '=', $current)
-               ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-               ->pluck('subjectteacher.id')
-               ->toArray();
+                ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+                ->pluck('subject.id')  // Fixed: Pluck 'subject.id' instead of 'subjectteacher.id'
+                ->toArray();
 
             $exams = DB::table('exams')
-                ->whereIn('subject_id',  $registeredSubjects)
-               ->where('schoolclass_id', $studentClassData->class_id)
-              ->where('termid', $studentClassData->term_id)
-               ->where('session', $studentClassData->session_id)
-                ->select('id', 'title', 'subject_id', 'description','duration','start_time','end_time')
+                ->whereIn('subject_id', $registeredSubjects)
+                ->where('schoolclass_id', $studentClassData->class_id)
+                ->where('termid', $studentClassData->term_id)
+                ->where('session', $studentClassData->session_id)
+                ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
                 ->paginate(15);
+
+            // Fetch attempted exam IDs for this student (efficient for pagination)
+            $examIds = $exams->pluck('id')->toArray();
+            $attempts = ExamAttempt::where('student_id', $studentId)
+                ->whereIn('exam_id', $examIds)
+                ->where('status', 'completed')  // Only count completed attempts
+                ->pluck('exam_id')
+                ->toArray();
         }
 
         $class = $studentClassData ? (object) ['id' => $studentClassData->class_id, 'schoolclass' => $studentClassData->class_name] : null;
@@ -106,7 +114,7 @@ class CBTController extends Controller
         $session = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name] : null;
 
         return view('cbt.index', [
-            'pagetitle'=>$pagetitle,
+            'pagetitle' => $pagetitle,
             'exams' => $exams,
             'student' => $student,
             'class' => $class,
@@ -114,6 +122,7 @@ class CBTController extends Controller
             'session' => $session,
             'totalreg' => $totalreg,
             'reg' => $reg,
+            'attempts' => $attempts,  // Added: Pass attempts to view
         ]);
     }
 
@@ -162,9 +171,8 @@ class CBTController extends Controller
         $pagetitle = 'CBT Exams'; // Define the page title
         try {
             // Get the authenticated student
-           $student = auth()->user()->student_id;
+            $student = auth()->user()->student_id;
           
-            
             // Verify student has permission to take this exam
             $exam = Exam::where('id', $examid)
                 ->with(['questions.options' => function ($query) {
@@ -238,7 +246,7 @@ class CBTController extends Controller
             $session = (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name];
 
             return view('cbt.take', [
-                'pagetitle'=>$pagetitle,
+                'pagetitle' => $pagetitle,
                 'exam' => $exam,
                 'questions' => $questions,
                 'student' => $studentReg,
@@ -257,25 +265,25 @@ class CBTController extends Controller
     public function submit(Request $request)
     {
         try {
-            \Log::info('Submit request received', $request->all());
+            Log::info('Submit request received', $request->all());
     
             $data = $request->validate([
                 'attempt_id' => 'required|exists:exam_attempts,id',
                 'exam_id' => 'required|exists:exams,id',
-                'answers' => 'required|array',
-                'answers.*.question_id' => '',
-                'answers.*.answer' => 'nullable|string',
-                'answers.*.notes' => 'nullable|string',
+                'answers' => 'required|array|min:1',
+                'answers.*.question_id' => 'required|integer|exists:questions,id',
+                'answers.*.answer' => 'nullable|string|max:255',
+                'answers.*.notes' => 'nullable|string|max:1000',
             ]);
     
-            $student= auth()->user()->student_id;
+            $student = auth()->user()->student_id;
             if (!$student) {
-                throw new \Exception('No authenticated student or student with ID 1 found');
+                throw new \Exception('No authenticated student found');
             }
-            \Log::info('Student ID', ['student_id' => $student]);
+            Log::info('Student ID', ['student_id' => $student]);
     
             $attempt = ExamAttempt::findOrFail($data['attempt_id']);
-            \Log::info('Attempt found', ['attempt_id' => $attempt]);
+            Log::info('Attempt found', ['attempt_id' => $attempt->id]);
     
             if ($attempt->student_id != $student || $attempt->exam_id != $data['exam_id']) {
                 return response()->json(['success' => false, 'message' => 'Invalid attempt or exam'], 403);
@@ -284,14 +292,22 @@ class CBTController extends Controller
             if ($attempt->status === 'completed') {
                 return response()->json(['success' => true, 'message' => 'Exam already submitted']);
             }
+
+            // Check submission time
+            $exam = Exam::with(['questions.options'])->findOrFail($data['exam_id']);
+            $now = Carbon::now();
+            $startTime = Carbon::parse($exam->start_time);
+            $endTime = Carbon::parse($exam->end_time);
+            if (!$now->between($startTime, $endTime)) {
+                return response()->json(['success' => false, 'message' => 'Exam submission time has expired.'], 403);
+            }
     
             $attempt->update([
-                'end_time' => Carbon::now(),
+                'end_time' => $now,
                 'status' => 'completed'
             ]);
-            \Log::info('Attempt updated', ['attempt_id' => $attempt->id]);
+            Log::info('Attempt updated', ['attempt_id' => $attempt->id]);
     
-            $exam = Exam::with(['questions.options'])->findOrFail($data['exam_id']);
             $totalMarks = $exam->questions->count();
             $score = 0;
     
@@ -300,11 +316,11 @@ class CBTController extends Controller
                 if ($question) {
                     $correctOption = $question->options->where('is_correct', true)->first();
                     if (!$correctOption) {
-                        \Log::warning('No correct option found for question', ['question_id' => $submittedAnswer['question_id']]);
+                        Log::warning('No correct option found for question', ['question_id' => $submittedAnswer['question_id']]);
                         continue;
                     }
                     $correctAnswer = $correctOption->option_text;
-                    \Log::info('Checking answer', [
+                    Log::info('Checking answer', [
                         'question_id' => $submittedAnswer['question_id'],
                         'submitted_answer' => $submittedAnswer['answer'],
                         'correct_answer' => $correctAnswer
@@ -321,12 +337,12 @@ class CBTController extends Controller
                 'score' => $score,
                 'total_marks' => $totalMarks,
             ]);
-            \Log::info('Result saved', ['score' => $score, 'total_marks' => $totalMarks]);
+            Log::info('Result saved', ['score' => $score, 'total_marks' => $totalMarks]);
     
             return response()->json(['success' => true, 'message' => 'Exam submitted successfully']);
     
         } catch (\Exception $e) {
-            \Log::error('Submission failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Log::error('Submission failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
