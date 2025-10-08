@@ -113,11 +113,11 @@
                                                     }
                                                 @endphp
                                                 <!-- Temporary Debug Row: Remove after fixing -->
-                                                <tr style="background-color: #f8f9fa; font-size: 0.8em;">
+                                                {{-- <tr style="background-color: #f8f9fa; font-size: 0.8em;">
                                                     <td colspan="8">
                                                         DEBUG: Exam ID {{ $exam->id }} | Raw Start: {{ $rawStart }} | Raw End: {{ $rawEnd }} | Now: {{ $now->toDateTimeString() }} | Parsed Start: {{ $start?->toDateTimeString() ?? 'NULL' }} | Parsed End: {{ $end?->toDateTimeString() ?? 'NULL' }} | Has Attempted: {{ $hasAttempted ? 'Yes' : 'No' }}
                                                     </td>
-                                                </tr>
+                                                </tr> --}}
                                                 <tr>
                                                     <td class="sn">{{ ++$i }}</td>
                                                     <td class="title">{{ $exam->title }}</td>
