@@ -2,25 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SchoolBillModel;
-use App\Models\SchoolBillTermSession;
-use App\Models\Schoolclass;
-use App\Models\SchoolInformation;
-use App\Models\Schoolsession;
-use App\Models\Schoolterm;
-use App\Models\Student;
-use App\Models\StudentBillPayment;
-use App\Models\StudentBillPaymentBook;
-use App\Models\StudentBillPaymentRecord;
+use PDF;
 use Carbon\Carbon;
+use App\Models\Student;
+use App\Models\Schoolterm;
+use App\Models\Schoolclass;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Schoolsession;
+use App\Models\SchoolBillModel;
+use App\Models\SchoolInformation;
+use App\Models\StudentBillPayment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use PDF;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use App\Models\SchoolBillTermSession;
+use App\Models\StudentBillPaymentBook;
+use App\Models\StudentBillPaymentRecord;
 
 class SchoolPaymentController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:View school-payment', ['only' => ['index', 'termSession', 'termsessionpayments', 'invoice', 'statement']]);
+        $this->middleware('permission:Create school-payment', ['only' => ['store']]);
+        $this->middleware('permission:Delete school-payment', ['only' => ['deletestudentpayment']]);
+    }
+
     /**
      * Display the list of students for payment selection.
      */

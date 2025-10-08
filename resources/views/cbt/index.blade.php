@@ -44,6 +44,7 @@
                 </div>
             @endif
 
+            @can('View cbt-exam')
             <div id="examsList">
                 <div class="row">
                     <div class="col-lg-12">
@@ -112,7 +113,11 @@
                                                     </td>
                                                     <td class="actions">
                                                         @if ($now->between($start, $end))
-                                                            <a href="{{ route('cbt.take', $exam->id) }}" class="btn btn-sm btn-primary">Take Exam</a>
+                                                            @can('Take cbt-exam')
+                                                                <a href="{{ route('cbt.take', $exam->id) }}" class="btn btn-sm btn-primary">Take Exam</a>
+                                                            @else
+                                                                <span class="text-muted">N/A</span>
+                                                            @endcan
                                                         @else
                                                             <span class="text-muted">N/A</span>
                                                         @endif
@@ -162,6 +167,7 @@
                     <p class="text-muted">Total Subjects Offered: {{ $totalreg }} | Subjects Registered: {{ $reg }}</p>
                 </div>
             </div>
+            @endcan
         </div>
         <!-- End Page-content -->
     </div>

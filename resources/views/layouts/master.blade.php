@@ -236,487 +236,516 @@
                     <i class="ri-record-circle-line"></i>
                 </button>
             </div>
+<div id="scrollbar">
+    <div class="container-fluid">
 
-            <div id="scrollbar">
-                <div class="container-fluid">
+        <div id="two-column-menu">
+        </div>
+        <ul class="navbar-nav" id="navbar-nav">
 
-                    <div id="two-column-menu">
-                    </div>
-                    <ul class="navbar-nav" id="navbar-nav">
-
-                        <li class="menu-title"><span data-key="t-menu">Menu</span></li>
-                        <li class="nav-item">
-                            <a class="nav-link menu-link collapsed " href="#sidebarDashboards" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarDashboards">
-                                <i class="ph-gauge"></i> <span data-key="t-dashboards">Dashboards</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarDashboards">
-                                <ul class="nav nav-sm flex-column">
-                                  
-                                        <li class="nav-item">
-                                            <a href="{{ route('dashboard') }}" class="nav-link" data-key="t-analytics"> Administration Analytics </a>
-                                        </li> 
-                                  
-                                    @can('finance dashboard')
-                                    <li class="nav-item">
-                                        <a href="dashboard-crm.html" class="nav-link" data-key="t-crm"> Finance Analytics</a>
-                                    </li>
-                                    @endcan
-                                    @can('academics dashboard')
-                                    <li class="nav-item">
-                                        <a href="index.html" class="nav-link" data-key="t-ecommerce"> Academics Analytics </a>
-                                    </li>
-                                    @endcan
-                                    
-                                </ul>
-                            </div>
-                        </li>
-
-
-                        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">USERS & PRIVILEDGES</span></li>
-                        @can('View user')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarusers" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarAuth">
-                                    <i class="ph-user-circle"></i> <span data-key="t-authentication">User Managements</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarusers">
-                                    <ul class="nav nav-sm flex-column">
-                                    
-                                            <li class="nav-item">
-                                            <a href="{{ route('users.index') }}" class="nav-link" role="button" data-key="t-signin"> Users </a>
-                                        </li>
-                                    
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-                        @can('View role')
-                              <li class="nav-item">
-                            <a class="nav-link menu-link collapsed" href="#sidebarroles" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarPages">
-                                <i class="ph-address-book"></i> <span data-key="t-pages">Roles And Permissions</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarroles">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View role')
-                                         <li class="nav-item">
-                                        <a href="{{ route('roles.index') }}" class="nav-link" data-key="t-starter"> Roles </a>
-                                    </li>
-                                    @endcan
-                                   @can('View permission')
-                                        <li class="nav-item">
-                                        <a href="{{ route('permissions.index') }}" class="nav-link" data-key="t-profile"> Permissions </a>
-                                    </li>
-                                   @endcan
-                                   
-                                </ul>
-                            </div>
-                        </li>
-                        @endcan
+            <li class="menu-title"><span data-key="t-menu">Menu</span></li>
+            <li class="nav-item">
+                <a class="nav-link menu-link collapsed " href="#sidebarDashboards" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarDashboards">
+                    <i class="ph-gauge"></i> <span data-key="t-dashboards">Dashboards</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarDashboards">
+                    <ul class="nav nav-sm flex-column">
                       
-
+                            <li class="nav-item">
+                                <a href="{{ route('dashboard') }}" class="nav-link" data-key="t-analytics"> Administration Analytics </a>
+                            </li> 
+                      
+                        @can('finance dashboard')
                         <li class="nav-item">
-                            <a class="nav-link menu-link collapsed" href="#sidebaraccount" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebaraccoun">
-                                <i class="ph-address-book"></i> <span data-key="t-pages">User Account</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebaraccount">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="pages-starter.html" class="nav-link" data-key="t-starter"> My Account </a>
-                                    </li>
-                                </ul>
-                            </div>
+                            <a href="dashboard-crm.html" class="nav-link" data-key="t-crm"> Finance Analytics</a>
                         </li>
-
-
+                        @endcan
+                        @can('academics dashboard')
+                        <li class="nav-item">
+                            <a href="index.html" class="nav-link" data-key="t-ecommerce"> Academics Analytics </a>
+                        </li>
+                        @endcan
                         
-
-                        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-apps">STUDENT & PARENTS</span></li>
-
-                    
-
-                        <li class="nav-item">
-                            <a href="#sidebarStudentmanagement" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarStudentmanagement">
-                                <i class="ph-storefront"></i> <span data-key="t-ecommerce">Student Management</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarStudentmanagement">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View student')
-                                         <li class="nav-item">
-                                               <a href="{{ route('student.index') }}" class="nav-link" data-key="t-products">All Students</a>
-                                         </li>
-                                    @endcan
-                                   @can('Create student-bulk-upload')
-                                       <li class="nav-item">
-                                              <a href="{{ route('studentbatchindex') }}" class="nav-link" data-key="t-products-grid">Batch Student Registration</a>
-                                       </li>
-                                   @endcan
-                                    
-                                </ul>
-                            </div>
-                        </li>
-
-
-                        <li class="nav-item">
-                            <a href="#sidebarParent" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarParent">
-                                <i class="ph-storefront"></i> <span data-key="t-ecommerce">Parent Management</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarParent">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="apps-ecommerce-products.html" class="nav-link" data-key="t-products">All Parents</a>
-                                    </li>
-                                    
-                                </ul>
-                            </div>
-                        </li>
-
-                        <li class="menu-title"><i class="ph-folder-open"></i> <span data-key="t-apps">SUBJECT REGISTRATION</span></li>
-                        
-                        <li class="nav-item">
-                            <a href="#sidebarsubjectoperaton" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarsubjectoperaton">
-                                <i class="ph-folder-open"></i> <span data-key="t-ecommerce">Subject Registration </span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarsubjectoperaton">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View my-class')
-                                          <li class="nav-item">
-                                               <a href="{{ route('subjectoperation.index') }}" class="nav-link" data-key="t-products">Student Subject Registration</a>
-                                         </li>
-                                    @endcan
-                                  @can('View my-subject')
-                                          <li class="nav-item">
-                                              <a href="{{ route('subjectoperation.index') }}" class="nav-link" data-key="t-products">My Subject</a>
-                                        </li>
-                                  @endcan                                  
-                                </ul>
-                            </div>
-                        </li>
-
-                        <li class="menu-title"><i class="ph-folder-open"></i> <span data-key="t-apps">CLASSES & RECORDS</span></li>
-                        
-                        <li class="nav-item">
-                            <a href="#sidebarClasses" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarClasses">
-                                <i class="ph-folder-open"></i> <span data-key="t-ecommerce">Classes & Subjects </span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarClasses">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View my-class')
-                                          <li class="nav-item">
-                                               <a href="{{ route('myclass.index') }}" class="nav-link" data-key="t-products">My Class</a>
-                                         </li>
-                                    @endcan
-                                  @can('View my-subject')
-                                          <li class="nav-item">
-                                              <a href="{{ route('mysubject.index') }}" class="nav-link" data-key="t-products">My Subject</a>
-                                        </li>
-                                  @endcan       
-                                  
-                                   @can('View my-subject-vettings')
-                                          <li class="nav-item">
-                                              <a href="{{ route('mysubjectvettings.index') }}" class="nav-link" data-key="t-products">Subjects to Vet</a>
-                                        </li>
-                                  @endcan   
-                                  @can('View my-mock-subject-vettings')
-                                          <li class="nav-item">
-                                              <a href="{{ route('mymocksubjectvettings.index') }}" class="nav-link" data-key="t-products">Mock Subjects to Vet</a>
-                                        </li>
-                                  @endcan  
-                                  
-                                   {{-- @can('View principals-comment')
-                                          <li class="nav-item">
-                                              <a href="{{ route('mysubjectvettings.index') }}" class="nav-link" data-key="t-products">Subjects to Vet</a>
-                                        </li>
-                                  @endcan    --}}
-                                </ul>
-                            </div>
-                        </li>
-
-                        <li class="nav-item">
-                            <a href="#sidebarRecords" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarRecords">
-                                <i class="ph-folder-open"></i> <span data-key="t-ecommerce">Records and Results </span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarRecords">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View myresult-room')
-                                         <li class="nav-item">
-                                              <a href="{{ route('myresultroom.index') }}" class="nav-link" data-key="t-products">Terminal & Mock Records</a>
-                                        </li>
-                                    @endcan
-                                  
-                                 
-                                   @can('View student-report')
-                                       <li class="nav-item">
-                                        <a href="{{ route('studentreports.index') }}" class="nav-link" data-key="t-products">Terminal Result Reports</a>
-                                    </li>
-                                   @endcan
-
-                                   @can('View student-mock-report')
-                                       <li class="nav-item">
-                                        <a href="{{ route('studentmockreports.index') }}" class="nav-link" data-key="t-products">Mock Result Reports</a>
-                                    </li>
-                                   @endcan
-                                    
-                                    
-                                </ul>
-                            </div>
-                        </li>
-
-
-                        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-apps">BURSARY & FINANCE </span></li>
-                        <li class="nav-item">
-                            <a href="#sidebarStudentpayments" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarStudentpayments">
-                                <i class="ph-storefront"></i> <span data-key="t-ecommerce">Student Payments</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarStudentpayments">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="{{ route('schoolpayment.index') }}" class="nav-link" data-key="t-products">Student Bill</a>
-                                    </li>
-                                    {{-- <li class="nav-item">
-                                        <a href="apps-ecommerce-products-grid.html" class="nav-link" data-key="t-products-grid">Student Invoice</a>
-                                    </li> --}}
-                                </ul>
-                            </div>
-                        </li>
-                        <li class="nav-item">
-                            <a href="#sidebarAnalysis" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarAnalysis">
-                                <i class="ph-storefront"></i> <span data-key="t-ecommerce">Payment Analysis</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarAnalysis">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="{{ route('analysis.index') }}" class="nav-link" data-key="t-products">School payment  Analysis</a>
-                                    </li>
-                                    {{-- <li class="nav-item">
-                                        <a href="{{ route('analysis.index') }}" class="nav-link" data-key="t-products-grid">Specific Analysis</a>
-                                    </li> --}}
-                                </ul>
-                            </div>
-                        </li>
-
-
-                        <li class="menu-title"><i class="ph-graduation-cap"></i> <span data-key="t-apps">EXAMS AND CBT </span></li>
-                        <li class="nav-item">
-                            <a href="#sidebarExams" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarExams">
-                                <i class="ph-graduation-cap"></i> <span data-key="t-ecommerce">Exams Managment</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarExams">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="{{ route('exams.index') }}" class="nav-link" data-key="t-products">All Examinations</a>
-                                    </li>
-                                
-                                </ul>
-                            </div>
-                        </li>
-
-                        <li class="nav-item">
-                            <a href="#sidebarCBT" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarCBT">
-                                <i class="ph-graduation-cap"></i> <span data-key="t-ecommerce">CBT Managment</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarCBT">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="{{ route('cbt.index') }}" class="nav-link" data-key="t-products">CBT Exercise</a>
-                                    </li>
-                                
-                                </ul>
-                            </div>
-                        </li>
-
-
-
-                        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-components">SCHOOL BASIC SETTINGS</span></li>
-
-
-                        <li class="nav-item">
-                            <a href="#sidebarSession" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSession">
-                                <i class="ph-file-text"></i> <span data-key="t-invoices">School Information</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarSession">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View schoolinformation')
-                                          <li class="nav-item">
-                                             <a href="{{ route('school-information.index') }}" class="nav-link" data-key="t-list-view">School Information</a>
-                                          </li>
-                                    @endcan
-                                   
-                                    
-                                </ul>
-                            </div>
-                        </li> 
-
-
-
-                        <li class="nav-item">
-                            <a href="#sidebarSession" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSession">
-                                <i class="ph-file-text"></i> <span data-key="t-invoices">Session Term & House</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarSession">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View session')
-                                          <li class="nav-item">
-                                             <a href="{{ route('session.index') }}" class="nav-link" data-key="t-list-view">School Session</a>
-                                          </li>
-                                    @endcan
-                                    @can('View term')
-                                       <li class="nav-item">
-                                            <a href="{{ route('term.index') }}" class="nav-link" data-key="t-overview">School Term</a>
-                                       </li>
-                                   @endcan
-                                   @can('View schoolhouse')
-                                       <li class="nav-item">
-                                             <a href="{{ route('schoolhouse.index') }}" class="nav-link" data-key="t-create-invoice">School House</a>
-                                       </li>
-                                   @endcan
-                                    
-                                </ul>
-                            </div>
-                        </li> 
-
-                        <li class="nav-item">
-                            <a href="#sidebarClassessettings" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarClassessettings">
-                                <i class="ph-file-text"></i> <span data-key="t-invoices">Classes</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarClassessettings">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View school-arm')
-                                         <li class="nav-item">
-                                            <a href="{{ route('schoolarm.index') }}" class="nav-link" data-key="t-list-view">Class Arm</a>
-                                        </li>
-                                    @endcan
-                                   
-                                    @can('View class-category')
-                                        <li class="nav-item">
-                                             <a href="{{ route('classcategories.index') }}" class="nav-link" data-key="t-overview">Class Category</a>
-                                        </li>
-                                    @endcan
-                                    @can('View school-class')
-                                         <li class="nav-item">
-                                            <a href="{{ route('schoolclass.index') }}" class="nav-link" data-key="t-create-invoice">Class Name</a>
-                                         </li>
-                                    @endcan
-                                    @can('View class-teacher')
-                                        <li class="nav-item">
-                                            <a href="{{ route('classteacher.index') }}" class="nav-link" data-key="t-create-invoice">Class Teacher</a>
-                                        </li>
-                                    @endcan
-                                   
-                                    
-                                </ul>
-                            </div>
-                        </li> 
-
-
-                        <li class="nav-item">
-                            <a href="#sidebarSub" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
-                                <i class="ph-file-text"></i> <span data-key="t-invoices">Subject</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarSub">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View subjects')
-                                          <li class="nav-item">
-                                              <a href="{{ route('subject.index') }}" class="nav-link" data-key="t-list-view">Subject</a>
-                                          </li>
-                                    @endcan
-
-                                    @can('View subject-teacher')
-                                          <li class="nav-item">
-                                            <a href="{{ route('subjectteacher.index') }}" class="nav-link" data-key="t-overview">Assign Subject Teacher</a>
-                                          </li>
-                                    @endcan
-
-                                    @can('View subject-class')
-                                          <li class="nav-item">
-                                            <a href="{{ route('subjectclass.index') }}" class="nav-link" data-key="t-create-invoice">Assign Class Subject</a>
-                                          </li>
-                                    @endcan
-
-                                     @can('View compulsory-subject')
-                                          <li class="nav-item">
-                                            <a href="{{ route('compulsorysubjectclass.index') }}" class="nav-link" data-key="t-create-invoice">Assign Compulsory  Subject to classes</a>
-                                          </li>
-                                    @endcan
-                                
-                                </ul>
-                            </div>
-                        </li> 
-
-                        <li class="nav-item">
-                            <a href="#sidebarPrincipal" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
-                                <i class="ph-file-text"></i> <span data-key="t-invoices">Principal's Comments</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarPrincipal">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View principals-comment')
-                                          <li class="nav-item">
-                                              <a href="{{ route('principalscomment.index') }}" class="nav-link" data-key="t-list-view">Assign Staff</a>
-                                          </li>
-                                    @endcan
-                                </ul>
-                            </div>
-                        </li> 
-
-                        <li class="nav-item">
-                            <a href="#sidebarSubjectvetting" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
-                                <i class="ph-file-text"></i> <span data-key="t-invoices">Terminal Subject Vettings</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarSubjectvetting">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View subjects')
-                                          <li class="nav-item">
-                                              <a href="{{ route('subjectvetting.index') }}" class="nav-link" data-key="t-list-view">Assign Subjects to Staff</a>
-                                          </li>
-                                    @endcan
-                                </ul>
-                            </div>
-                        </li> 
-
-
-                         <li class="nav-item">
-                            <a href="#mocksidebarSubjectvetting" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
-                                <i class="ph-file-text"></i> <span data-key="t-invoices">Mock Subject Vettings</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="mocksidebarSubjectvetting">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View subjects')
-                                          <li class="nav-item">
-                                              <a href="{{ route('mocksubjectvetting.index') }}" class="nav-link" data-key="t-list-view">Assign Subjects to Staff</a>
-                                          </li>
-                                    @endcan
-                                </ul>
-                            </div>
-                        </li> 
-
-                        
-
-
-                        <li class="nav-item">
-                            <a href="#sidebarBills" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarBills">
-                                <i class="ph-file-text"></i> <span data-key="t-invoices">School Bills</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarBills">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('View school-bills')
-                                          <li class="nav-item">
-                                            <a href="{{ route('schoolbill.index') }}" class="nav-link" data-key="t-list-view">Bills</a>
-                                          </li>
-                                    @endcan  
-                                    @can('View school-bill-for-term-session')
-                                           <li class="nav-item">
-                                                <a href="{{ route('schoolbilltermsession.index') }}" class="nav-link" data-key="t-overview">Appy Bills</a>
-                                          </li>
-                                    @endcan
-                                    
-                                </ul>
-                            </div>
-                        </li> 
-
                     </ul>
                 </div>
-                <!-- Sidebar -->
-            </div>
+            </li>
 
-            <div class="sidebar-background"></div>
+
+            <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">USERS & PRIVILEDGES</span></li>
+            @can('View user')
+                <li class="nav-item">
+                    <a class="nav-link menu-link collapsed" href="#sidebarusers" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarAuth">
+                        <i class="ph-user-circle"></i> <span data-key="t-authentication">User Managements</span>
+                    </a>
+                    <div class="collapse menu-dropdown" id="sidebarusers">
+                        <ul class="nav nav-sm flex-column">
+                        
+                                <li class="nav-item">
+                                <a href="{{ route('users.index') }}" class="nav-link" role="button" data-key="t-signin"> Users </a>
+                            </li>
+                        
+                        </ul>
+                    </div>
+                </li>
+            @endcan
+            @can('View role')
+                  <li class="nav-item">
+                <a class="nav-link menu-link collapsed" href="#sidebarroles" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarPages">
+                    <i class="ph-address-book"></i> <span data-key="t-pages">Roles And Permissions</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarroles">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View role')
+                             <li class="nav-item">
+                            <a href="{{ route('roles.index') }}" class="nav-link" data-key="t-starter"> Roles </a>
+                        </li>
+                        @endcan
+                       @can('View permission')
+                            <li class="nav-item">
+                            <a href="{{ route('permissions.index') }}" class="nav-link" data-key="t-profile"> Permissions </a>
+                        </li>
+                       @endcan
+                       
+                    </ul>
+                </div>
+            </li>
+            @endcan
+          
+
+            <li class="nav-item">
+                <a class="nav-link menu-link collapsed" href="#sidebaraccount" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebaraccoun">
+                    <i class="ph-address-book"></i> <span data-key="t-pages">User Account</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebaraccount">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="pages-starter.html" class="nav-link" data-key="t-starter"> My Account </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+
+            
+
+            <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-apps">STUDENT & PARENTS</span></li>
+
+            @if(auth()->user()->can('View student') || auth()->user()->can('Create student-bulk-upload'))
+            <li class="nav-item">
+                <a href="#sidebarStudentmanagement" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarStudentmanagement">
+                    <i class="ph-storefront"></i> <span data-key="t-ecommerce">Student Management</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarStudentmanagement">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View student')
+                             <li class="nav-item">
+                                   <a href="{{ route('student.index') }}" class="nav-link" data-key="t-products">All Students</a>
+                             </li>
+                        @endcan
+                       @can('Create student-bulk-upload')
+                           <li class="nav-item">
+                                  <a href="{{ route('studentbatchindex') }}" class="nav-link" data-key="t-products-grid">Batch Student Registration</a>
+                           </li>
+                       @endcan
+                        
+                    </ul>
+                </div>
+            </li>
+            @endif
+
+
+            @if(true) {{-- Assuming always visible for parents, or add perm if needed --}}
+            <li class="nav-item">
+                <a href="#sidebarParent" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarParent">
+                    <i class="ph-storefront"></i> <span data-key="t-ecommerce">Parent Management</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarParent">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="apps-ecommerce-products.html" class="nav-link" data-key="t-products">All Parents</a>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </li>
+            @endif
+
+            <li class="menu-title"><i class="ph-folder-open"></i> <span data-key="t-apps">SUBJECT REGISTRATION</span></li>
+            
+            @if(auth()->user()->can('View my-class') || auth()->user()->can('View my-subject'))
+            <li class="nav-item">
+                <a href="#sidebarsubjectoperaton" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarsubjectoperaton">
+                    <i class="ph-folder-open"></i> <span data-key="t-ecommerce">Subject Registration </span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarsubjectoperaton">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View my-class')
+                              <li class="nav-item">
+                                   <a href="{{ route('subjectoperation.index') }}" class="nav-link" data-key="t-products">Student Subject Registration</a>
+                             </li>
+                        @endcan
+                      @can('View my-subject')
+                              <li class="nav-item">
+                                  <a href="{{ route('subjectoperation.index') }}" class="nav-link" data-key="t-products">My Subject</a>
+                            </li>
+                      @endcan                                  
+                    </ul>
+                </div>
+            </li>
+            @endif
+
+            <li class="menu-title"><i class="ph-folder-open"></i> <span data-key="t-apps">CLASSES & RECORDS</span></li>
+            
+            @if(auth()->user()->can('View my-class') || auth()->user()->can('View my-subject') || auth()->user()->can('View my-subject-vettings') || auth()->user()->can('View my-mock-subject-vettings'))
+            <li class="nav-item">
+                <a href="#sidebarClasses" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarClasses">
+                    <i class="ph-folder-open"></i> <span data-key="t-ecommerce">Classes & Subjects </span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarClasses">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View my-class')
+                              <li class="nav-item">
+                                   <a href="{{ route('myclass.index') }}" class="nav-link" data-key="t-products">My Class</a>
+                             </li>
+                        @endcan
+                      @can('View my-subject')
+                              <li class="nav-item">
+                                  <a href="{{ route('mysubject.index') }}" class="nav-link" data-key="t-products">My Subject</a>
+                            </li>
+                      @endcan       
+                      
+                       @can('View my-subject-vettings')
+                              <li class="nav-item">
+                                  <a href="{{ route('mysubjectvettings.index') }}" class="nav-link" data-key="t-products">Subjects to Vet</a>
+                            </li>
+                      @endcan   
+                      @can('View my-mock-subject-vettings')
+                              <li class="nav-item">
+                                  <a href="{{ route('mymocksubjectvettings.index') }}" class="nav-link" data-key="t-products">Mock Subjects to Vet</a>
+                            </li>
+                      @endcan  
+                      
+                       {{-- @can('View principals-comment')
+                              <li class="nav-item">
+                                  <a href="{{ route('mysubjectvettings.index') }}" class="nav-link" data-key="t-products">Subjects to Vet</a>
+                            </li>
+                      @endcan    --}}
+                    </ul>
+                </div>
+            </li>
+            @endif
+
+            @if(auth()->user()->can('View myresult-room') || auth()->user()->can('View student-report') || auth()->user()->can('View student-mock-report'))
+            <li class="nav-item">
+                <a href="#sidebarRecords" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarRecords">
+                    <i class="ph-folder-open"></i> <span data-key="t-ecommerce">Records and Results </span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarRecords">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View myresult-room')
+                             <li class="nav-item">
+                                  <a href="{{ route('myresultroom.index') }}" class="nav-link" data-key="t-products">Terminal & Mock Records</a>
+                            </li>
+                        @endcan
+                      
+                     
+                       @can('View student-report')
+                           <li class="nav-item">
+                            <a href="{{ route('studentreports.index') }}" class="nav-link" data-key="t-products">Terminal Result Reports</a>
+                        </li>
+                       @endcan
+
+                       @can('View student-mock-report')
+                           <li class="nav-item">
+                            <a href="{{ route('studentmockreports.index') }}" class="nav-link" data-key="t-products">Mock Result Reports</a>
+                        </li>
+                       @endcan
+                        
+                        
+                    </ul>
+                </div>
+            </li>
+            @endif
+
+
+            <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-apps">BURSARY & FINANCE </span></li>
+            <li class="nav-item">
+                <a href="#sidebarStudentpayments" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarStudentpayments">
+                    <i class="ph-storefront"></i> <span data-key="t-ecommerce">Student Payments</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarStudentpayments">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="{{ route('schoolpayment.index') }}" class="nav-link" data-key="t-products">Student Bill</a>
+                        </li>
+                        {{-- <li class="nav-item">
+                            <a href="apps-ecommerce-products-grid.html" class="nav-link" data-key="t-products-grid">Student Invoice</a>
+                        </li> --}}
+                    </ul>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a href="#sidebarAnalysis" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarAnalysis">
+                    <i class="ph-storefront"></i> <span data-key="t-ecommerce">Payment Analysis</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarAnalysis">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="{{ route('analysis.index') }}" class="nav-link" data-key="t-products">School payment  Analysis</a>
+                        </li>
+                        {{-- <li class="nav-item">
+                            <a href="{{ route('analysis.index') }}" class="nav-link" data-key="t-products-grid">Specific Analysis</a>
+                        </li> --}}
+                    </ul>
+                </div>
+            </li>
+
+
+            <li class="menu-title"><i class="ph-graduation-cap"></i> <span data-key="t-apps">EXAMS AND CBT </span></li>
+            @can('View exam')
+            <li class="nav-item">
+                <a href="#sidebarExams" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarExams">
+                    <i class="ph-graduation-cap"></i> <span data-key="t-ecommerce">Exams Managment</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarExams">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="{{ route('exams.index') }}" class="nav-link" data-key="t-products">All Examinations</a>
+                        </li>
+                        @can('View question')
+                        <li class="nav-item">
+                            <a href="{{ route('questions.index') }}" class="nav-link" data-key="t-questions">Questions Management</a>
+                        </li>
+                        @endcan
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            @can('View cbt-exam')
+            <li class="nav-item">
+                <a href="#sidebarCBT" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarCBT">
+                    <i class="ph-graduation-cap"></i> <span data-key="t-ecommerce">CBT Managment</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarCBT">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="{{ route('cbt.index') }}" class="nav-link" data-key="t-products">CBT Exercise</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+
+
+            <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-components">SCHOOL BASIC SETTINGS</span></li>
+
+
+            @if(auth()->user()->can('View schoolinformation'))
+            <li class="nav-item">
+                <a href="#sidebarSession" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSession">
+                    <i class="ph-file-text"></i> <span data-key="t-invoices">School Information</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarSession">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View schoolinformation')
+                              <li class="nav-item">
+                                 <a href="{{ route('school-information.index') }}" class="nav-link" data-key="t-list-view">School Information</a>
+                              </li>
+                        @endcan
+                       
+                        
+                    </ul>
+                </div>
+            </li> 
+            @endif
+
+
+
+            @if(auth()->user()->can('View session') || auth()->user()->can('View term') || auth()->user()->can('View schoolhouse'))
+            <li class="nav-item">
+                <a href="#sidebarSession" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSession">
+                    <i class="ph-file-text"></i> <span data-key="t-invoices">Session Term & House</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarSession">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View session')
+                              <li class="nav-item">
+                                 <a href="{{ route('session.index') }}" class="nav-link" data-key="t-list-view">School Session</a>
+                              </li>
+                        @endcan
+                        @can('View term')
+                           <li class="nav-item">
+                                <a href="{{ route('term.index') }}" class="nav-link" data-key="t-overview">School Term</a>
+                           </li>
+                       @endcan
+                       @can('View schoolhouse')
+                           <li class="nav-item">
+                                 <a href="{{ route('schoolhouse.index') }}" class="nav-link" data-key="t-create-invoice">School House</a>
+                           </li>
+                       @endcan
+                        
+                    </ul>
+                </div>
+            </li> 
+            @endif
+
+            @if(auth()->user()->can('View school-arm') || auth()->user()->can('View class-category') || auth()->user()->can('View school-class') || auth()->user()->can('View class-teacher'))
+            <li class="nav-item">
+                <a href="#sidebarClassessettings" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarClassessettings">
+                    <i class="ph-file-text"></i> <span data-key="t-invoices">Classes</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarClassessettings">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View school-arm')
+                             <li class="nav-item">
+                                <a href="{{ route('schoolarm.index') }}" class="nav-link" data-key="t-list-view">Class Arm</a>
+                            </li>
+                        @endcan
+                       
+                        @can('View class-category')
+                            <li class="nav-item">
+                                 <a href="{{ route('classcategories.index') }}" class="nav-link" data-key="t-overview">Class Category</a>
+                            </li>
+                        @endcan
+                        @can('View school-class')
+                             <li class="nav-item">
+                                <a href="{{ route('schoolclass.index') }}" class="nav-link" data-key="t-create-invoice">Class Name</a>
+                             </li>
+                        @endcan
+                        @can('View class-teacher')
+                            <li class="nav-item">
+                                <a href="{{ route('classteacher.index') }}" class="nav-link" data-key="t-create-invoice">Class Teacher</a>
+                            </li>
+                        @endcan
+                       
+                        
+                    </ul>
+                </div>
+            </li> 
+            @endif
+
+
+            @if(auth()->user()->can('View subjects') || auth()->user()->can('View subject-teacher') || auth()->user()->can('View subject-class') || auth()->user()->can('View compulsory-subject'))
+            <li class="nav-item">
+                <a href="#sidebarSub" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
+                    <i class="ph-file-text"></i> <span data-key="t-invoices">Subject</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarSub">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View subjects')
+                              <li class="nav-item">
+                                  <a href="{{ route('subject.index') }}" class="nav-link" data-key="t-list-view">Subject</a>
+                              </li>
+                        @endcan
+
+                        @can('View subject-teacher')
+                              <li class="nav-item">
+                                <a href="{{ route('subjectteacher.index') }}" class="nav-link" data-key="t-overview">Assign Subject Teacher</a>
+                            </li>
+                        @endcan
+
+                        @can('View subject-class')
+                              <li class="nav-item">
+                                <a href="{{ route('subjectclass.index') }}" class="nav-link" data-key="t-create-invoice">Assign Class Subject</a>
+                            </li>
+                        @endcan
+
+                         @can('View compulsory-subject')
+                              <li class="nav-item">
+                                <a href="{{ route('compulsorysubjectclass.index') }}" class="nav-link" data-key="t-create-invoice">Assign Compulsory  Subject to classes</a>
+                            </li>
+                        @endcan
+                    
+                    </ul>
+                </div>
+            </li> 
+            @endif
+
+            @if(auth()->user()->can('View principals-comment'))
+            <li class="nav-item">
+                <a href="#sidebarPrincipal" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
+                    <i class="ph-file-text"></i> <span data-key="t-invoices">Principal's Comments</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarPrincipal">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View principals-comment')
+                              <li class="nav-item">
+                                  <a href="{{ route('principalscomment.index') }}" class="nav-link" data-key="t-list-view">Assign Staff</a>
+                              </li>
+                        @endcan
+                    </ul>
+                </div>
+            </li> 
+            @endif
+
+            @if(auth()->user()->can('View subjects'))
+            <li class="nav-item">
+                <a href="#sidebarSubjectvetting" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
+                    <i class="ph-file-text"></i> <span data-key="t-invoices">Terminal Subject Vettings</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarSubjectvetting">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View subjects')
+                              <li class="nav-item">
+                                  <a href="{{ route('subjectvetting.index') }}" class="nav-link" data-key="t-list-view">Assign Subjects to Staff</a>
+                              </li>
+                        @endcan
+                    </ul>
+                </div>
+            </li> 
+            @endif
+
+
+             @if(auth()->user()->can('View subjects'))
+             <li class="nav-item">
+                <a href="#mocksidebarSubjectvetting" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
+                    <i class="ph-file-text"></i> <span data-key="t-invoices">Mock Subject Vettings</span>
+                </a>
+                <div class="collapse menu-dropdown" id="mocksidebarSubjectvetting">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View subjects')
+                              <li class="nav-item">
+                                  <a href="{{ route('mocksubjectvetting.index') }}" class="nav-link" data-key="t-list-view">Assign Subjects to Staff</a>
+                              </li>
+                        @endcan
+                    </ul>
+                </div>
+            </li> 
+            @endif
+
+            
+
+
+            @if(auth()->user()->can('View school-bills') || auth()->user()->can('View school-bill-for-term-session'))
+            <li class="nav-item">
+                <a href="#sidebarBills" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarBills">
+                    <i class="ph-file-text"></i> <span data-key="t-invoices">School Bills</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarBills">
+                    <ul class="nav nav-sm flex-column">
+                        @can('View school-bills')
+                              <li class="nav-item">
+                                <a href="{{ route('schoolbill.index') }}" class="nav-link" data-key="t-list-view">Bills</a>
+                            </li>
+                        @endcan  
+                        @can('View school-bill-for-term-session')
+                               <li class="nav-item">
+                                    <a href="{{ route('schoolbilltermsession.index') }}" class="nav-link" data-key="t-overview">Appy Bills</a>
+                              </li>
+                        @endcan
+                        
+                    </ul>
+                </div>
+            </li> 
+            @endif
+
+        </ul>
+    </div>
+    <!-- Sidebar -->
+</div>
+
+<div class="sidebar-background"></div>
         </div>
 <!-- Left Sidebar End -->
 <!-- Vertical Overlay-->

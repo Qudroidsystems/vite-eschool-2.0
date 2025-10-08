@@ -20,7 +20,9 @@
                                 <span class="fw-bold">Time Remaining:</span>
                                 <span id="examTimer" class="fs-2 fw-bolder ms-2">00:00:00</span>
                             </div>
-                            <button class="btn btn-sm btn-light" id="submitExam">Submit Exam</button>
+                            @can('Submit cbt-exam')
+                                <button class="btn btn-sm btn-light" id="submitExam">Submit Exam</button>
+                            @endcan
                         </div>
                     </div>
                 </div>
@@ -51,6 +53,7 @@
                 </div>
             @endif
 
+            @can('Take cbt-exam')
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card">
@@ -160,6 +163,7 @@
                     </div>
                 </div>
             </div>
+            @endcan
         </div>
         <!-- End Page-content -->
     </div>
@@ -398,7 +402,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentQuestion < questions.length - 1) loadQuestion(currentQuestion + 1);
     };
     
+    @if(auth()->user()->can('Submit cbt-exam'))
     document.getElementById('submitExam').onclick = () => submitExam(false);
+    @endif
     
     document.addEventListener('change', (e) => {
         if (e.target.classList.contains('question-option')) {

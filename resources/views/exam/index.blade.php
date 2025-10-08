@@ -65,8 +65,12 @@
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
-                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
-                                        <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addExamModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Create New Exam</button>
+                                        @can('Delete exam')
+                                            <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
+                                        @endcan
+                                        @can('Create exam')
+                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addExamModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Create New Exam</button>
+                                        @endcan
                                     </div>
                                 </div>
                             </div>
@@ -111,12 +115,16 @@
                                                     </td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
-                                                            <li>
-                                                                <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="{{ $exam->id }}"><i class="ph-pencil"></i></a>
-                                                            </li>
-                                                            <li>
-                                                                <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-url="{{ route('exams.destroy', ['exam' => $exam->id]) }}"><i class="ph-trash"></i></a>
-                                                            </li>
+                                                            @can('Update exam')
+                                                                <li>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="{{ $exam->id }}"><i class="ph-pencil"></i></a>
+                                                                </li>
+                                                            @endcan
+                                                            @can('Delete exam')
+                                                                <li>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-url="{{ route('exams.destroy', ['exam' => $exam->id]) }}"><i class="ph-trash"></i></a>
+                                                                </li>
+                                                            @endcan
                                                         </ul>
                                                     </td>
                                                 </tr>
@@ -160,6 +168,7 @@
             </div>
 
             <!-- Add Exam Modal -->
+            @can('Create exam')
             <div id="addExamModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog modal-dialog-centered mw-650px">
                     <div class="modal-content">
@@ -244,8 +253,10 @@
                     </div>
                 </div>
             </div>
+            @endcan
 
             <!-- Edit Exam Modal -->
+            @can('Update exam')
             <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog modal-dialog-centered mw-650px">
                     <div class="modal-content">
@@ -332,8 +343,10 @@
                     </div>
                 </div>
             </div>
+            @endcan
 
             <!-- Delete Confirmation Modal -->
+            @can('Delete exam')
             <div id="deleteRecordModal" class="modal fade" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -348,6 +361,7 @@
                     </div>
                 </div>
             </div>
+            @endcan
         </div>
         <!-- End Page-content -->
     </div>
