@@ -405,6 +405,7 @@
     </div>
 </div>
 
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const tableBody = document.querySelector('#kt_questions_table tbody');
@@ -537,9 +538,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += `</div>`;
                     } else if (data.type === 'mcq') {
                         html += `<div class="row g-3">`;
+                        // FIX: Use option.label for accurate labeling (fallback to index if missing)
                         const optionLabels = ['A', 'B', 'C', 'D', 'E'];
                         data.options.forEach((option, index) => {
-                            const label = index < optionLabels.length ? optionLabels[index] : (index + 1);
+                            const label = option.label ? option.label.toUpperCase() : (optionLabels[index] || (index + 1));
                             html += `
                                 <div class="col-md-6">
                                     <div class="card ${option.is_correct ? 'bg-success text-white' : 'bg-light'} h-100">
@@ -625,13 +627,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             const optionsFields = container.querySelector('.options-fields');
                             optionsFields.innerHTML = '';
                             
-                            data.options.forEach((option, index) => {
-                                const letter = String.fromCharCode(97 + index);
+                            // FIX: Sort options by label for consistent order (A-B-C...), then use option.label for letters/keys
+                            const sortedOptions = data.options.sort((a, b) => a.label.localeCompare(b.label));
+                            sortedOptions.forEach(option => {
+                                const letter = option.label; // Use actual label (e.g., 'a', 'b')
+                                const upper = letter.toUpperCase();
                                 const radioHtml = option.is_correct ? 'checked' : '';
                                 optionsFields.innerHTML += `
                                     <div class="option-field mb-3">
                                         <div class="d-flex align-items-center">
-                                            <label class="fw-semibold me-3">${letter.toUpperCase()}:</label>
+                                            <label class="fw-semibold me-3">${upper}:</label>
                                             <input type="text" name="options[${letter}][option_text]" 
                                                 class="form-control me-3" value="${option.option_text || ''}" />
                                             <div class="form-check">
@@ -642,12 +647,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </div>
                                     </div>`;
                             });
+                            // Debug log (remove in prod)
+                            console.log('Populated MCQ options:', sortedOptions);
                         } else if (data.question.type === 'true_false') {
                             const container = document.getElementById('edit_tf_options');
                             container.style.display = 'block';
                             const optionsFields = container.querySelector('.options-fields');
-                            const trueCorrect = data.options.find(o => o.option_text === 'True')?.is_correct ? 'checked' : '';
-                            const falseCorrect = data.options.find(o => o.option_text === 'False')?.is_correct ? 'checked' : '';
+                            const trueOption = data.options.find(o => o.option_text === 'True');
+                            const falseOption = data.options.find(o => o.option_text === 'False');
+                            const trueCorrect = trueOption?.is_correct ? 'checked' : '';
+                            const falseCorrect = falseOption?.is_correct ? 'checked' : '';
                             optionsFields.innerHTML = `
                                 <div class="option-field mb-3">
                                     <div class="d-flex align-items-center">
@@ -661,6 +670,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <label class="ms-2">False</label>
                                     </div>
                                 </div>`;
+                            // Debug log (remove in prod)
+                            console.log('TF correct:', { true: trueOption?.is_correct, false: falseOption?.is_correct });
                         } else if (data.question.type === 'short_answer') {
                             const container = document.getElementById('edit_sa_options');
                             container.style.display = 'block';
@@ -699,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial attach
     attachEventListeners();
 
-    // Add form submission
+    // Add form submission (unchanged, as add doesn't have this bug)
     document.getElementById('add-question-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const formData = new FormData(this);
@@ -772,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Edit form submission
+    // Edit form submission (unchanged)
     document.getElementById('edit-question-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const id = document.getElementById('edit-id-field').value;
@@ -846,7 +857,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Delete function
+    // Delete function (unchanged)
     function deleteQuestion(url) {
         fetch(url, {
             method: 'DELETE',
@@ -870,7 +881,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Bulk delete
+    // Bulk delete (unchanged)
     window.deleteMultiple = function() {
         const checked = document.querySelectorAll('input[name="chk_child"]:checked');
         if (checked.length === 0) return;
@@ -908,7 +919,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Helper functions
+    // Helper functions (unchanged)
     function showFormErrors(form, errors) {
         const alert = form.querySelector('.alert');
         alert.classList.remove('d-none');
@@ -938,7 +949,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    // Image preview for add modal
+    // Image preview for add modal (unchanged)
     const imageInput = document.getElementById('image');
     const previewContainer = document.getElementById('image-preview');
     const previewImg = document.getElementById('preview-img');
@@ -958,7 +969,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Question type toggle for add modal
+    // Question type toggle for add modal (unchanged)
     const typeSelect = document.getElementById('type');
     if (typeSelect) {
         typeSelect.addEventListener('change', function() {
@@ -997,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Image preview for edit modal
+    // Image preview for edit modal (unchanged)
     const editImageInput = document.getElementById('edit_image');
     const editPreviewContainer = document.getElementById('edit_image_preview');
     const editPreviewImg = document.getElementById('edit_preview_img');
@@ -1017,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // CSRF token
+    // CSRF token (unchanged)
     if (!document.querySelector('meta[name="csrf-token"]')) {
         const meta = document.createElement('meta');
         meta.name = 'csrf-token';
