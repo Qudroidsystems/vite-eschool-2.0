@@ -6456,7 +6456,8 @@ namespace App\Models {
      *
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
-     * @property bool $is_correct
+     * @property string|null $label
+     * @property boolean $is_correct
      * @property string $option_text
      * @property int $question_id
      * @property int $id
@@ -6465,6 +6466,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Option>|Option whereQuestionId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Option>|Option whereOptionText($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Option>|Option whereIsCorrect($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Option>|Option whereLabel($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Option>|Option whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Option>|Option whereUpdatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Option>|Option newModelQuery()
