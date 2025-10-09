@@ -94,6 +94,7 @@ class QuestionController extends Controller
                     $question->options()->create([
                         'option_text' => $validated['options'][$label]['option_text'],
                         'is_correct' => $validated['correct_option'] === $label,
+                        'label' => $label,
                     ]);
                     $filledOptions++;
                 }
@@ -107,15 +108,18 @@ class QuestionController extends Controller
             $question->options()->create([
                 'option_text' => 'True',
                 'is_correct' => $validated['correct_option'] === 'true',
+                'label' => 'true',
             ]);
             $question->options()->create([
                 'option_text' => 'False',
                 'is_correct' => $validated['correct_option'] === 'false',
+                'label' => 'false',
             ]);
         } elseif ($validated['type'] === 'short_answer') {
             $question->options()->create([
                 'option_text' => $validated['options']['answer']['option_text'],
                 'is_correct' => true,
+                'label' => 'answer',
             ]);
         }
     
@@ -144,7 +148,8 @@ class QuestionController extends Controller
             'options' => $question->options->map(function($option) {
                 return [
                     'option_text' => $option->option_text,
-                    'is_correct' => $option->is_correct
+                    'is_correct' => $option->is_correct,
+                    'label' => $option->label ?? '',
                 ];
             })
         ]);
@@ -167,7 +172,8 @@ class QuestionController extends Controller
         'options' => $question->options->map(function($option) {
             return [
                 'option_text' => $option->option_text,
-                'is_correct' => $option->is_correct
+                'is_correct' => $option->is_correct,
+                'label' => $option->label ?? '',
             ];
         })
     ]);
@@ -256,19 +262,21 @@ class QuestionController extends Controller
                 if (!empty(trim($option['option_text'] ?? ''))) {
                     $question->options()->create([
                         'option_text' => $option['option_text'],
-                        'is_correct' => $request->correct_option === $key
+                        'is_correct' => $request->correct_option === $key,
+                        'label' => $key,
                     ]);
                 }
             }
         } elseif ($type === 'true_false') {
             $question->options()->createMany([
-                ['option_text' => 'True', 'is_correct' => $request->correct_option === 'true'],
-                ['option_text' => 'False', 'is_correct' => $request->correct_option === 'false']
+                ['option_text' => 'True', 'is_correct' => $request->correct_option === 'true', 'label' => 'true'],
+                ['option_text' => 'False', 'is_correct' => $request->correct_option === 'false', 'label' => 'false']
             ]);
         } elseif ($type === 'short_answer') {
             $question->options()->create([
                 'option_text' => $request->input('options.answer.option_text'),
-                'is_correct' => true
+                'is_correct' => true,
+                'label' => 'answer',
             ]);
         }
 
