@@ -89,7 +89,7 @@ class CBTController extends Controller
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
                 ->where('schoolsession.status', '=', $current)
                 ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-                ->pluck('subject.id')  // Fixed: Pluck 'subject.id' instead of 'subjectteacher.id'
+                ->pluck('subjectteacher.id')
                 ->toArray();
 
             $exams = DB::table('exams')
@@ -122,7 +122,7 @@ class CBTController extends Controller
             'session' => $session,
             'totalreg' => $totalreg,
             'reg' => $reg,
-            'attempts' => $attempts,  // Added: Pass attempts to view
+            'attempts' => $attempts,  // Added: Pass attempts to view for $hasAttempted
         ]);
     }
 
