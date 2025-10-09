@@ -91,6 +91,7 @@
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="start_time">Start Time</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="end_time">End Time</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="questions">Questions</th>
+                                                <th class="min-w-100px">View Students</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
@@ -114,6 +115,9 @@
                                                         <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
                                                     </td>
                                                     <td>
+                                                        <a href="{{ route('exams.students', $exam->id) }}" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
+                                                    </td>
+                                                    <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('Update exam')
                                                                 <li>
@@ -131,7 +135,7 @@
                                                 @endif
                                             @empty
                                                 <tr>
-                                                    <td colspan="9" class="noresult" style="display: block;">No exams found</td>
+                                                    <td colspan="10" class="noresult" style="display: block;">No exams found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -459,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let i = (data.current_page - 1) * data.per_page + 1;
 
         if (data.data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="noresult" style="display: block;">No exams found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="noresult" style="display: block;">No exams found</td></tr>';
             return;
         }
 
@@ -467,6 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!exam.id) return; // Skip if no ID
             const destroyUrl = `/exams/${exam.id}`;
             const questionsUrl = `/questions/${exam.id}/show`; // Adjust if needed
+            const studentsUrl = `/exams/${exam.id}/students`;
             const description = exam.description ? (exam.description.length > 50 ? exam.description.substring(0, 50) + '...' : exam.description) : '';
             const row = `
                 <tr data-url="${destroyUrl}">
@@ -483,6 +488,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td class="end_time">${exam.end_time}</td>
                     <td class="questions">
                         <a href="${questionsUrl}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
+                    </td>
+                    <td>
+                        <a href="${studentsUrl}" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
                     </td>
                     <td>
                         <ul class="d-flex gap-2 list-unstyled mb-0">

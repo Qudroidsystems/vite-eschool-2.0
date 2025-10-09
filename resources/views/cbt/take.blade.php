@@ -322,6 +322,76 @@
         0%, 100% { opacity: 1; }
         50% { opacity: 0.8; }
     }
+    
+    /* Calculator Styles */
+    .calculator-container {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        width: 320px;
+    }
+    
+    .calculator-display {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: right;
+        font-size: 2rem;
+        font-weight: bold;
+        min-height: 70px;
+        word-wrap: break-word;
+        margin-bottom: 1rem;
+        box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .calculator-buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .calc-btn {
+        padding: 1.25rem;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.25rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #f3f4f6;
+        color: #374151;
+    }
+    
+    .calc-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .calc-btn:active {
+        transform: translateY(0);
+    }
+    
+    .calc-btn.operator {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .calc-btn.equals {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        grid-column: span 2;
+    }
+    
+    .calc-btn.clear {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+    
+    .calc-btn.zero {
+        grid-column: span 2;
+    }
 </style>
 
 <div class="main-content">
@@ -402,6 +472,9 @@
                                     <p class="text-muted mb-0 small">{{ $exam->description }}</p>
                                 </div>
                                 <div class="d-flex gap-2">
+                                    <button id="calculatorBtn" class="zoom-btn" title="Calculator">
+                                        <i class="ri-calculator-line"></i>
+                                    </button>
                                     <button id="fontSizeIncrease" class="zoom-btn" title="Increase font size">
                                         <i class="ri-font-size"></i>
                                     </button>
@@ -607,6 +680,56 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedNotes = localStorage.getItem('examNotes');
     if (savedAnswers) answers = JSON.parse(savedAnswers);
     if (savedNotes) notes = JSON.parse(savedNotes);
+
+    // Calculator functionality
+    document.getElementById('calculatorBtn').addEventListener('click', () => {
+        showCalculator();
+    });
+    
+    function showCalculator() {
+        Swal.fire({
+            title: '<i class="ri-calculator-line me-2"></i>Calculator',
+            html: `
+                <div class="calculator-container">
+                    <div class="calculator-display" id="calcDisplay">0</div>
+                    <div class="calculator-buttons">
+                        <button class="calc-btn clear" onclick="calcClear()">C</button>
+                        <button class="calc-btn operator" onclick="calcInput('/')">/</button>
+                        <button class="calc-btn operator" onclick="calcInput('*')">×</button>
+                        <button class="calc-btn operator" onclick="calcBackspace()">⌫</button>
+                        
+                        <button class="calc-btn" onclick="calcInput('7')">7</button>
+                        <button class="calc-btn" onclick="calcInput('8')">8</button>
+                        <button class="calc-btn" onclick="calcInput('9')">9</button>
+                        <button class="calc-btn operator" onclick="calcInput('-')">−</button>
+                        
+                        <button class="calc-btn" onclick="calcInput('4')">4</button>
+                        <button class="calc-btn" onclick="calcInput('5')">5</button>
+                        <button class="calc-btn" onclick="calcInput('6')">6</button>
+                        <button class="calc-btn operator" onclick="calcInput('+')">+</button>
+                        
+                        <button class="calc-btn" onclick="calcInput('1')">1</button>
+                        <button class="calc-btn" onclick="calcInput('2')">2</button>
+                        <button class="calc-btn" onclick="calcInput('3')">3</button>
+                        <button class="calc-btn operator" onclick="calcInput('%')">%</button>
+                        
+                        <button class="calc-btn zero" onclick="calcInput('0')">0</button>
+                        <button class="calc-btn" onclick="calcInput('.')">.</button>
+                        <button class="calc-btn equals" onclick="calcEquals()">=</button>
+                    </div>
+                </div>
+            `,
+            showConfirmButton: false,
+            showCloseButton: true,
+            width: 'auto',
+            padding: '1rem',
+            background: 'transparent',
+            backdrop: 'rgba(0,0,0,0.4)',
+            customClass: {
+                popup: 'calculator-popup'
+            }
+        });
+    }
 
     // Font size controls
     document.getElementById('fontSizeIncrease').addEventListener('click', () => {
@@ -847,7 +970,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     text: 'Your exam has been submitted successfully',
                     icon: 'success',
                     confirmButtonColor: '#667eea',
-                    confirmButtonText: 'Done',
+                    confirmButtonText: 'View Results'
                 }).then(() => {
                     window.location.href = '{{ route("cbt.index") }}';
                 });
@@ -951,6 +1074,53 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize
     loadQuestion(0);
 });
+
+// Calculator functions (global scope for SweetAlert HTML)
+let calcCurrentValue = '0';
+let calcPreviousValue = '';
+let calcOperation = null;
+
+function calcInput(value) {
+    const display = document.getElementById('calcDisplay');
+    if (calcCurrentValue === '0' || calcCurrentValue === 'Error') {
+        calcCurrentValue = value;
+    } else {
+        calcCurrentValue += value;
+    }
+    display.textContent = calcCurrentValue;
+}
+
+function calcClear() {
+    const display = document.getElementById('calcDisplay');
+    calcCurrentValue = '0';
+    calcPreviousValue = '';
+    calcOperation = null;
+    display.textContent = '0';
+}
+
+function calcBackspace() {
+    const display = document.getElementById('calcDisplay');
+    if (calcCurrentValue.length > 1) {
+        calcCurrentValue = calcCurrentValue.slice(0, -1);
+    } else {
+        calcCurrentValue = '0';
+    }
+    display.textContent = calcCurrentValue;
+}
+
+function calcEquals() {
+    const display = document.getElementById('calcDisplay');
+    try {
+        // Replace × with * for evaluation
+        const expression = calcCurrentValue.replace(/×/g, '*').replace(/−/g, '-');
+        const result = eval(expression);
+        calcCurrentValue = result.toString();
+        display.textContent = calcCurrentValue;
+    } catch (error) {
+        display.textContent = 'Error';
+        calcCurrentValue = 'Error';
+    }
+}
 </script>
 
 @endsection

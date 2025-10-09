@@ -307,7 +307,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <label for="edit_type" class="form-label required">Question Type</label>
-                                        <select name="type" id="edit_type" class="form-control" readonly>
+                                        <select id="edit_type" class="form-control" disabled>
                                             <option value="mcq">Multiple Choice (MCQ)</option>
                                             <option value="true_false">True/False</option>
                                             <option value="short_answer">Short Answer</option>
@@ -584,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('edit-id-field').value = data.question.id;
                         document.getElementById('edit_exam_id').value = data.exam_id;
                         document.getElementById('edit_question_text').value = data.question.question_text;
-                        document.getElementById('edit_type').value = data.question.type;
+                        document.getElementById('edit_type').value = data.question.type; // For display only
 
                         // Handle image
                         const currentImageDiv = document.getElementById('edit_current_image');
@@ -592,8 +592,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             `<img src="/storage/${data.question.image}" class="img-fluid mb-3" style="max-height: 150px;">` : 
                             '<div class="text-muted">No image</div>';
 
-                        // Handle options
-                        document.querySelectorAll('.options-container').forEach(c => c.style.display = 'none');
+                        // Clear any existing SA hidden input
+                        const existingSaHidden = document.getElementById('edit_correct_option_sa');
+                        if (existingSaHidden) {
+                            existingSaHidden.remove();
+                        }
+
+                        // Handle options - first hide all
+                        document.querySelectorAll('#editModal .options-container').forEach(c => c.style.display = 'none');
                         
                         if (data.question.type === 'mcq') {
                             const container = document.getElementById('edit_mcq_options');
@@ -617,10 +623,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                             </div>
                                         </div>
                                     </div>`;
-                                
-                                if (option.is_correct) {
-                                    document.getElementById('edit_correct_option').value = letter;
-                                }
                             });
                         } else if (data.question.type === 'true_false') {
                             const container = document.getElementById('edit_tf_options');
@@ -629,32 +631,45 @@ document.addEventListener('DOMContentLoaded', function() {
                             optionsFields.innerHTML = `
                                 <div class="option-field mb-3">
                                     <div class="d-flex align-items-center">
-                                        <input type="radio" name="correct_option" value="true" 
+                                        <input type="radio" class="is-correct" name="correct_option" value="true" 
                                             ${data.options.find(o => o.option_text === 'True')?.is_correct ? 'checked' : ''}>
                                         <label class="ms-2">True</label>
                                     </div>
                                 </div>
                                 <div class="option-field mb-3">
                                     <div class="d-flex align-items-center">
-                                        <input type="radio" name="correct_option" value="false"
+                                        <input type="radio" class="is-correct" name="correct_option" value="false"
                                             ${data.options.find(o => o.option_text === 'False')?.is_correct ? 'checked' : ''}>
                                         <label class="ms-2">False</label>
                                     </div>
                                 </div>`;
-                            
-                            document.getElementById('edit_correct_option').value = 
-                                data.options.find(o => o.is_correct)?.option_text.toLowerCase() || 'true';
                         } else if (data.question.type === 'short_answer') {
                             const container = document.getElementById('edit_sa_options');
                             container.style.display = 'block';
                             document.getElementById('edit_sa_answer').value = data.options[0]?.option_text || '';
-                            document.getElementById('edit_correct_option').value = 'answer';
+
+                            // Add hidden for SA correct_option
+                            const hiddenSa = document.createElement('input');
+                            hiddenSa.type = 'hidden';
+                            hiddenSa.name = 'correct_option';
+                            hiddenSa.id = 'edit_correct_option_sa';
+                            hiddenSa.value = 'answer';
+                            document.getElementById('edit-question-form').appendChild(hiddenSa);
                         }
 
+                        // Clear general hidden (no longer needed)
+                        document.getElementById('edit_correct_option').value = '';
+
                         new bootstrap.Modal(document.getElementById('editModal')).show();
+                    } else {
+                        console.error('Failed to load question data:', data);
+                        alert('Error loading question for edit. Please try again.');
                     }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error fetching question data. Please check console for details.');
+                });
             });
         });
 
@@ -752,13 +767,14 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         const id = document.getElementById('edit-id-field').value;
         const formData = new FormData(this);
+        formData.append('_method', 'PUT');
         const submitBtn = document.getElementById('update-btn');
         const originalText = submitBtn.textContent;
         submitBtn.textContent = 'Updating...';
         submitBtn.disabled = true;
 
         fetch(`/questions/${id}`, {
-            method: 'PUT',
+            method: 'POST',
             body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
@@ -930,43 +946,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         document.querySelectorAll('.is-correct').forEach(radio => {
             radio.addEventListener('change', updateCorrectOptionAdd);
-        });
-    }
-
-    // Similar for edit modal
-    const editTypeSelect = document.getElementById('edit_type');
-    if (editTypeSelect) {
-        editTypeSelect.addEventListener('change', function() {
-            document.querySelectorAll('#editModal .options-container').forEach(container => {
-                container.style.display = 'none';
-            });
-
-            if (this.value === 'mcq') {
-                document.getElementById('edit_mcq_options').style.display = 'block';
-            } else if (this.value === 'true_false') {
-                document.getElementById('edit_tf_options').style.display = 'block';
-            } else if (this.value === 'short_answer') {
-                document.getElementById('edit_sa_options').style.display = 'block';
-            }
-
-            updateCorrectOptionEdit();
-        });
-
-        function updateCorrectOptionEdit() {
-            const editCorrectOption = document.getElementById('edit_correct_option');
-            if (!editCorrectOption) return;
-
-            const type = editTypeSelect.value;
-            if (type === 'short_answer') {
-                editCorrectOption.value = 'answer';
-            } else {
-                const selectedRadio = document.querySelector('#editModal .is-correct:checked');
-                editCorrectOption.value = selectedRadio ? selectedRadio.value : '';
-            }
-        }
-
-        document.querySelectorAll('#editModal .is-correct').forEach(radio => {
-            radio.addEventListener('change', updateCorrectOptionEdit);
         });
     }
 

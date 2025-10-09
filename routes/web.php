@@ -356,7 +356,14 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('exams', ExamController::class);
     Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])->name('exams.destroy');
+    // Add this new route for viewing students
+    Route::get('/exams/{exam}/students', [ExamController::class, 'showStudents'])->name('exams.students');
 
+
+    // Add this new route for viewing student answers
+     Route::get('/exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])->name('exams.student.answers');
+
+     
     Route::resource('questions', QuestionController::class);
     Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);
     Route::get('/{question}/details', [QuestionController::class, 'details'])->name('questions.details');

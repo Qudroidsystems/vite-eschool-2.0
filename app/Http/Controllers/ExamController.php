@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Exam;
+use App\Models\Answer;
 use App\Models\Schoolterm;
 use App\Models\Schoolclass;
 use App\Models\ClassTeacher;
@@ -19,7 +20,7 @@ class ExamController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:View exam', ['only' => ['index', 'show', 'edit']]);
+        $this->middleware('permission:View exam', ['only' => ['index', 'show', 'edit', 'showStudents', 'showStudentAnswers']]);
         $this->middleware('permission:Create exam', ['only' => ['create', 'store']]);
         $this->middleware('permission:Update exam', ['only' => ['edit', 'update']]);
         $this->middleware('permission:Delete exam', ['only' => ['destroy', 'bulkDestroy']]);
@@ -97,6 +98,88 @@ class ExamController extends Controller
         }
 
         return view('exam.index', compact('pagetitle', 'exams', 'terms', 'session', 'mysubjects', 'myclass'));
+    }
+
+    /**
+     * Show students who attempted the specified exam.
+     */
+    public function showStudents($examId)
+    {
+        $exam = Exam::findOrFail($examId);
+
+        $students = DB::table('exam_attempts')
+            ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
+            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+            ->join('results', 'exam_attempts.student_id', '=', 'results.user_id')
+            ->where('exam_attempts.exam_id', $examId)
+            ->where('exam_attempts.status', 'completed')
+            ->where('results.exam_id', $examId)
+            ->select(
+                'studentRegistration.id',
+                'studentRegistration.firstname',
+                'studentRegistration.lastname',
+                'studentRegistration.admissionNo',
+                'studentpicture.picture as picture',
+                'results.score',
+                'results.total_marks',
+                DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions')
+            )
+            ->orderBy('studentRegistration.lastname')
+            ->paginate(15);
+
+        $pagetitle = 'Students who Attempted: ' . $exam->title;
+
+        return view('exam.students', compact('pagetitle', 'exam', 'students'));
+    }
+
+    /**
+     * Show detailed answers for a student in the specified exam.
+     */
+    public function showStudentAnswers($examId, $studentId)
+    {
+        $exam = Exam::findOrFail($examId);
+
+        $student = DB::table('studentRegistration')
+            ->where('id', $studentId)
+            ->select('id', 'firstname', 'lastname', 'admissionNo')
+            ->firstOrFail();
+
+        $result = DB::table('results')
+            ->where('user_id', $studentId)
+            ->where('exam_id', $examId)
+            ->first();
+
+        $questionAnswers = DB::table('questions')
+            ->leftJoin('answers', function($join) use ($examId, $studentId) {
+                $join->on('questions.id', '=', 'answers.question_id')
+                     ->where('answers.exam_id', '=', $examId)
+                     ->where('answers.user_id', '=', $studentId);
+            })
+            ->leftJoin('options as student_opt', 'answers.option_id', '=', 'student_opt.id')
+            ->leftJoin('options as correct_opt', function($join) {
+                $join->on('correct_opt.question_id', '=', 'questions.id')
+                     ->where('correct_opt.is_correct', '=', 1);
+            })
+            ->where('questions.exam_id', $examId)
+            ->select(
+                'questions.id',
+                'questions.question_text',
+                'questions.image',
+                'questions.type',
+                'student_opt.option_text as student_answer',
+                'correct_opt.option_text as correct_answer',
+                'answers.id as answer_id',
+                DB::raw('CASE 
+                    WHEN answers.id IS NULL THEN "Not Attempted" 
+                    ELSE CASE WHEN student_opt.is_correct = 1 THEN "Yes" ELSE "No" END 
+                END as marked_correct')
+            )
+            ->orderBy('questions.id')
+            ->get();
+
+        $pagetitle = 'Exam Answers: ' . $student->firstname . ' ' . $student->lastname . ' - ' . $exam->title;
+
+        return view('exam.student-answers', compact('pagetitle', 'exam', 'student', 'questionAnswers', 'result'));
     }
 
     /**

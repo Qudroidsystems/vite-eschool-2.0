@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Carbon\Carbon; 
 use App\Models\Exam;
+use App\Models\Answer;
 use App\Models\Result;
 use App\Models\Student;
 use App\Models\Schoolterm;
@@ -176,7 +177,7 @@ class CBTController extends Controller
             // Verify student has permission to take this exam
             $exam = Exam::where('id', $examid)
                 ->with(['questions.options' => function ($query) {
-                    $query->select('id', 'question_id', 'option_text');
+                    $query->select('id', 'question_id', 'option_text', 'is_correct');
                 }])
                 ->firstOrFail();
 
@@ -294,7 +295,9 @@ class CBTController extends Controller
             }
 
             // Check submission time
-            $exam = Exam::with(['questions.options'])->findOrFail($data['exam_id']);
+            $exam = Exam::with(['questions.options' => function ($query) {
+                $query->select('id', 'question_id', 'option_text', 'is_correct');
+            }])->findOrFail($data['exam_id']);
             $now = Carbon::now();
             $startTime = Carbon::parse($exam->start_time);
             $endTime = Carbon::parse($exam->end_time);
@@ -310,23 +313,23 @@ class CBTController extends Controller
     
             $totalMarks = $exam->questions->count();
             $score = 0;
+            $attempted = 0;
     
             foreach ($data['answers'] as $submittedAnswer) {
                 $question = $exam->questions->firstWhere('id', $submittedAnswer['question_id']);
-                if ($question) {
-                    $correctOption = $question->options->where('is_correct', true)->first();
-                    if (!$correctOption) {
-                        Log::warning('No correct option found for question', ['question_id' => $submittedAnswer['question_id']]);
-                        continue;
-                    }
-                    $correctAnswer = $correctOption->option_text;
-                    Log::info('Checking answer', [
-                        'question_id' => $submittedAnswer['question_id'],
-                        'submitted_answer' => $submittedAnswer['answer'],
-                        'correct_answer' => $correctAnswer
-                    ]);
-                    if ($submittedAnswer['answer'] === $correctAnswer) {
-                        $score++;
+                if ($question && !empty(trim($submittedAnswer['answer'] ?? ''))) {
+                    $attempted++;
+                    $selectedOption = $question->options->firstWhere('option_text', $submittedAnswer['answer']);
+                    if ($selectedOption) {
+                        Answer::create([
+                            'user_id' => $student,
+                            'exam_id' => $data['exam_id'],
+                            'question_id' => $submittedAnswer['question_id'],
+                            'option_id' => $selectedOption->id,
+                        ]);
+                        if ($selectedOption->is_correct) {
+                            $score++;
+                        }
                     }
                 }
             }
@@ -337,7 +340,7 @@ class CBTController extends Controller
                 'score' => $score,
                 'total_marks' => $totalMarks,
             ]);
-            Log::info('Result saved', ['score' => $score, 'total_marks' => $totalMarks]);
+            Log::info('Result saved', ['score' => $score, 'total_marks' => $totalMarks, 'attempted' => $attempted]);
     
             return response()->json(['success' => true, 'message' => 'Exam submitted successfully']);
     
