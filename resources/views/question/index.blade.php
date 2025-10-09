@@ -406,6 +406,7 @@
 </div>
 
 
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const tableBody = document.querySelector('#kt_questions_table tbody');
@@ -538,10 +539,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += `</div>`;
                     } else if (data.type === 'mcq') {
                         html += `<div class="row g-3">`;
-                        // FIX: Use option.label for accurate labeling (fallback to index if missing)
+                        // Use index for label if label empty (handles missing column)
                         const optionLabels = ['A', 'B', 'C', 'D', 'E'];
                         data.options.forEach((option, index) => {
-                            const label = option.label ? option.label.toUpperCase() : (optionLabels[index] || (index + 1));
+                            const label = (option.label ? option.label.toUpperCase() : optionLabels[index]) || (index + 1);
                             html += `
                                 <div class="col-md-6">
                                     <div class="card ${option.is_correct ? 'bg-success text-white' : 'bg-light'} h-100">
@@ -627,12 +628,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             const optionsFields = container.querySelector('.options-fields');
                             optionsFields.innerHTML = '';
                             
-                            // FIX: Sort options by label for consistent order (A-B-C...), then use option.label for letters/keys
-                            const sortedOptions = data.options.sort((a, b) => a.label.localeCompare(b.label));
-                            sortedOptions.forEach(option => {
-                                const letter = option.label; // Use actual label (e.g., 'a', 'b')
+                            // No sort needed—DB loads in creation order (a-b-c-d-e)
+                            // Use index for letter if label empty (handles missing column)
+                            const optionLetters = ['a', 'b', 'c', 'd', 'e'];
+                            data.options.forEach((option, index) => {
+                                if (index >= optionLetters.length) return; // Safety for >5 (unlikely)
+                                const letter = option.label || optionLetters[index];
                                 const upper = letter.toUpperCase();
-                                const radioHtml = option.is_correct ? 'checked' : '';
+                                const radioHtml = (option.is_correct ? 'checked' : ''); // Works for '1'/1 truthy
                                 optionsFields.innerHTML += `
                                     <div class="option-field mb-3">
                                         <div class="d-flex align-items-center">
@@ -648,7 +651,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>`;
                             });
                             // Debug log (remove in prod)
-                            console.log('Populated MCQ options:', sortedOptions);
+                            console.log('Populated MCQ options:', data.options.map((o, i) => ({...o, assigned_letter: optionLetters[i] || o.label})));
                         } else if (data.question.type === 'true_false') {
                             const container = document.getElementById('edit_tf_options');
                             container.style.display = 'block';
@@ -710,7 +713,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial attach
     attachEventListeners();
 
-    // Add form submission (unchanged, as add doesn't have this bug)
+    // Add form submission
     document.getElementById('add-question-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const formData = new FormData(this);
@@ -783,7 +786,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Edit form submission (unchanged)
+    // Edit form submission
     document.getElementById('edit-question-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const id = document.getElementById('edit-id-field').value;
@@ -857,7 +860,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Delete function (unchanged)
+    // Delete function
     function deleteQuestion(url) {
         fetch(url, {
             method: 'DELETE',
@@ -881,7 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Bulk delete (unchanged)
+    // Bulk delete
     window.deleteMultiple = function() {
         const checked = document.querySelectorAll('input[name="chk_child"]:checked');
         if (checked.length === 0) return;
@@ -919,7 +922,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Helper functions (unchanged)
+    // Helper functions
     function showFormErrors(form, errors) {
         const alert = form.querySelector('.alert');
         alert.classList.remove('d-none');
@@ -949,7 +952,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    // Image preview for add modal (unchanged)
+    // Image preview for add modal
     const imageInput = document.getElementById('image');
     const previewContainer = document.getElementById('image-preview');
     const previewImg = document.getElementById('preview-img');
@@ -969,7 +972,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Question type toggle for add modal (unchanged)
+    // Question type toggle for add modal
     const typeSelect = document.getElementById('type');
     if (typeSelect) {
         typeSelect.addEventListener('change', function() {
@@ -1008,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Image preview for edit modal (unchanged)
+    // Image preview for edit modal
     const editImageInput = document.getElementById('edit_image');
     const editPreviewContainer = document.getElementById('edit_image_preview');
     const editPreviewImg = document.getElementById('edit_preview_img');
@@ -1028,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // CSRF token (unchanged)
+    // CSRF token
     if (!document.querySelector('meta[name="csrf-token"]')) {
         const meta = document.createElement('meta');
         meta.name = 'csrf-token';
