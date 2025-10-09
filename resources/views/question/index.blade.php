@@ -476,6 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Attach event listeners
     function attachEventListeners() {
         // View buttons
+        // Fix for View Modal - Replace the view button click handler section
         document.querySelectorAll('.view-item-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.dataset.id;
@@ -509,7 +510,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }[data.type];
                     
                     html += `<div class="badge bg-primary mb-4">Type: ${typeName}</div>`;
-                    
                     html += `<h5 class="fw-bold mb-3">Answer Options</h5>`;
                     
                     if (data.type === 'true_false') {
@@ -537,9 +537,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += `</div>`;
                     } else if (data.type === 'mcq') {
                         html += `<div class="row g-3">`;
-                        const optionLabels = ['A', 'B', 'C', 'D', 'E'];
-                        data.options.forEach((option, index) => {
-                            const label = index < optionLabels.length ? optionLabels[index] : (index + 1);
+                        // FIX: Use the actual label from the option data
+                        data.options.forEach(option => {
+                            const label = option.label ? option.label.toUpperCase() : '';
                             html += `
                                 <div class="col-md-6">
                                     <div class="card ${option.is_correct ? 'bg-success text-white' : 'bg-light'} h-100">
@@ -589,6 +589,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Edit buttons
+        // Fix for Edit Modal - Replace the edit button click handler section
         document.querySelectorAll('.edit-item-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.dataset.id;
@@ -604,7 +605,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('edit-id-field').value = data.question.id;
                         document.getElementById('edit_exam_id').value = data.exam_id;
                         document.getElementById('edit_question_text').value = data.question.question_text;
-                        document.getElementById('edit_type').value = data.question.type; // For display only
+                        document.getElementById('edit_type').value = data.question.type;
 
                         // Handle image
                         const currentImageDiv = document.getElementById('edit_current_image');
@@ -612,10 +613,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             `<img src="/storage/${data.question.image}" class="img-fluid mb-3" style="max-height: 150px;">` : 
                             '<div class="text-muted">No image</div>';
 
-                        // Reset hidden
+                        // Reset
                         document.getElementById('edit_correct_option').value = '';
-
-                        // Handle options - first hide all and uncheck all radios
                         document.querySelectorAll('#editModal .options-container').forEach(c => c.style.display = 'none');
                         document.querySelectorAll('#editModal .is-correct').forEach(r => r.checked = false);
                         
@@ -625,18 +624,30 @@ document.addEventListener('DOMContentLoaded', function() {
                             const optionsFields = container.querySelector('.options-fields');
                             optionsFields.innerHTML = '';
                             
-                            data.options.forEach((option, index) => {
-                                const letter = String.fromCharCode(97 + index);
-                                const radioHtml = option.is_correct ? 'checked' : '';
+                            // FIX: Create a map of existing options by label
+                            const optionsMap = {};
+                            data.options.forEach(option => {
+                                if (option.label) {
+                                    optionsMap[option.label.toLowerCase()] = option;
+                                }
+                            });
+                            
+                            // Create fields for all possible options (a-e)
+                            const letters = ['a', 'b', 'c', 'd', 'e'];
+                            letters.forEach(letter => {
+                                const option = optionsMap[letter];
+                                const optionText = option ? option.option_text : '';
+                                const isCorrect = option ? option.is_correct : false;
+                                
                                 optionsFields.innerHTML += `
                                     <div class="option-field mb-3">
                                         <div class="d-flex align-items-center">
                                             <label class="fw-semibold me-3">${letter.toUpperCase()}:</label>
                                             <input type="text" name="options[${letter}][option_text]" 
-                                                class="form-control me-3" value="${option.option_text || ''}" />
+                                                class="form-control me-3" value="${optionText}" />
                                             <div class="form-check">
                                                 <input class="form-check-input is-correct" type="radio" 
-                                                    name="correct_option" value="${letter}" ${radioHtml} />
+                                                    name="correct_option" value="${letter}" ${isCorrect ? 'checked' : ''} />
                                                 <label class="form-check-label">Correct</label>
                                             </div>
                                         </div>
@@ -646,8 +657,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             const container = document.getElementById('edit_tf_options');
                             container.style.display = 'block';
                             const optionsFields = container.querySelector('.options-fields');
-                            const trueCorrect = data.options.find(o => o.option_text === 'True')?.is_correct ? 'checked' : '';
-                            const falseCorrect = data.options.find(o => o.option_text === 'False')?.is_correct ? 'checked' : '';
+                            
+                            // FIX: Find the correct option by label, not by option_text
+                            const trueOption = data.options.find(o => o.label === 'true');
+                            const falseOption = data.options.find(o => o.label === 'false');
+                            
+                            const trueCorrect = trueOption && trueOption.is_correct ? 'checked' : '';
+                            const falseCorrect = falseOption && falseOption.is_correct ? 'checked' : '';
+                            
                             optionsFields.innerHTML = `
                                 <div class="option-field mb-3">
                                     <div class="d-flex align-items-center">
@@ -667,7 +684,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             document.getElementById('edit_sa_answer').value = data.options[0]?.option_text || '';
                         }
 
-                        // Update hidden after population
+                        // Update hidden field after population
                         updateCorrectOptionEdit();
 
                         new bootstrap.Modal(document.getElementById('editModal')).show();
