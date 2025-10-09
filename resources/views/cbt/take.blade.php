@@ -1,163 +1,521 @@
 @extends('layouts.master')
+
 @section('content')
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+    
+    .exam-header {
+        background: var(--primary-gradient);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .timer-display {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .exam-card {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .exam-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+    
+    .question-card {
+        background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        min-height: 500px;
+    }
+    
+    .question-number-badge {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        animation: fadeIn 0.5s ease;
+    }
+    
+    .question-text-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        border-left: 4px solid #667eea;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin: 1.5rem 0;
+        animation: slideIn 0.5s ease;
+    }
+    
+    .option-card {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .option-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0;
+        background: var(--primary-gradient);
+        opacity: 0.1;
+        transition: width 0.3s ease;
+    }
+    
+    .option-card:hover {
+        border-color: #667eea;
+        transform: translateX(5px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+    }
+    
+    .option-card:hover::before {
+        width: 100%;
+    }
+    
+    .option-card.selected {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+        transform: scale(1.02);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .option-card.selected .form-check-label {
+        color: white;
+        font-weight: 600;
+    }
+    
+    .option-letter {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #f3f4f6;
+        color: #667eea;
+        font-weight: bold;
+        margin-right: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .option-card.selected .option-letter {
+        background: white;
+        color: #667eea;
+    }
+    
+    .nav-button {
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .nav-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .nav-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .question-nav-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        border: 2px solid #e5e7eb;
+        background: white;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .question-nav-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.2;
+        transform: translate(-50%, -50%);
+        transition: width 0.3s ease, height 0.3s ease;
+    }
+    
+    .question-nav-btn:hover::before {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .question-nav-btn.answered {
+        background: var(--success-gradient);
+        color: white;
+        border-color: #10b981;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    .question-nav-btn.unanswered {
+        background: white;
+        color: #6b7280;
+        border-color: #e5e7eb;
+    }
+    
+    .question-nav-btn.active {
+        border-width: 3px;
+        border-color: #667eea;
+        transform: scale(1.1);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        border: 2px solid #f3f4f6;
+        transition: all 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .image-container {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        background: #f9fafb;
+        padding: 1rem;
+    }
+    
+    .image-zoom-controls {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 0.5rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .zoom-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: none;
+        background: #f3f4f6;
+        color: #667eea;
+        transition: all 0.2s ease;
+    }
+    
+    .zoom-btn:hover {
+        background: #667eea;
+        color: white;
+        transform: scale(1.1);
+    }
+    
+    .notes-container {
+        background: #fffbeb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 2px solid #fef3c7;
+    }
+    
+    .notes-textarea {
+        border: 2px solid #fde68a;
+        border-radius: 8px;
+        resize: vertical;
+        transition: all 0.3s ease;
+    }
+    
+    .notes-textarea:focus {
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+        outline: none;
+    }
+    
+    .submit-btn {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(239, 68, 68, 0.4);
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+</style>
 
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <!-- Start page title -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-primary text-white py-3 px-4 rounded">
-                        <div class="page-title-left">
-                            <h4 class="mb-sm-0 text-white">Computer Based Test</h4>
-                            <ol class="breadcrumb m-0">
-                                <li class="breadcrumb-item"><a href="{{ route('cbt.index') }}" class="text-white opacity-75">Exams</a></li>
-                                <li class="breadcrumb-item active" aria-current="page">Take Exam</li>
-                            </ol>
+            <!-- Modern Exam Header -->
+            <div class="exam-header">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="ri-file-list-3-line" style="font-size: 2.5rem; color: white;"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 text-white fw-bold">Computer Based Test</h4>
+                                <div class="d-flex align-items-center gap-2">
+                                    <a href="{{ route('cbt.index') }}" class="text-white opacity-75 text-decoration-none">
+                                        <i class="ri-home-line me-1"></i>Exams
+                                    </a>
+                                    <span class="text-white opacity-50">/</span>
+                                    <span class="text-white">Take Exam</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="page-title-right d-flex align-items-center text-white">
-                            <div class="me-4">
-                                <span class="fw-bold">Time Remaining:</span>
-                                <span id="examTimer" class="fs-2 fw-bolder ms-2">00:00:00</span>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center justify-content-end gap-3">
+                            <div class="timer-display">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="ri-time-line text-white" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <div class="text-white opacity-75 small">Time Remaining</div>
+                                        <div id="examTimer" class="text-white fw-bold" style="font-size: 1.75rem; letter-spacing: 1px;">00:00:00</div>
+                                    </div>
+                                </div>
                             </div>
                             @can('Submit cbt-exam')
-                                <button class="btn btn-sm btn-light" id="submitExam">Submit Exam</button>
+                                <button class="submit-btn" id="submitExam">
+                                    <i class="ri-send-plane-fill me-2"></i>Submit Exam
+                                </button>
                             @endcan
                         </div>
                     </div>
                 </div>
             </div>
-            <!-- End page title -->
 
             @if ($errors->any())
-                <div class="alert alert-danger">
-                    <strong>Whoops!</strong> There were some problems with your input.<br><br>
-                    <ul>
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="ri-error-warning-line me-2"></i>
+                    <strong>Whoops!</strong> There were some problems with your input.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             @endif
 
             @if (session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <i class="ri-checkbox-circle-line me-2"></i>{{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             @endif
+            
             @if (session('error'))
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <i class="ri-close-circle-line me-2"></i>{{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             @endif
 
             @can('Take cbt-exam')
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="card">
-                        <div class="card-header d-flex align-items-center">
-                            <div class="flex-grow-1">
-                                <h5 class="card-title mb-0">{{ $exam->title }}</h5>
-                                <p class="text-muted mb-0">{{ $exam->description }}</p>
-                            </div>
-                            <div class="flex-shrink-0">
+            <div class="row g-4">
+                <!-- Main Question Area -->
+                <div class="col-lg-8">
+                    <div class="exam-card">
+                        <div class="card-header bg-white border-0 p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1 fw-bold">{{ $exam->title }}</h5>
+                                    <p class="text-muted mb-0 small">{{ $exam->description }}</p>
+                                </div>
                                 <div class="d-flex gap-2">
-                                    <button id="fontSizeIncrease" class="btn btn-subtle-light btn-icon btn-sm">
-                                        <i class="ri-add-line"></i>
+                                    <button id="fontSizeIncrease" class="zoom-btn" title="Increase font size">
+                                        <i class="ri-font-size"></i>
                                     </button>
-                                    <button id="fontSizeDecrease" class="btn btn-subtle-light btn-icon btn-sm">
-                                        <i class="ri-subtract-line"></i>
+                                    <button id="fontSizeDecrease" class="zoom-btn" title="Decrease font size">
+                                        <i class="ri-font-size-2"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <!-- Questions Section -->
-                                <div class="col-lg-8">
-                                    <div id="questionContainer" class="mb-6">
-                                        <!-- Questions will be dynamically loaded here -->
-                                        <div class="current-question">
-                                            <h4 class="mb-4 fs-1">Question <span id="currentQuestionNum">1</span></h4>
-                                            
-                                            <!-- Question content area with larger text -->
-                                            <div class="question-content mb-4">
-                                                <p id="questionText" class="fs-3 question-text"></p>
-                                                
-                                                <!-- Image container with zoom functionality -->
-                                                <div id="questionImageContainer" class="text-center my-4" style="display: none;">
-                                                    <div class="position-relative image-zoom-container">
-                                                        <img id="questionImage" src="" alt="Question Image" class="img-fluid rounded border question-image" style="max-height: 400px;">
-                                                        <div class="image-zoom-controls position-absolute bottom-0 end-0 p-2 bg-light rounded-circle m-2">
-                                                            <button id="zoomIn" class="btn btn-sm btn-icon btn-light me-1">
-                                                                <i class="ri-add-line fs-2"></i>
-                                                            </button>
-                                                            <button id="zoomOut" class="btn btn-sm btn-icon btn-light me-1">
-                                                                <i class="ri-subtract-line fs-2"></i>
-                                                            </button>
-                                                            <button id="zoomReset" class="btn btn-sm btn-icon btn-light">
-                                                                <i class="ri-refresh-line fs-2"></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="options mt-4">
-                                                <div class="form-check mb-4">
-                                                    <input class="form-check-input question-option" type="radio" name="answer" id="option1">
-                                                    <label class="form-check-label fs-4" for="option1"></label>
-                                                </div>
-                                                <!-- More options will be added dynamically -->
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Pagination -->
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <button class="btn btn-subtle-primary btn-lg" id="prevQuestion">
-                                            <i class="ri-arrow-left-line fs-2 me-1"></i> Previous
-                                        </button>
-                                        <div id="paginationNumbers" class="d-flex gap-2">
-                                            <!-- Pagination buttons will be dynamically generated -->
-                                        </div>
-                                        <button class="btn btn-subtle-primary btn-lg" id="nextQuestion">
-                                            Next <i class="ri-arrow-right-line fs-2 ms-1"></i>
-                                        </button>
-                                    </div>
+                        
+                        <div class="card-body p-4">
+                            <div class="question-card">
+                                <!-- Question Number Badge -->
+                                <div class="mb-4">
+                                    <span class="question-number-badge">
+                                        <i class="ri-question-line"></i>
+                                        Question <span id="currentQuestionNum">1</span>
+                                    </span>
                                 </div>
-                                <!-- End Questions Section -->
-
-                                <!-- Question Navigator -->
-                                <div class="col-lg-4">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <h5 class="mb-4 fs-3">Question Overview</h5>
-                                            <div id="questionNavigator" class="d-flex flex-wrap gap-3">
-                                                <!-- Question number buttons will be generated here -->
-                                            </div>
-                                            <div class="mt-6">
-                                                <div class="d-flex align-items-center mb-3">
-                                                    <span class="bullet bg-success me-2"></span>
-                                                    <span class="fs-5">Answered: <span id="answeredCount">0</span></span>
-                                                </div>
-                                                <div class="d-flex align-items-center">
-                                                    <span class="bullet bg-warning me-2"></span>
-                                                    <span class="fs-5">Unanswered: <span id="unansweredCount">0</span></span>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Question Notes -->
-                                            <div class="mt-8">
-                                                <h6 class="fs-5 mb-3">Question Notes</h6>
-                                                <textarea id="questionNotes" class="form-control" rows="4" placeholder="Add your notes for this question..."></textarea>
-                                            </div>
+                                
+                                <!-- Question Text -->
+                                <div class="question-text-container">
+                                    <p id="questionText" class="mb-0 question-text" style="font-size: 1.1rem; line-height: 1.8;"></p>
+                                </div>
+                                
+                                <!-- Question Image -->
+                                <div id="questionImageContainer" class="my-4" style="display: none;">
+                                    <div class="image-container">
+                                        <img id="questionImage" src="" alt="Question Image" class="img-fluid rounded question-image" style="max-height: 400px; cursor: pointer;">
+                                        <div class="image-zoom-controls position-absolute bottom-0 end-0 m-3">
+                                            <button id="zoomIn" class="zoom-btn me-1" title="Zoom in">
+                                                <i class="ri-zoom-in-line"></i>
+                                            </button>
+                                            <button id="zoomOut" class="zoom-btn me-1" title="Zoom out">
+                                                <i class="ri-zoom-out-line"></i>
+                                            </button>
+                                            <button id="zoomReset" class="zoom-btn" title="Reset zoom">
+                                                <i class="ri-refresh-line"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                                <!-- End Question Navigator -->
+                                
+                                <!-- Options -->
+                                <div id="optionsContainer" class="mt-4">
+                                    <!-- Options will be loaded here -->
+                                </div>
+                            </div>
+                            
+                            <!-- Navigation -->
+                            <div class="d-flex justify-content-between align-items-center mt-4">
+                                <button class="nav-button btn btn-outline-primary" id="prevQuestion">
+                                    <i class="ri-arrow-left-line me-2"></i>Previous
+                                </button>
+                                <div class="d-flex gap-2">
+                                    <span class="text-muted small">
+                                        <span id="currentQuestionNum2">1</span> of <span id="totalQuestions">0</span>
+                                    </span>
+                                </div>
+                                <button class="nav-button btn btn-primary" id="nextQuestion">
+                                    Next<i class="ri-arrow-right-line ms-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <div class="exam-card sticky-top" style="top: 20px;">
+                        <div class="card-body p-4">
+                            <!-- Statistics -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3">
+                                    <i class="ri-bar-chart-box-line me-2"></i>Progress Overview
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="stats-card">
+                                            <div class="stat-icon mb-2" style="background: #d1fae5; color: #10b981;">
+                                                <i class="ri-checkbox-circle-fill"></i>
+                                            </div>
+                                            <div class="small text-muted">Answered</div>
+                                            <div class="h4 mb-0 fw-bold" id="answeredCount">0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="stats-card">
+                                            <div class="stat-icon mb-2" style="background: #fef3c7; color: #f59e0b;">
+                                                <i class="ri-question-line"></i>
+                                            </div>
+                                            <div class="small text-muted">Remaining</div>
+                                            <div class="h4 mb-0 fw-bold" id="unansweredCount">0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Question Navigator -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3">
+                                    <i class="ri-layout-grid-line me-2"></i>Question Navigator
+                                </h6>
+                                <div id="questionNavigator" class="d-flex flex-wrap gap-2">
+                                    <!-- Question buttons will be generated here -->
+                                </div>
+                            </div>
+                            
+                            <!-- Notes Section -->
+                            <div class="notes-container">
+                                <h6 class="fw-bold mb-3">
+                                    <i class="ri-sticky-note-line me-2"></i>Question Notes
+                                </h6>
+                                <textarea id="questionNotes" class="form-control notes-textarea" rows="4" placeholder="Add your notes for this question..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -165,20 +523,21 @@
             </div>
             @endcan
         </div>
-        <!-- End Page-content -->
     </div>
 </div>
 
-<!-- Image Modal for fullscreen view -->
-<div id="imageModal" class="modal fade" tabindex="-1" aria-hidden="true">
+<!-- Image Modal -->
+<div id="imageModal" class="modal fade" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="imageModalLabel">Question Image</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content" style="border-radius: 16px; border: none;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-image-line me-2"></i>Question Image
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
-                <img id="modalImage" src="" alt="Question Image Full View" class="img-fluid">
+            <div class="modal-body text-center p-4">
+                <img id="modalImage" src="" alt="Question Image" class="img-fluid" style="border-radius: 12px;">
             </div>
         </div>
     </div>
@@ -186,34 +545,35 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Script loaded');
-
     const duration = {{ $exam->duration ?? 0 }} * 60;
-    console.log('Duration in minutes:', {{ $exam->duration ?? 'null' }});
-    console.log('Duration in seconds:', duration);
-
     let timeLeft = duration;
     const timerElement = document.getElementById('examTimer');
     let timer;
 
     if (!timerElement) {
-        console.error('Timer element not found in DOM');
+        console.error('Timer element not found');
     } else if (isNaN(duration) || duration <= 0) {
-        console.error('Invalid duration value');
+        console.error('Invalid duration');
         timerElement.textContent = 'Timer Error';
     } else {
         const savedTime = localStorage.getItem('examTimeLeft');
         if (savedTime !== null) {
             timeLeft = parseInt(savedTime, 10);
-            console.log('Resuming exam with time left:', timeLeft);
         }
 
+        // Add pulse animation when time is running low
         timer = setInterval(() => {
             const hours = Math.floor(timeLeft / 3600);
             const minutes = Math.floor((timeLeft % 3600) / 60);
             const seconds = timeLeft % 60;
             
             timerElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            // Add warning animation when time is low
+            if (timeLeft <= 300 && timeLeft > 0) {
+                timerElement.classList.add('pulse-animation');
+            }
+            
             localStorage.setItem('examTimeLeft', timeLeft);
 
             if (timeLeft <= 0) {
@@ -228,32 +588,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const questions = @json($questions);
-    console.log('Questions from backend:', questions);
-
+    
     if (!questions || questions.length === 0) {
-        console.error('No questions loaded from backend');
+        console.error('No questions loaded');
         document.getElementById('questionText').textContent = 'No questions available';
         return;
     }
+
+    document.getElementById('totalQuestions').textContent = questions.length;
 
     let currentQuestion = 0;
     let answers = new Array(questions.length).fill(null);
     let notes = new Array(questions.length).fill('');
     let currentFontSize = 16;
     let currentZoom = 1;
-    const zoomFactor = 0.1;
 
     const savedAnswers = localStorage.getItem('examAnswers');
     const savedNotes = localStorage.getItem('examNotes');
-    if (savedAnswers) {
-        answers = JSON.parse(savedAnswers);
-        console.log('Loaded saved answers:', answers);
-    }
-    if (savedNotes) {
-        notes = JSON.parse(savedNotes);
-        console.log('Loaded saved notes:', notes);
-    }
+    if (savedAnswers) answers = JSON.parse(savedAnswers);
+    if (savedNotes) notes = JSON.parse(savedNotes);
 
+    // Font size controls
     document.getElementById('fontSizeIncrease').addEventListener('click', () => {
         currentFontSize += 2;
         updateFontSize();
@@ -273,14 +628,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Zoom controls
     document.getElementById('zoomIn').addEventListener('click', () => {
-        currentZoom += zoomFactor;
+        currentZoom += 0.1;
         updateZoom();
     });
     
     document.getElementById('zoomOut').addEventListener('click', () => {
-        if (currentZoom > zoomFactor) {
-            currentZoom -= zoomFactor;
+        if (currentZoom > 0.1) {
+            currentZoom -= 0.1;
             updateZoom();
         }
     });
@@ -295,10 +651,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (img) {
             img.style.transform = `scale(${currentZoom})`;
             img.style.transformOrigin = 'center center';
-            img.style.transition = 'transform 0.2s ease';
+            img.style.transition = 'transform 0.3s ease';
         }
     }
     
+    // Image modal
     document.getElementById('questionImage').addEventListener('click', () => {
         const img = document.getElementById('questionImage');
         if (img.src && img.src !== window.location.href) {
@@ -311,52 +668,67 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadQuestion(index) {
         const question = questions[index];
         document.getElementById('currentQuestionNum').textContent = index + 1;
+        document.getElementById('currentQuestionNum2').textContent = index + 1;
         document.getElementById('questionText').textContent = question.text;
         
+        // Save notes from previous question
         if (currentQuestion !== index) {
             notes[currentQuestion] = document.getElementById('questionNotes').value;
             localStorage.setItem('examNotes', JSON.stringify(notes));
         }
         
+        // Load image
         const imageContainer = document.getElementById('questionImageContainer');
         const questionImage = document.getElementById('questionImage');
         
-        console.log('Loading question', index + 1, 'Image URL:', question.image_url);
-        
         if (question.image_url) {
-            console.log('Attempting to load image:', question.image_url);
             imageContainer.style.display = 'block';
             questionImage.src = question.image_url;
             questionImage.alt = `Image for question ${index + 1}`;
             questionImage.onerror = () => {
-                console.error('Image failed to load:', question.image_url);
                 imageContainer.style.display = 'none';
             };
             questionImage.onload = () => {
-                console.log('Image loaded successfully:', question.image_url);
                 currentZoom = 1;
                 updateZoom();
             };
         } else {
-            console.log('No image for this question');
             imageContainer.style.display = 'none';
         }
         
-        const optionsContainer = document.querySelector('.options');
+        // Load options with modern design
+        const optionsContainer = document.getElementById('optionsContainer');
         optionsContainer.innerHTML = '';
+        const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
+        
         question.options.forEach((option, i) => {
             const div = document.createElement('div');
-            div.className = 'form-check mb-4';
+            div.className = `option-card ${answers[index] === option ? 'selected' : ''}`;
             div.innerHTML = `
-                <input class="form-check-input question-option" 
-                       type="radio" 
-                       name="answer" 
-                       id="option${i}" 
-                       value="${option}"
-                       data-question-id="${question.id}"
-                       ${answers[index] === option ? 'checked' : ''}>
-                <label class="form-check-label fs-4" for="option${i}">${option}</label>
+                <label class="d-flex align-items-center w-100 cursor-pointer m-0">
+                    <span class="option-letter">${optionLetters[i]}</span>
+                    <input class="form-check-input question-option d-none" 
+                           type="radio" 
+                           name="answer" 
+                           value="${option}"
+                           data-question-id="${question.id}"
+                           ${answers[index] === option ? 'checked' : ''}>
+                    <span class="form-check-label flex-grow-1">${option}</span>
+                </label>
             `;
+            
+            div.addEventListener('click', function() {
+                document.querySelectorAll('.option-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                this.classList.add('selected');
+                const input = this.querySelector('input');
+                input.checked = true;
+                answers[currentQuestion] = input.value;
+                localStorage.setItem('examAnswers', JSON.stringify(answers));
+                updateNavigation();
+            });
+            
             optionsContainer.appendChild(div);
         });
         
@@ -373,7 +745,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let answeredCount = 0;
         questions.forEach((_, index) => {
             const btn = document.createElement('button');
-            btn.className = `btn btn-lg ${answers[index] ? 'btn-success' : 'btn-warning'} ${index === currentQuestion ? 'active' : ''}`;
+            btn.className = `question-nav-btn ${answers[index] ? 'answered' : 'unanswered'} ${index === currentQuestion ? 'active' : ''}`;
             btn.textContent = index + 1;
             btn.onclick = () => loadQuestion(index);
             navigator.appendChild(btn);
@@ -383,17 +755,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('answeredCount').textContent = answeredCount;
         document.getElementById('unansweredCount').textContent = questions.length - answeredCount;
         
-        const pagination = document.getElementById('paginationNumbers');
-        pagination.innerHTML = '';
-        questions.forEach((_, index) => {
-            const btn = document.createElement('button');
-            btn.className = `btn btn-sm ${index === currentQuestion ? 'btn-primary' : 'btn-light'}`;
-            btn.textContent = index + 1;
-            btn.onclick = () => loadQuestion(index);
-            pagination.appendChild(btn);
-        });
+        // Update navigation buttons
+        document.getElementById('prevQuestion').disabled = currentQuestion === 0;
+        document.getElementById('nextQuestion').disabled = currentQuestion === questions.length - 1;
     }
 
+    // Navigation
     document.getElementById('prevQuestion').onclick = () => {
         if (currentQuestion > 0) loadQuestion(currentQuestion - 1);
     };
@@ -402,83 +769,121 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentQuestion < questions.length - 1) loadQuestion(currentQuestion + 1);
     };
     
+    // Submit
     @if(auth()->user()->can('Submit cbt-exam'))
-    document.getElementById('submitExam').onclick = () => submitExam(false);
+    document.getElementById('submitExam').onclick = () => {
+        Swal.fire({
+            title: 'Submit Exam?',
+            text: 'Are you sure you want to submit your exam? This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#667eea',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, submit it!',
+            cancelButtonText: 'No, keep working'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                submitExam(false);
+            }
+        });
+    };
     @endif
     
-    document.addEventListener('change', (e) => {
-        if (e.target.classList.contains('question-option')) {
-            const selectedOption = e.target.value;
-            answers[currentQuestion] = selectedOption;
-            localStorage.setItem('examAnswers', JSON.stringify(answers));
-            updateNavigation();
-        }
-    });
-    
+    // Notes
     document.getElementById('questionNotes').addEventListener('input', (e) => {
         notes[currentQuestion] = e.target.value;
         localStorage.setItem('examNotes', JSON.stringify(notes));
     });
 
     function submitExam(isAutoSubmit = false) {
-    notes[currentQuestion] = document.getElementById('questionNotes').value;
-    localStorage.setItem('examNotes', JSON.stringify(notes));
-    
-    const submissionData = {
-        attempt_id: {{ $attempt->id }},
-        exam_id: {{ $exam->id }},
-        answers: questions.map((q, index) => ({
-            question_id: q.id, // Explicitly use the integer ID
-            answer: answers[index],
-            notes: notes[index] || null
-        }))
-    };
-
-    console.log('Submitting exam data:', submissionData);
-
-    fetch('/cbt/submit', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify(submissionData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok: ' + response.statusText);
+        notes[currentQuestion] = document.getElementById('questionNotes').value;
+        localStorage.setItem('examNotes', JSON.stringify(notes));
+        
+        // Show loading alert
+        if (!isAutoSubmit) {
+            Swal.fire({
+                title: 'Submitting...',
+                text: 'Please wait while we submit your exam',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
         }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Submission response:', data);
-        if (data.success) {
-            localStorage.removeItem('examTimeLeft');
-            localStorage.removeItem('examAnswers');
-            localStorage.removeItem('examNotes');
-            window.location.href = '{{ route("cbt.index") }}';
-        } else {
-            throw new Error(data.message || 'Unknown error');
-        }
-    })
-    .catch(error => {
-        console.error('Submission error:', error);
-        if (isAutoSubmit) {
-            console.log('Auto-submit failed; will retry on reconnect');
-        } else {
-            alert('An error occurred while submitting the exam: ' + error.message + '. Progress saved.');
-        }
-    });
-}
+        
+        const submissionData = {
+            attempt_id: {{ $attempt->id }},
+            exam_id: {{ $exam->id }},
+            answers: questions.map((q, index) => ({
+                question_id: q.id,
+                answer: answers[index],
+                notes: notes[index] || null
+            }))
+        };
 
+        fetch('/cbt/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(submissionData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                localStorage.removeItem('examTimeLeft');
+                localStorage.removeItem('examAnswers');
+                localStorage.removeItem('examNotes');
+                
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Your exam has been submitted successfully',
+                    icon: 'success',
+                    confirmButtonColor: '#667eea',
+                    confirmButtonText: 'Done',
+                }).then(() => {
+                    window.location.href = '{{ route("cbt.index") }}';
+                });
+            } else {
+                throw new Error(data.message || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            console.error('Submission error:', error);
+            if (isAutoSubmit) {
+                console.log('Auto-submit failed; will retry on reconnect');
+            } else {
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'An error occurred while submitting the exam: ' + error.message + '. Your progress has been saved.',
+                    icon: 'error',
+                    confirmButtonColor: '#667eea',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+    }
+
+    // Network status handling
     window.addEventListener('offline', () => {
-        console.log('Network disconnected; exam paused');
         clearInterval(timer);
-        alert('Network disconnected. Your progress is saved. The exam will resume when the network is restored.');
+        Swal.fire({
+            title: 'Network Disconnected',
+            text: 'Your progress is saved. The exam will resume when the network is restored.',
+            icon: 'warning',
+            confirmButtonColor: '#667eea',
+            confirmButtonText: 'OK'
+        });
     });
 
     window.addEventListener('online', () => {
-        console.log('Network reconnected');
         if (timeLeft > 0) {
             timer = setInterval(() => {
                 const hours = Math.floor(timeLeft / 3600);
@@ -486,6 +891,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const seconds = timeLeft % 60;
                 
                 timerElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                if (timeLeft <= 300 && timeLeft > 0) {
+                    timerElement.classList.add('pulse-animation');
+                }
+                
                 localStorage.setItem('examTimeLeft', timeLeft);
 
                 if (timeLeft <= 0) {
@@ -497,12 +907,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 timeLeft--;
             }, 1000);
-            alert('Network restored. Exam resumed.');
+            
+            Swal.fire({
+                title: 'Network Restored',
+                text: 'Exam resumed successfully',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
         } else {
             submitExam(true);
         }
     });
 
+    // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft') {
             if (currentQuestion > 0) loadQuestion(currentQuestion - 1);
@@ -514,14 +932,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const optionIndex = parseInt(e.key) - 1;
             const options = document.querySelectorAll('.question-option');
             if (optionIndex < options.length) {
-                options[optionIndex].checked = true;
-                answers[currentQuestion] = options[optionIndex].value;
-                localStorage.setItem('examAnswers', JSON.stringify(answers));
-                updateNavigation();
+                const optionCard = options[optionIndex].closest('.option-card');
+                if (optionCard) {
+                    optionCard.click();
+                }
             }
         }
     });
 
+    // Prevent accidental page leave
+    window.addEventListener('beforeunload', (e) => {
+        if (timeLeft > 0) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Initialize
     loadQuestion(0);
 });
 </script>
