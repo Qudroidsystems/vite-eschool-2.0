@@ -453,6 +453,26 @@ document.addEventListener('DOMContentLoaded', function() {
         badge.textContent = visibleCount;
     }
 
+    // Function to update correct option hidden for edit modal
+    function updateCorrectOptionEdit() {
+        const hidden = document.getElementById('edit_correct_option');
+        if (!hidden) return;
+        const type = document.getElementById('edit_type').value;
+        if (type === 'short_answer') {
+            hidden.value = 'answer';
+        } else {
+            const selectedRadio = document.querySelector('#editModal .is-correct:checked');
+            hidden.value = selectedRadio ? selectedRadio.value : '';
+        }
+    }
+
+    // Attach event listeners for edit modal radios
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('is-correct') && e.target.closest('#editModal')) {
+            updateCorrectOptionEdit();
+        }
+    });
+
     // Attach event listeners
     function attachEventListeners() {
         // View buttons
@@ -592,14 +612,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             `<img src="/storage/${data.question.image}" class="img-fluid mb-3" style="max-height: 150px;">` : 
                             '<div class="text-muted">No image</div>';
 
-                        // Clear any existing SA hidden input
-                        const existingSaHidden = document.getElementById('edit_correct_option_sa');
-                        if (existingSaHidden) {
-                            existingSaHidden.remove();
-                        }
+                        // Reset hidden
+                        document.getElementById('edit_correct_option').value = '';
 
-                        // Handle options - first hide all
+                        // Handle options - first hide all and uncheck all radios
                         document.querySelectorAll('#editModal .options-container').forEach(c => c.style.display = 'none');
+                        document.querySelectorAll('#editModal .is-correct').forEach(r => r.checked = false);
                         
                         if (data.question.type === 'mcq') {
                             const container = document.getElementById('edit_mcq_options');
@@ -609,6 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             data.options.forEach((option, index) => {
                                 const letter = String.fromCharCode(97 + index);
+                                const radioHtml = option.is_correct ? 'checked' : '';
                                 optionsFields.innerHTML += `
                                     <div class="option-field mb-3">
                                         <div class="d-flex align-items-center">
@@ -617,8 +636,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 class="form-control me-3" value="${option.option_text || ''}" />
                                             <div class="form-check">
                                                 <input class="form-check-input is-correct" type="radio" 
-                                                    name="correct_option" value="${letter}" 
-                                                    ${option.is_correct ? 'checked' : ''} />
+                                                    name="correct_option" value="${letter}" ${radioHtml} />
                                                 <label class="form-check-label">Correct</label>
                                             </div>
                                         </div>
@@ -628,18 +646,18 @@ document.addEventListener('DOMContentLoaded', function() {
                             const container = document.getElementById('edit_tf_options');
                             container.style.display = 'block';
                             const optionsFields = container.querySelector('.options-fields');
+                            const trueCorrect = data.options.find(o => o.option_text === 'True')?.is_correct ? 'checked' : '';
+                            const falseCorrect = data.options.find(o => o.option_text === 'False')?.is_correct ? 'checked' : '';
                             optionsFields.innerHTML = `
                                 <div class="option-field mb-3">
                                     <div class="d-flex align-items-center">
-                                        <input type="radio" class="is-correct" name="correct_option" value="true" 
-                                            ${data.options.find(o => o.option_text === 'True')?.is_correct ? 'checked' : ''}>
+                                        <input type="radio" class="is-correct" name="correct_option" value="true" ${trueCorrect}>
                                         <label class="ms-2">True</label>
                                     </div>
                                 </div>
                                 <div class="option-field mb-3">
                                     <div class="d-flex align-items-center">
-                                        <input type="radio" class="is-correct" name="correct_option" value="false"
-                                            ${data.options.find(o => o.option_text === 'False')?.is_correct ? 'checked' : ''}>
+                                        <input type="radio" class="is-correct" name="correct_option" value="false" ${falseCorrect}>
                                         <label class="ms-2">False</label>
                                     </div>
                                 </div>`;
@@ -647,18 +665,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             const container = document.getElementById('edit_sa_options');
                             container.style.display = 'block';
                             document.getElementById('edit_sa_answer').value = data.options[0]?.option_text || '';
-
-                            // Add hidden for SA correct_option
-                            const hiddenSa = document.createElement('input');
-                            hiddenSa.type = 'hidden';
-                            hiddenSa.name = 'correct_option';
-                            hiddenSa.id = 'edit_correct_option_sa';
-                            hiddenSa.value = 'answer';
-                            document.getElementById('edit-question-form').appendChild(hiddenSa);
                         }
 
-                        // Clear general hidden (no longer needed)
-                        document.getElementById('edit_correct_option').value = '';
+                        // Update hidden after population
+                        updateCorrectOptionEdit();
 
                         new bootstrap.Modal(document.getElementById('editModal')).show();
                     } else {
@@ -772,6 +782,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalText = submitBtn.textContent;
         submitBtn.textContent = 'Updating...';
         submitBtn.disabled = true;
+
+        // Client-side validation for edit
+        const type = document.getElementById('edit_type').value;
+        if (type === 'mcq') {
+            const mcqInputs = document.querySelectorAll('#edit_mcq_options input[type="text"]');
+            const filledOptions = Array.from(mcqInputs).filter(input => input.value.trim() !== '').length;
+            const correctSelected = document.querySelector('#edit_mcq_options .is-correct:checked');
+            if (filledOptions < 2) {
+                alert('At least 2 MCQ options must be filled');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                return;
+            }
+            if (!correctSelected) {
+                alert('Please select a correct option for MCQ');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                return;
+            }
+        } else if (type === 'true_false') {
+            const correctSelected = document.querySelector('#edit_tf_options .is-correct:checked');
+            if (!correctSelected) {
+                alert('Please select a correct option for True/False');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                return;
+            }
+        } else if (type === 'short_answer') {
+            const answerText = document.getElementById('edit_sa_answer').value.trim();
+            if (!answerText) {
+                alert('Please provide a correct answer for Short Answer');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                return;
+            }
+        }
 
         fetch(`/questions/${id}`, {
             method: 'POST',
@@ -916,6 +962,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const typeSelect = document.getElementById('type');
     if (typeSelect) {
         typeSelect.addEventListener('change', function() {
+            // Uncheck all radios when changing type
+            document.querySelectorAll('.is-correct').forEach(r => r.checked = false);
             document.querySelectorAll('.options-container').forEach(container => {
                 container.style.display = 'none';
             });
