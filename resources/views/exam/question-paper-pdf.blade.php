@@ -15,11 +15,11 @@
             height: 80px; 
             border-radius: 50%; 
             object-fit: cover; 
-            float: left; 
-            margin-right: 10px; 
+            float: right; 
+            margin-left: 10px; 
             border: 2px solid #ddd; 
         }
-        .student-info > div { overflow: hidden; }
+        .student-info > div { overflow: hidden; text-align: left; } /* Align text left for better readability */
         .exam-details { clear: both; margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 5px; }
         .question { margin-bottom: 25px; page-break-inside: avoid; }
         .question-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
