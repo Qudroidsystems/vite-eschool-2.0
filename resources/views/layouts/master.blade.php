@@ -236,6 +236,8 @@
                     <i class="ri-record-circle-line"></i>
                 </button>
             </div>
+
+
 <div id="scrollbar">
     <div class="container-fluid">
 
@@ -270,8 +272,10 @@
                 </div>
             </li>
 
-
+            @if(auth()->user()->can('View user') || auth()->user()->can('View role') || auth()->user()->can('View user-account'))
             <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">USERS & PRIVILEDGES</span></li>
+            @endif
+
             @can('View user')
                 <li class="nav-item">
                     <a class="nav-link menu-link collapsed" href="#sidebarusers" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarAuth">
@@ -311,7 +315,7 @@
             </li>
             @endcan
           
-
+            @can('View user-account')
             <li class="nav-item">
                 <a class="nav-link menu-link collapsed" href="#sidebaraccount" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebaraccoun">
                     <i class="ph-address-book"></i> <span data-key="t-pages">User Account</span>
@@ -324,11 +328,11 @@
                     </ul>
                 </div>
             </li>
+            @endcan
 
-
-            
-
+            @if(auth()->user()->can('View student') || auth()->user()->can('Create student-bulk-upload') || auth()->user()->can('View parent'))
             <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-apps">STUDENT & PARENTS</span></li>
+            @endif
 
             @if(auth()->user()->can('View student') || auth()->user()->can('Create student-bulk-upload'))
             <li class="nav-item">
@@ -353,8 +357,7 @@
             </li>
             @endif
 
-
-            @if(true) {{-- Assuming always visible for parents, or add perm if needed --}}
+            @can('View parent')
             <li class="nav-item">
                 <a href="#sidebarParent" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarParent">
                     <i class="ph-storefront"></i> <span data-key="t-ecommerce">Parent Management</span>
@@ -362,15 +365,17 @@
                 <div class="collapse menu-dropdown" id="sidebarParent">
                     <ul class="nav nav-sm flex-column">
                         <li class="nav-item">
-                            <a href="apps-ecommerce-products.html" class="nav-link" data-key="t-products">All Parents</a>
+                            <a href="{{ route('parent.index') }}" class="nav-link" data-key="t-products">All Parents</a>
                         </li>
                         
                     </ul>
                 </div>
             </li>
-            @endif
+            @endcan
 
+            @if(auth()->user()->can('View my-class') || auth()->user()->can('View my-subject'))
             <li class="menu-title"><i class="ph-folder-open"></i> <span data-key="t-apps">SUBJECT REGISTRATION</span></li>
+            @endif
             
             @if(auth()->user()->can('View my-class') || auth()->user()->can('View my-subject'))
             <li class="nav-item">
@@ -394,7 +399,9 @@
             </li>
             @endif
 
+            @if(auth()->user()->can('View my-class') || auth()->user()->can('View my-subject') || auth()->user()->can('View my-subject-vettings') || auth()->user()->can('View my-mock-subject-vettings') || auth()->user()->can('View myresult-room') || auth()->user()->can('View student-report') || auth()->user()->can('View student-mock-report'))
             <li class="menu-title"><i class="ph-folder-open"></i> <span data-key="t-apps">CLASSES & RECORDS</span></li>
+            @endif
             
             @if(auth()->user()->can('View my-class') || auth()->user()->can('View my-subject') || auth()->user()->can('View my-subject-vettings') || auth()->user()->can('View my-mock-subject-vettings'))
             <li class="nav-item">
@@ -425,11 +432,6 @@
                             </li>
                       @endcan  
                       
-                       {{-- @can('View principals-comment')
-                              <li class="nav-item">
-                                  <a href="{{ route('mysubjectvettings.index') }}" class="nav-link" data-key="t-products">Subjects to Vet</a>
-                            </li>
-                      @endcan    --}}
                     </ul>
                 </div>
             </li>
@@ -467,8 +469,10 @@
             </li>
             @endif
 
-
+            @if(auth()->user()->can('View schoolpayment') || auth()->user()->can('View analysis'))
             <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-apps">BURSARY & FINANCE </span></li>
+            @endif
+            @can('View schoolpayment')
             <li class="nav-item">
                 <a href="#sidebarStudentpayments" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarStudentpayments">
                     <i class="ph-storefront"></i> <span data-key="t-ecommerce">Student Payments</span>
@@ -478,12 +482,11 @@
                         <li class="nav-item">
                             <a href="{{ route('schoolpayment.index') }}" class="nav-link" data-key="t-products">Student Bill</a>
                         </li>
-                        {{-- <li class="nav-item">
-                            <a href="apps-ecommerce-products-grid.html" class="nav-link" data-key="t-products-grid">Student Invoice</a>
-                        </li> --}}
                     </ul>
                 </div>
             </li>
+            @endcan
+            @can('View analysis')
             <li class="nav-item">
                 <a href="#sidebarAnalysis" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarAnalysis">
                     <i class="ph-storefront"></i> <span data-key="t-ecommerce">Payment Analysis</span>
@@ -493,15 +496,14 @@
                         <li class="nav-item">
                             <a href="{{ route('analysis.index') }}" class="nav-link" data-key="t-products">School payment  Analysis</a>
                         </li>
-                        {{-- <li class="nav-item">
-                            <a href="{{ route('analysis.index') }}" class="nav-link" data-key="t-products-grid">Specific Analysis</a>
-                        </li> --}}
                     </ul>
                 </div>
             </li>
+            @endcan
 
-
+            @if(auth()->user()->can('View exam') || auth()->user()->can('View cbt-exam'))
             <li class="menu-title"><i class="ph-graduation-cap"></i> <span data-key="t-apps">EXAMS AND CBT </span></li>
+            @endif
             @can('View exam')
             <li class="nav-item">
                 <a href="#sidebarExams" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarExams">
@@ -536,10 +538,9 @@
             </li>
             @endcan
 
-
-
+            @if(auth()->user()->can('View schoolinformation') || auth()->user()->can('View session') || auth()->user()->can('View term') || auth()->user()->can('View schoolhouse') || auth()->user()->can('View school-arm') || auth()->user()->can('View class-category') || auth()->user()->can('View school-class') || auth()->user()->can('View class-teacher') || auth()->user()->can('View subjects') || auth()->user()->can('View subject-teacher') || auth()->user()->can('View subject-class') || auth()->user()->can('View compulsory-subject') || auth()->user()->can('View principals-comment') || auth()->user()->can('View school-bills') || auth()->user()->can('View school-bill-for-term-session'))
             <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-components">SCHOOL BASIC SETTINGS</span></li>
-
+            @endif
 
             @if(auth()->user()->can('View schoolinformation'))
             <li class="nav-item">
@@ -559,8 +560,6 @@
                 </div>
             </li> 
             @endif
-
-
 
             @if(auth()->user()->can('View session') || auth()->user()->can('View term') || auth()->user()->can('View schoolhouse'))
             <li class="nav-item">
@@ -625,7 +624,6 @@
             </li> 
             @endif
 
-
             @if(auth()->user()->can('View subjects') || auth()->user()->can('View subject-teacher') || auth()->user()->can('View subject-class') || auth()->user()->can('View compulsory-subject'))
             <li class="nav-item">
                 <a href="#sidebarSub" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
@@ -662,7 +660,7 @@
             </li> 
             @endif
 
-            @if(auth()->user()->can('View principals-comment'))
+            @can('View principals-comment')
             <li class="nav-item">
                 <a href="#sidebarPrincipal" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
                     <i class="ph-file-text"></i> <span data-key="t-invoices">Principal's Comments</span>
@@ -677,9 +675,9 @@
                     </ul>
                 </div>
             </li> 
-            @endif
+            @endcan
 
-            @if(auth()->user()->can('View subjects'))
+            @can('View subjects')
             <li class="nav-item">
                 <a href="#sidebarSubjectvetting" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
                     <i class="ph-file-text"></i> <span data-key="t-invoices">Terminal Subject Vettings</span>
@@ -694,10 +692,9 @@
                     </ul>
                 </div>
             </li> 
-            @endif
+            @endcan
 
-
-             @if(auth()->user()->can('View subjects'))
+             @can('View subjects')
              <li class="nav-item">
                 <a href="#mocksidebarSubjectvetting" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSub">
                     <i class="ph-file-text"></i> <span data-key="t-invoices">Mock Subject Vettings</span>
@@ -712,10 +709,7 @@
                     </ul>
                 </div>
             </li> 
-            @endif
-
-            
-
+            @endcan
 
             @if(auth()->user()->can('View school-bills') || auth()->user()->can('View school-bill-for-term-session'))
             <li class="nav-item">
@@ -743,6 +737,9 @@
         </ul>
     </div>
     <!-- Sidebar -->
+</div>
+            
+
 </div>
 
 <div class="sidebar-background"></div>
