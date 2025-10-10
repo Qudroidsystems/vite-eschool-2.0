@@ -66,15 +66,25 @@
                                                     <span class="badge bg-success">{{ $student->score }} / {{ $student->total_marks }}</span>
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}" class="btn btn-subtle-info btn-icon btn-sm">
-                                                        <i class="ph-eye"></i> View Answers
-                                                    </a>
-                                                    <button type="button" class="btn btn-danger btn-sm delete-attempt" 
-                                                            data-exam-id="{{ $exam->id }}" 
-                                                            data-student-id="{{ $student->id }}"
-                                                            data-student-name="{{ $student->lastname }} {{ $student->firstname }}">
-                                                        <i class="ph-trash"></i> Delete Attempt
-                                                    </button>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}" 
+                                                           class="btn btn-subtle-info btn-icon btn-sm" 
+                                                           data-bs-toggle="tooltip" 
+                                                           data-bs-placement="top" 
+                                                           title="View Answers">
+                                                            <i class="ph-eye"></i>
+                                                        </a>
+                                                        <button type="button" 
+                                                                class="btn btn-subtle-danger btn-icon btn-sm delete-attempt" 
+                                                                data-bs-toggle="tooltip" 
+                                                                data-bs-placement="top" 
+                                                                title="Delete Attempt (allows retake)"
+                                                                data-exam-id="{{ $exam->id }}" 
+                                                                data-student-id="{{ $student->id }}"
+                                                                data-student-name="{{ $student->lastname }} {{ $student->firstname }}">
+                                                            <i class="ph-trash-simple"></i>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         @empty
@@ -108,11 +118,18 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
     const deleteButtons = document.querySelectorAll('.delete-attempt');
     
     deleteButtons.forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation(); // Prevent btn-group interference
             
             const examId = this.dataset.examId;
             const studentId = this.dataset.studentId;
