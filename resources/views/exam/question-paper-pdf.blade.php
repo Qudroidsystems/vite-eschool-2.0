@@ -5,22 +5,40 @@
     <title>Question Paper - {{ $student->firstname }} {{ $student->lastname }}</title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #333; margin: 0; padding: 20px; }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
-        .school-logo { max-width: 100px; max-height: 100px; float: left; margin-right: 20px; }
-        .school-info h1 { margin: 0; font-size: 18px; }
-        .school-info p { margin: 5px 0; }
-        .student-info { float: right; text-align: right; }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #333; 
+            padding-bottom: 20px; 
+            overflow: hidden; /* Contain floats */
+        }
+        .school-section { float: left; text-align: left; margin-right: 20px; }
+        .school-logo { max-width: 100px; max-height: 100px; display: block; margin-bottom: 10px; }
+        .school-info h1 { margin: 0 0 5px 0; font-size: 18px; }
+        .school-info p { margin: 2px 0; font-size: 11px; }
+        .student-section { 
+            float: right; 
+            display: flex; 
+            align-items: center; 
+            flex-direction: row-reverse; /* Photo on right, text on left of photo */
+            text-align: right; 
+        }
         .student-photo { 
             width: 80px; 
             height: 80px; 
             border-radius: 50%; 
             object-fit: cover; 
-            float: right; 
-            margin-left: 10px; 
             border: 2px solid #ddd; 
+            margin-left: 10px; /* Space between photo and text */
         }
-        .student-info > div { overflow: hidden; text-align: left; } /* Align text left for better readability */
-        .exam-details { clear: both; margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 5px; }
+        .student-text { 
+            text-align: left; /* Align text left for readability */
+            margin-right: 10px; /* Space from right edge */
+        }
+        .student-text h3 { margin: 0 0 5px 0; font-size: 14px; }
+        .student-text p { margin: 0; font-size: 11px; }
+        .clear { clear: both; } /* Force clear after floats */
+        .exam-details { margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 5px; }
         .question { margin-bottom: 25px; page-break-inside: avoid; }
         .question-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
         .question-text { margin-bottom: 15px; }
@@ -39,23 +57,26 @@
 </head>
 <body>
     <div class="header">
-        @if($school && $school->school_logo)
-            <img src="{{ asset('storage/' . $school->school_logo) }}" alt="School Logo" class="school-logo">
-        @endif
-        <div class="school-info">
-            <h1>{{ $school->school_name ?? 'School Name' }}</h1>
-            <p>{{ $school->school_motto ?? '' }}</p>
-            <p>{{ $school->school_address ?? '' }}</p>
-            <p>Phone: {{ $school->school_phone ?? '' }} | Email: {{ $school->school_email ?? '' }}</p>
-            <p>Date: {{ now()->format('F d, Y') }}</p>
+        <div class="school-section">
+            @if($school && $school->school_logo)
+                <img src="{{ asset('storage/' . $school->school_logo) }}" alt="School Logo" class="school-logo">
+            @endif
+            <div class="school-info">
+                <h1>{{ $school->school_name ?? 'School Name' }}</h1>
+                <p>{{ $school->school_motto ?? '' }}</p>
+                <p>{{ $school->school_address ?? '' }}</p>
+                <p>Phone: {{ $school->school_phone ?? '' }} | Email: {{ $school->school_email ?? '' }}</p>
+                <p>Date: {{ now()->format('F d, Y') }}</p>
+            </div>
         </div>
-        <div class="student-info">
+        <div class="student-section">
             <img src="{{ $student->picture_path }}" alt="Student Photo" class="student-photo">
-            <div>
+            <div class="student-text">
                 <h3>{{ $student->firstname }} {{ $student->lastname }}</h3>
                 <p>Admission No: {{ $student->admissionNo }}</p>
             </div>
         </div>
+        <div class="clear"></div> <!-- Clear floats -->
     </div>
 
     <div class="exam-details">
