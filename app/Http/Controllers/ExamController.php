@@ -394,12 +394,22 @@ class ExamController extends Controller
      * Generate PDF question paper for a student's exam attempt.
      */
    
+    
+    /**
+     * Generate PDF question paper for a student's exam attempt.
+     */
     public function generateQuestionPaperPdf(Exam $exam, $studentId)
     {
         $student = DB::table('studentRegistration')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
             ->where('studentRegistration.id', $studentId)
-            ->select('studentRegistration.id', 'studentRegistration.firstname', 'studentRegistration.lastname', 'studentRegistration.admissionNo', 'studentpicture.picture as picture')
+            ->select(
+                'studentRegistration.id',
+                'studentRegistration.firstname',
+                'studentRegistration.lastname',
+                'studentRegistration.admissionNo',
+                'studentpicture.picture as picture'
+            )
             ->firstOrFail();
 
         $result = DB::table('results')
@@ -430,9 +440,9 @@ class ExamController extends Controller
                 ->with('option') // Student's selected option
                 ->first();
 
-            $question->student_answer = $studentAnswer ? $studentAnswer->option->option_text ?? 'Not Attempted' : 'Not Attempted';
+            $question->student_answer = $studentAnswer ? $studentAnswer->getAnswerTextAttribute() ?? 'Not Attempted' : 'Not Attempted';
             $question->student_option_id = $studentAnswer ? $studentAnswer->option_id : null;
-            $question->marked_correct = $studentAnswer && $studentAnswer->option->is_correct ? 'Yes' : ($studentAnswer ? 'No' : 'Not Attempted');
+            $question->marked_correct = $studentAnswer && ($studentAnswer->option ? $studentAnswer->option->is_correct : false) ? 'Yes' : ($studentAnswer ? 'No' : 'Not Attempted');
         }
 
         $data = compact('exam', 'student', 'result', 'school', 'attempt', 'questions');

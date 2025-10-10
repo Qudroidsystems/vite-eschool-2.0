@@ -7,10 +7,10 @@
         body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #333; margin: 0; padding: 20px; }
         .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
         .school-logo { max-width: 100px; max-height: 100px; float: left; margin-right: 20px; }
-        .student-photo { max-width: 80px; max-height: 100px; border-radius: 50%; float: left; margin-right: 10px; }
         .school-info h1 { margin: 0; font-size: 18px; }
         .school-info p { margin: 5px 0; }
         .student-info { float: right; text-align: right; }
+        .student-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; float: left; margin-right: 10px; border: 2px solid #ddd; }
         .exam-details { clear: both; margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 5px; }
         .question { margin-bottom: 25px; page-break-inside: avoid; }
         .question-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
@@ -43,9 +43,13 @@
         <div class="student-info">
             @if($student->picture)
                 <img src="{{ asset('storage/' . $student->picture) }}" alt="Student Photo" class="student-photo">
+            @else
+                <img src="{{ asset('storage/student_avatars/unnamed.jpg') }}" alt="Default Photo" class="student-photo">
             @endif
-            <h3>{{ $student->firstname }} {{ $student->lastname }}</h3>
-            <p>Admission No: {{ $student->admissionNo }}</p>
+            <div style="overflow: hidden;">
+                <h3>{{ $student->firstname }} {{ $student->lastname }}</h3>
+                <p>Admission No: {{ $student->admissionNo }}</p>
+            </div>
         </div>
     </div>
 
