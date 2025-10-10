@@ -61,7 +61,7 @@
                         <div class="card">
                             <div class="card-header d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h5 class="card-title mb-0">Manage Questions <span class="badge bg-dark-subtle text-dark ms-1">{{ $exam->questions->count() }}</span></h5>
+                                    <h5 class="card-title mb-0">Manage Questions <span class="badge bg-dark-subtle text-dark ms-1" id="total-badge">{{ $exam->questions->count() }}</span></h5>
                                     <p class="text-muted mb-0 fs-6">for {{ $exam->title }}</p>
                                 </div>
                                 <div class="flex-shrink-0">
@@ -99,7 +99,7 @@
                                                         </div>
                                                     </td>
                                                     <td class="sn">{{ $i++ }}</td>
-                                                    <td class="question">{{ Str::limit($question->question_text, 50) }}</td>
+                                                    <td class="question">{{ Str::limit(strip_tags($question->question_text), 50) }}</td>
                                                     <td class="type">{{ ucfirst(str_replace('_', ' ', $question->type)) }}</td>
                                                     <td class="image">
                                                         @if ($question->image)
@@ -118,7 +118,7 @@
                                                                 <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="{{ $question->id }}"><i class="ph-pencil"></i></a>
                                                             </li>
                                                             <li>
-                                                                <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-url="{{ route('questions.destroy', $question->id) }}"><i class="ph-trash"></i></a>
+                                                                <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="{{ $question->id }}" data-url="{{ route('questions.destroy', $question->id) }}"><i class="ph-trash"></i></a>
                                                             </li>
                                                         </ul>
                                                     </td>
@@ -134,7 +134,7 @@
                                 <div class="row mt-3 align-items-center" id="pagination-element">
                                     <div class="col-sm">
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $exam->questions->count() }}</span> of <span class="fw-semibold">{{ $exam->questions->count() }}</span> Results
+                                            Showing <span id="showing-count" class="fw-semibold">{{ $exam->questions->count() }}</span> of <span id="total-count" class="fw-semibold">{{ $exam->questions->count() }}</span> Results
                                         </div>
                                     </div>
                                 </div>
@@ -146,21 +146,22 @@
 
             <!-- Add Question Modal -->
             <div id="addQuestionModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered mw-900px">
+                <div class="modal-dialog modal-dialog-centered modal-xl">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Add New Question</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form id="add-question-form" class="tablelist-form" autocomplete="off" enctype="multipart/form-data">
+                        <form id="add-question-form" class="tablelist-form" autocomplete="off" enctype="multipart/form-data" novalidate>
                             @csrf
                             <div class="modal-body">
                                 <input type="hidden" name="exam_id" value="{{ $exam->id }}">
                                 <div id="questions-container">
                                     <div class="question-field mb-7 border p-5 rounded">
                                         <div class="mb-3">
-                                            <label for="question_text" class="form-label required">Question Text</label>
-                                            <textarea name="question_text" id="question_text" class="form-control" placeholder="Enter question text..." rows="3" required></textarea>
+                                            <label for="question_text" class="form-label">Question Text</label>
+                                            <div id="add-question-editor"></div>
+                                            <textarea name="question_text" id="question_text" style="display: none;"></textarea>
                                         </div>
                                         <div class="mb-3">
                                             <label for="type" class="form-label required">Question Type</label>
@@ -269,7 +270,8 @@
                                         <div class="sa-options options-container" style="display: none;">
                                             <h6 class="fw-bold mb-3">Correct Answer</h6>
                                             <div class="mb-3">
-                                                <textarea name="options[answer][option_text]" class="form-control" placeholder="Enter the correct answer..." rows="3"></textarea>
+                                                <div id="add-sa-editor"></div>
+                                                <textarea name="options[answer][option_text]" id="add_sa_answer" style="display: none;"></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -288,13 +290,13 @@
 
             <!-- Edit Question Modal -->
             <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered mw-900px">
+                <div class="modal-dialog modal-dialog-centered modal-xl">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Edit Question</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form id="edit-question-form" class="tablelist-form" autocomplete="off" enctype="multipart/form-data">
+                        <form id="edit-question-form" class="tablelist-form" autocomplete="off" enctype="multipart/form-data" novalidate>
                             @method('PUT')
                             @csrf
                             <div class="modal-body">
@@ -302,8 +304,9 @@
                                 <input type="hidden" name="exam_id" id="edit_exam_id">
                                 <div class="question-field mb-7 border p-5 rounded">
                                     <div class="mb-3">
-                                        <label for="edit_question_text" class="form-label required">Question Text</label>
-                                        <textarea name="question_text" id="edit_question_text" class="form-control" placeholder="Enter question text..." rows="3" required></textarea>
+                                        <label for="edit_question_text" class="form-label">Question Text</label>
+                                        <div id="edit-question-editor"></div>
+                                        <textarea name="question_text" id="edit_question_text" style="display: none;"></textarea>
                                     </div>
                                     <div class="mb-3">
                                         <label for="edit_type" class="form-label required">Question Type</label>
@@ -351,7 +354,8 @@
                                     <div id="edit_sa_options" class="options-container" style="display: none;">
                                         <h6 class="fw-bold mb-3">Correct Answer</h6>
                                         <div class="mb-3">
-                                            <textarea name="options[answer][option_text]" id="edit_sa_answer" class="form-control" placeholder="Enter the correct answer..." rows="3"></textarea>
+                                            <div id="edit-sa-editor"></div>
+                                            <textarea name="options[answer][option_text]" id="edit_sa_answer" style="display: none;"></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -405,15 +409,182 @@
     </div>
 </div>
 
+<!-- Quill CSS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
+<!-- Quill JS -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Quill editors
+    let addQuill = new Quill('#add-question-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, false] }],
+                ['bold', 'italic'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }],
+                ['link', 'image'],
+                ['clean']
+            ]
+        }
+    });
+
+    let editQuill = new Quill('#edit-question-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, false] }],
+                ['bold', 'italic'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }],
+                ['link', 'image'],
+                ['clean']
+            ]
+        }
+    });
+
+    let addSaQuill = new Quill('#add-sa-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, false] }],
+                ['bold', 'italic'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['clean']
+            ]
+        }
+    });
+
+    let editSaQuill = new Quill('#edit-sa-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, false] }],
+                ['bold', 'italic'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['clean']
+            ]
+        }
+    });
+
     const tableBody = document.querySelector('#kt_questions_table tbody');
     const searchInput = document.querySelector('.search');
     const checkAll = document.getElementById('checkAll');
     const removeActions = document.getElementById('remove-actions');
     let searchTerm = '';
+    let totalQuestions = {{ $exam->questions->count() }};
+
+    // Helper functions
+    function stripTags(html) {
+        return html.replace(/<[^>]*>/g, '');
+    }
+
+    function limitText(text, len = 50) {
+        const stripped = stripTags(text);
+        return stripped.length > len ? stripped.slice(0, len) + '...' : stripped;
+    }
+
+    function formatType(type) {
+        return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
+    }
+
+    function createElementFromHTML(htmlString) {
+        const div = document.createElement('div');
+        div.innerHTML = htmlString.trim();
+        return div.firstChild;
+    }
+
+    function updateQuestionCount(visibleCount = null) {
+        if (visibleCount !== null) {
+            document.getElementById('showing-count').textContent = visibleCount;
+        }
+        document.getElementById('total-count').textContent = totalQuestions;
+        document.getElementById('total-badge').textContent = totalQuestions;
+    }
+
+    function addNewQuestionRow(question) {
+        const currentSN = tableBody.querySelectorAll('tr:not(.noresult)').length + 1;
+        const rowHtml = `
+            <tr data-url="/questions/${question.id}">
+                <td class="id" data-id="${question.id}">
+                    <div class="form-check form-check-sm form-check-custom form-check-solid">
+                        <input class="form-check-input" type="checkbox" name="chk_child" />
+                    </div>
+                </td>
+                <td class="sn">${currentSN}</td>
+                <td class="question">${limitText(question.question_text)}</td>
+                <td class="type">${formatType(question.type)}</td>
+                <td class="image">
+                    ${question.image ? `<img src="/storage/${question.image}" alt="Question Image" style="max-width: 50px; max-height: 50px;">` : 'No Image'}
+                </td>
+                <td class="options">${question.options_count}</td>
+                <td>
+                    <ul class="d-flex gap-2 list-unstyled mb-0">
+                        <li>
+                            <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm view-item-btn" data-id="${question.id}"><i class="ph-eye"></i></a>
+                        </li>
+                        <li>
+                            <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${question.id}"><i class="ph-pencil"></i></a>
+                        </li>
+                        <li>
+                            <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${question.id}" data-url="/questions/${question.id}"><i class="ph-trash"></i></a>
+                        </li>
+                    </ul>
+                </td>
+            </tr>
+        `;
+        const noresultRow = tableBody.querySelector('.noresult');
+        if (noresultRow) {
+            noresultRow.parentNode.insertBefore(createElementFromHTML(rowHtml), noresultRow);
+            noresultRow.remove();
+        } else {
+            tableBody.appendChild(createElementFromHTML(rowHtml));
+        }
+        totalQuestions++;
+        updateQuestionCount();
+        attachEventListeners(); // Re-attach for new buttons
+        filterTable(); // Re-apply filter if active
+    }
+
+    function updateQuestionRow(question) {
+        const row = document.querySelector(`tr[data-id="${question.id}"]`);
+        if (!row) return;
+        row.querySelector('.question').textContent = limitText(question.question_text);
+        row.querySelector('.type').textContent = formatType(question.type);
+        const imgCell = row.querySelector('.image');
+        imgCell.innerHTML = question.image ? `<img src="/storage/${question.image}" alt="Question Image" style="max-width: 50px; max-height: 50px;">` : 'No Image';
+        row.querySelector('.options').textContent = question.options_count;
+        row.dataset.url = `/questions/${question.id}`;
+        row.querySelector('.remove-item-btn').dataset.url = `/questions/${question.id}`;
+        filterTable(); // Re-apply filter if active
+    }
+
+    function removeRow(id) {
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (row) {
+            row.remove();
+        }
+        if (tableBody.querySelectorAll('tr:not(.noresult)').length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" class="noresult" style="display: block;">No questions found</td></tr>';
+        }
+        totalQuestions--;
+        updateQuestionCount();
+        attachEventListeners(); // Re-attach if needed
+        filterTable(); // Re-apply filter
+    }
+
+    function removeRows(ids) {
+        ids.forEach(removeRow);
+    }
+
+    function addNoResultRow() {
+        if (tableBody.querySelectorAll('tr:not(.noresult)').length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" class="noresult" style="display: block;">No questions found</td></tr>';
+        }
+    }
 
     // Handle checkboxes
     checkAll.addEventListener('change', function() {
@@ -450,9 +621,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (matches) visibleCount++;
         });
 
-        // Update count
-        const badge = document.querySelector('.badge');
-        badge.textContent = visibleCount;
+        updateQuestionCount(visibleCount);
     }
 
     // Function to update correct option hidden for edit modal
@@ -606,7 +775,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success) {
                         document.getElementById('edit-id-field').value = data.question.id;
                         document.getElementById('edit_exam_id').value = data.exam_id;
-                        document.getElementById('edit_question_text').value = data.question.question_text;
+                        editQuill.root.innerHTML = data.question.question_text;
                         document.getElementById('edit_type').value = data.question.type; // For display only
 
                         // Handle image
@@ -678,7 +847,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else if (data.question.type === 'short_answer') {
                             const container = document.getElementById('edit_sa_options');
                             container.style.display = 'block';
-                            document.getElementById('edit_sa_answer').value = data.options[0]?.option_text || '';
+                            editSaQuill.root.innerHTML = data.options[0]?.option_text || '';
                         }
 
                         // Update hidden after population
@@ -700,9 +869,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Delete buttons
         document.querySelectorAll('.remove-item-btn').forEach(btn => {
             btn.addEventListener('click', function() {
+                const id = this.dataset.id;
                 const url = this.dataset.url;
                 document.getElementById('delete-record').onclick = function() {
-                    deleteQuestion(url);
+                    deleteQuestion(id, url);
                     bootstrap.Modal.getInstance(document.getElementById('deleteRecordModal')).hide();
                 };
                 new bootstrap.Modal(document.getElementById('deleteRecordModal')).show();
@@ -712,10 +882,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial attach
     attachEventListeners();
+    updateQuestionCount();
 
     // Add form submission
     document.getElementById('add-question-form').addEventListener('submit', function(e) {
         e.preventDefault();
+        
+        // Validate Quill question text
+        const questionText = addQuill.getText().trim();
+        if (!questionText) {
+            alert('Question text is required.');
+            return;
+        }
+        
+        // Update hidden textarea with Quill content
+        document.getElementById('question_text').value = addQuill.root.innerHTML;
+        
+        // Validate short answer if applicable
+        const type = document.getElementById('type').value;
+        if (type === 'short_answer') {
+            const saText = addSaQuill.getText().trim();
+            if (!saText) {
+                alert('Correct answer is required for Short Answer.');
+                return;
+            }
+            document.getElementById('add_sa_answer').value = addSaQuill.root.innerHTML;
+        }
+        
         const formData = new FormData(this);
         const submitBtn = document.getElementById('add-btn');
         const originalText = submitBtn.textContent;
@@ -723,7 +916,6 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
 
         // Validate
-        const type = document.getElementById('type').value;
         if (type === 'mcq') {
             const mcqInputs = document.querySelectorAll('.mcq-options input[type="text"]');
             const filledOptions = Array.from(mcqInputs).filter(input => input.value.trim() !== '').length;
@@ -748,14 +940,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.disabled = false;
                 return;
             }
-        } else if (type === 'short_answer') {
-            const answerText = document.querySelector('.sa-options textarea').value.trim();
-            if (!answerText) {
-                alert('Please provide a correct answer for Short Answer');
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                return;
-            }
         }
 
         fetch('{{ route("questions.store", $exam->id) }}', {
@@ -768,10 +952,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('addQuestionModal')).hide();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addQuestionModal'));
+                modal.hide();
                 this.reset();
+                addQuill.root.innerHTML = '';
+                if (type === 'short_answer') addSaQuill.root.innerHTML = '';
                 showAlert('success', data.message);
-                location.reload(); // Reload to show new question
+                addNewQuestionRow(data.question);
             } else {
                 showFormErrors(this, data.errors || {});
             }
@@ -789,6 +976,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Edit form submission
     document.getElementById('edit-question-form').addEventListener('submit', function(e) {
         e.preventDefault();
+        
+        // Validate Quill question text
+        const questionText = editQuill.getText().trim();
+        if (!questionText) {
+            alert('Question text is required.');
+            return;
+        }
+        
+        // Update hidden textarea with Quill content
+        document.getElementById('edit_question_text').value = editQuill.root.innerHTML;
+        
+        // Validate short answer if applicable
+        const type = document.getElementById('edit_type').value;
+        if (type === 'short_answer') {
+            const saText = editSaQuill.getText().trim();
+            if (!saText) {
+                alert('Correct answer is required for Short Answer.');
+                return;
+            }
+            document.getElementById('edit_sa_answer').value = editSaQuill.root.innerHTML;
+        }
+        
         const id = document.getElementById('edit-id-field').value;
         const formData = new FormData(this);
         formData.append('_method', 'PUT');
@@ -798,7 +1007,6 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
 
         // Client-side validation for edit
-        const type = document.getElementById('edit_type').value;
         if (type === 'mcq') {
             const mcqInputs = document.querySelectorAll('#edit_mcq_options input[type="text"]');
             const filledOptions = Array.from(mcqInputs).filter(input => input.value.trim() !== '').length;
@@ -823,14 +1031,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.disabled = false;
                 return;
             }
-        } else if (type === 'short_answer') {
-            const answerText = document.getElementById('edit_sa_answer').value.trim();
-            if (!answerText) {
-                alert('Please provide a correct answer for Short Answer');
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                return;
-            }
         }
 
         fetch(`/questions/${id}`, {
@@ -843,9 +1043,10 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+                modal.hide();
                 showAlert('success', data.message);
-                location.reload(); // Reload to show updated question
+                updateQuestionRow(data.question);
             } else {
                 showFormErrors(this, data.errors || {});
             }
@@ -861,7 +1062,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Delete function
-    function deleteQuestion(url) {
+    function deleteQuestion(id, url) {
         fetch(url, {
             method: 'DELETE',
             headers: {
@@ -873,7 +1074,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showAlert('success', data.message);
-                location.reload(); // Reload to remove deleted question
+                removeRow(id);
             } else {
                 showAlert('danger', data.message || 'An error occurred while deleting.');
             }
@@ -911,7 +1112,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showAlert('success', data.message);
-                location.reload();
+                removeRows(ids);
+                addNoResultRow();
             } else {
                 showAlert('danger', data.message || 'An error occurred while deleting.');
             }
@@ -988,6 +1190,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelector('.tf-options').style.display = 'block';
             } else if (this.value === 'short_answer') {
                 document.querySelector('.sa-options').style.display = 'block';
+                addSaQuill.root.innerHTML = '';
             }
 
             updateCorrectOptionAdd();
