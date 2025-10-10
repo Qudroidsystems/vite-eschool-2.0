@@ -10,7 +10,16 @@
         .school-info h1 { margin: 0; font-size: 18px; }
         .school-info p { margin: 5px 0; }
         .student-info { float: right; text-align: right; }
-        .student-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; float: left; margin-right: 10px; border: 2px solid #ddd; }
+        .student-photo { 
+            width: 80px; 
+            height: 80px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            float: left; 
+            margin-right: 10px; 
+            border: 2px solid #ddd; 
+        }
+        .student-info > div { overflow: hidden; }
         .exam-details { clear: both; margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 5px; }
         .question { margin-bottom: 25px; page-break-inside: avoid; }
         .question-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
@@ -41,12 +50,8 @@
             <p>Date: {{ now()->format('F d, Y') }}</p>
         </div>
         <div class="student-info">
-            @if($student->picture)
-                <img src="{{ asset('storage/' . $student->picture) }}" alt="Student Photo" class="student-photo">
-            @else
-                <img src="{{ asset('storage/student_avatars/unnamed.jpg') }}" alt="Default Photo" class="student-photo">
-            @endif
-            <div style="overflow: hidden;">
+            <img src="{{ $student->picture_path }}" alt="Student Photo" class="student-photo">
+            <div>
                 <h3>{{ $student->firstname }} {{ $student->lastname }}</h3>
                 <p>Admission No: {{ $student->admissionNo }}</p>
             </div>

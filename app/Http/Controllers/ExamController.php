@@ -390,12 +390,7 @@ class ExamController extends Controller
     }
 
 
-    /**
-     * Generate PDF question paper for a student's exam attempt.
-     */
-   
-    
-    /**
+  /**
      * Generate PDF question paper for a student's exam attempt.
      */
     public function generateQuestionPaperPdf(Exam $exam, $studentId)
@@ -411,6 +406,17 @@ class ExamController extends Controller
                 'studentpicture.picture as picture'
             )
             ->firstOrFail();
+
+        // NEW: Handle picture path - ensure it's a full asset path or fallback
+        if ($student->picture && Storage::disk('public')->exists($student->picture)) {
+            $student->picture_path = asset('storage/' . $student->picture);
+        } else {
+            // Fallback: Check if default file exists, else use a placeholder
+            $defaultPath = 'student_avatars/unnamed.jpg';
+            $student->picture_path = Storage::disk('public')->exists($defaultPath) 
+                ? asset('storage/' . $defaultPath) 
+                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNFNUU1RTUiLz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Qzk5QUMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4Ii8+Cjwvc3ZnPgo='; // Base64 SVG placeholder for no image
+        }
 
         $result = DB::table('results')
             ->where('user_id', $studentId)
@@ -449,7 +455,11 @@ class ExamController extends Controller
 
         $pdf = Pdf::loadView('exam.question-paper-pdf', $data);
         $pdf->setPaper('A4', 'portrait');
-        $pdf->setOptions(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true]); // For images
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true, 
+            'isRemoteEnabled' => true,  // Allows loading external images
+            'isPhpEnabled' => true     // For dynamic content
+        ]);
 
         $filename = "Question-Paper-{$student->firstname}-{$student->lastname}-{$exam->title}.pdf";
         return $pdf->download($filename);
