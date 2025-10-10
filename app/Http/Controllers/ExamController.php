@@ -393,11 +393,13 @@ class ExamController extends Controller
     /**
      * Generate PDF question paper for a student's exam attempt.
      */
+   
     public function generateQuestionPaperPdf(Exam $exam, $studentId)
     {
         $student = DB::table('studentRegistration')
-            ->where('id', $studentId)
-            ->select('id', 'firstname', 'lastname', 'admissionNo')
+            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+            ->where('studentRegistration.id', $studentId)
+            ->select('studentRegistration.id', 'studentRegistration.firstname', 'studentRegistration.lastname', 'studentRegistration.admissionNo', 'studentpicture.picture as picture')
             ->firstOrFail();
 
         $result = DB::table('results')
