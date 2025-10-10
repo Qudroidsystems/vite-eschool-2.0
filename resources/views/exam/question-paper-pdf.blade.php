@@ -6,22 +6,29 @@
     <style>
         body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #333; margin: 0; padding: 20px; }
         .header { 
-            text-align: center; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
             margin-bottom: 30px; 
             border-bottom: 2px solid #333; 
             padding-bottom: 20px; 
-            overflow: hidden; /* Contain floats */
+            gap: 20px; /* Space between sections */
         }
-        .school-section { float: left; text-align: left; margin-right: 20px; }
-        .school-logo { max-width: 100px; max-height: 100px; display: block; margin-bottom: 10px; }
-        .school-info h1 { margin: 0 0 5px 0; font-size: 18px; }
-        .school-info p { margin: 2px 0; font-size: 11px; }
-        .student-section { 
-            float: right; 
+        .school-section { 
+            flex: 1; 
+            text-align: center; 
             display: flex; 
+            flex-direction: column; 
             align-items: center; 
-            flex-direction: row-reverse; /* Photo on right, text on left of photo */
-            text-align: right; 
+        }
+        .school-logo { max-width: 100px; max-height: 100px; margin-bottom: 10px; }
+        .school-info h1 { margin: 0 0 5px 0; font-size: 18px; text-align: center; }
+        .school-info p { margin: 2px 0; font-size: 11px; text-align: center; }
+        .student-section { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            text-align: center; 
         }
         .student-photo { 
             width: 80px; 
@@ -29,15 +36,10 @@
             border-radius: 50%; 
             object-fit: cover; 
             border: 2px solid #ddd; 
-            margin-left: 10px; /* Space between photo and text */
-        }
-        .student-text { 
-            text-align: left; /* Align text left for readability */
-            margin-right: 10px; /* Space from right edge */
+            margin-bottom: 5px; 
         }
         .student-text h3 { margin: 0 0 5px 0; font-size: 14px; }
         .student-text p { margin: 0; font-size: 11px; }
-        .clear { clear: both; } /* Force clear after floats */
         .exam-details { margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 5px; }
         .question { margin-bottom: 25px; page-break-inside: avoid; }
         .question-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
@@ -76,7 +78,6 @@
                 <p>Admission No: {{ $student->admissionNo }}</p>
             </div>
         </div>
-        <div class="clear"></div> <!-- Clear floats -->
     </div>
 
     <div class="exam-details">
