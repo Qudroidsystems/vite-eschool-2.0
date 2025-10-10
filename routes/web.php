@@ -362,8 +362,9 @@ Route::group(['middleware' => ['auth']], function () {
     Route::delete('exams/{examId}/students/{studentId}/attempt/delete', [ExamController::class, 'deleteStudentAttempt'])->name('exams.student.attempt.delete');
 
     // Add this new route for viewing student answers
-     Route::get('/exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])->name('exams.student.answers');
-
+    Route::get('/exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])->name('exams.student.answers');
+    Route::get('/exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
+    ->name('exams.students.question-paper');  
      
     Route::resource('questions', QuestionController::class);
     Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);

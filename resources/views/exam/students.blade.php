@@ -159,76 +159,103 @@ document.addEventListener('DOMContentLoaded', function() {
     deleteButtons.forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
-            e.stopPropagation(); // Prevent btn-group interference
+            e.stopPropagation();
             
             const examId = this.dataset.examId;
             const studentId = this.dataset.studentId;
             const studentName = this.dataset.studentName;
             const row = this.closest('tr');
             const isInProgress = row.querySelector('.badge.bg-warning') !== null;
+            
             const confirmMsg = isInProgress 
                 ? `Are you sure you want to delete ${studentName}'s ongoing exam attempt? This will stop the exam and allow a retake.`
                 : `Are you sure you want to delete ${studentName}'s exam attempt? This will allow them to retake the exam.`;
             
-            if (confirm(confirmMsg)) {
-                // Disable button during request
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="ph-spinner"></i>';
-                button.disabled = true;
+            // SweetAlert confirmation
+            Swal.fire({
+                title: 'Are you sure?',
+                text: confirmMsg,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Deleting...',
+                        text: 'Please wait',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
 
-                fetch(`/exams/${examId}/students/${studentId}/attempt/delete`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => {
-                            console.error('Delete Error Response:', text);
-                            throw new Error(`Server error ${response.status}: ${text.substring(0, 200)}...`);
+                    fetch(`/exams/${examId}/students/${studentId}/attempt/delete`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                console.error('Delete Error Response:', text);
+                                throw new Error(`Server error ${response.status}: ${text.substring(0, 200)}...`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the row from the table
+                            row.remove();
+                            
+                            // Update the total count badge
+                            updateCountBadge();
+                            
+                            // Update pagination text
+                            updatePaginationText();
+                            
+                            // Update serial numbers
+                            updateSerialNumbers();
+                            
+                            // Check if table is empty
+                            checkEmptyTable();
+                            
+                            // Show success message
+                            Swal.fire({
+                                title: 'Deleted!',
+                                text: data.message,
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: data.message || 'Error deleting attempt. Please try again.',
+                                icon: 'error',
+                                confirmButtonColor: '#3085d6'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Delete Error:', error);
+                        Swal.fire({
+                            title: 'Error!',
+                            text: error.message || 'An error occurred while deleting the attempt.',
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6'
                         });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Re-enable button
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-
-                    if (data.success) {
-                        // Remove the row from the table
-                        row.remove();
-                        
-                        // Update the total count badge
-                        updateCountBadge();
-                        
-                        // Update pagination text
-                        updatePaginationText();
-                        
-                        // Update serial numbers
-                        updateSerialNumbers();
-                        
-                        // Check if table is empty
-                        checkEmptyTable();
-                        
-                        // Show success message
-                        alert(data.message); // Replace with toast if available
-                    } else {
-                        alert(data.message || 'Error deleting attempt. Please try again.');
-                    }
-                })
-                .catch(error => {
-                    // Re-enable button
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-
-                    console.error('Delete Error:', error);
-                    alert(error.message || 'An error occurred while deleting the attempt. Check console for details.');
-                });
-            }
+                    });
+                }
+            });
         });
     });
     
@@ -255,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateSerialNumbers() {
         const rows = document.querySelectorAll('#students-tbody tr:not(.empty-row)');
-        let i = (1 + (Math.max(0, rows.length - 15) / 15) * 15); // Approximate based on perPage=15
+        let i = (1 + (Math.max(0, rows.length - 15) / 15) * 15);
         rows.forEach(row => {
             const snCell = row.querySelector('.sn-number');
             if (snCell) {

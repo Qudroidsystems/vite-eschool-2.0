@@ -922,6 +922,11 @@ namespace App\Models {
      * @property int $exam_id
      * @property int $user_id
      * @property int $id
+     * @property-read mixed $answer_text
+     * @property-read \App\Models\Option $option
+     * @property-read \App\Models\Question $question
+     * @property-read \App\Models\User $user
+     * @property-read \App\Models\Exam $exam
      * @method static \Illuminate\Database\Eloquent\Builder<Answer>|Answer whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Answer>|Answer whereUserId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Answer>|Answer whereExamId($value)
@@ -5176,6 +5181,9 @@ namespace App\Models {
      * @property decimal:2|null $score
      * @property string $status
      * @property \Illuminate\Support\Carbon|null $end_time
+     * @property integer $pause_duration
+     * @property \Illuminate\Support\Carbon|null $resumed_at
+     * @property \Illuminate\Support\Carbon|null $paused_at
      * @property \Illuminate\Support\Carbon $start_time
      * @property int $exam_id
      * @property int $student_id
@@ -5187,6 +5195,9 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereStudentId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereExamId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereStartTime($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt wherePausedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereResumedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt wherePauseDuration($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereEndTime($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereScore($value)

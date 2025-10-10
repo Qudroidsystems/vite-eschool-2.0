@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Exam;
 use App\Models\Answer;
+use App\Models\Question;
 use App\Models\Schoolterm;
+use App\Models\ExamAttempt;
 use App\Models\Schoolclass;
 use App\Models\ClassTeacher;
 use Illuminate\Http\Request;
 use App\Models\Schoolsession;
 use App\Models\SubjectTeacher;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\SchoolInformation;
 use App\Models\Staffclasssetting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Str;
@@ -383,5 +387,59 @@ class ExamController extends Controller
             'success' => true,
             'message' => count($ids) . ' exams deleted successfully.'
         ]);
+    }
+
+
+    /**
+     * Generate PDF question paper for a student's exam attempt.
+     */
+    public function generateQuestionPaperPdf(Exam $exam, $studentId)
+    {
+        $student = DB::table('studentRegistration')
+            ->where('id', $studentId)
+            ->select('id', 'firstname', 'lastname', 'admissionNo')
+            ->firstOrFail();
+
+        $result = DB::table('results')
+            ->where('user_id', $studentId)
+            ->where('exam_id', $exam->id)
+            ->first();
+
+        // Fetch school info (active record)
+        $school = SchoolInformation::where('is_active', true)->first();
+
+        // Fetch attempt for date taken
+        $attempt = ExamAttempt::where('exam_id', $exam->id)
+            ->where('student_id', $studentId)
+            ->whereIn('status', ['completed', 'in_progress'])
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        // Load questions with all options
+        $questions = Question::where('exam_id', $exam->id)
+            ->with('options') // All options
+            ->get();
+
+        // For each question, get student's answer
+        foreach ($questions as $question) {
+            $studentAnswer = Answer::where('question_id', $question->id)
+                ->where('user_id', $studentId)
+                ->where('exam_id', $exam->id)
+                ->with('option') // Student's selected option
+                ->first();
+
+            $question->student_answer = $studentAnswer ? $studentAnswer->option->option_text ?? 'Not Attempted' : 'Not Attempted';
+            $question->student_option_id = $studentAnswer ? $studentAnswer->option_id : null;
+            $question->marked_correct = $studentAnswer && $studentAnswer->option->is_correct ? 'Yes' : ($studentAnswer ? 'No' : 'Not Attempted');
+        }
+
+        $data = compact('exam', 'student', 'result', 'school', 'attempt', 'questions');
+
+        $pdf = Pdf::loadView('exam.question-paper-pdf', $data);
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOptions(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true]); // For images
+
+        $filename = "Question-Paper-{$student->firstname}-{$student->lastname}-{$exam->title}.pdf";
+        return $pdf->download($filename);
     }
 }

@@ -497,7 +497,7 @@
                                 
                                 <!-- Question Text -->
                                 <div class="question-text-container">
-                                    <p id="questionText" class="mb-0 question-text" style="font-size: 1.1rem; line-height: 1.8;"></p>
+                                    <div id="questionText" class="question-text" style="font-size: 1.1rem; line-height: 1.8;"></div>
                                 </div>
                                 
                                 <!-- Question Image -->
@@ -699,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (!questions || questions.length === 0) {
         console.error('No questions loaded');
-        document.getElementById('questionText').textContent = 'No questions available';
+        document.getElementById('questionText').innerHTML = 'No questions available';
         return;
     }
 
@@ -827,7 +827,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const question = questions[index];
         document.getElementById('currentQuestionNum').textContent = index + 1;
         document.getElementById('currentQuestionNum2').textContent = index + 1;
-        document.getElementById('questionText').textContent = question.text;
+        document.getElementById('questionText').innerHTML = question.text;
         
         // Save notes from previous question
         if (currentQuestion !== index) {
