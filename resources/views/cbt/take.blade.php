@@ -616,9 +616,10 @@
     </div>
 </div>
 
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const duration = {{ $exam->duration ?? 0 }} * 60;
+    const duration = {{ $exam->duration ?? 0 }} * 60; // e.g., 10 mins = 600s
     let timeLeft = duration;
     const timerElement = document.getElementById('examTimer');
     let timer;
@@ -629,12 +630,45 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Invalid duration');
         timerElement.textContent = 'Timer Error';
     } else {
-        const savedTime = localStorage.getItem('examTimeLeft');
-        if (savedTime !== null) {
-            timeLeft = parseInt(savedTime, 10);
+        // NEW: Timestamp-based resume to fix shortages
+        const startTimeStr = localStorage.getItem('examStartTime');
+        if (startTimeStr !== null) {
+            const startTime = parseInt(startTimeStr, 10);
+            const now = Date.now();
+            const elapsedMs = now - startTime;
+            const elapsedSeconds = Math.floor(elapsedMs / 1000);
+            console.log(`Elapsed since start: ${elapsedSeconds}s`);
+            
+            if (elapsedSeconds >= duration) {
+                // Exam expired—clear and auto-submit
+                console.warn('Exam time expired on resume');
+                localStorage.removeItem('examStartTime');
+                localStorage.removeItem('examTimeLeft');
+                localStorage.removeItem('examAnswers');
+                localStorage.removeItem('examNotes');
+                Swal.fire({
+                    title: 'Time Expired',
+                    text: 'Your exam time has run out. Submitting now.',
+                    icon: 'warning',
+                    timer: 3000,
+                    showConfirmButton: false
+                }).then(() => submitExam(true));
+                return; // Don't start timer
+            } else {
+                // Valid resume: Use calculated remaining
+                timeLeft = duration - elapsedSeconds;
+                console.log(`Resumed with calculated ${timeLeft}s remaining (ignored stale savedTime)`);
+                // Clear old savedTime to avoid confusion
+                localStorage.removeItem('examTimeLeft');
+            }
+        } else {
+            // Fresh start: Set timestamp
+            const now = Date.now();
+            localStorage.setItem('examStartTime', now.toString());
+            console.log(`New exam started at ${now}`);
         }
 
-        // Add pulse animation when time is running low
+        // Start timer from calculated timeLeft
         timer = setInterval(() => {
             const hours = Math.floor(timeLeft / 3600);
             const minutes = Math.floor((timeLeft % 3600) / 60);
@@ -642,15 +676,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             timerElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
             
-            // Add warning animation when time is low
             if (timeLeft <= 300 && timeLeft > 0) {
                 timerElement.classList.add('pulse-animation');
             }
             
+            // Save current timeLeft (for fallback, but timestamp is primary)
             localStorage.setItem('examTimeLeft', timeLeft);
 
             if (timeLeft <= 0) {
                 clearInterval(timer);
+                localStorage.removeItem('examStartTime');
                 localStorage.removeItem('examTimeLeft');
                 localStorage.removeItem('examAnswers');
                 localStorage.removeItem('examNotes');
@@ -892,7 +927,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentQuestion < questions.length - 1) loadQuestion(currentQuestion + 1);
     };
     
-    // Submit
+    // Submit (unchanged from previous fix)
     @if(auth()->user()->can('Submit cbt-exam'))
     document.getElementById('submitExam').onclick = () => {
         Swal.fire({
@@ -912,17 +947,21 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     @endif
     
-    // Notes
+    // Notes with debounce (unchanged)
+    let notesTimeout;
     document.getElementById('questionNotes').addEventListener('input', (e) => {
-        notes[currentQuestion] = e.target.value;
-        localStorage.setItem('examNotes', JSON.stringify(notes));
+        clearTimeout(notesTimeout);
+        notesTimeout = setTimeout(() => {
+            notes[currentQuestion] = e.target.value;
+            localStorage.setItem('examNotes', JSON.stringify(notes));
+        }, 500);
     });
 
+    // Submit function (unchanged from previous)
     function submitExam(isAutoSubmit = false) {
         notes[currentQuestion] = document.getElementById('questionNotes').value;
         localStorage.setItem('examNotes', JSON.stringify(notes));
         
-        // Show loading alert
         if (!isAutoSubmit) {
             Swal.fire({
                 title: 'Submitting...',
@@ -945,22 +984,33 @@ document.addEventListener('DOMContentLoaded', function() {
             }))
         };
 
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!csrfToken) {
+            console.error('CSRF token missing');
+            return Swal.fire('Error', 'Security token missing. Please refresh and try again.', 'error');
+        }
+
         fetch('/cbt/submit', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': csrfToken
             },
             body: JSON.stringify(submissionData)
         })
-        .then(response => {
+        .then(async response => {
+            const data = await response.json();
             if (!response.ok) {
-                throw new Error('Network response was not ok: ' + response.statusText);
+                if (response.status === 419) {
+                    throw new Error('Security token expired. Refreshing page...');
+                }
+                throw new Error(data.message || `Server error: ${response.status}`);
             }
-            return response.json();
+            return data;
         })
         .then(data => {
             if (data.success) {
+                localStorage.removeItem('examStartTime');
                 localStorage.removeItem('examTimeLeft');
                 localStorage.removeItem('examAnswers');
                 localStorage.removeItem('examNotes');
@@ -975,20 +1025,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.location.href = '{{ route("cbt.index") }}';
                 });
             } else {
-                throw new Error(data.message || 'Unknown error');
+                throw new Error(data.message || 'Unknown submission error');
             }
         })
         .catch(error => {
             console.error('Submission error:', error);
-            if (isAutoSubmit) {
-                console.log('Auto-submit failed; will retry on reconnect');
+            if (isAutoSubmit || error.message.includes('419')) {
+                if (error.message.includes('419')) {
+                    Swal.fire('Token Expired', 'Refreshing page to retry...', 'warning').then(() => {
+                        location.reload();
+                    });
+                } else {
+                    console.log('Auto-submit failed; retrying in 5s...');
+                    setTimeout(() => submitExam(true), 5000);
+                }
             } else {
                 Swal.fire({
-                    title: 'Error!',
-                    text: 'An error occurred while submitting the exam: ' + error.message + '. Your progress has been saved.',
+                    title: 'Submission Failed',
+                    text: error.message + '. Your answers are saved locally—retry or contact support.',
                     icon: 'error',
                     confirmButtonColor: '#667eea',
-                    confirmButtonText: 'OK'
+                    confirmButtonText: 'Retry'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitExam(false);
+                    }
                 });
             }
         });
@@ -1008,6 +1069,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.addEventListener('online', () => {
         if (timeLeft > 0) {
+            // Re-init timer on online (uses timestamp, so accurate)
             timer = setInterval(() => {
                 const hours = Math.floor(timeLeft / 3600);
                 const minutes = Math.floor((timeLeft % 3600) / 60);
@@ -1023,6 +1085,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (timeLeft <= 0) {
                     clearInterval(timer);
+                    localStorage.removeItem('examStartTime');
                     localStorage.removeItem('examTimeLeft');
                     localStorage.removeItem('examAnswers');
                     localStorage.removeItem('examNotes');
@@ -1075,7 +1138,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadQuestion(0);
 });
 
-// Calculator functions (global scope for SweetAlert HTML)
+// Calculator functions (global scope for SweetAlert HTML) - unchanged
 let calcCurrentValue = '0';
 let calcPreviousValue = '';
 let calcOperation = null;

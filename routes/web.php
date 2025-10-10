@@ -38,6 +38,7 @@ use App\Http\Controllers\ClassOperationController;
 use App\Http\Controllers\StudentResultsController;
 use App\Http\Controllers\SubjectTeacherController;
 use App\Http\Controllers\SubjectVettingController;
+use App\Http\Controllers\Admin\ExamPauseController;
 use App\Http\Controllers\ClassBroadsheetController;
 use App\Http\Controllers\StaffImageUploadController;
 use App\Http\Controllers\SubjectOperationController;
@@ -358,7 +359,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])->name('exams.destroy');
     // Add this new route for viewing students
     Route::get('/exams/{exam}/students', [ExamController::class, 'showStudents'])->name('exams.students');
-
+    Route::delete('exams/{examId}/students/{studentId}/attempt/delete', [ExamController::class, 'deleteStudentAttempt'])->name('exams.student.attempt.delete');
 
     // Add this new route for viewing student answers
      Route::get('/exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])->name('exams.student.answers');
@@ -390,4 +391,9 @@ Route::group(['middleware' => ['auth']], function () {
     // Route::resource('cbt', CBTController::class);
     // Route::get('/cbt/{examid}/takecbt', [CBTController::class, 'takeCBT'])->name('cbt.take');
     // Route::post('/cbt/submit', [CBTController::class, 'submit'])->name('cbt.submit');
+    
+
+    Route::post('/admin/exams/{exam}/pause', [ExamPauseController::class, 'pause'])->name('admin.exams.pause');
+    Route::post('/admin/exams/{exam}/resume', [ExamPauseController::class, 'resume'])->name('admin.exams.resume');
+    Route::get('/api/exams/{exam}/status', [ExamPauseController::class, 'status'])->name('api.exams.status');
 });

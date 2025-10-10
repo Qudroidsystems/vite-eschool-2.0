@@ -5173,13 +5173,16 @@ namespace App\Models {
      *
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
-     * @property float|null $score
+     * @property decimal:2|null $score
      * @property string $status
-     * @property string|null $end_time
-     * @property string $start_time
+     * @property \Illuminate\Support\Carbon|null $end_time
+     * @property \Illuminate\Support\Carbon $start_time
      * @property int $exam_id
      * @property int $student_id
      * @property int $id
+     * @property-read mixed $effective_remaining_time
+     * @property-read \App\Models\User $student
+     * @property-read \App\Models\Exam $exam
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereStudentId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereExamId($value)
@@ -5189,6 +5192,8 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereScore($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt paused()
+     * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt active()
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ExamAttempt>|ExamAttempt query()

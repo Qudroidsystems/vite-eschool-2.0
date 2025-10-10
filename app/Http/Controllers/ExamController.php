@@ -23,7 +23,7 @@ class ExamController extends Controller
         $this->middleware('permission:View exam', ['only' => ['index', 'show', 'edit', 'showStudents', 'showStudentAnswers']]);
         $this->middleware('permission:Create exam', ['only' => ['create', 'store']]);
         $this->middleware('permission:Update exam', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:Delete exam', ['only' => ['destroy', 'bulkDestroy']]);
+        $this->middleware('permission:Delete exam', ['only' => ['destroy', 'bulkDestroy', 'deleteStudentAttempt']]);
     }
 
     /**
@@ -103,11 +103,11 @@ class ExamController extends Controller
     /**
      * Show students who attempted the specified exam.
      */
-    public function showStudents($examId)
+    public function showStudents(Request $request, $examId)
     {
         $exam = Exam::findOrFail($examId);
 
-        $students = DB::table('exam_attempts')
+        $query = DB::table('exam_attempts')
             ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
             ->join('results', 'exam_attempts.student_id', '=', 'results.user_id')
@@ -124,12 +124,52 @@ class ExamController extends Controller
                 'results.total_marks',
                 DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions')
             )
-            ->orderBy('studentRegistration.lastname')
-            ->paginate(15);
+            ->orderBy('studentRegistration.lastname');
+
+        $students = $query->paginate(15);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json($students);
+        }
 
         $pagetitle = 'Students who Attempted: ' . $exam->title;
 
         return view('exam.students', compact('pagetitle', 'exam', 'students'));
+    }
+
+    /**
+     * Delete a student's exam attempt so they can retake it.
+     */
+    public function deleteStudentAttempt($examId, $studentId)
+    {
+        $exam = Exam::findOrFail($examId);
+
+        // Delete answers
+        Answer::where('exam_id', $examId)
+              ->where('user_id', $studentId)
+              ->delete();
+
+        // Delete result
+        DB::table('results')
+          ->where('exam_id', $examId)
+          ->where('user_id', $studentId)
+          ->delete();
+
+        // Delete exam attempt
+        DB::table('exam_attempts')
+          ->where('exam_id', $examId)
+          ->where('student_id', $studentId)
+          ->where('status', 'completed')
+          ->delete();
+
+        if (request()->ajax() || request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Student\'s exam attempt deleted successfully. They can now retake the exam.'
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Student\'s exam attempt deleted successfully. They can now retake the exam.');
     }
 
     /**
