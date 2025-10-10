@@ -25,7 +25,7 @@
                     <div class="card">
                         <div class="card-header d-flex align-items-center">
                             <div class="flex-grow-1">
-                                <h5 class="card-title mb-0">Students <span class="badge bg-dark-subtle text-dark ms-1">{{ $students->total() }}</span></h5>
+                                <h5 class="card-title mb-0">Students <span class="badge bg-dark-subtle text-dark ms-1" id="students-count">{{ $students->total() }}</span></h5>
                             </div>
                         </div>
                         <div class="card-body">
@@ -45,11 +45,11 @@
                                             <th class="min-w-100px">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="fw-semibold text-gray-600">
+                                    <tbody id="students-tbody">
                                         @php $i = ($students->currentPage() - 1) * $students->perPage() @endphp
                                         @forelse ($students as $student)
                                             <tr data-student-id="{{ $student->id }}">
-                                                <td>{{ ++$i }}</td>
+                                                <td class="sn-number">{{ ++$i }}</td>
                                                 <td>
                                                     <img src="{{ $student->picture ? asset('storage/student_avatars/' . basename($student->picture)) : asset('storage/student_avatars/unnamed.jpg') }}"
                                                          alt="{{ $student->lastname }} {{ $student->firstname }}"
@@ -58,22 +58,52 @@
                                                 </td>
                                                 <td>{{ $student->lastname }} {{ $student->firstname }}</td>
                                                 <td>{{ $student->admissionNo }}</td>
-                                                <td>{{ $student->total_marks }}</td>
-                                                <td>{{ $student->attempted_questions }}</td>
-                                                <td>{{ $student->score }}</td>
-                                                <td>{{ $student->attempted_questions - $student->score }}</td>
                                                 <td>
-                                                    <span class="badge bg-success">{{ $student->score }} / {{ $student->total_marks }}</span>
+                                                    @if($student->attempt_status === 'in_progress')
+                                                        <span class="badge bg-warning text-dark">In Progress</span>
+                                                    @else
+                                                        {{ $student->total_marks ?? 0 }}
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($student->attempt_status === 'in_progress')
+                                                        <span class="badge bg-warning text-dark">In Progress</span>
+                                                    @else
+                                                        {{ $student->attempted_questions ?? 0 }}
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($student->attempt_status === 'in_progress')
+                                                        <span class="badge bg-warning text-dark">In Progress</span>
+                                                    @else
+                                                        {{ $student->score ?? 0 }}
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($student->attempt_status === 'in_progress')
+                                                        <span class="badge bg-warning text-dark">In Progress</span>
+                                                    @else
+                                                        {{ ($student->attempted_questions ?? 0) - ($student->score ?? 0) }}
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($student->attempt_status === 'in_progress')
+                                                        <span class="badge bg-info">Ongoing</span>
+                                                    @else
+                                                        <span class="badge bg-success">{{ $student->score ?? 0 }} / {{ $student->total_marks ?? 0 }}</span>
+                                                    @endif
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}" 
-                                                           class="btn btn-subtle-info btn-icon btn-sm" 
-                                                           data-bs-toggle="tooltip" 
-                                                           data-bs-placement="top" 
-                                                           title="View Answers">
-                                                            <i class="ph-eye"></i>
-                                                        </a>
+                                                        @if($student->attempt_status === 'completed')
+                                                            <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}" 
+                                                               class="btn btn-subtle-info btn-icon btn-sm" 
+                                                               data-bs-toggle="tooltip" 
+                                                               data-bs-placement="top" 
+                                                               title="View Answers">
+                                                                <i class="ph-eye"></i>
+                                                            </a>
+                                                        @endif
                                                         <button type="button" 
                                                                 class="btn btn-subtle-danger btn-icon btn-sm delete-attempt" 
                                                                 data-bs-toggle="tooltip" 
@@ -88,7 +118,7 @@
                                                 </td>
                                             </tr>
                                         @empty
-                                            <tr>
+                                            <tr class="empty-row">
                                                 <td colspan="10" class="text-center">No students found</td>
                                             </tr>
                                         @endforelse
@@ -97,7 +127,7 @@
                             </div>
                             <div class="row mt-3 align-items-center">
                                 <div class="col-sm">
-                                    <div class="text-muted text-center text-sm-start">
+                                    <div class="text-muted text-center text-sm-start" id="pagination-text">
                                         Showing <span class="fw-semibold">{{ $students->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $students->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $students->total() }}</span> Results
                                     </div>
                                 </div>
@@ -135,53 +165,110 @@ document.addEventListener('DOMContentLoaded', function() {
             const studentId = this.dataset.studentId;
             const studentName = this.dataset.studentName;
             const row = this.closest('tr');
+            const isInProgress = row.querySelector('.badge.bg-warning') !== null;
+            const confirmMsg = isInProgress 
+                ? `Are you sure you want to delete ${studentName}'s ongoing exam attempt? This will stop the exam and allow a retake.`
+                : `Are you sure you want to delete ${studentName}'s exam attempt? This will allow them to retake the exam.`;
             
-            if (confirm(`Are you sure you want to delete ${studentName}'s exam attempt? This will allow them to retake the exam.`)) {
+            if (confirm(confirmMsg)) {
+                // Disable button during request
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="ph-spinner"></i>';
+                button.disabled = true;
+
                 fetch(`/exams/${examId}/students/${studentId}/attempt/delete`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            console.error('Delete Error Response:', text);
+                            throw new Error(`Server error ${response.status}: ${text.substring(0, 200)}...`);
+                        });
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    // Re-enable button
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+
                     if (data.success) {
                         // Remove the row from the table
                         row.remove();
                         
-                        // Update the total count badge if necessary
-                        const badge = document.querySelector('.badge');
-                        if (badge) {
-                            const currentTotal = parseInt(badge.textContent);
-                            badge.textContent = currentTotal - 1;
-                        }
+                        // Update the total count badge
+                        updateCountBadge();
                         
-                        // Update pagination text if needed
+                        // Update pagination text
                         updatePaginationText();
                         
-                        // Show success message (assuming you have a toast or alert system)
-                        alert(data.message); // Replace with your preferred notification system
+                        // Update serial numbers
+                        updateSerialNumbers();
+                        
+                        // Check if table is empty
+                        checkEmptyTable();
+                        
+                        // Show success message
+                        alert(data.message); // Replace with toast if available
                     } else {
-                        alert('Error deleting attempt. Please try again.');
+                        alert(data.message || 'Error deleting attempt. Please try again.');
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while deleting the attempt.');
+                    // Re-enable button
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+
+                    console.error('Delete Error:', error);
+                    alert(error.message || 'An error occurred while deleting the attempt. Check console for details.');
                 });
             }
         });
     });
     
+    function updateCountBadge() {
+        const badge = document.getElementById('students-count');
+        if (badge) {
+            let currentTotal = parseInt(badge.textContent.trim());
+            if (!isNaN(currentTotal)) {
+                badge.textContent = currentTotal - 1;
+            }
+        }
+    }
+    
     function updatePaginationText() {
-        const totalText = document.querySelector('.text-muted');
-        if (totalText) {
-            const match = totalText.textContent.match(/of (\d+) Results/);
+        const paginationText = document.getElementById('pagination-text');
+        if (paginationText) {
+            const match = paginationText.textContent.match(/of (\d+) Results/);
             if (match) {
                 const newTotal = parseInt(match[1]) - 1;
-                totalText.innerHTML = totalText.innerHTML.replace(/of \d+ Results/, `of ${newTotal} Results`);
+                paginationText.innerHTML = paginationText.innerHTML.replace(/of \d+ Results/, `of ${newTotal} Results`);
             }
+        }
+    }
+    
+    function updateSerialNumbers() {
+        const rows = document.querySelectorAll('#students-tbody tr:not(.empty-row)');
+        let i = (1 + (Math.max(0, rows.length - 15) / 15) * 15); // Approximate based on perPage=15
+        rows.forEach(row => {
+            const snCell = row.querySelector('.sn-number');
+            if (snCell) {
+                snCell.textContent = ++i;
+            }
+        });
+    }
+    
+    function checkEmptyTable() {
+        const tbody = document.getElementById('students-tbody');
+        const rows = tbody.querySelectorAll('tr:not(.empty-row)');
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="10" class="text-center">No students found</td></tr>';
         }
     }
 });

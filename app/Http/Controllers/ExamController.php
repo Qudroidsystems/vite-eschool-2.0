@@ -101,7 +101,7 @@ class ExamController extends Controller
     }
 
     /**
-     * Show students who attempted the specified exam.
+     * Show students who attempted the specified exam (completed or in_progress).
      */
     public function showStudents(Request $request, $examId)
     {
@@ -110,10 +110,12 @@ class ExamController extends Controller
         $query = DB::table('exam_attempts')
             ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-            ->join('results', 'exam_attempts.student_id', '=', 'results.user_id')
+            ->leftJoin('results', function ($join) use ($examId) {
+                $join->on('exam_attempts.student_id', '=', 'results.user_id')
+                     ->where('results.exam_id', '=', $examId);
+            })
             ->where('exam_attempts.exam_id', $examId)
-            ->where('exam_attempts.status', 'completed')
-            ->where('results.exam_id', $examId)
+            ->whereIn('exam_attempts.status', ['completed', 'in_progress'])
             ->select(
                 'studentRegistration.id',
                 'studentRegistration.firstname',
@@ -122,6 +124,7 @@ class ExamController extends Controller
                 'studentpicture.picture as picture',
                 'results.score',
                 'results.total_marks',
+                'exam_attempts.status as attempt_status',
                 DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions')
             )
             ->orderBy('studentRegistration.lastname');
@@ -144,32 +147,48 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($examId);
 
-        // Delete answers
-        Answer::where('exam_id', $examId)
+        try {
+            // Delete answers
+            Answer::where('exam_id', $examId)
+                  ->where('user_id', $studentId)
+                  ->delete();
+
+            // Delete result
+            DB::table('results')
+              ->where('exam_id', $examId)
               ->where('user_id', $studentId)
               ->delete();
 
-        // Delete result
-        DB::table('results')
-          ->where('exam_id', $examId)
-          ->where('user_id', $studentId)
-          ->delete();
+            // Delete exam attempt (for both completed and in_progress)
+            $deletedAttempt = DB::table('exam_attempts')
+              ->where('exam_id', $examId)
+              ->where('student_id', $studentId)
+              ->delete();
 
-        // Delete exam attempt
-        DB::table('exam_attempts')
-          ->where('exam_id', $examId)
-          ->where('student_id', $studentId)
-          ->where('status', 'completed')
-          ->delete();
+            $message = $deletedAttempt > 0 
+                ? 'Student\'s exam attempt deleted successfully. They can now retake the exam.'
+                : 'No active attempt found for this student.';
 
-        if (request()->ajax() || request()->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Student\'s exam attempt deleted successfully. They can now retake the exam.'
-            ]);
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message
+                ]);
+            }
+
+            return redirect()->back()->with('success', $message);
+        } catch (\Exception $e) {
+            \Log::error("Error deleting student attempt: " . $e->getMessage());
+
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while deleting the attempt. Please check the logs for details.'
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'An error occurred while deleting the attempt.');
         }
-
-        return redirect()->back()->with('success', 'Student\'s exam attempt deleted successfully. They can now retake the exam.');
     }
 
     /**
