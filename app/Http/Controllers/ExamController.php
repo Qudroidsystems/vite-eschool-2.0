@@ -46,6 +46,9 @@ class ExamController extends Controller
 
         $query = Exam::query();
 
+        // Filter exams by the logged-in user's staff ID
+        $query->where('staffId', $user->id);
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -110,7 +113,7 @@ class ExamController extends Controller
      */
     public function showStudents(Request $request, $examId)
     {
-        $exam = Exam::findOrFail($examId);
+        $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
 
         $query = DB::table('exam_attempts')
             ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
@@ -150,7 +153,7 @@ class ExamController extends Controller
      */
     public function deleteStudentAttempt($examId, $studentId)
     {
-        $exam = Exam::findOrFail($examId);
+        $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
 
         try {
             // Delete answers
@@ -201,7 +204,7 @@ class ExamController extends Controller
      */
     public function showStudentAnswers($examId, $studentId)
     {
-        $exam = Exam::findOrFail($examId);
+        $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
 
         $student = DB::table('studentRegistration')
             ->where('id', $studentId)
@@ -302,7 +305,7 @@ class ExamController extends Controller
      */
     public function edit(string $id)
     {
-        $exam = Exam::findOrFail($id);
+        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
         if (request()->ajax() || request()->wantsJson()) {
             return response()->json([
@@ -320,7 +323,7 @@ class ExamController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $exam = Exam::findOrFail($id);
+        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -356,7 +359,7 @@ class ExamController extends Controller
      */
     public function destroy(string $id)
     {
-        $exam = Exam::findOrFail($id);
+        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
         $exam->delete();
 
         if (request()->ajax() || request()->wantsJson()) {
@@ -374,6 +377,7 @@ class ExamController extends Controller
      */
     public function bulkDestroy(Request $request)
     {
+        $user = auth()->user();
         $ids = $request->input('ids', []);
         if (empty($ids)) {
             return response()->json([
@@ -382,11 +386,13 @@ class ExamController extends Controller
             ], 400);
         }
 
-        Exam::whereIn('id', $ids)->delete();
+        $deletedCount = Exam::whereIn('id', $ids)
+                            ->where('staffId', $user->id)
+                            ->delete();
 
         return response()->json([
             'success' => true,
-            'message' => count($ids) . ' exams deleted successfully.'
+            'message' => $deletedCount . ' exams deleted successfully.'
         ]);
     }
 
@@ -396,6 +402,11 @@ class ExamController extends Controller
      */
     public function generateQuestionPaperPdf(Exam $exam, $studentId)
     {
+        // Ensure the exam belongs to the logged-in user
+        if ($exam->staffId !== auth()->user()->id) {
+            abort(403, 'Unauthorized access to this exam.');
+        }
+
         $student = DB::table('studentRegistration')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
             ->where('studentRegistration.id', $studentId)

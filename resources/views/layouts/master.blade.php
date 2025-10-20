@@ -1136,60 +1136,74 @@
                             </div>
                         </div> --}}
 
+                     
+                      
                         <div class="dropdown ms-sm-3 header-item topbar-user">
-                            <button type="button" class="btn shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="d-flex align-items-center">
-                                      @php
-                                      use App\Models\User;
-                                        $userdata = User::find(Auth::id())
-                                        
-                                      @endphp
-                                       <?php $image = "";?>
-                                       <?php
-                                          if ($userdata->avatar == NULL || $userdata->avatar =="" || !isset($userdata->avatar) ){
-                                                  $image =  'unnamed.png';
-                                          }else {
-                                              $image =  $userdata->avatar;
-                                          }
-                                       ?>
-                                   
-                                    <img class="rounded-circle header-profile-user" src="{{ Storage::url('images/staffavatar/'.$image)}}" alt="{{ $userdata->name }}">
-                                    {{-- <img src="{{ $student->picture ? asset('storage/' . $student->picture) : asset('theme/layouts/assets/media/avatars/blank.png') }}" alt=""  class="avatar-xs"/> --}}
-                                    @php
-                                    $userdata = Auth::user();
-                                @endphp
-                                
-                                @if ($userdata)
-                                    <span class="text-start ms-xl-2">
-                                        <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $userdata->name }}</span>
-                                        <span class="d-none d-xl-block ms-1 fs-sm user-name-sub-text">Founder</span>
-                                    </span>
-                                </span>
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-end">
-                                    <h6 class="dropdown-header">Welcome {{ $userdata->name }}!</h6>
-                                    <a class="dropdown-item" href="{{ route('user.overview', $userdata->id) }}">
-                                        <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i> 
-                                        <span class="align-middle">Profile</span>
-                                    </a>
-                                    <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item" href="auth-lockscreen.html">
-                                        <i class="mdi mdi-lock text-muted fs-lg align-middle me-1"></i> 
-                                        <span class="align-middle">Lock screen</span>
-                                    </a>
-                                
-                                    <form method="POST" action="{{ route('logout') }}">
-                                        @csrf
-                                        <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); this.closest('form').submit();">
-                                            <i class="mdi mdi-logout text-muted fs-lg align-middle me-1"></i> 
-                                            <span class="align-middle" data-key="t-logout">Logout</span>
-                                        </a>
-                                    </form>
-                                </div>
-                                @endif
-                                
-                        </div>
-                    </div>
+    <button type="button" class="btn shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <span class="d-flex align-items-center">
+            @php
+                use App\Models\User;
+                use App\Models\Student;
+                $userdata = Auth::user();
+                $isStudent = $userdata->hasRole('student');
+                $avatarPath = '';
+                $fullName = $userdata->name ?? 'User';
+                $studentPicture = null;
+                if ($isStudent) {
+                    $student = Student::where('id', $userdata->student_id)->first();
+                    $studentPicture = $student ? $student->picture : null;
+                    $avatarPath = $studentPicture ? 'student_avatars/' . basename($studentPicture) : 'student_avatars/unnamed.jpg';
+                    $srcPath = asset('storage/' . $avatarPath);
+                    $fallbackSrc = asset('storage/student_avatars/unnamed.jpg');
+                } else {
+                    $avatarPath = $userdata->avatar ? 'staff_avatars/' . basename($userdata->avatar) : 'staff_avatars/unnamed.png';
+                    $srcPath = Storage::url($avatarPath);
+                    $fallbackSrc = Storage::url('student_avatars/unnamed.jpg');
+                }
+                $dataPicture = $isStudent ? ($studentPicture ?? 'none') : ($userdata->avatar ?? 'none');
+            @endphp
+        
+            <div class="avatar-sm me-2">
+                <img src="{{ $srcPath }}" alt="{{ $fullName }}" class="rounded-circle w-100 header-profile-user" data-bs-toggle="modal" data-bs-target="#imageViewModal" data-image="{{ $srcPath }}" data-picture="{{ $dataPicture }}" onerror="this.src='{{ $fallbackSrc }}';">
+            </div>
+            
+            @if ($userdata)
+                <span class="text-start ms-xl-2">
+                    <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $userdata->name }}</span>
+                    @php
+                        $roles = $userdata->roles->pluck('name')->implode(', ') ?? 'No Role';
+                    @endphp
+                    <span class="d-none d-xl-block ms-1 fs-sm user-name-sub-text">{{ $roles }}</span>
+                </span>
+            </span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end">
+            <h6 class="dropdown-header">Welcome {{ $userdata->name }}!</h6>
+            @php
+                $userRoles = $userdata->roles->pluck('name')->implode(', ') ?? 'No Role';
+            @endphp
+            <p class="dropdown-item-text text-muted mb-1">Roles: {{ $userRoles }}</p>
+            <a class="dropdown-item" href="{{ route('user.overview', $userdata->id) }}">
+                <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i> 
+                <span class="align-middle">Profile</span>
+            </a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="auth-lockscreen.html">
+                <i class="mdi mdi-lock text-muted fs-lg align-middle me-1"></i> 
+                <span class="align-middle">Lock screen</span>
+            </a>
+        
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); this.closest('form').submit();">
+                    <i class="mdi mdi-logout text-muted fs-lg align-middle me-1"></i> 
+                    <span class="align-middle" data-key="t-logout">Logout</span>
+                </a>
+            </form>
+        </div>
+        @endif
+        
+    </div>
                 </div>
             </div>
         </header>

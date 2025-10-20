@@ -18,6 +18,14 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
 }
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin: 20px 0;
+}
+.vibrant-colors .chartjs-render-monitor {
+    background: transparent;
+}
 </style>
 
 <div class="main-content">
@@ -42,7 +50,7 @@
                                 <select name="term_id" id="term_id" class="form-select">
                                     <option value="">All Terms</option>
                                     @foreach($terms as $t)
-                                        <option value="{{ $t->id }}" {{ $selectedTermId == $t->id ? 'selected' : '' }}>{{ $t->term }}</option>
+                                        <option value="{{ $t->id }}" {{ $userSelectedTermId == $t->id ? 'selected' : '' }}>{{ $t->term }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -63,8 +71,14 @@
                 </div>
             </div>
 
-            <!-- Student Info Header - Conditional with isset -->
-            @if(isset($class) && $class && isset($term) && $term && isset($session) && $session)
+            @php
+                $selectedTermObj = $userSelectedTermId ? $terms->firstWhere('id', $userSelectedTermId) : null;
+                $selectedTermName = $selectedTermObj ? $selectedTermObj->term : 'All Terms';
+                $selectedSessionObj = $selectedSessionId ? $sessions->firstWhere('id', $selectedSessionId) : null;
+                $selectedSessionName = $selectedSessionObj ? $selectedSessionObj->session : 'All Sessions';
+            @endphp
+
+            <!-- Student Info Header -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card">
@@ -81,27 +95,17 @@
                                 </div>
                                 <div class="col-md-3">
                                     <h6><i class="bi bi-calendar3 me-2"></i>Term</h6>
-                                    <p class="text-muted mb-0">{{ $term->term ?? 'N/A' }}</p>
+                                    <p class="text-muted mb-0">{{ $selectedTermName }}</p>
                                 </div>
                                 <div class="col-md-3">
                                     <h6><i class="bi bi-calendar4-event me-2"></i>Session</h6>
-                                    <p class="text-muted mb-0">{{ $session->session ?? 'N/A' }}</p>
+                                    <p class="text-muted mb-0">{{ $selectedSessionName }}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            @else
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            No class assigned for the selected term/session.
-                        </div>
-                    </div>
-                </div>
-            @endif
 
             <!-- Progress Report Summary -->
             @if(isset($subjectsWithAssessments) && $subjectsWithAssessments->isNotEmpty())
@@ -132,6 +136,22 @@
                     </div>
                 </div>
             </div>
+
+            <!-- GPA Trend Line Chart -->
+            @if(isset($gpaTrend) && !empty($gpaTrend))
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">GPA Trend</h5>
+                            <div class="chart-container">
+                                <canvas id="gpaTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
             @endif
 
             @if (session('error') || isset($error))
@@ -149,7 +169,7 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-body">
-                                <h5 class="card-title mb-4">Your Subjects & Assessments</h5>
+                                <h5 class="card-title mb-4">My Subjects and Assessments for {{ $selectedTermName }}- {{ $selectedSessionName }}</h5>
                                 <div class="accordion" id="subjectsAccordion">
                                     @foreach($subjectsWithAssessments as $index => $subject)
                                         <div class="accordion-item">
@@ -190,6 +210,18 @@
                                                         <div class="alert alert-secondary mb-3">
                                                             <strong>Position in Class:</strong> {{ $subject['position'] }}
                                                         </div>
+                                                    @endif
+
+                                                    <!-- Assessment Chart Visualization -->
+                                                    @if(isset($subject['assessments']) && $subject['assessments']->isNotEmpty())
+                                                    <div class="row mb-3">
+                                                        <div class="col-12">
+                                                            <h6 class="mb-2">Assessments Visualization</h6>
+                                                            <div class="chart-container">
+                                                                <canvas id="assessmentChart{{ $index }}"></canvas>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     @endif
 
                                                     <!-- Assessments Table -->
@@ -257,4 +289,99 @@
         </div>
     </div>
 </div>
+
+@if(isset($subjectsWithAssessments) && $subjectsWithAssessments->isNotEmpty())
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // GPA Trend Line Chart
+    @if(isset($gpaTrend) && !empty($gpaTrend))
+    const gpaCtx = document.getElementById('gpaTrendChart').getContext('2d');
+    const gpaChart = new Chart(gpaCtx, {
+        type: 'line',
+        data: {
+            labels: @json(array_keys($gpaTrend)),
+            datasets: [{
+                label: 'GPA',
+                data: @json(array_values($gpaTrend)),
+                borderColor: '#ff6b6b',
+                backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#333'
+                    }
+                }
+            }
+        }
+    });
+    @endif
+
+    // Assessment Charts for each subject
+    @foreach($subjectsWithAssessments as $index => $subject)
+        @if(isset($subject['assessments']) && $subject['assessments']->isNotEmpty())
+        const assessmentCtx{{ $index }} = document.getElementById('assessmentChart{{ $index }}').getContext('2d');
+        const assessmentChart{{ $index }} = new Chart(assessmentCtx{{ $index }}, {
+            type: 'bar',
+            data: {
+                labels: @json($subject['assessments']->pluck('name')->toArray()),
+                datasets: [{
+                    label: 'Your Score',
+                    data: @json($subject['assessments']->pluck('score')->toArray()),
+                    backgroundColor: [
+                        '#ff6384',
+                        '#36a2eb',
+                        '#ffce56',
+                        '#4bc0c0',
+                        '#9966ff',
+                        '#ff9f40',
+                        '#ff6384'
+                    ],
+                    borderColor: [
+                        '#ff6384',
+                        '#36a2eb',
+                        '#ffce56',
+                        '#4bc0c0',
+                        '#9966ff',
+                        '#ff9f40',
+                        '#ff6384'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#333'
+                        }
+                    }
+                }
+            }
+        });
+        @endif
+    @endforeach
+</script>
+@endif
 @endsection
