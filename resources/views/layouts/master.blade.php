@@ -455,7 +455,7 @@
                     <ul class="nav nav-sm flex-column">
                         @can('View myresult-room')
                              <li class="nav-item">
-                                  <a href="{{ route('myresultroom.index') }}" class="nav-link" data-key="t-products">Terminal & Mock Records</a>
+                                  <a href="{{ route('myresultroom.index') }}" class="nav-link" data-key="t-products">Terminal  Records</a>
                             </li>
                         @endcan
                       
@@ -465,12 +465,12 @@
                             <a href="{{ route('studentreports.index') }}" class="nav-link" data-key="t-products">Terminal Result Reports</a>
                         </li>
                        @endcan
-
+{{-- 
                        @can('View student-mock-report')
                            <li class="nav-item">
                             <a href="{{ route('studentmockreports.index') }}" class="nav-link" data-key="t-products">Mock Result Reports</a>
                         </li>
-                       @endcan
+                       @endcan --}}
                         
                         
                     </ul>
