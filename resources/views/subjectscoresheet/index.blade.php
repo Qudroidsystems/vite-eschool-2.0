@@ -203,7 +203,7 @@
                                 <a href="{{ route('myresultroom.index') }}" class="btn btn-primary">
                                     <i class="ri-arrow-left-line"></i> Back
                                 </a>
-                                <div>
+                                {{-- <div>
                                     @if(session('subjectclass_id'))
                                         <a href="{{ route('scoresheet.download-marks-sheet') }}" class="btn btn-warning" id="downloadMarksSheet">
                                             <i class="fas fa-file-pdf"></i> Download Marks Sheet
@@ -220,7 +220,7 @@
                                             <i class="bi bi-table me-1"></i> View Scores
                                         </button>
                                     @endif
-                                </div>
+                                </div> --}}
                             </div>
 
                             <!-- Download Progress Indicator -->

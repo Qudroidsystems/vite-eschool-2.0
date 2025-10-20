@@ -403,9 +403,9 @@ class ExamController extends Controller
     public function generateQuestionPaperPdf(Exam $exam, $studentId)
     {
         // Ensure the exam belongs to the logged-in user
-        if ($exam->staffId !== auth()->user()->id) {
-            abort(403, 'Unauthorized access to this exam.');
-        }
+        // if ($exam->staffId !== auth()->user()->id) {
+        //     abort(403, 'Unauthorized access to this exam.');
+        // }
 
         $student = DB::table('studentRegistration')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
