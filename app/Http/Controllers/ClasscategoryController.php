@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Assessment;
 use Illuminate\Http\Request;
 use App\Models\Classcategory;
-use App\Models\Assessment;
-use Illuminate\Support\Facades\Log;
+use App\Models\SubAssessment;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ClasscategoryController extends Controller
 {
@@ -22,7 +23,7 @@ class ClasscategoryController extends Controller
     {
         Log::info('Index Class Category Request:', $request->all());
         $pagetitle = "Class Category Management";
-        $query = Classcategory::with('assessments');
+        $query = Classcategory::with('assessments.subAssessments');
 
         if ($request->has('search')) {
             $search = $request->query('search');
@@ -49,9 +50,11 @@ class ClasscategoryController extends Controller
         $request->validate([
             'category' => 'required|string|max:255|unique:classcategories,category',
             'is_senior' => 'required|boolean',
-            'assessments' => 'required|array|min:1',
-            'assessments.*.name' => 'required|string|max:100',
-            'assessments.*.max_score' => 'required|numeric|min:0',
+            'assessments' => 'required|array|size:1',
+            'assessments.0.name' => 'required|string|max:100',
+            'assessments.0.sub_assessments' => 'required|array|min:1',
+            'assessments.0.sub_assessments.*.name' => 'nullable|string|max:100',
+            'assessments.0.sub_assessments.*.max_score' => 'required|numeric|min:0',
         ]);
 
         try {
@@ -62,11 +65,21 @@ class ClasscategoryController extends Controller
                 'is_senior' => $request->input('is_senior'),
             ]);
 
-            foreach ($request->input('assessments') as $assessment) {
-                Assessment::create([
-                    'classcategory_id' => $category->id,
-                    'name' => $assessment['name'],
-                    'max_score' => $assessment['max_score'],
+            $assessmentData = $request->input('assessments')[0];
+            $subAssessments = $assessmentData['sub_assessments'];
+            $avg = count($subAssessments) > 0 ? array_sum(array_column($subAssessments, 'max_score')) / count($subAssessments) : 0;
+
+            $assessment = Assessment::create([
+                'classcategory_id' => $category->id,
+                'name' => $assessmentData['name'],
+                'max_score' => $avg,
+            ]);
+
+            foreach ($subAssessments as $sub) {
+                SubAssessment::create([
+                    'assessment_id' => $assessment->id,
+                    'name' => $sub['name'] ?? null,
+                    'max_score' => $sub['max_score'],
                 ]);
             }
 
@@ -75,7 +88,7 @@ class ClasscategoryController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Class category and assessments created successfully'
+                'message' => 'Class category and assessment created successfully'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -94,9 +107,11 @@ class ClasscategoryController extends Controller
         $request->validate([
             'category' => "required|string|max:255|unique:classcategories,category,{$id}",
             'is_senior' => 'required|boolean',
-            'assessments' => 'required|array|min:1',
-            'assessments.*.name' => 'required|string|max:100',
-            'assessments.*.max_score' => 'required|numeric|min:0',
+            'assessments' => 'required|array|size:1',
+            'assessments.0.name' => 'required|string|max:100',
+            'assessments.0.sub_assessments' => 'required|array|min:1',
+            'assessments.0.sub_assessments.*.name' => 'nullable|string|max:100',
+            'assessments.0.sub_assessments.*.max_score' => 'required|numeric|min:0',
         ]);
 
         try {
@@ -108,15 +123,25 @@ class ClasscategoryController extends Controller
                 'is_senior' => $request->input('is_senior'),
             ]);
 
-            // Delete existing assessments
+            // Delete existing assessment and sub-assessments
             Assessment::where('classcategory_id', $id)->delete();
 
-            // Create new assessments
-            foreach ($request->input('assessments') as $assessment) {
-                Assessment::create([
-                    'classcategory_id' => $category->id,
-                    'name' => $assessment['name'],
-                    'max_score' => $assessment['max_score'],
+            // Create new assessment and sub-assessments
+            $assessmentData = $request->input('assessments')[0];
+            $subAssessments = $assessmentData['sub_assessments'];
+            $avg = count($subAssessments) > 0 ? array_sum(array_column($subAssessments, 'max_score')) / count($subAssessments) : 0;
+
+            $assessment = Assessment::create([
+                'classcategory_id' => $category->id,
+                'name' => $assessmentData['name'],
+                'max_score' => $avg,
+            ]);
+
+            foreach ($subAssessments as $sub) {
+                SubAssessment::create([
+                    'assessment_id' => $assessment->id,
+                    'name' => $sub['name'] ?? null,
+                    'max_score' => $sub['max_score'],
                 ]);
             }
 
@@ -125,7 +150,7 @@ class ClasscategoryController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Class category and assessments updated successfully'
+                'message' => 'Class category and assessment updated successfully'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -142,12 +167,12 @@ class ClasscategoryController extends Controller
         Log::info('Delete Class Category Request:', ['id' => $id]);
         try {
             $category = Classcategory::findOrFail($id);
-            $category->delete(); // Assessments are automatically deleted via cascade
+            $category->delete(); // Assessments and sub-assessments are automatically deleted via cascade
             Log::info('Class Category Deleted:', ['id' => $id]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Class category and its assessments deleted successfully'
+                'message' => 'Class category and its assessment deleted successfully'
             ]);
         } catch (\Exception $e) {
             Log::error('Error deleting class category:', ['error' => $e->getMessage()]);
@@ -165,12 +190,12 @@ class ClasscategoryController extends Controller
         
         try {
             $category = Classcategory::findOrFail($request->classcategoryid);
-            $category->delete(); // Assessments are automatically deleted via cascade
+            $category->delete(); // Assessments and sub-assessments are automatically deleted via cascade
             Log::info('Class Category Deleted via AJAX:', ['id' => $request->classcategoryid]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Class category and its assessments deleted successfully'
+                'message' => 'Class category and its assessment deleted successfully'
             ]);
         } catch (\Exception $e) {
             Log::error('Error deleting class category via AJAX:', ['error' => $e->getMessage()]);
@@ -189,9 +214,11 @@ class ClasscategoryController extends Controller
             'id' => 'required|exists:classcategories,id',
             'category' => "required|string|max:255|unique:classcategories,category,{$request->id}",
             'is_senior' => 'required|boolean',
-            'assessments' => 'required|array|min:1',
-            'assessments.*.name' => 'required|string|max:100',
-            'assessments.*.max_score' => 'required|numeric|min:0',
+            'assessments' => 'required|array|size:1',
+            'assessments.0.name' => 'required|string|max:100',
+            'assessments.0.sub_assessments' => 'required|array|min:1',
+            'assessments.0.sub_assessments.*.name' => 'nullable|string|max:100',
+            'assessments.0.sub_assessments.*.max_score' => 'required|numeric|min:0',
         ]);
 
         try {
@@ -203,15 +230,25 @@ class ClasscategoryController extends Controller
                 'is_senior' => $request->input('is_senior'),
             ]);
 
-            // Delete existing assessments
+            // Delete existing assessment and sub-assessments
             Assessment::where('classcategory_id', $request->id)->delete();
 
-            // Create new assessments
-            foreach ($request->input('assessments') as $assessment) {
-                Assessment::create([
-                    'classcategory_id' => $category->id,
-                    'name' => $assessment['name'],
-                    'max_score' => $assessment['max_score'],
+            // Create new assessment and sub-assessments
+            $assessmentData = $request->input('assessments')[0];
+            $subAssessments = $assessmentData['sub_assessments'];
+            $avg = count($subAssessments) > 0 ? array_sum(array_column($subAssessments, 'max_score')) / count($subAssessments) : 0;
+
+            $assessment = Assessment::create([
+                'classcategory_id' => $category->id,
+                'name' => $assessmentData['name'],
+                'max_score' => $avg,
+            ]);
+
+            foreach ($subAssessments as $sub) {
+                SubAssessment::create([
+                    'assessment_id' => $assessment->id,
+                    'name' => $sub['name'] ?? null,
+                    'max_score' => $sub['max_score'],
                 ]);
             }
 
@@ -220,7 +257,7 @@ class ClasscategoryController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Class category and assessments updated successfully'
+                'message' => 'Class category and assessment updated successfully'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

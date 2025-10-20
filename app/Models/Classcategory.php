@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Classcategory extends Model
 {
@@ -28,9 +28,9 @@ class Classcategory extends Model
         return $this->hasMany(Assessment::class, 'classcategory_id');
     }
 
-    public function schoolclasses()
+    public function schoolClasses()
     {
-        return $this->hasMany(Schoolclass::class, 'classcategoryid');
+        return $this->belongsToMany(Schoolclass::class, 'schoolclass_classcategory', 'classcategory_id', 'schoolclass_id');
     }
 
     public function grades()

@@ -7,6 +7,7 @@ use App\Models\Schoolclass;
 use App\Models\ClassTeacher;
 use Illuminate\Http\Request;
 use App\Models\Classcategory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
@@ -26,18 +27,19 @@ class SchoolClassController extends Controller
         Log::info('Index School Class Request:', $request->all());
         $pagetitle = "School Class Management";
 
-        $query = Schoolclass::query()
-            ->leftJoin('classcategories', 'classcategories.id', '=', 'schoolclass.classcategoryid')
-            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+        $query = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->leftJoin('schoolclass_classcategory', 'schoolclass_classcategory.schoolclass_id', '=', 'schoolclass.id')
+            ->leftJoin('classcategories', 'classcategories.id', '=', 'schoolclass_classcategory.classcategory_id')
             ->select(
                 'schoolclass.id',
                 'schoolclass.schoolclass',
                 'schoolarm.arm as arm_name',
                 'schoolclass.arm as arm_id',
-                'classcategories.category as classcategory',
-                'classcategories.id as classcategoryid',
+                DB::raw('GROUP_CONCAT(DISTINCT classcategories.category ORDER BY classcategories.category SEPARATOR ", ") as classcategory'),
+                DB::raw('GROUP_CONCAT(DISTINCT classcategories.id ORDER BY classcategories.id SEPARATOR "," ) as classcategoryids'),
                 'schoolclass.updated_at'
-            );
+            )
+            ->groupBy('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm', 'schoolclass.arm', 'schoolclass.updated_at');
 
         if ($request->has('search')) {
             $search = $request->query('search');
@@ -75,30 +77,28 @@ class SchoolClassController extends Controller
             'schoolclass' => 'required|string|max:255',
             'arm_id' => 'required|array|min:1',
             'arm_id.*' => 'exists:schoolarm,id',
-            'classcategoryid' => 'required|exists:classcategories,id',
+            'classcategoryid' => 'required|array|min:1',
+            'classcategoryid.*' => 'exists:classcategories,id',
         ], [
             'schoolclass.required' => 'Please enter a school class name.',
             'arm_id.required' => 'Please select at least one arm.',
             'arm_id.*.exists' => 'One or more selected arms do not exist.',
-            'classcategoryid.required' => 'Please select a category.',
-            'classcategoryid.exists' => 'Selected category does not exist.',
+            'classcategoryid.required' => 'Please select at least one category.',
+            'classcategoryid.*.exists' => 'One or more selected categories do not exist.',
         ]);
 
         $validator->after(function ($validator) use ($request) {
             $armIds = $request->arm_id ?? [];
-            $category = Classcategory::find($request->classcategoryid);
-            $categoryName = $category ? $category->category : 'Unknown';
             foreach ($armIds as $armId) {
                 $exists = Schoolclass::where('schoolclass', $request->schoolclass)
                     ->where('arm', $armId)
-                    ->where('classcategoryid', $request->classcategoryid)
                     ->exists();
                 if ($exists) {
                     $arm = Schoolarm::find($armId);
                     $armName = $arm ? $arm->arm : 'Unknown';
                     $validator->errors()->add(
                         'schoolclass',
-                        "The combination of class '{$request->schoolclass}', arm '{$armName}', and category '{$categoryName}' already exists."
+                        "The combination of class '{$request->schoolclass}' and arm '{$armName}' already exists."
                     );
                 }
             }
@@ -117,24 +117,26 @@ class SchoolClassController extends Controller
 
         try {
             $createdRecords = [];
-            foreach ($request->arm_id as $armId) {
+            $armIds = $request->arm_id;
+            $categoryIds = $request->classcategoryid;
+            $description = $request->description ?? 'Null';
+            $categories = Classcategory::whereIn('id', $categoryIds)->get(['id', 'category']);
+            foreach ($armIds as $armId) {
                 $schoolclass = new Schoolclass();
                 $schoolclass->schoolclass = $request->schoolclass;
                 $schoolclass->arm = $armId;
-                $schoolclass->classcategoryid = $request->classcategoryid;
-                $schoolclass->description = $request->description ?? 'Null';
+                $schoolclass->description = $description;
                 $schoolclass->save();
+                $schoolclass->classcategories()->attach($categoryIds);
 
                 $arm = Schoolarm::find($armId);
-                $category = Classcategory::find($schoolclass->classcategoryid);
 
                 $createdRecords[] = [
                     'id' => $schoolclass->id,
                     'schoolclass' => $schoolclass->schoolclass,
                     'arm_id' => $schoolclass->arm,
                     'arm_name' => $arm ? $arm->arm : 'Unknown',
-                    'classcategoryid' => $schoolclass->classcategoryid,
-                    'classcategory' => $category ? $category->category : 'Unknown',
+                    'classcategories' => $categories->toArray(),
                     'description' => $schoolclass->description,
                     'updated_at' => $schoolclass->updated_at->toISOString(),
                     'created_at' => $schoolclass->created_at->toISOString()
@@ -173,36 +175,30 @@ class SchoolClassController extends Controller
 
         $validator = Validator::make($request->all(), [
             'schoolclass' => 'required|string|max:255',
-            'arm_id' => 'required|array|size:1',
-            'arm_id.*' => 'exists:schoolarm,id',
-            'classcategoryid' => 'required|exists:classcategories,id',
+            'arm_id' => 'required|exists:schoolarm,id',
+            'classcategoryid' => 'required|array|min:1',
+            'classcategoryid.*' => 'exists:classcategories,id',
         ], [
             'schoolclass.required' => 'Please enter a school class name.',
             'arm_id.required' => 'Please select one arm.',
-            'arm_id.size' => 'Exactly one arm must be selected.',
-            'arm_id.*.exists' => 'The selected arm does not exist.',
-            'classcategoryid.required' => 'Please select a category.',
-            'classcategoryid.exists' => 'Selected category does not exist.',
+            'arm_id.exists' => 'The selected arm does not exist.',
+            'classcategoryid.required' => 'Please select at least one category.',
+            'classcategoryid.*.exists' => 'One or more selected categories do not exist.',
         ]);
 
         $validator->after(function ($validator) use ($request, $id) {
-            $armId = $request->arm_id[0] ?? null;
-            if ($armId) {
-                $exists = Schoolclass::where('schoolclass', $request->schoolclass)
-                    ->where('arm', $armId)
-                    ->where('classcategoryid', $request->classcategoryid)
-                    ->where('id', '!=', $id)
-                    ->exists();
-                if ($exists) {
-                    $arm = Schoolarm::find($armId);
-                    $armName = $arm ? $arm->arm : 'Unknown';
-                    $category = Classcategory::find($request->classcategoryid);
-                    $categoryName = $category ? $category->category : 'Unknown';
-                    $validator->errors()->add(
-                        'schoolclass',
-                        "The combination of class '{$request->schoolclass}', arm '{$armName}', and category '{$categoryName}' already exists."
-                    );
-                }
+            $armId = $request->arm_id;
+            $exists = Schoolclass::where('schoolclass', $request->schoolclass)
+                ->where('arm', $armId)
+                ->where('id', '!=', $id)
+                ->exists();
+            if ($exists) {
+                $arm = Schoolarm::find($armId);
+                $armName = $arm ? $arm->arm : 'Unknown';
+                $validator->errors()->add(
+                    'schoolclass',
+                    "The combination of class '{$request->schoolclass}' and arm '{$armName}' already exists."
+                );
             }
         });
 
@@ -220,21 +216,20 @@ class SchoolClassController extends Controller
         try {
             $schoolclass = Schoolclass::findOrFail($id);
             $schoolclass->schoolclass = $request->schoolclass;
-            $schoolclass->arm = $request->arm_id[0];
-            $schoolclass->classcategoryid = $request->classcategoryid;
+            $schoolclass->arm = $request->arm_id;
             $schoolclass->description = $request->description ?? 'Null';
             $schoolclass->save();
+            $schoolclass->classcategories()->sync($request->classcategoryid);
 
             $arm = Schoolarm::find($schoolclass->arm);
-            $category = Classcategory::find($schoolclass->classcategoryid);
+            $categories = Classcategory::whereIn('id', $request->classcategoryid)->get(['id', 'category']);
 
             $updatedRecord = [
                 'id' => $schoolclass->id,
                 'schoolclass' => $schoolclass->schoolclass,
                 'arm_id' => $schoolclass->arm,
                 'arm_name' => $arm ? $arm->arm : 'Unknown',
-                'classcategoryid' => $schoolclass->classcategoryid,
-                'classcategory' => $category ? $category->category : 'Unknown',
+                'classcategories' => $categories->toArray(),
                 'description' => $schoolclass->description,
                 'updated_at' => $schoolclass->updated_at->toISOString(),
                 'created_at' => $schoolclass->created_at->toISOString()
@@ -269,14 +264,12 @@ class SchoolClassController extends Controller
     public function destroy($id)
     {
         Log::info('Delete School Class Request:', ['id' => $id]);
-        \DB::enableQueryLog();
 
         try {
             $schoolclass = Schoolclass::findOrFail($id);
-            Classteacher::where('schoolclassid', $id)->delete();
+            ClassTeacher::where('schoolclassid', $id)->delete();
             $schoolclass->delete();
 
-            Log::info('Query Log:', \DB::getQueryLog());
             return response()->json(['message' => 'School class deleted successfully!']);
         } catch (\Exception $e) {
             Log::error('Delete Error:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);

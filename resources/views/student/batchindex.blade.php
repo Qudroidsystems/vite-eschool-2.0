@@ -223,7 +223,7 @@
                                     <label for="schoolclassid" class="form-label">School Class & Arm</label>
                                     <select id="schoolclassid" name="schoolclassid" class="form-control" data-choices data-choices-search-true required>
                                         <option value="">Select Class</option>
-                                        @foreach ($schoolclass as $sc)
+                                        @foreach ($schoolclasses as $sc)
                                             <option value="{{ $sc->id }}">{{ $sc->schoolclass }} - {{ $sc->arm }}</option>
                                         @endforeach
                                     </select>
@@ -232,7 +232,7 @@
                                     <label for="termid" class="form-label">Term</label>
                                     <select id="termid" name="termid" class="form-control" data-choices data-choices-search-true required>
                                         <option value="">Select Term</option>
-                                        @foreach ($schoolterm as $sc)
+                                        @foreach ($schoolterms as $sc)
                                             <option value="{{ $sc->id }}">{{ $sc->term }}</option>
                                         @endforeach
                                     </select>
@@ -241,7 +241,7 @@
                                     <label for="sessionid" class="form-label">Session</label>
                                     <select id="sessionid" name="sessionid" class="form-control" data-choices data-choices-search-true required>
                                         <option value="">Select Session</option>
-                                        @foreach ($schoolsession as $sc)
+                                        @foreach ($schoolsessions as $sc)
                                             <option value="{{ $sc->id }}">{{ $sc->session }}</option>
                                         @endforeach
                                     </select>

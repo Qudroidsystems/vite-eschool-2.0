@@ -92,7 +92,6 @@
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="schoolclass">School Class</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="arm">Arm</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="classcategory">Category</th>
-                                                {{-- <th class="min-w-125px sort cursor-pointer" data-sort="datereg">Date Updated</th> --}}
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
@@ -107,9 +106,8 @@
                                                     </td>
                                                     <td class="schoolclassid">{{ ++$i }}</td>
                                                     <td class="schoolclass" data-schoolclass="{{ $class->schoolclass }}">{{ $class->schoolclass }}</td>
-                                                    <td class="arm" data-arm="{{ $class->arm_name }}">{{ $class->arm_name }}</td>
-                                                    <td class="classcategory" data-classcategory="{{ $class->classcategory }}">{{ $class->classcategory }}</td>
-                                                    {{-- <td class="datereg">{{ $class->updated_at->format('Y-m-d') }}</td> --}}
+                                                    <td class="arm" data-arm-id="{{ $class->arm_id }}" data-arm="{{ $class->arm_name }}">{{ $class->arm_name }}</td>
+                                                    <td class="classcategory" data-category-ids="{{ $class->classcategoryids }}" data-classcategory="{{ $class->classcategory }}">{{ $class->classcategory }}</td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('Update school-class')
@@ -127,7 +125,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="noresult" style="display: none;">No results found</td>
+                                                    <td colspan="6" class="noresult" style="display: none;">No results found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -140,21 +138,7 @@
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
-                                        <div class="pagination-wrap hstack gap-2 justify-content-center">
-                                            <a class="page-item pagination-prev {{ $all_classes->onFirstPage() ? 'disabled' : '' }}" href="javascript:void(0);" data-url="{{ $all_classes->previousPageUrl() }}">
-                                                <i class="mdi mdi-chevron-left align-middle"></i>
-                                            </a>
-                                            <ul class="pagination listjs-pagination mb-0">
-                                                @foreach ($all_classes->links()->elements[0] as $page => $url)
-                                                    <li class="page-item {{ $all_classes->currentPage() == $page ? 'active' : '' }}">
-                                                        <a class="page-link" href="javascript:void(0);" data-url="{{ $url }}">{{ $page }}</a>
-                                                    </li>
-                                                @endforeach
-                                            </ul>
-                                            <a class="page-item pagination-next {{ $all_classes->hasMorePages() ? '' : 'disabled' }}" href="javascript:void(0);" data-url="{{ $all_classes->nextPageUrl() }}">
-                                                <i class="mdi mdi-chevron-right align-middle"></i>
-                                            </a>
-                                        </div>
+                                        {{ $all_classes->links() }}
                                     </div>
                                 </div>
                             </div>
@@ -176,32 +160,32 @@
                             <div class="modal-body">
                                 <input type="hidden" id="add-id-field" name="id">
                                 <div class="mb-3">
-                                    <label for="schoolclass" class="form-label">School Class</label>
-                                    <input type="text" id="schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
+                                    <label for="add-schoolclass" class="form-label">School Class</label>
+                                    <input type="text" id="add-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Select Arm</label>
+                                    <label class="form-label">Select Arm(s)</label>
                                     <div class="d-flex flex-wrap gap-3" id="add-arm-checkboxes">
                                         @foreach ($arms as $arm)
                                             <div class="form-check form-check-outline form-check-primary">
-                                                <input class="form-check-input arm-checkbox" type="checkbox" value="{{ $arm->id }}" name="arm_id[]">
-                                                <label class="form-check-label">{{ $arm->arm }}</label>
+                                                <input class="form-check-input add-arm-checkbox" type="checkbox" value="{{ $arm->id }}" name="arm_id[]" id="add-arm-{{ $arm->id }}">
+                                                <label class="form-check-label" for="add-arm-{{ $arm->id }}">{{ $arm->arm }}</label>
                                             </div>
                                         @endforeach
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Select Category</label>
+                                    <label class="form-label">Select Category(s)</label>
                                     <div class="d-flex flex-wrap gap-3" id="add-category-checkboxes">
                                         @foreach ($classcategories as $category)
                                             <div class="form-check form-check-outline form-check-primary">
-                                                <input class="form-check-input category-checkbox" type="checkbox" value="{{ $category->id }}" name="classcategoryid[]">
-                                                <label class="form-check-label">{{ $category->category }}</label>
+                                                <input class="form-check-input add-category-checkbox" type="checkbox" value="{{ $category->id }}" name="classcategoryid[]" id="add-category-{{ $category->id }}">
+                                                <label class="form-check-label" for="add-category-{{ $category->id }}">{{ $category->category }}</label>
                                             </div>
                                         @endforeach
                                     </div>
                                 </div>
-                                <div class="alert alert-danger d-none" id="alert-error-msg"></div>
+                                <div class="alert alert-danger d-none" id="add-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
@@ -230,22 +214,22 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Select Arm</label>
-                                    <div class="d-flex flex-wrap gap-3" id="edit-arm-checkboxes">
+                                    <div class="d-flex flex-wrap gap-3" id="edit-arm-radios">
                                         @foreach ($arms as $arm)
                                             <div class="form-check form-check-outline form-check-primary">
-                                                <input class="form-check-input arm-checkbox" type="checkbox" value="{{ $arm->id }}" name="arm_id[]">
-                                                <label class="form-check-label">{{ $arm->arm }}</label>
+                                                <input class="form-check-input edit-arm-radio" type="radio" value="{{ $arm->id }}" name="arm_id" id="edit-arm-{{ $arm->id }}">
+                                                <label class="form-check-label" for="edit-arm-{{ $arm->id }}">{{ $arm->arm }}</label>
                                             </div>
                                         @endforeach
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Select Category</label>
+                                    <label class="form-label">Select Category(s)</label>
                                     <div class="d-flex flex-wrap gap-3" id="edit-category-checkboxes">
                                         @foreach ($classcategories as $category)
                                             <div class="form-check form-check-outline form-check-primary">
-                                                <input class="form-check-input category-checkbox" type="checkbox" value="{{ $category->id }}" name="classcategoryid[]">
-                                                <label class="form-check-label">{{ $category->category }}</label>
+                                                <input class="form-check-input edit-category-checkbox" type="checkbox" value="{{ $category->id }}" name="classcategoryid[]" id="edit-category-{{ $category->id }}">
+                                                <label class="form-check-label" for="edit-category-{{ $category->id }}">{{ $category->category }}</label>
                                             </div>
                                         @endforeach
                                     </div>
@@ -282,48 +266,221 @@
             </div>
         </div>
     </div>
+</div>
 
-    <style>
-        /* Enlarge checkboxes in modals */
-        #addSchoolClassModal .form-check-input,
-        #editModal .form-check-input {
-            width: 1.5em;
-            height: 1.5em;
-            margin-top: 0.15em;
-        }
-        #addSchoolClassModal .form-check-label,
-        #editModal .form-check-label {
-            font-size: 1.1em;
-            line-height: 1.5em;
-            margin-left: 0.5em;
-        }
-        /* Ensure delete modal is above other modals and backdrop */
-        #deleteRecordModal {
-            z-index: 1055;
-        }
-        #deleteRecordModal .modal-backdrop {
-            z-index: 1050;
-        }
-        /* Fix font path for Material Design Icons */
-        @font-face {
-            font-family: 'Material Design Icons';
-            src: url('{{ asset('theme/layouts/assets/fonts/materialdesignicons-webfont.woff2') }}?v=6.5.95') format('woff2'),
-                 url('{{ asset('theme/layouts/assets/fonts/materialdesignicons-webfont.ttf') }}?v=6.5.95') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-        }
-    </style>
+<style>
+    /* Enlarge checkboxes and radios in modals */
+    #addSchoolClassModal .form-check-input,
+    #editModal .form-check-input {
+        width: 1.5em;
+        height: 1.5em;
+        margin-top: 0.15em;
+    }
+    #addSchoolClassModal .form-check-label,
+    #editModal .form-check-label {
+        font-size: 1.1em;
+        line-height: 1.5em;
+        margin-left: 0.5em;
+    }
+    /* Ensure delete modal is above other modals and backdrop */
+    #deleteRecordModal {
+        z-index: 1055;
+    }
+    #deleteRecordModal .modal-backdrop {
+        z-index: 1050;
+    }
+</style>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
-    <script src="{{ asset('theme/layouts/assets/js/schoolclass-list.init.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
+<script src="{{ asset('theme/layouts/assets/js/schoolclass-list.init.js') }}"></script>
 
-    <script>
-        window.routeUrls = {
-            updateSchoolClass: '{{ route("schoolclass.update", ":id") }}',
-            getArms: '{{ route("schoolclass.getarms", ":id") }}'
-        };
-    </script>
+<script>
+    window.routeUrls = {
+        storeSchoolClass: '{{ route("schoolclass.store") }}',
+        updateSchoolClass: '{{ route("schoolclass.update", "PLACEHOLDER") }}',
+        destroySchoolClass: '{{ route("schoolclass.destroy", "PLACEHOLDER") }}',
+        getArms: '{{ route("schoolclass.getarms", "PLACEHOLDER") }}'
+    };
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const addForm = document.getElementById('add-schoolclass-form');
+        const editForm = document.getElementById('edit-schoolclass-form');
+        const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        const addModal = new bootstrap.Modal(document.getElementById('addSchoolClassModal'));
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteRecordModal'));
+
+        let currentEditId = null;
+
+        // Handle Add Form Submission
+        if (addForm) {
+            addForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(addForm);
+                const submitBtn = document.getElementById('add-btn');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+
+                axios.post(window.routeUrls.storeSchoolClass, formData)
+                    .then(function (response) {
+                        Swal.fire('Success!', response.data.message, 'success');
+                        addModal.hide();
+                        addForm.reset();
+                        location.reload(); // Reload to show new records
+                    })
+                    .catch(function (error) {
+                        if (error.response && error.response.status === 422) {
+                            const errors = error.response.data.errors;
+                            let errorMsg = '';
+                            for (let key in errors) {
+                                errorMsg += errors[key].join('<br>');
+                            }
+                            document.getElementById('add-alert-error-msg').innerHTML = errorMsg;
+                            document.getElementById('add-alert-error-msg').classList.remove('d-none');
+                        } else {
+                            Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
+                        }
+                    })
+                    .finally(function () {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Add Class';
+                    });
+            });
+        }
+
+        // Handle Edit Button Click
+        document.querySelectorAll('.edit-item-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                currentEditId = row.querySelector('.id').dataset.id;
+                const schoolclass = row.querySelector('.schoolclass').dataset.schoolclass;
+                const armId = row.querySelector('.arm').dataset.armId;
+                const categoryIdsStr = row.querySelector('.classcategory').dataset.categoryIds;
+
+                document.getElementById('edit-id-field').value = currentEditId;
+                document.getElementById('edit-schoolclass').value = schoolclass;
+
+                // Set arm radio
+                document.querySelectorAll('#edit-arm-radios input[type="radio"]').forEach(radio => {
+                    radio.checked = radio.value == armId;
+                });
+
+                // Reset category checkboxes
+                document.querySelectorAll('#edit-category-checkboxes input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+
+                // Check the original categories
+                if (categoryIdsStr) {
+                    const categoryIds = categoryIdsStr.split(',');
+                    categoryIds.forEach(catId => {
+                        const checkbox = document.querySelector(`#edit-category-${catId.trim()}`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                }
+
+                document.getElementById('edit-alert-error-msg').classList.add('d-none');
+                editModal.show();
+            });
+        });
+
+        // Handle Edit Form Submission
+        if (editForm) {
+            editForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (!currentEditId) return;
+
+                const formData = new FormData(editForm);
+                formData.append('_method', 'PUT');
+
+                const submitBtn = document.getElementById('update-btn');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+
+                const updateUrl = window.routeUrls.updateSchoolClass.replace('PLACEHOLDER', currentEditId);
+                axios.post(updateUrl, formData)
+                    .then(function (response) {
+                        Swal.fire('Success!', response.data.message, 'success');
+                        editModal.hide();
+                        editForm.reset();
+                        currentEditId = null;
+                        location.reload(); // Reload to show updated records
+                    })
+                    .catch(function (error) {
+                        if (error.response && error.response.status === 422) {
+                            const errors = error.response.data.errors;
+                            let errorMsg = '';
+                            for (let key in errors) {
+                                errorMsg += errors[key].join('<br>');
+                            }
+                            document.getElementById('edit-alert-error-msg').innerHTML = errorMsg;
+                            document.getElementById('edit-alert-error-msg').classList.remove('d-none');
+                        } else {
+                            Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
+                        }
+                    })
+                    .finally(function () {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Update';
+                    });
+            });
+        }
+
+        // Handle Delete Button Click
+        document.querySelectorAll('.remove-item-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                currentEditId = row.querySelector('.id').dataset.id; // Reuse for delete id
+                deleteModal.show();
+            });
+        });
+
+        // Handle Delete Confirmation
+        document.getElementById('delete-record').addEventListener('click', function () {
+            if (!currentEditId) return;
+
+            const submitBtn = this;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+
+            const destroyUrl = window.routeUrls.destroySchoolClass.replace('PLACEHOLDER', currentEditId);
+            axios.delete(destroyUrl)
+                .then(function (response) {
+                    Swal.fire('Success!', response.data.message, 'success');
+                    deleteModal.hide();
+                    location.reload();
+                })
+                .catch(function (error) {
+                    Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
+                })
+                .finally(function () {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Delete';
+                });
+        });
+
+        // Handle Add Modal Close - Reset form
+        addModal._element.addEventListener('hidden.bs.modal', function () {
+            if (addForm) {
+                addForm.reset();
+                document.getElementById('add-alert-error-msg').classList.add('d-none');
+            }
+        });
+
+        // Handle Edit Modal Close - Reset form
+        editModal._element.addEventListener('hidden.bs.modal', function () {
+            if (editForm) {
+                editForm.reset();
+                document.getElementById('edit-alert-error-msg').classList.add('d-none');
+                currentEditId = null;
+            }
+        });
+    });
+</script>
 @endsection

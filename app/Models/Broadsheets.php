@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Broadsheets extends Model
 {
@@ -56,5 +56,21 @@ class Broadsheets extends Model
     public function staff()
     {
         return $this->belongsTo(User::class, 'staff_id');
+    }
+
+    /**
+     * Relationship to Assessment Scores (Dynamic Assessments)
+     */
+    public function assessmentScores()
+    {
+        return $this->hasMany(BroadsheetAssessmentScore::class, 'broadsheet_id');
+    }
+
+    /**
+     * Relationship to Sub-Assessment Scores (for sub-assessments under assessments)
+     */
+    public function subAssessmentScores()
+    {
+        return $this->hasMany(BroadsheetSubAssessmentScore::class, 'broadsheet_id');
     }
 }

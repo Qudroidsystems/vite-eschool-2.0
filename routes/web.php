@@ -44,6 +44,7 @@ use App\Http\Controllers\StaffImageUploadController;
 use App\Http\Controllers\SubjectOperationController;
 use App\Http\Controllers\MySubjectVettingsController;
 use App\Http\Controllers\PrincipalsCommentController;
+use App\Http\Controllers\StudentAssessmentController;
 use App\Http\Controllers\ViewStudentReportController;
 use \App\Http\Controllers\SchoolInformationController;
 use App\Http\Controllers\MockSubjectVettingController;
@@ -213,7 +214,18 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('subjectscoresheet-mock/download-marksheet', [MyScoreSheetController::class, 'mockDownloadMarkSheet'])->name('subjectscoresheet-mock.download-marksheet');
     // Route::get('/job/status/{job_id}', [JobStatusController::class, 'show'])->name('job.status');
     Route::post('subjectscoresheet-mock/calculate-grade', [MyScoreSheetController::class, 'calculateGradeForScore'])->name('subjectscoresheet-mock.calculate-grade');
+    Route::get('/subassessment/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}/{subassessmentid}', [MyScoreSheetController::class, 'subassessmentScoresheet'])->name('subassessment.scoresheet');
+    Route::get('/assessment/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}/{assessmentid}', [MyScoreSheetController::class, 'assessmentScoresheet'])->name('assessment.scoresheet');
+    Route::post('/subjectscoresheet/single-update', [MyScoreSheetController::class, 'singleUpdateScore'])->name('subjectscoresheet.single-update');
+    
+    
+    
    
+    Route::get('/studentassessments', [StudentAssessmentController::class, 'index'])->name('assessments');
+   
+
+    
+    
         // Marks Sheet Download Routes
     Route::get('/scoresheet/download-marks-sheet', [MyScoreSheetController::class, 'downloadMarkSheet'])
     ->name('scoresheet.download-marks-sheet');

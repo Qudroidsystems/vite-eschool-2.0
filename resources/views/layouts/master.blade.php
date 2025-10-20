@@ -146,6 +146,18 @@
         @include('layouts.pages-assets.css.subjectscoresheet-list-css')
     @endif
 
+    @if (Route::is('subassessment.*'))
+        @include('layouts.pages-assets.css.subjectscoresheet-list-css')
+    @endif
+
+    @if (Route::is('assessment.*'))
+        @include('layouts.pages-assets.css.subjectscoresheet-list-css')
+    @endif
+
+    @if (Route::is('assessments'))
+        @include('layouts.pages-assets.css.subjectscoresheet-list-css')
+    @endif
+
     @if (Route::is('subjectscoresheet-mock.*'))
            @include('layouts.pages-assets.css.subjectscoresheet-mock-list-css')
     @endif
@@ -389,11 +401,8 @@
                                    <a href="{{ route('subjectoperation.index') }}" class="nav-link" data-key="t-products">Student Subject Registration</a>
                              </li>
                         @endcan
-                      @can('View my-subject')
-                              <li class="nav-item">
-                                  <a href="{{ route('subjectoperation.index') }}" class="nav-link" data-key="t-products">My Subject</a>
-                            </li>
-                      @endcan                                  
+                     
+                                                   
                     </ul>
                 </div>
             </li>
@@ -501,6 +510,28 @@
             </li>
             @endcan
 
+
+              @if(auth()->user()->can('View student assessments'))
+            <li class="menu-title"><i class="ph-graduation-cap"></i> <span data-key="t-apps">STUDENT PORTAL</span></li>
+            @endif
+            @can('View student assessments')
+            <li class="nav-item">
+                <a href="#sidebarAssessments" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarExams">
+                    <i class="ph-graduation-cap"></i> <span data-key="t-ecommerce">Assessments</span>
+                </a>
+                <div class="collapse menu-dropdown" id="sidebarAssessments">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="{{ route('assessments') }}" class="nav-link" data-key="t-products">My Assessments</a>
+                        </li>
+                       
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+
+
             @if(auth()->user()->can('View exam') || auth()->user()->can('View cbt-exam'))
             <li class="menu-title"><i class="ph-graduation-cap"></i> <span data-key="t-apps">EXAMS AND CBT </span></li>
             @endif
@@ -523,6 +554,8 @@
                 </div>
             </li>
             @endcan
+
+
             @can('View cbt-exam')
             <li class="nav-item">
                 <a href="#sidebarCBT" class="nav-link menu-link collapsed" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarCBT">
@@ -2058,9 +2091,20 @@
             @include('layouts.pages-assets.js.myresultroom-list-js')
       @endif
 
-      @if (Route::is('subjectscoresheet'))
+      
+
+      @if (Route::is('assessment.*'))
             @include('layouts.pages-assets.js.subjectscoresheet-list-js')
       @endif
+
+      @if (Route::is('assessments'))
+         @include('layouts.pages-assets.js.studentassessment-list-js')
+      @endif
+
+       @if (Route::is('subjectscoresheet'))
+            @include('layouts.pages-assets.js.subjectscoresheet-list-js')
+      @endif
+
 
       @if (Route::is('subjectscoresheet-mock.*'))
         @include('layouts.pages-assets.js.subjectscoresheet-mock-list-js')

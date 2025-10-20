@@ -53,6 +53,7 @@ class Student extends Model
         'sport_house', // Added (from the store method)
         'email', // Added (from the store method)
         'city', // Added (from the store method)
+        'can_view_assessments',
     ];
 
     protected $casts = [

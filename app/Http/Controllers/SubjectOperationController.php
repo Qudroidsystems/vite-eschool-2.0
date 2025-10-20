@@ -2,25 +2,27 @@
 
 namespace App\Http\Controllers;
 
-
-use App\Models\BroadsheetRecord;
-use App\Models\BroadsheetRecordMock;
-use App\Models\Broadsheets;
-use App\Models\BroadsheetsMock;
-use App\Models\Schoolclass;
-use App\Models\Student;
-use App\Models\Studentpicture;
-use App\Models\StudentSubjectRecord;
-use App\Models\Subjectclass;
-use App\Models\SubjectRegistrationStatus;
-use App\Models\SubjectTeacher;
 use App\Models\User;
-use App\Models\Schoolsession;
+use App\Models\Student;
 use App\Models\Schoolterm;
-use Illuminate\Http\JsonResponse;
+use App\Models\Broadsheets;
+use App\Models\Schoolclass;
+use App\Models\Subjectclass;
 use Illuminate\Http\Request;
+use App\Models\Schoolsession;
+use App\Models\Studentpicture;
+use App\Models\SubjectTeacher;
+use App\Models\BroadsheetsMock;
+use App\Models\BroadsheetRecord;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\BroadsheetRecordMock;
+use App\Models\StudentSubjectRecord;
+use App\Models\BroadsheetAssessmentScore;
+use App\Models\SubjectRegistrationStatus;
+use App\Models\BroadsheetSubAssessmentScore;
+use Illuminate\Validation\ValidationException;
 
 class SubjectOperationController extends Controller
 {
@@ -585,6 +587,7 @@ class SubjectOperationController extends Controller
             $subjectclass = Subjectclass::findOrFail($validated['subjectclassid']);
             $subjectId = $subjectclass->subjectid;
             $schoolclassId = $subjectclass->schoolclassid;
+
             $now = now();
 
             // Filter out already registered students
@@ -815,13 +818,15 @@ class SubjectOperationController extends Controller
         $this->bulkCreateDependentRecords($createdRecords, $createdRecordsMock, $students, $validated, $now);
     }
 
-    /**
+    
+
+     /**
      * Create dependent records for individual processing
      */
     private function createDependentRecords(int $recordId, int $recordMockId, int $studentId, array $validated): void
     {
         // Create Broadsheet if it doesn't exist
-        Broadsheets::firstOrCreate([
+        $broadsheet = Broadsheets::firstOrCreate([
             'broadsheet_record_id' => $recordId,
             'term_id' => $validated['termid'],
             'subjectclass_id' => $validated['subjectclassid'],
@@ -857,9 +862,107 @@ class SubjectOperationController extends Controller
             'staffid' => $validated['staffid'],
             'session' => $validated['sessionid'],
         ]);
+
+        // Create assessment scores based on existing assessments
+        $this->createAssessmentScores($broadsheet->id, $validated['subjectclassid']);
     }
 
+
+
     /**
+     * Create assessment and sub-assessment scores for a broadsheet
+     * Only creates scores for assessments that actually exist for the class categories
+     */
+    private function createAssessmentScores(int $broadsheetId, int $subjectclassId): void
+    {
+        try {
+            // Get the subjectclass with related data
+            $subjectclass = Subjectclass::with(['schoolClass.classcategories'])->find($subjectclassId);
+            
+            if (!$subjectclass || !$subjectclass->schoolClass) {
+                Log::warning('No school class found for subjectclass', [
+                    'subjectclass_id' => $subjectclassId,
+                ]);
+                return;
+            }
+
+            $schoolClass = $subjectclass->schoolClass;
+            $categoryIds = $schoolClass->classcategories->pluck('id');
+
+            if ($categoryIds->isEmpty()) {
+                Log::info('No class categories found for school class', [
+                    'schoolclass_id' => $schoolClass->id,
+                    'broadsheet_id' => $broadsheetId,
+                ]);
+                return;
+            }
+
+            $assessmentCount = 0;
+            $subAssessmentCount = 0;
+
+            // Fetch unique assessments across all categories
+            $assessments = DB::table('assessments')
+                ->whereIn('classcategory_id', $categoryIds)
+                ->distinct()
+                ->get(['id', 'name', 'classcategory_id']);
+
+            if ($assessments->isEmpty()) {
+                Log::info('No assessments found for class categories', [
+                    'category_ids' => $categoryIds,
+                    'broadsheet_id' => $broadsheetId,
+                ]);
+                return;
+            }
+
+            // Create assessment scores for each existing assessment
+            foreach ($assessments as $assessment) {
+                // Create the main assessment score
+                BroadsheetAssessmentScore::firstOrCreate([
+                    'broadsheet_id' => $broadsheetId,
+                    'assessment_id' => $assessment->id,
+                ], [
+                    'score' => 0.00
+                ]);
+                $assessmentCount++;
+
+                // Fetch and create sub-assessment scores for this assessment
+                $subAssessments = DB::table('sub_assessments')
+                    ->where('assessment_id', $assessment->id)
+                    ->pluck('id');
+
+                foreach ($subAssessments as $subAssessmentId) {
+                    BroadsheetSubAssessmentScore::firstOrCreate([
+                        'broadsheet_id' => $broadsheetId,
+                        'sub_assessment_id' => $subAssessmentId,
+                        'assessment_id' => $assessment->id,
+                    ], [
+                        'score' => 0.00
+                    ]);
+                    $subAssessmentCount++;
+                }
+            }
+
+            Log::info('Created assessment scores', [
+                'broadsheet_id' => $broadsheetId,
+                'category_ids' => $categoryIds,
+                'assessment_count' => $assessmentCount,
+                'sub_assessment_count' => $subAssessmentCount,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create assessment scores', [
+                'broadsheet_id' => $broadsheetId,
+                'subjectclass_id' => $subjectclassId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // Don't throw - allow the registration to continue without scores
+        }
+    }
+
+
+ 
+     /**
      * Bulk create dependent records for batch processing
      */
     private function bulkCreateDependentRecords($createdRecords, $createdRecordsMock, array $students, array $validated, $now): void
@@ -869,6 +972,7 @@ class SubjectOperationController extends Controller
         $subjectRegistrations = [];
         $studentSubjectRecords = [];
 
+        // Create broadsheets data
         foreach ($students as $studentId) {
             $record = $createdRecords->get($studentId);
             $recordMock = $createdRecordsMock->get($studentId);
@@ -918,7 +1022,7 @@ class SubjectOperationController extends Controller
             ];
         }
 
-        // Bulk insert all dependent records
+        // Bulk insert core dependent records
         if (!empty($broadsheets)) {
             Broadsheets::insertOrIgnore($broadsheets);
         }
@@ -931,7 +1035,140 @@ class SubjectOperationController extends Controller
         if (!empty($studentSubjectRecords)) {
             StudentSubjectRecord::insertOrIgnore($studentSubjectRecords);
         }
+
+        // Fetch created broadsheets
+        $recordIds = collect($students)->map(function ($studentId) use ($createdRecords) {
+            $record = $createdRecords->get($studentId);
+            return $record ? $record->id : null;
+        })->filter()->toArray();
+
+        if (empty($recordIds)) {
+            Log::error('No record IDs for broadsheets');
+            return;
+        }
+
+        $createdBroadsheets = Broadsheets::whereIn('broadsheet_record_id', $recordIds)
+            ->where('term_id', $validated['termid'])
+            ->where('subjectclass_id', $validated['subjectclassid'])
+            ->get();
+
+        Log::info('Created broadsheets', [
+            'count' => $createdBroadsheets->count(),
+            'expected' => count($students),
+        ]);
+
+        // Create assessment scores for each broadsheet using bulk operations
+        $this->bulkCreateAssessmentScoresForBroadsheets($createdBroadsheets, $validated['subjectclassid'], $now);
     }
+
+
+    
+
+     /**
+     * Bulk create assessment scores for multiple broadsheets
+     */
+    private function bulkCreateAssessmentScoresForBroadsheets($broadsheets, int $subjectclassId, $now): void
+    {
+        try {
+            if ($broadsheets->isEmpty()) {
+                return;
+            }
+
+            // Get the subjectclass with related data
+            $subjectclass = Subjectclass::with(['schoolClass.classcategories'])->find($subjectclassId);
+            
+            if (!$subjectclass || !$subjectclass->schoolClass) {
+                Log::warning('No school class found for subjectclass', [
+                    'subjectclass_id' => $subjectclassId,
+                ]);
+                return;
+            }
+
+            $schoolClass = $subjectclass->schoolClass;
+            $categoryIds = $schoolClass->classcategories->pluck('id');
+
+            if ($categoryIds->isEmpty()) {
+                Log::info('No class categories found for school class', [
+                    'schoolclass_id' => $schoolClass->id,
+                ]);
+                return;
+            }
+
+            // Fetch unique assessments across all categories
+            $assessments = DB::table('assessments')
+                ->whereIn('classcategory_id', $categoryIds)
+                ->distinct()
+                ->get(['id']);
+
+            if ($assessments->isEmpty()) {
+                Log::info('No assessments found for class categories', [
+                    'category_ids' => $categoryIds,
+                ]);
+                return;
+            }
+
+            $assessmentScores = [];
+            $subAssessmentScores = [];
+
+            // Prepare bulk data for assessment scores
+            foreach ($broadsheets as $broadsheet) {
+                foreach ($assessments as $assessment) {
+                    $assessmentScores[] = [
+                        'broadsheet_id' => $broadsheet->id,
+                        'assessment_id' => $assessment->id,
+                        'score' => 0.00,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+            }
+
+            // Bulk insert assessment scores
+            if (!empty($assessmentScores)) {
+                BroadsheetAssessmentScore::insertOrIgnore($assessmentScores);
+            }
+
+            // Get all sub-assessments for the assessments
+            $assessmentIds = $assessments->pluck('id')->toArray();
+            $subAssessments = DB::table('sub_assessments')
+                ->whereIn('assessment_id', $assessmentIds)
+                ->get(['id', 'assessment_id']);
+
+            // Prepare bulk data for sub-assessment scores
+            foreach ($broadsheets as $broadsheet) {
+                foreach ($subAssessments as $subAssessment) {
+                    $subAssessmentScores[] = [
+                        'broadsheet_id' => $broadsheet->id,
+                        'sub_assessment_id' => $subAssessment->id,
+                        'assessment_id' => $subAssessment->assessment_id,
+                        'score' => 0.00,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+            }
+
+            // Bulk insert sub-assessment scores
+            if (!empty($subAssessmentScores)) {
+                BroadsheetSubAssessmentScore::insertOrIgnore($subAssessmentScores);
+            }
+
+            Log::info('Bulk created assessment scores', [
+                'broadsheet_count' => $broadsheets->count(),
+                'category_ids' => $categoryIds,
+                'assessment_scores_created' => count($assessmentScores),
+                'sub_assessment_scores_created' => count($subAssessmentScores),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to bulk create assessment scores', [
+                'subjectclass_id' => $subjectclassId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
 
     /**
      * Remove subject registrations for selected students and subjects.
@@ -994,8 +1231,20 @@ class SubjectOperationController extends Controller
                 // Track unique students being unregistered
                 $unregisteredStudents = array_unique(array_merge($unregisteredStudents, $studentsToProcess));
 
-                // Get broadsheet IDs for related table deletions
-                $broadsheetIds = $existingRegistrations->pluck('broadsheetid')->filter()->toArray();
+                // Get broadsheet IDs for related table deletions (BroadsheetRecord ids)
+                $broadsheetRecordIds = $existingRegistrations->pluck('broadsheetid')->filter()->toArray();
+
+                // Get Broadsheets ids for score deletions
+                $broadsheetSheetIds = Broadsheets::whereIn('broadsheet_record_id', $broadsheetRecordIds)
+                    ->where('term_id', $termid)
+                    ->where('subjectclass_id', $subjectclassid)
+                    ->pluck('id');
+
+                // Delete assessment and sub-assessment scores
+                if ($broadsheetSheetIds->isNotEmpty()) {
+                    BroadsheetAssessmentScore::whereIn('broadsheet_id', $broadsheetSheetIds)->delete();
+                    BroadsheetSubAssessmentScore::whereIn('broadsheet_id', $broadsheetSheetIds)->delete();
+                }
 
                 // Delete from BroadsheetRecordMock
                 $broadsheetRecordMockDeleted = BroadsheetRecordMock::whereIn('student_id', $studentsToProcess)
@@ -1005,20 +1254,20 @@ class SubjectOperationController extends Controller
                     ->delete();
 
                 // Delete from BroadsheetsMock
-                $broadsheetsMockDeleted = BroadsheetsMock::whereIn('broadsheet_records_mock_id', $broadsheetIds)
+                $broadsheetsMockDeleted = BroadsheetsMock::whereIn('broadsheet_records_mock_id', $broadsheetRecordIds)
                     ->where('subjectclass_id', $subjectclassid)
                     ->where('term_id', $termid)
                     ->where('staff_id', $staffid)
                     ->delete();
 
                 // Delete from Broadsheets
-                $broadsheetsDeleted = Broadsheets::whereIn('broadsheet_record_id', $broadsheetIds)
+                $broadsheetsDeleted = Broadsheets::whereIn('broadsheet_record_id', $broadsheetRecordIds)
                     ->where('term_id', $termid)
                     ->where('subjectclass_id', $subjectclassid)
                     ->delete();
 
                 // Delete from BroadsheetRecord
-                $broadsheetRecordDeleted = BroadsheetRecord::whereIn('id', $broadsheetIds)->delete();
+                $broadsheetRecordDeleted = BroadsheetRecord::whereIn('id', $broadsheetRecordIds)->delete();
 
                 // Delete from StudentSubjectRecord
                 $studentSubjectRecordDeleted = StudentSubjectRecord::whereIn('studentId', $studentsToProcess)
@@ -1045,7 +1294,8 @@ class SubjectOperationController extends Controller
                     'staff_id' => $staffid,
                     'student_count' => count($studentsToProcess),
                     'student_ids' => $studentsToProcess,
-                    'broadsheet_ids' => $broadsheetIds,
+                    'broadsheet_record_ids' => $broadsheetRecordIds,
+                    'broadsheet_sheet_ids' => $broadsheetSheetIds,
                     'broadsheet_record_mock_deleted' => $broadsheetRecordMockDeleted,
                     'broadsheets_mock_deleted' => $broadsheetsMockDeleted,
                     'broadsheets_deleted' => $broadsheetsDeleted,
@@ -1178,7 +1428,7 @@ class SubjectOperationController extends Controller
                 'success' => true,
                 'data' => $classes,
             ]);
-        } catch (\ValidationException $e) {
+        } catch (ValidationException $e) {
             Log::warning('Validation failed', [
                 'errors' => $e->errors(),
                 'request' => $request->all(),

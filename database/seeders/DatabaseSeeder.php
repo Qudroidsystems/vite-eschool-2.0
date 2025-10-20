@@ -10,7 +10,10 @@ use Database\Seeders\TermTableSeeder;
 use Database\Seeders\UserTableSeeder;
 use Database\Seeders\PermissionTableSeeder;
 use Database\Seeders\StudentStatusTableSeeder;
+use Database\Seeders\ExamPermissionTableSeeder;
+use Database\Seeders\CBTExamPermissionTableSeeder;
 use Database\Seeders\StudentPermissionTableSeeder;
+use Database\Seeders\QuestionPermissionTableSeeder;
 use Database\Seeders\ViewClassPermissionTableSeeder;
 use Database\Seeders\StudentReportPermissionTableSeeder;
 use Database\Seeders\SubjectVettedPermissionTableSeeder;
@@ -19,6 +22,7 @@ use Database\Seeders\MyClassMySubjectPermissionTableSeeder;
 use Database\Seeders\MySubjectVettingsPermissionTableSeeder;
 use Database\Seeders\PrincipalscommentPermissionTableSeeder;
 use Database\Seeders\SchoolInformationPermissionTableSeeder;
+use Database\Seeders\StudentAssessmentPermissionTableSeeder;
 use Database\Seeders\StudentMockReportPermissionTableSeeder;
 use Database\Seeders\CompulsorySubjectsPermissionTableSeeder;
 use Database\Seeders\MockSubjectVettingsPermissionTableSeeder;
@@ -64,6 +68,11 @@ class DatabaseSeeder extends Seeder
             SubjectUploadForStaffPermissionTableSeeder::class,
             SubjectVettedPermissionTableSeeder::class,
             SubjectVettingsPermissionTableSeeder::class,
+            StudentAssessmentPermissionTableSeeder::class,
+            ExamPermissionTableSeeder::class,
+            QuestionPermissionTableSeeder::class,
+            CBTExamPermissionTableSeeder::class,
+            ParentPermissionTableSeeder::class,
         
          
 

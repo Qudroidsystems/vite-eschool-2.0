@@ -2,25 +2,23 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Schoolclass extends Model
 {
     use HasFactory;
     protected $table = "schoolclass";
 
-    protected $fillable = ['schoolclass','arm','classcategoryid','description'];
+    protected $fillable = ['schoolclass','arm','description'];
 
-
-
-    public function armRelation()
+    public function arms()
     {
         return $this->belongsTo(Schoolarm::class, 'arm', 'id');
     }
 
-    public function classcategory()
+    public function classcategories()
     {
-        return $this->belongsTo(Classcategory::class, 'classcategoryid', 'id');
+        return $this->belongsToMany(Classcategory::class, 'schoolclass_classcategory', 'schoolclass_id', 'classcategory_id');
     }
 }

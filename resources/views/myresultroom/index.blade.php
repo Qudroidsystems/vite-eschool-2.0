@@ -40,7 +40,7 @@
                                     <select class="form-control" id="idsession" name="idsession">
                                         <option value="ALL">Select Session</option>
                                         @foreach ($sessions as $session)
-                                            <option value="{{ $session->id }}">{{ $session->session }}</option>
+                                            <option value="{{ $session->id }}" {{ request('sessionid') == $session->id ? 'selected' : '' }}>{{ $session->session }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -49,7 +49,7 @@
                                     <select class="form-control" id="idterm" name="idterm">
                                         <option value="ALL">Select Term</option>
                                         @foreach ($terms as $term)
-                                            <option value="{{ $term->id }}">{{ $term->term }}</option>
+                                            <option value="{{ $term->id }}" {{ request('termid') == $term->id ? 'selected' : '' }}>{{ $term->term }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -97,7 +97,7 @@
                                                                     data-termid="{{ $term->id }}" checked>
                                                                 <label class="form-check-label" for="subject-{{ $teacher->subjectclassid }}">
                                                                     <strong>{{ $teacher->subjectname }}</strong><br>
-                                                                    <small class="text-muted">{{ $teacher->schoolclass }} - {{ $teacher->staffname }}</small>
+                                                                    <small class="text-muted">{{ $teacher->schoolclass }}</small>
                                                                 </label>
                                                             </div>
                                                         </div>
@@ -177,7 +177,7 @@
                                                             </div>
                                                         </td>
                                                         <td class="sn">{{ $index + 1 }}</td>
-                                                        <td class="schoolclass" data-schoolclass="{{ $subject->schoolclass }}">{{ $subject->schoolclass }}</td>
+                                                        <td class="schoolclass" data-schoolclass="{{ $subject->schoolclass }}">{{ $subject->schoolclass }} ({{ $subject->classcategories }})</td>
                                                         <td class="subject" data-subject="{{ $subject->subject }}">{{ $subject->subject }}</td>
                                                         <td class="subjectcode" data-subjectcode="{{ $subject->subjectcode }}">{{ $subject->subjectcode }}</td>
                                                         <td class="term" data-term="{{ $subject->term }}">{{ $subject->term }}</td>
@@ -225,5 +225,158 @@
     </div>
 </div>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterButton = document.getElementById('filterButton');
+        const idterm = document.getElementById('idterm');
+        const idsession = document.getElementById('idsession');
+        const subjectList = document.getElementById('subjectList');
+        const subjectTeachersCard = document.getElementById('subjectTeachersCard');
+        const noDataAlert = document.getElementById('noDataAlert');
+
+        filterButton.addEventListener('click', function () {
+            const termId = idterm.value;
+            const sessionId = idsession.value;
+
+            if (termId === 'ALL' || sessionId === 'ALL') {
+                alert('Please select both term and session.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('termid', termId);
+            formData.append('sessionid', sessionId);
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the table body with new data
+                    updateSubjectTable(data.data.mysubjects);
+                    updateSubjectTeachers(data.data.subjectTeachers);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while fetching data.');
+            });
+        });
+
+        function updateSubjectTable(subjects) {
+            const tbody = document.getElementById('subjectTableBody');
+            tbody.innerHTML = '';
+
+            if (subjects.length === 0) {
+                tbody.innerHTML = '<tr class="noresult"><td colspan="8" class="text-center text-muted">No results found</td></tr>';
+                noDataAlert.style.display = 'block';
+                document.getElementById('subjectcount').textContent = '0';
+            } else {
+                subjects.forEach((subject, index) => {
+                    const row = `
+                        <tr>
+                            <td class="id" data-id="${subject.id}">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="chk_child"
+                                           data-subjectclassid="${subject.subjectclassid}"
+                                           data-termid="${subject.termid}"
+                                           data-sessionid="${subject.session_id}"
+                                           data-staffid="${subject.userid}">
+                                    <label class="form-check-label"></label>
+                                </div>
+                            </td>
+                            <td class="sn">${index + 1}</td>
+                            <td class="schoolclass" data-schoolclass="${subject.schoolclass}">${subject.schoolclass} (${subject.classcategories})</td>
+                            <td class="subject" data-subject="${subject.subject}">${subject.subject}</td>
+                            <td class="subjectcode" data-subjectcode="${subject.subjectcode}">${subject.subjectcode}</td>
+                            <td class="term" data-term="${subject.term}">${subject.term}</td>
+                            <td class="session" data-session="${subject.session}">${subject.session}</td>
+                            <td>
+                                <ul class="d-flex gap-2 list-unstyled mb-0">
+                                    ${subject.broadsheet_exists ? 
+                                        `<li><a href="/subjectscoresheet/index/${subject.schoolclassid}/${subject.subjectclassid}/${subject.userid}/${subject.termid}/${subject.session_id}" 
+                                               class="btn btn-success btn-icon btn-sm" title="View Terminal Record">
+                                               <i class="ph-file-list"></i>
+                                               </a></li>` : 
+                                        '<li><span class="badge bg-warning" title="No Terminal Record Available">N/A</span></li>'
+                                    }
+                                    ${subject.broadsheet_mock_exists ? 
+                                        `<li><a href="/subjectscoresheet-mock/show/${subject.schoolclassid}/${subject.subjectclassid}/${subject.userid}/${subject.termid}/${subject.session_id}" 
+                                               class="btn btn-warning btn-icon btn-sm" title="View Mock Record">
+                                               <i class="ph-clipboard"></i>
+                                               </a></li>` : 
+                                        '<li><span class="badge bg-warning" title="No Mock Record Available">N/A</span></li>'
+                                    }
+                                </ul>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+                noDataAlert.style.display = 'none';
+                document.getElementById('subjectcount').textContent = subjects.length;
+            }
+        }
+
+        function updateSubjectTeachers(teachers) {
+            const container = document.getElementById('subjectTeachersContainer');
+            container.innerHTML = '';
+
+            if (teachers.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No subject teachers found.</p>';
+                subjectTeachersCard.style.display = 'none';
+                document.getElementById('subjectTeacherCount').textContent = '0';
+            } else {
+                // Group by term
+                const grouped = teachers.reduce((acc, teacher) => {
+                    if (!acc[teacher.termid]) acc[teacher.termid] = [];
+                    acc[teacher.termid].push(teacher);
+                    return acc;
+                }, {});
+
+                Object.keys(grouped).forEach(termId => {
+                    const term = terms.find(t => t.id == termId); // Assume terms is global or passed
+                    if (term) {
+                        let termHtml = `<h6 class="mt-3">${term.term}</h6><div class="row">`;
+                        grouped[termId].forEach(teacher => {
+                            termHtml += `
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input subject-checkbox" type="checkbox" id="subject-${teacher.subjectclassid}"
+                                               data-subjectclassid="${teacher.subjectclassid}" data-staffid="${teacher.userid}"
+                                               data-termid="${termId}" checked>
+                                        <label class="form-check-label" for="subject-${teacher.subjectclassid}">
+                                            <strong>${teacher.subjectname}</strong><br>
+                                            <small class="text-muted">${teacher.schoolclass} - ${teacher.staffname}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        termHtml += '</div>';
+                        container.innerHTML += termHtml;
+                    }
+                });
+
+                subjectTeachersCard.style.display = 'block';
+                document.getElementById('subjectTeacherCount').textContent = teachers.length;
+            }
+        }
+
+        // Add global variables for terms
+        window.terms = @json($terms);
+
+        // Other JS code for selectAll, etc., can be added if needed
+    });
+</script>
 
 @endsection
