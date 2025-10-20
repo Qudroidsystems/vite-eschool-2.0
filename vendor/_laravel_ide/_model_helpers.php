@@ -15525,6 +15525,7 @@ namespace App\Models {
     /**
      * App\Models\Student
      *
+     * @property bool $can_view_assessments
      * @property mixed $student_status
      * @property string|null $student_category
      * @property string|null $statusId
@@ -15605,6 +15606,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereStatusid($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereStudentCategory($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereStudentStatus($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student whereCanViewAssessments($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Student>|Student query()

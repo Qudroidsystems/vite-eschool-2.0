@@ -8,14 +8,14 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::table('studentregistration', function (Blueprint $table) {
+        Schema::table('studentRegistration', function (Blueprint $table) {
             $table->boolean('can_view_assessments')->default(true)->after('student_status');
         });
     }
 
     public function down()
     {
-        Schema::table('studentregistration', function (Blueprint $table) {
+        Schema::table('studentRegistration', function (Blueprint $table) {
             $table->dropColumn('can_view_assessments');
         });
     }
