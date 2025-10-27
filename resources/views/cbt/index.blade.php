@@ -104,8 +104,8 @@
     </div>
 </div>
 
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script> {{-- Optional: For advanced search/sort; remove if unused --}}
+{{-- @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script> Optional: For advanced search/sort; remove if unused --}}
 <script>
 $(document).ready(function() {
     let examList; // For List.js if used
