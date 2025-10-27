@@ -31,18 +31,90 @@ class CBTController extends Controller
         $this->middleware('permission:Submit cbt-exam', ['only' => ['submit']]);
     }
 
-  
-    // ... (your existing imports and class code remain the same)
+    public function index()
+    {
+        $pagetitle = 'CBT Management'; // Define the page title
 
-public function index()
-{
-    // ... (your entire existing index() method code remains unchanged, up to the $attempts assignment)
+        $studentId = auth()->user()->student_id;
 
-    $class = $studentClassData ? (object) ['id' => $studentClassData->class_id, 'schoolclass' => $studentClassData->class_name] : null;
-    $term = $studentClassData ? (object) ['id' => $studentClassData->term_id, 'term' => $studentClassData->term_name] : null;
-    $session = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name] : null;
+        $studentClassData = DB::table('studentclass')
+            ->where('studentId', $studentId)
+            ->join('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+            ->join('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
+            ->join('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
+            ->select(
+                'schoolclass.id as class_id',
+                'schoolclass.schoolclass as class_name',
+                'schoolterm.id as term_id',
+                'schoolterm.term as term_name',
+                'schoolsession.id as session_id',
+                'schoolsession.session as session_name'
+            )
+            ->first();
 
-    // NEW: AJAX Support for Pagination
+        $student = DB::table('studentRegistration')
+            ->where('id', $studentId)
+            ->select('id', 'firstname', 'lastname', 'admissionNo')
+            ->first();
+
+        $current = 'Current';
+
+        $totalreg = 0;
+        $reg = 0;
+        $registeredSubjects = [];
+        $exams = collect(); // Default empty collection
+        $attempts = []; // Initialize empty
+
+        if ($studentClassData) {
+            $totalreg = DB::table('subjectclass')
+                ->where('schoolclassid', $studentClassData->class_id)
+                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+                ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+                ->where('schoolsession.status', '=', $current)
+                ->distinct('subjectteacher.subjectid')
+                ->count('subjectteacher.subjectid');
+
+            $reg = DB::table('student_subject_register_record')
+                ->where('student_subject_register_record.studentId', $studentId)
+                ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
+                ->where('schoolsession.status', '=', $current)
+                ->count();
+
+            $registeredSubjects = DB::table('student_subject_register_record')
+                ->where('student_subject_register_record.studentId', $studentId)
+                ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
+                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
+                ->where('schoolsession.status', '=', $current)
+                ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+                ->pluck('subjectteacher.id')
+                ->toArray();
+
+            $exams = DB::table('exams')
+                ->whereIn('subject_id', $registeredSubjects)
+                ->where('schoolclass_id', $studentClassData->class_id)
+                ->where('termid', $studentClassData->term_id)
+                ->where('session', $studentClassData->session_id)
+                ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
+                ->paginate(15);
+
+            // Fetch attempted exam IDs for this student (efficient for pagination)
+            $examIds = $exams->pluck('id')->toArray();
+            $attempts = ExamAttempt::where('student_id', $studentId)
+                ->whereIn('exam_id', $examIds)
+                ->where('status', 'completed')  // Only count completed attempts
+                ->pluck('exam_id')
+                ->toArray();
+        }
+
+        $class = $studentClassData ? (object) ['id' => $studentClassData->class_id, 'schoolclass' => $studentClassData->class_name] : null;
+        $term = $studentClassData ? (object) ['id' => $studentClassData->term_id, 'term' => $studentClassData->term_name] : null;
+        $session = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name] : null;
+
+        // NEW: AJAX Support for Pagination
     if (request()->ajax()) {
         return response()->view('cbt.partials.exams-table', [
             'exams' => $exams,
@@ -56,20 +128,19 @@ public function index()
         ]);
     }
 
-    return view('cbt.index', [
-        'pagetitle' => $pagetitle,
-        'exams' => $exams,
-        'student' => $student,
-        'class' => $class,
-        'term' => $term,
-        'session' => $session,
-        'totalreg' => $totalreg,
-        'reg' => $reg,
-        'attempts' => $attempts,
-    ]);
-}
-
-// ... (rest of your controller methods remain unchanged)
+        
+        return view('cbt.index', [
+            'pagetitle' => $pagetitle,
+            'exams' => $exams,
+            'student' => $student,
+            'class' => $class,
+            'term' => $term,
+            'session' => $session,
+            'totalreg' => $totalreg,
+            'reg' => $reg,
+            'attempts' => $attempts,  // Added: Pass attempts to view for $hasAttempted
+        ]);
+    }
 
     /**
      * Show the form for creating a new resource.
