@@ -22,13 +22,6 @@ use App\Models\StudentBillPaymentRecord;
 
 class SchoolPaymentController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('permission:View school-payment', ['only' => ['index', 'termSession', 'termsessionpayments', 'invoice', 'statement']]);
-        $this->middleware('permission:Create school-payment', ['only' => ['store']]);
-        $this->middleware('permission:Delete school-payment', ['only' => ['deletestudentpayment']]);
-    }
-
     /**
      * Display the list of students for payment selection.
      */
@@ -101,8 +94,10 @@ class SchoolPaymentController extends Controller
                 'studentRegistration.admissionNo as admissionNo',
                 'studentRegistration.firstname as firstname',
                 'studentRegistration.lastname as lastname',
-                'studentRegistration.home_address as homeadd',
+                'studentRegistration.home_address2 as homeadd',
                 'parentRegistration.father_phone as phone',
+                'studentRegistration.statusId as statusId',
+                'studentRegistration.student_status as student_status',
                 'studentpicture.picture as avatar',
                 'schoolclass.schoolclass as schoolclass',
                 'schoolarm.arm as arm',
@@ -111,6 +106,7 @@ class SchoolPaymentController extends Controller
                 'studentclass.schoolclassid as schoolclassId',
             ])
             ->first();
+            // print($studentdata->schoolclass);
 
         if (!$studentdata) {
             return redirect()->route('schoolpayment.index')->with('error', 'Student not found or not enrolled in the current session.');
@@ -186,7 +182,7 @@ class SchoolPaymentController extends Controller
                         ->where('school_bill_class_term_session.session_id', $request->sessionid)
                         ->leftJoin('school_bill', 'school_bill.id', '=', 'school_bill_class_term_session.bill_id')
                         ->leftJoin('student_status', 'student_status.id', '=', 'school_bill.statusId')
-                        ->where('student_status.id', 1)
+                        ->where('student_status.id', $studentdata->statusId)
                         ->select([
                             'school_bill_class_term_session.id as id',
                             'school_bill.id as schoolbillid',
@@ -196,7 +192,7 @@ class SchoolPaymentController extends Controller
                             'school_bill.bill_amount as amount'
                         ])
                         ->get();
-                 // print_r($student_bill_info);
+                //  print_r($student_bill_info);
 
             } catch (\Illuminate\Database\QueryException $e) {
                 if (strpos($e->getMessage(), 'school_bill_term_session') !== false) {
@@ -225,8 +221,8 @@ class SchoolPaymentController extends Controller
         $schoolclassId = $studentdata->schoolclassId ?? null;
 
         // Debug the $studentpaymentbill and $paymentHistory collections
-        Log::info('Student Payment Bill:', $studentpaymentbill->toArray());
-        Log::info('Payment History:', $paymentHistory->toArray());
+        // Log::info('Student Payment Bill:', $studentpaymentbill->toArray());
+        // Log::info('Payment History:', $paymentHistory->toArray());
 
         return view('schoolpayment.studentpayment', compact(
             'pagetitle',
@@ -825,7 +821,7 @@ class SchoolPaymentController extends Controller
 
         // Fetch school information
         $schoolInfo = SchoolInformation::first() ?? (object) [
-            'school_name' => 'TOPCLASS COLLEGE',
+            'school_name' => 'VITE-ESCHOOL',
             'logo_url' => asset('assets/images/logo.png'),
             'school_email' => 'info@topclasscollege.edu',
             'school_address' => 'Your School Address Here',

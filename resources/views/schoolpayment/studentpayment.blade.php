@@ -59,6 +59,19 @@
                                                     </div>
                                                     <div class="fw-semibold fs-6 text-gray-400">Admission No</div>
                                                 </div>
+
+                                                <!-- Student Status Card -->
+                                                <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi bi-card-text fs-3 {{ $studentdata->student_status !== 'Active' ? 'text-danger' : 'text-success' }} me-2"></i>
+                                                        <div class="fs-2 fw-bold {{ $studentdata->student_status !== 'Active' ? 'text-danger' : 'text-success' }}">
+                                                            {{ $studentdata->statusId == 1 ? 'Returning Student' : ($studentdata->statusId == 2 ? 'New Student' : $studentdata->statusId) }} | {{ $studentdata->student_status }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="fw-semibold fs-6 text-gray-400">Student Status | Active Mode</div>
+                                                </div>
+
+
                                                 <!-- Class Card -->
                                                 <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
                                                     <div class="d-flex align-items-center">

@@ -1,13 +1,12 @@
 <!doctype html>
 <html lang="en" data-layout="vertical" data-sidebar="dark" data-sidebar-size="lg" data-preloader="disable" data-theme="default" data-topbar="light" data-bs-theme="light">
 
-
     
 <!-- Mirrored from themesbrand.com/steex/layouts/auth-signin.html by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 12 Jun 2023 02:58:32 GMT -->
 <head>
 
         <meta charset="utf-8">
-        <title>Sign In | Vite-ESchool</title>
+        <title>Sign In | {{ $school->school_name ?? 'Vite-ESchool' }}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta content="school  App" name="description">
         <meta content="Themesbrand" name="author">
@@ -143,7 +142,7 @@
                 height: 100%;
                 object-fit: cover;
             }
-            .avatar-tooltip {`
+            .avatar-tooltip {
                 background-color: #6c757d; /* Secondary color from bg-secondary */
                 color: #fff;
                 border: 1px solid #fff;
@@ -153,7 +152,10 @@
     </head>
 
     <body>
-    
+@php
+    $school = \App\Models\SchoolInformation::getActiveSchool();
+@endphp
+
         <section class="auth-page-wrapper  position-relative d-flex align-items-center justify-content-center min-vh-100">
             <div class="container">
                 <div class="row justify-content-center">
@@ -210,7 +212,7 @@
                                                 <div class="effect-circle-1 position-relative mx-auto rounded-circle d-flex align-items-center justify-content-center">
                                                     <div class="effect-circle-2 position-relative mx-auto rounded-circle d-flex align-items-center justify-content-center">
                                                         <div class="effect-circle-3 mx-auto rounded-circle position-relative text-white fs-4xl d-flex align-items-center justify-content-center">
-                                                            Welcome to <span class="text-primary ms-1">Vite-ESchool</span>
+                                                            Welcome to <span class="text-primary ms-1">Vite-ESchool'</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -262,7 +264,7 @@
                             
                                             <div class="text-center">
                                                 <p class="text-white opacity-75 mb-0 mt-3">
-                                                    &copy; <script>document.write(new Date().getFullYear())</script> Vite-ESchool. Created with <i class="mdi mdi-heart text-danger"></i> by Qudroid Systems
+                                                    &copy; <script>document.write(new Date().getFullYear())</script> {{ $school->school_name ?? 'Vite-ESchool' }}. Created with <i class="mdi mdi-heart text-danger"></i> by Qudroid Systems
                                                 </p>
                                             </div>
                                         </div>
@@ -273,7 +275,7 @@
                                     <div class="card mb-0 border-0 shadow-none mb-0">
                                         <div class="card-body p-sm-5 m-lg-4">
                                             <div class="text-center mt-5">
-                                                <h5 class="fs-3xl">College Portal (Demo)</h5>
+                                                <h5 class="fs-3xl">{{ $school->school_name ?? 'TopClass College' }} Portal</h5>
                                                 <p class="text-muted">Sign in to continue</p>
                                             </div>
                                             <div class="p-2 mt-5">
