@@ -100,6 +100,15 @@ class StudentAssessmentController extends Controller
         $term = (object) ['id' => $studentClassData->term_id, 'term' => $studentClassData->term_name];
         $session = (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name];
 
+        // Get schoolclass for category IDs and senior status
+        $schoolclass = Schoolclass::with('classcategories')->find($studentClassData->class_id);
+        if (!$schoolclass || $schoolclass->classcategories->isEmpty()) {
+            return view('student.assessments.index', compact('pagetitle', 'student', 'class', 'term', 'session', 'terms', 'sessions', 'userSelectedTermId', 'selectedSessionId'))
+                ->with('error', 'Class category not found.');
+        }
+        $isSenior = $schoolclass->classcategories->first()->is_senior ?? false;
+        $categoryIds = $schoolclass->classcategories->pluck('id');
+
         // Get registered subjects for selected term/session
         // Filter by session always; filter by term only if specific term selected (not "All Terms")
         $registeredSubjects = DB::table('student_subject_register_record as ssrr')
@@ -131,18 +140,15 @@ class StudentAssessmentController extends Controller
             'completed_subjects' => 0,
             'total_score' => 0,
             'average_cum' => 0,
-            'gpa' => '-'
+            'gpa' => '-',
+            'cgpa' => '-',
+            'gpa_grade' => '-',
+            'num_subjects' => 0,
+            'total_grade_points' => 0.0,
+            'calculated_gpa' => 0.0
         ];
 
         foreach ($registeredSubjects as $regSubject) {
-            // Get schoolclass for category IDs
-            $schoolclass = Schoolclass::with('classcategories')->find($studentClassData->class_id);
-            if (!$schoolclass || $schoolclass->classcategories->isEmpty()) {
-                continue;
-            }
-
-            $categoryIds = $schoolclass->classcategories->pluck('id');
-
             // Get assessments for the class
             $assessments = Assessment::whereIn('classcategory_id', $categoryIds)
                 ->with('subAssessments')
@@ -205,6 +211,8 @@ class StudentAssessmentController extends Controller
                 ];
             });
 
+            $subjectGPA = $this->getGradePoint($broadsheet->cum ?? 0, $isSenior);
+
             $subjectsWithAssessments->push([
                 'subject_id' => $regSubject->subject_id,
                 'subject_name' => $regSubject->subject_name,
@@ -214,6 +222,7 @@ class StudentAssessmentController extends Controller
                 'bf' => $broadsheet->bf ?? 0,
                 'cum' => $broadsheet->cum ?? 0,
                 'grade' => $broadsheet->grade ?? '-',
+                'subject_gpa' => round($subjectGPA, 1),
                 'remark' => $broadsheet->remark ?? '-',
                 'position' => $broadsheet->position ? $broadsheet->position . getOrdinalSuffix($broadsheet->position) : '-'
             ]);
@@ -226,18 +235,20 @@ class StudentAssessmentController extends Controller
             }
         }
 
-        // Calculate average and GPA
+        // Calculate average
         if ($overallProgress['completed_subjects'] > 0) {
             $overallProgress['average_cum'] = round($overallProgress['total_score'] / $overallProgress['completed_subjects'], 2);
-            // Simple GPA calculation (A=4.0, B=3.0, etc.)
-            $gpaMap = ['A' => 4.0, 'B' => 3.0, 'C' => 2.0, 'D' => 1.0, 'F' => 0.0];
-            $totalGPA = 0;
-            foreach ($subjectsWithAssessments as $subject) {
-                if (isset($gpaMap[$subject['grade']])) {
-                    $totalGPA += $gpaMap[$subject['grade']];
-                }
-            }
-            $overallProgress['gpa'] = $subjectsWithAssessments->count() > 0 ? round($totalGPA / $subjectsWithAssessments->count(), 2) : 0;
+        }
+
+        // Compute overall GPA and CGPA
+        if ($subjectsWithAssessments->isNotEmpty() && $schoolclass) {
+            $gpaCgpaData = $this->computeOverallForStudent($studentId, $schoolclass, $selectedTermId, $selectedSessionId ?? $studentClassData->session_id, $isSenior);
+            $overallProgress['gpa'] = round($gpaCgpaData['gpa'], 2);
+            $overallProgress['cgpa'] = round($gpaCgpaData['cgpa'], 2);
+            $overallProgress['gpa_grade'] = $gpaCgpaData['gpa_grade'] ?? 'F';
+            $overallProgress['num_subjects'] = $gpaCgpaData['num_subjects'];
+            $overallProgress['total_grade_points'] = $gpaCgpaData['total_grade_points'];
+            $overallProgress['calculated_gpa'] = $gpaCgpaData['num_subjects'] > 0 ? round($gpaCgpaData['total_grade_points'] / $gpaCgpaData['num_subjects'], 2) : 0;
         }
 
         return view('student.assessments.index', compact(
@@ -253,5 +264,123 @@ class StudentAssessmentController extends Controller
             'selectedSessionId',
             'overallProgress'
         ));
+    }
+
+    /**
+     * Get grade point from score based on the class category scale.
+     */
+    private function getGradePoint($score, $isSenior = false)
+    {
+        if (!$isSenior) {
+            // Junior scale
+            if ($score >= 70) {
+                return 5.0;
+            } elseif ($score >= 60) {
+                return 4.0;
+            } elseif ($score >= 50) {
+                return 3.0;
+            } elseif ($score >= 40) {
+                return 2.0;
+            }
+            return 0.0;
+        } else {
+            // Senior scale
+            if ($score >= 75) {
+                return 5.0;
+            } elseif ($score >= 65) {
+                return 4.0;
+            } elseif ($score >= 50) {
+                return 3.0;
+            } elseif ($score >= 45) {
+                return 2.0;
+            } elseif ($score >= 40) {
+                return 1.0;
+            }
+            return 0.0;
+        }
+    }
+
+    /**
+     * Compute overall GPA and CGPA for a single student.
+     *
+     * @param int $studentId
+     * @param \App\Models\Schoolclass $schoolclass
+     * @param int $termId
+     * @param int $sessionId
+     * @param bool $isSenior
+     * @return array ['gpa' => float, 'cgpa' => float, 'gpa_grade' => string, 'num_subjects' => int, 'total_grade_points' => float]
+     */
+    private function computeOverallForStudent($studentId, $schoolclass, $termId, $sessionId, $isSenior)
+    {
+        // Current Term GPA and Grade (across all subjects) using total scores
+        $currentTermBroadsheets = Broadsheets::where('term_id', $termId)
+            ->whereHas('broadsheetRecord', function ($q) use ($studentId, $sessionId) {
+                $q->where('student_id', $studentId)->where('session_id', $sessionId);
+            })
+            ->get(['total']);
+        // Compute average total score for GPA Grade using totals
+        $averageTotal = $currentTermBroadsheets->avg('total') ?? 0.0;
+        $category = $schoolclass->classcategories->first();
+        $gpaGrade = $category ? $category->calculateGrade($averageTotal) : $this->getDefaultGrade($averageTotal);
+        $termGradePoints = $currentTermBroadsheets->map(function ($b) use ($isSenior) {
+            return $this->getGradePoint($b->total, $isSenior); // Use total, not cum
+        });
+        $gpa = $termGradePoints->avg() ?? 0.0;
+        $num_subjects = $currentTermBroadsheets->count();
+        $total_grade_points = $termGradePoints->sum();
+        // CGPA: Average of up to 3 most recent sessions' annual GPAs within the class category
+        $annualGPAs = [];
+        $studentSessionsInCategory = DB::table('broadsheet_records')
+            ->join('schoolclass', 'schoolclass.id', '=', 'broadsheet_records.schoolclass_id')
+            ->join('classcategories', 'classcategories.id', '=', 'schoolclass.classcategoryid')
+            ->where('broadsheet_records.student_id', $studentId)
+            ->where('classcategories.is_senior', $isSenior)
+            ->select('broadsheet_records.session_id')
+            ->distinct()
+            ->orderByDesc('broadsheet_records.session_id')
+            ->limit(3)
+            ->pluck('session_id');
+        foreach ($studentSessionsInCategory as $targetSession) {
+            $sessionAnnualGPAs = [];
+            for ($t = 1; $t <= 3; $t++) {
+                $termBroadsheets = Broadsheets::where('term_id', $t)
+                    ->whereHas('broadsheetRecord', function ($q) use ($studentId, $targetSession) {
+                        $q->where('student_id', $studentId)->where('session_id', $targetSession);
+                    })
+                    ->get(['total']); // Use total for past terms too
+                $termGradePointsPast = $termBroadsheets->map(function ($b) use ($isSenior) {
+                    return $this->getGradePoint($b->total, $isSenior); // Use total
+                });
+                $termGPA = $termGradePointsPast->avg() ?? 0.0;
+                $sessionAnnualGPAs[] = $termGPA;
+            }
+            $annualGPA = collect($sessionAnnualGPAs)->avg() ?? 0.0;
+            $annualGPAs[] = $annualGPA;
+        }
+        $cgpa = collect($annualGPAs)->avg() ?? 0.0;
+        return [
+            'gpa' => $gpa,
+            'cgpa' => $cgpa,
+            'gpa_grade' => $gpaGrade,
+            'num_subjects' => $num_subjects,
+            'total_grade_points' => $total_grade_points,
+        ];
+    }
+
+    /**
+     * Fallback grading logic when class category is not available
+     */
+    protected function getDefaultGrade($score)
+    {
+        if ($score >= 70 && $score <= 100) {
+            return 'A';
+        } elseif ($score >= 60) {
+            return 'B';
+        } elseif ($score >= 50) {
+            return 'C';
+        } elseif ($score >= 40) {
+            return 'D';
+        }
+        return 'F';
     }
 }

@@ -115,21 +115,43 @@
                         <div class="card-body">
                             <h5 class="card-title text-white mb-3">Progress Report</h5>
                             <div class="row text-center">
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <h4 class="text-white">{{ $overallProgress['total_subjects'] ?? 0 }}</h4>
                                     <p class="mb-0">Total Subjects</p>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <h4 class="text-white">{{ $overallProgress['completed_subjects'] ?? 0 }}</h4>
                                     <p class="mb-0">Completed</p>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <h4 class="text-white">{{ $overallProgress['average_cum'] ?? 0 }}</h4>
                                     <p class="mb-0">Avg Score</p>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <h4 class="text-white">{{ $overallProgress['gpa'] ?? '-' }}</h4>
                                     <p class="mb-0">GPA</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <h4 class="text-white">{{ $overallProgress['cgpa'] ?? '-' }}</h4>
+                                    <p class="mb-0">CGPA</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <h4 class="text-white">{{ $overallProgress['gpa_grade'] ?? '-' }}</h4>
+                                    <p class="mb-0">GPA Grade</p>
+                                </div>
+                            </div>
+                            <div class="row text-center mt-3">
+                                <div class="col-md-3">
+                                    <h6 class="text-white-50 mb-1">Total Grade Points</h6>
+                                    <h5 class="text-white">{{ number_format($overallProgress['total_grade_points'] ?? 0, 1) }}</h5>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6 class="text-white-50 mb-1">Calculated GPA</h6>
+                                    <h5 class="text-white">{{ $overallProgress['calculated_gpa'] ?? 0 }}</h5>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-white-50 mb-1">Subjects Count</h6>
+                                    <h5 class="text-white">{{ $overallProgress['num_subjects'] ?? 0 }}</h5>
                                 </div>
                             </div>
                         </div>
@@ -182,21 +204,29 @@
                                                 <div class="accordion-body">
                                                     <!-- Overall Performance -->
                                                     <div class="row mb-3 p-3 bg-light rounded">
-                                                        <div class="col-md-3">
+                                                        <div class="col-md-2">
                                                             <h6>Total Score</h6>
                                                             <span class="badge bg-primary fs-6">{{ number_format($subject['total'] ?? 0, 2) }}</span>
                                                         </div>
-                                                        <div class="col-md-3">
+                                                        <div class="col-md-2">
                                                             <h6>Brought Forward</h6>
                                                             <span class="badge bg-secondary fs-6">{{ number_format($subject['bf'] ?? 0, 2) }}</span>
                                                         </div>
-                                                        <div class="col-md-3">
+                                                        <div class="col-md-2">
                                                             <h6>Cumulative</h6>
                                                             <span class="badge bg-info fs-6">{{ number_format($subject['cum'] ?? 0, 2) }}</span>
                                                         </div>
-                                                        <div class="col-md-3">
+                                                        <div class="col-md-2">
+                                                            <h6>Subject GPA</h6>
+                                                            <span class="badge bg-warning fs-6">{{ number_format($subject['subject_gpa'] ?? 0, 1) }}</span>
+                                                        </div>
+                                                        <div class="col-md-2">
                                                             <h6>Grade</h6>
                                                             <span class="badge bg-success fs-6">{{ $subject['grade'] ?? '-' }}</span>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <h6>Overall GPA</h6>
+                                                            <span class="badge bg-primary fs-6">{{ $overallProgress['gpa'] ?? '-' }}</span>
                                                         </div>
                                                     </div>
 
