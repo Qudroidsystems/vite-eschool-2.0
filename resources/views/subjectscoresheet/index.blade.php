@@ -1,5 +1,4 @@
 @extends('layouts.master')
-
 @section('content')
 <style>
 /* Existing styles */
@@ -28,12 +27,10 @@
         font-size: 0.9rem;
     }
 }
-
 /* Vetted status background colors */
 .bg-success-subtle { background-color: #d4edda !important; }
 .bg-danger-subtle { background-color: #f8d7da !important; }
 .bg-warning-subtle { background-color: #fff3cd !important; }
-
 /* Assessment dropdown styles */
 .assessment-dropdown .dropdown-menu {
     max-height: 200px;
@@ -42,14 +39,23 @@
 .assessment-dropdown .dropdown-item {
     white-space: nowrap;
 }
-
 /* Invalid input styling */
 .is-invalid {
     border-color: #dc3545 !important;
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
 }
+/* Column visibility modal styles */
+.column-group {
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+}
+.column-group h6 {
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
 </style>
-
 <!-- Main content container -->
 <div class="main-content">
     <div class="page-content">
@@ -65,7 +71,6 @@
                     </ul>
                 </div>
             @endif
-
             <!-- Display success/status messages -->
             @if (session('status') || session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -73,13 +78,11 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
-
             @if (session('error'))
                 <div class="alert alert-danger">
                     {{ session('error') }}
                 </div>
             @endif
-
             <!-- Subject Information Cards -->
             @if ($broadsheets->isNotEmpty())
                 <div class="row">
@@ -125,8 +128,7 @@
                                             </div>
                                         </div>
                                     </div>
-
-                               
+                            
                                     <!-- Assessment Buttons Section -->
                                     @if($assessments->isNotEmpty())
                                         <div class="row g-2 mb-4">
@@ -175,7 +177,6 @@
                     </div>
                 </div>
             @endif
-
             <!-- Scoresheet Table -->
             <div class="row">
                 <div class="col-lg-12">
@@ -196,6 +197,11 @@
                                         <i class="ri-close-line"></i>
                                     </button>
                                 </div>
+                                @if ($broadsheets->isNotEmpty())
+                                    <button type="button" class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#columnVisibilityModal">
+                                        <i class="bi bi-eye me-1"></i> Columns
+                                    </button>
+                                @endif
                             </div>
                         </div>
                         <div class="card-body">
@@ -222,7 +228,6 @@
                                     @endif
                                 </div> --}}
                             </div>
-
                             <!-- Download Progress Indicator -->
                             <div class="row mt-2" id="downloadProgressContainer" style="display: none;">
                                 <div class="col-12">
@@ -245,38 +250,42 @@
                                     </div>
                                 </div>
                             </div>
-
                             <!-- No Data Alert -->
                             <div class="alert alert-info text-center" id="noDataAlert" style="display: {{ $broadsheets->isEmpty() ? 'block' : 'none' }};">
                                 <i class="ri-information-line me-2"></i>
                                 No scores available for the selected subject. Please check your filters or import scores.
                             </div>
-
                             <!-- Scoresheet Table -->
                             <div class="table-responsive">
                                 <table class="table table-centered align-middle table-nowrap mb-0" id="scoresheetTable">
                                     <thead class="table-active">
                                         <tr>
-                                            <th style="width: 50px;">
+                                            <th class="col-checkbox" style="width: 50px;">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" id="checkAll">
                                                     <label class="form-check-label" for="checkAll"></label>
                                                 </div>
                                             </th>
-                                            <th style="width: 50px;" class="sort cursor-pointer" data-sort="sn">SN</th>
-                                            <th class="sort cursor-pointer" data-sort="admissionno">Admission No</th>
-                                            <th class="sort cursor-pointer" data-sort="name">Name</th>
+                                            <th class="col-sn sort cursor-pointer" data-sort="sn">SN</th>
+                                            <th class="col-admissionno sort cursor-pointer" data-sort="admissionno">Admission No</th>
+                                            <th class="col-name sort cursor-pointer" data-sort="name">Name</th>
                                             @forelse ($assessments as $assessment)
-                                                <th>{{ $assessment->name }}<br><small>({{ $assessment->max_score }})</small></th>
+                                                <th class="col-assessment-{{ $assessment->id }}">{{ $assessment->name }}<br><small>({{ $assessment->max_score }})</small></th>
                                             @empty
-                                                <th colspan="4">No Assessments Defined</th>
+                                                <th colspan="4" class="col-no-assessments">No Assessments Defined</th>
                                             @endforelse
-                                            <th>Total</th>
-                                            <th>BF</th>
-                                            <th>Cum</th>
-                                            <th>Grade</th>
-                                            <th>Position</th>
-                                            <th>Vetted Status</th>
+                                            <th class="col-total">Total</th>
+                                            <th class="col-bf">BF</th>
+                                            <th class="col-cum">Cum</th>
+                                            <th class="col-num-subjects">Num Subjects</th>
+                                            <th class="col-total-gp">Total GP</th>
+                                            <th class="col-gpa">GPA</th>
+                                            <th class="col-calc-gpa">Calc GPA</th>
+                                            <th class="col-gpa-grade">GPA Grade</th>
+                                            <th class="col-cgpa">CGPA</th>
+                                            <th class="col-grade">Grade</th>
+                                            <th class="col-position">Position</th>
+                                            <th class="col-vetted">Vetted Status</th>
                                         </tr>
                                     </thead>
                                     <tbody id="scoresheetTableBody" class="list form-check-all">
@@ -288,21 +297,22 @@
                                                     $scoreObj = $broadsheet->assessmentScores->where('assessment_id', $assessment->id)->first();
                                                     $initialTotal += $scoreObj ? $scoreObj->score : 0;
                                                 }
+                                                $calculated_gpa = ($broadsheet->num_subjects ?? 1) > 0 ? number_format(($broadsheet->total_grade_points ?? 0) / ($broadsheet->num_subjects ?? 1), 1) : '0.0';
                                             @endphp
                                             <tr class="{{ $broadsheet->vettedstatus === '1' ? 'bg-success-subtle' : ($broadsheet->vettedstatus === '0' ? 'bg-danger-subtle' : 'bg-warning-subtle') }}"
                                                 data-id="{{ $broadsheet->id }}"
-                                                data-bs-toggle="tooltip" 
+                                                data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 title="{{ $broadsheet->vettedstatus === '1' ? 'Scores vetted' : ($broadsheet->vettedstatus === '0' ? 'Scores not vetted' : 'Scores not vetted yet') }}">
-                                                <td>
+                                                <td class="col-checkbox">
                                                     <div class="form-check">
                                                         <input class="form-check-input score-checkbox" type="checkbox" name="chk_child" data-id="{{ $broadsheet->id }}">
                                                         <label class="form-check-label"></label>
                                                     </div>
                                                 </td>
-                                                <td class="sn">{{ ++$i }}</td>
-                                                <td class="admissionno" data-admissionno="{{ $broadsheet->admissionno }}">{{ $broadsheet->admissionno ?? '-' }}</td>
-                                                <td class="name" data-name="{{ ($broadsheet->lname ?? '') . ' ' . ($broadsheet->fname ?? '') . ' ' . ($broadsheet->mname ?? '') }}">
+                                                <td class="col-sn sn">{{ ++$i }}</td>
+                                                <td class="col-admissionno admissionno" data-admissionno="{{ $broadsheet->admissionno }}">{{ $broadsheet->admissionno ?? '-' }}</td>
+                                                <td class="col-name name" data-name="{{ ($broadsheet->lname ?? '') . ' ' . ($broadsheet->fname ?? '') . ' ' . ($broadsheet->mname ?? '') }}">
                                                     <div class="d-flex align-items-center">
                                                         <div class="avatar-sm me-2">
                                                             <img src="{{ $broadsheet->picture ? asset('storage/student_avatars/' . basename($broadsheet->picture)) : asset('storage/student_avatars/unnamed.jpg') }}" alt="{{ ($broadsheet->lname ?? '') . ' ' . ($broadsheet->fname ?? '') . ' ' . ($broadsheet->mname ?? '') }}" class="rounded-circle w-100 student-image" data-bs-toggle="modal" data-bs-target="#imageViewModal" data-image="{{ $broadsheet->picture ? asset('storage/student_avatars/' . basename($broadsheet->picture)) : asset('storage/student_avatars/unnamed.jpg') }}" data-picture="{{ $broadsheet->picture ?? 'none' }}" onerror="this.src='{{ asset('storage/student_avatars/unnamed.jpg') }}';">
@@ -317,28 +327,46 @@
                                                         $scoreObj = $broadsheet->assessmentScores->where('assessment_id', $assessment->id)->first();
                                                         $scoreValue = $scoreObj ? $scoreObj->score : '';
                                                     @endphp
-                                                    <td class="assessment-col">
+                                                    <td class="col-assessment-{{ $assessment->id }} assessment-col">
                                                         <input type="number" class="form-control score-input" data-field="{{ $assessment->id }}" data-max="{{ $assessment->max_score }}" data-id="{{ $broadsheet->id }}" data-original="{{ $scoreValue }}" value="{{ $scoreValue }}" min="0" max="{{ $assessment->max_score }}" step="0.1" placeholder="">
                                                     </td>
                                                 @empty
-                                                    <td colspan="4">-</td>
+                                                    <td colspan="4" class="col-no-assessments">-</td>
                                                 @endforelse
-                                                <td class="total-display text-center">
+                                                <td class="col-total total-display text-center">
                                                     <span class="badge bg-primary" data-total="{{ $initialTotal }}">{{ number_format($initialTotal, 1) }}</span>
                                                 </td>
-                                                <td class="bf-display text-center">
+                                                <td class="col-bf bf-display text-center">
                                                     <span class="badge bg-secondary">{{ $broadsheet->bf ? number_format($broadsheet->bf, 2) : '0.00' }}</span>
                                                 </td>
-                                                <td class="cum-display text-center">
+                                                <td class="col-cum cum-display text-center">
                                                     <span class="badge bg-info">{{ $broadsheet->cum ? number_format($broadsheet->cum, 2) : '0.00' }}</span>
                                                 </td>
-                                                <td class="grade-display text-center">
+                                                <td class="col-num-subjects num-subjects-display text-center">
+                                                    <span class="badge bg-light text-dark">{{ $broadsheet->num_subjects ?? '-' }}</span>
+                                                </td>
+                                                <td class="col-total-gp total-gp-display text-center">
+                                                    <span class="badge bg-light text-dark">{{ number_format($broadsheet->total_grade_points ?? 0, 1) }}</span>
+                                                </td>
+                                                <td class="col-gpa gpa-display text-center">
+                                                    <span class="badge bg-warning">{{ $broadsheet->gpa ? number_format($broadsheet->gpa, 1) : '0.0' }}</span>
+                                                </td>
+                                                <td class="col-calc-gpa calc-gpa-display text-center">
+                                                    <span class="badge bg-secondary">{{ $calculated_gpa }}</span>
+                                                </td>
+                                                <td class="col-gpa-grade gpa-grade-display text-center">
+                                                    <span class="badge bg-success">{{ $broadsheet->gpa_grade ?? '-' }}</span>
+                                                </td>
+                                                <td class="col-cgpa cgpa-display text-center">
+                                                    <span class="badge bg-dark">{{ $broadsheet->cgpa ? number_format($broadsheet->cgpa, 2) : '0.00' }}</span>
+                                                </td>
+                                                <td class="col-grade grade-display text-center">
                                                     <span class="badge bg-secondary">{{ $broadsheet->grade ?? '-' }}</span>
                                                 </td>
-                                                <td class="position-display text-center">
+                                                <td class="col-position position-display text-center">
                                                     <span class="badge bg-info">{{ $broadsheet->position ? $broadsheet->position . \App\Helpers\OrdinalHelper::getOrdinalSuffix($broadsheet->position) : '-' }}</span>
                                                 </td>
-                                                <td class="vetted-status text-center">
+                                                <td class="col-vetted vetted-status text-center">
                                                     <span class="badge {{ $broadsheet->vettedstatus === '1' ? 'bg-success' : ($broadsheet->vettedstatus === '0' ? 'bg-danger' : 'bg-warning') }}">
                                                         {{ $broadsheet->vettedstatus === '1' ? 'Scores vetted' : ($broadsheet->vettedstatus === '0' ? 'Scores not vetted' : 'Scores not vetted yet') }}
                                                     </span>
@@ -346,13 +374,12 @@
                                             </tr>
                                         @empty
                                             <tr id="noDataRow">
-                                                <td colspan="{{ 4 + ($assessments->count() > 0 ? $assessments->count() : 4) + 7 }}" class="text-center">No scores available.</td>
+                                                <td colspan="{{ (count($assessments) > 0 ? count($assessments) : 4) + 16 }}" class="text-center">No scores available.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
                                 </table>
                             </div>
-
                             <!-- Enhanced Control Panel -->
                             @if ($broadsheets->isNotEmpty())
                                 <div class="row mt-3">
@@ -387,7 +414,6 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 <!-- Progress Indicator for Saving Scores -->
                                 <div class="row mt-2" id="progressContainer" style="display: none;">
                                     <div class="col-12">
@@ -415,7 +441,105 @@
                     </div>
                 </div>
             </div>
-
+            <!-- Column Visibility Modal -->
+            @if ($broadsheets->isNotEmpty())
+            <div class="modal fade" id="columnVisibilityModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Column Visibility</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="column-group">
+                                <h6>Student Info</h6>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-checkbox" data-col="col-checkbox" checked>
+                                    <label class="form-check-label" for="col-checkbox">Select</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-sn" data-col="col-sn" checked>
+                                    <label class="form-check-label" for="col-sn">SN</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-admissionno" data-col="col-admissionno" checked>
+                                    <label class="form-check-label" for="col-admissionno">Admission No</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-name" data-col="col-name" checked>
+                                    <label class="form-check-label" for="col-name">Name</label>
+                                </div>
+                            </div>
+                            @if($assessments->isNotEmpty())
+                            <div class="column-group">
+                                <h6>Assessments</h6>
+                                @foreach($assessments as $assessment)
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-assessment-{{ $assessment->id }}" data-col="col-assessment-{{ $assessment->id }}" checked>
+                                    <label class="form-check-label" for="col-assessment-{{ $assessment->id }}">{{ $assessment->name }}</label>
+                                </div>
+                                @endforeach
+                            </div>
+                            @endif
+                            <div class="column-group">
+                                <h6>Scores & Metrics</h6>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-total" data-col="col-total" checked>
+                                    <label class="form-check-label" for="col-total">Total</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-bf" data-col="col-bf" checked>
+                                    <label class="form-check-label" for="col-bf">BF</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-cum" data-col="col-cum" checked>
+                                    <label class="form-check-label" for="col-cum">Cum</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-num-subjects" data-col="col-num-subjects" checked>
+                                    <label class="form-check-label" for="col-num-subjects">Num Subjects</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-total-gp" data-col="col-total-gp" checked>
+                                    <label class="form-check-label" for="col-total-gp">Total GP</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-gpa" data-col="col-gpa" checked>
+                                    <label class="form-check-label" for="col-gpa">GPA</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-calc-gpa" data-col="col-calc-gpa" checked>
+                                    <label class="form-check-label" for="col-calc-gpa">Calc GPA</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-gpa-grade" data-col="col-gpa-grade" checked>
+                                    <label class="form-check-label" for="col-gpa-grade">GPA Grade</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-cgpa" data-col="col-cgpa" checked>
+                                    <label class="form-check-label" for="col-cgpa">CGPA</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-grade" data-col="col-grade" checked>
+                                    <label class="form-check-label" for="col-grade">Grade</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-position" data-col="col-position" checked>
+                                    <label class="form-check-label" for="col-position">Position</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-toggle" type="checkbox" id="col-vetted" data-col="col-vetted" checked>
+                                    <label class="form-check-label" for="col-vetted">Vetted Status</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
             <!-- Import Modal -->
             <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
@@ -458,7 +582,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Scores Modal -->
             <div class="modal fade" id="scoresModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-xl">
@@ -472,20 +595,26 @@
                                 <table class="table table-centered align-middle table-nowrap mb-0">
                                     <thead class="table-active">
                                         <tr>
-                                            <th>SN</th>
-                                            <th>Admission No</th>
-                                            <th>Name</th>
+                                            <th class="col-sn">SN</th>
+                                            <th class="col-admissionno">Admission No</th>
+                                            <th class="col-name">Name</th>
                                             @forelse ($assessments as $assessment)
-                                                <th>{{ $assessment->name }}</th>
+                                                <th class="col-assessment-{{ $assessment->id }}">{{ $assessment->name }}</th>
                                             @empty
-                                                <th colspan="4">No Assessments</th>
+                                                <th colspan="4" class="col-no-assessments">No Assessments</th>
                                             @endforelse
-                                            <th>Total</th>
-                                            <th>BF</th>
-                                            <th>Cum</th>
-                                            <th>Grade</th>
-                                            <th>Position</th>
-                                            <th>Vetted Status</th>
+                                            <th class="col-total">Total</th>
+                                            <th class="col-bf">BF</th>
+                                            <th class="col-cum">Cum</th>
+                                            <th class="col-num-subjects">Num Subjects</th>
+                                            <th class="col-total-gp">Total GP</th>
+                                            <th class="col-gpa">GPA</th>
+                                            <th class="col-calc-gpa">Calc GPA</th>
+                                            <th class="col-gpa-grade">GPA Grade</th>
+                                            <th class="col-cgpa">CGPA</th>
+                                            <th class="col-grade">Grade</th>
+                                            <th class="col-position">Position</th>
+                                            <th class="col-vetted">Vetted Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -497,14 +626,15 @@
                                                     $scoreObj = $broadsheet->assessmentScores->where('assessment_id', $assessment->id)->first();
                                                     $modalTotal += $scoreObj ? $scoreObj->score : 0;
                                                 }
+                                                $modal_calculated_gpa = ($broadsheet->num_subjects ?? 1) > 0 ? number_format(($broadsheet->total_grade_points ?? 0) / ($broadsheet->num_subjects ?? 1), 1) : '0.0';
                                             @endphp
                                             <tr class="{{ $broadsheet->vettedstatus === '1' ? 'bg-success-subtle' : ($broadsheet->vettedstatus === '0' ? 'bg-danger-subtle' : 'bg-warning-subtle') }}"
-                                                data-bs-toggle="tooltip" 
+                                                data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 title="{{ $broadsheet->vettedstatus === '1' ? 'Scores vetted' : ($broadsheet->vettedstatus === '0' ? 'Scores not vetted' : 'Scores not vetted yet') }}">
-                                                <td>{{ ++$i }}</td>
-                                                <td class="admissionno">{{ $broadsheet->admissionno ?? '-' }}</td>
-                                                <td class="name">
+                                                <td class="col-sn">{{ ++$i }}</td>
+                                                <td class="col-admissionno admissionno">{{ $broadsheet->admissionno ?? '-' }}</td>
+                                                <td class="col-name name">
                                                     <div class="d-flex align-items-center">
                                                         <div class="avatar-sm me-2">
                                                             <img src="{{ $broadsheet->picture ? asset('storage/student_avatars/' . basename($broadsheet->picture)) : asset('storage/student_avatars/unnamed.jpg') }}" alt="{{ ($broadsheet->lname ?? '') . ' ' . ($broadsheet->fname ?? '') . ' ' . ($broadsheet->mname ?? '') }}" class="rounded-circle w-100 student-image" data-bs-toggle="modal" data-bs-target="#imageViewModal" data-image="{{ $broadsheet->picture ? asset('storage/student_avatars/' . basename($broadsheet->picture)) : asset('storage/student_avatars/unnamed.jpg') }}" data-picture="{{ $broadsheet->picture ?? 'none' }}" onerror="this.src='{{ asset('storage/student_avatars/unnamed.jpg') }}';">
@@ -518,18 +648,24 @@
                                                     @php
                                                         $scoreObj = $broadsheet->assessmentScores->where('assessment_id', $assessment->id)->first();
                                                     @endphp
-                                                    <td>{{ $scoreObj ? number_format($scoreObj->score, 1) : '0.0' }}</td>
+                                                    <td class="col-assessment-{{ $assessment->id }}">{{ $scoreObj ? number_format($scoreObj->score, 1) : '0.0' }}</td>
                                                 @empty
-                                                    <td colspan="4">-</td>
+                                                    <td colspan="4" class="col-no-assessments">-</td>
                                                 @endforelse
-                                                <td>{{ number_format($modalTotal, 1) }}</td>
-                                                <td>{{ $broadsheet->bf ? number_format($broadsheet->bf, 2) : '0.00' }}</td>
-                                                <td>{{ $broadsheet->cum ? number_format($broadsheet->cum, 2) : '0.00' }}</td>
-                                                <td>{{ $broadsheet->grade ?? '-' }}</td>
-                                                <td>
+                                                <td class="col-total">{{ number_format($modalTotal, 1) }}</td>
+                                                <td class="col-bf">{{ $broadsheet->bf ? number_format($broadsheet->bf, 2) : '0.00' }}</td>
+                                                <td class="col-cum">{{ $broadsheet->cum ? number_format($broadsheet->cum, 2) : '0.00' }}</td>
+                                                <td class="col-num-subjects">{{ $broadsheet->num_subjects ?? '-' }}</td>
+                                                <td class="col-total-gp">{{ number_format($broadsheet->total_grade_points ?? 0, 1) }}</td>
+                                                <td class="col-gpa">{{ $broadsheet->gpa ? number_format($broadsheet->gpa, 1) : '0.0' }}</td>
+                                                <td class="col-calc-gpa">{{ $modal_calculated_gpa }}</td>
+                                                <td class="col-gpa-grade">{{ $broadsheet->gpa_grade ?? '-' }}</td>
+                                                <td class="col-cgpa">{{ $broadsheet->cgpa ? number_format($broadsheet->cgpa, 2) : '0.00' }}</td>
+                                                <td class="col-grade">{{ $broadsheet->grade ?? '-' }}</td>
+                                                <td class="col-position">
                                                     {{ $broadsheet->position ? $broadsheet->position . \App\Helpers\OrdinalHelper::getOrdinalSuffix($broadsheet->position) : '-' }}
                                                 </td>
-                                                <td class="vetted-status text-center">
+                                                <td class="col-vetted vetted-status text-center">
                                                     <span class="badge {{ $broadsheet->vettedstatus === '1' ? 'bg-success' : ($broadsheet->vettedstatus === '0' ? 'bg-danger' : 'bg-warning') }}">
                                                         {{ $broadsheet->vettedstatus === '1' ? 'Scores vetted' : ($broadsheet->vettedstatus === '0' ? 'Scores not vetted' : 'Scores not vetted yet') }}
                                                     </span>
@@ -537,7 +673,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="{{ 3 + ($assessments->count() > 0 ? $assessments->count() : 4) + 6 }}" class="text-center">No scores available.</td>
+                                                <td colspan="{{ (count($assessments) > 0 ? count($assessments) : 4) + 15 }}" class="text-center col-no-assessments">No scores available.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -550,7 +686,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Image View Modal -->
             <div id="imageViewModal" class="modal fade" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -565,12 +700,9 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
-
-
 <script>
     // Ensure CSRF token is available
     if (!document.querySelector('meta[name="csrf-token"]')) {
@@ -579,7 +711,6 @@
         meta.content = '{{ csrf_token() }}';
         document.head.appendChild(meta);
     }
-
     // Global variables
     console.log('Raw broadsheets before normalization:', @json($broadsheets));
     window.broadsheets = @json($broadsheets);
@@ -600,7 +731,6 @@
         downloadMarksSheet: '{{ route('scoresheet.download-marks-sheet') }}',
         gradePreview: '{{ route('subjectscoresheet.grade-preview') }}'
     };
-
     // Initialize everything on DOM ready
     document.addEventListener('DOMContentLoaded', function () {
         // Initialize Bootstrap tooltips
@@ -608,22 +738,36 @@
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
-
+        // Column visibility toggle
+        document.querySelectorAll('.col-toggle').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const colClass = this.dataset.col;
+                const elements = document.querySelectorAll(`#scoresheetTable th.${colClass}, #scoresheetTable td.${colClass}`);
+                elements.forEach(el => {
+                    el.style.display = this.checked ? '' : 'none';
+                });
+                // Also apply to scores modal if open, but for simplicity, reload or apply separately
+                const modalTable = document.querySelector('#scoresModal table');
+                if (modalTable) {
+                    const modalElements = modalTable.querySelectorAll(`th.${colClass}, td.${colClass}`);
+                    modalElements.forEach(el => {
+                        el.style.display = this.checked ? '' : 'none';
+                    });
+                }
+            });
+        });
         // Search functionality
         const searchInput = document.getElementById('searchInput');
         const clearSearch = document.getElementById('clearSearch');
         let tableRows = document.querySelectorAll('#scoresheetTableBody tr[data-id]');
         const noDataAlert = document.getElementById('noDataAlert');
         const scoreCount = document.getElementById('scoreCount');
-
         function updateSearchAndCount() {
             const searchQuery = searchInput.value.trim().toLowerCase();
             let visibleRows = 0;
-
             tableRows.forEach(row => {
-                const admissionNo = row.querySelector('.admissionno').dataset.admissionno.toLowerCase();
-                const name = row.querySelector('.name').dataset.name.toLowerCase();
-
+                const admissionNo = row.querySelector('.col-admissionno').dataset.admissionno.toLowerCase();
+                const name = row.querySelector('.col-name').dataset.name.toLowerCase();
                 if (searchQuery === '' || admissionNo.includes(searchQuery) || name.includes(searchQuery)) {
                     row.style.display = '';
                     visibleRows++;
@@ -631,15 +775,12 @@
                     row.style.display = 'none';
                 }
             });
-
             if (noDataAlert) noDataAlert.style.display = visibleRows === 0 ? 'block' : 'none';
             if (scoreCount) scoreCount.textContent = visibleRows;
         }
-
         if (searchInput) {
             searchInput.addEventListener('input', updateSearchAndCount);
         }
-
         if (clearSearch) {
             clearSearch.addEventListener('click', function () {
                 if (searchInput) searchInput.value = '';
@@ -648,17 +789,14 @@
                 if (scoreCount) scoreCount.textContent = tableRows.length;
             });
         }
-
         // Checkbox functionality
         const checkAll = document.getElementById('checkAll');
         const scoreCheckboxes = document.querySelectorAll('.score-checkbox');
-
         if (checkAll) {
             checkAll.addEventListener('change', function () {
                 scoreCheckboxes.forEach(cb => cb.checked = this.checked);
             });
         }
-
         scoreCheckboxes.forEach(cb => {
             cb.addEventListener('change', function () {
                 const checkedCount = document.querySelectorAll('.score-checkbox:checked').length;
@@ -668,7 +806,6 @@
                 }
             });
         });
-
         // Select All button
         const selectAllBtn = document.getElementById('selectAllScores');
         if (selectAllBtn) {
@@ -677,7 +814,6 @@
                 scoreCheckboxes.forEach(cb => cb.checked = true);
             });
         }
-
         // Clear All button
         const clearAllBtn = document.getElementById('clearAllScores');
         if (clearAllBtn) {
@@ -686,7 +822,6 @@
                 scoreCheckboxes.forEach(cb => cb.checked = false);
             });
         }
-
         // Dynamic total update: sum of all assessment scores (raw)
         function updateRowTotal(row) {
             let sum = 0;
@@ -694,13 +829,12 @@
                 const val = parseFloat(inp.value) || 0;
                 sum += val;
             });
-            const totalSpan = row.querySelector('.total-display span');
+            const totalSpan = row.querySelector('.col-total span');
             if (totalSpan) {
                 totalSpan.textContent = number_format(sum, 1);
                 totalSpan.dataset.total = sum;
             }
         }
-
         // Validation check for a single input
         function validateInput(input) {
             const max = parseFloat(input.dataset.max) || 0;
@@ -715,7 +849,6 @@
                 return true;
             }
         }
-
         // Validation check for a row
         function validateRow(row) {
             let isValid = true;
@@ -726,7 +859,6 @@
             });
             return isValid;
         }
-
         // Global validation check for all rows
         function validateAllRows() {
             let isValid = true;
@@ -741,14 +873,12 @@
             });
             return { isValid, invalidCount };
         }
-
         // Event listeners for score inputs
         document.querySelectorAll('.score-input').forEach(input => {
             input.addEventListener('input', function () {
                 validateInput(this);
                 updateRowTotal(this.closest('tr'));
             });
-
             input.addEventListener('blur', function () {
                 validateInput(this);
                 updateRowTotal(this.closest('tr'));
@@ -760,7 +890,6 @@
                     this.dataset.original = this.value;
                 }
             });
-
             // Quick save on Enter
             input.addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') {
@@ -779,18 +908,16 @@
                 }
             });
         });
-
-        // Fixed Individual score save (sends current row total)
+        // Updated Individual score save (sends current row total)
         function saveIndividualScore(input) {
             const rowId = input.dataset.id;
             const fieldId = parseInt(input.dataset.field);
             const score = parseFloat(input.value) || 0;
             const row = input.closest('tr');
-            
+         
             // Get current total from row
-            const totalSpan = row.querySelector('.total-display span');
+            const totalSpan = row.querySelector('.col-total span');
             const currentTotal = totalSpan ? parseFloat(totalSpan.dataset.total) || 0 : 0;
-
             fetch(window.routes.singleUpdate, {
                 method: 'POST',
                 headers: {
@@ -819,6 +946,31 @@
                         text: data.message || 'Unknown error saving score.',
                     });
                 } else {
+                    // Update row displays
+                    const row = document.querySelector(`tr[data-id="${rowId}"]`);
+                    if (row) {
+                        const cumSpan = row.querySelector('.col-cum span');
+                        if (cumSpan) cumSpan.textContent = number_format(data.cum, 2);
+                        const gpaSpan = row.querySelector('.col-gpa span');
+                        if (gpaSpan) gpaSpan.textContent = number_format(data.gpa, 1);
+                        const gpaGradeSpan = row.querySelector('.col-gpa-grade span');
+                        if (gpaGradeSpan) gpaGradeSpan.textContent = data.gpa_grade;
+                        const cgpaSpan = row.querySelector('.col-cgpa span');
+                        if (cgpaSpan) cgpaSpan.textContent = number_format(data.cgpa, 2);
+                        const gradeSpan = row.querySelector('.col-grade span');
+                        if (gradeSpan) gradeSpan.textContent = data.grade;
+                        const bfSpan = row.querySelector('.col-bf span');
+                        if (bfSpan) bfSpan.textContent = number_format(data.bf, 2);
+                        const numSubjectsSpan = row.querySelector('.col-num-subjects span');
+                        if (numSubjectsSpan) numSubjectsSpan.textContent = data.num_subjects;
+                        const totalGpSpan = row.querySelector('.col-total-gp span');
+                        if (totalGpSpan) totalGpSpan.textContent = number_format(data.total_grade_points, 1);
+                        // Recalculate and update Calc GPA
+                        const calcGpaSpan = row.querySelector('.col-calc-gpa span');
+                        if (calcGpaSpan && data.num_subjects > 0) {
+                            calcGpaSpan.textContent = number_format(data.total_grade_points / data.num_subjects, 1);
+                        }
+                    }
                     console.log('Score saved:', data.data);
                 }
             }).catch(error => {
@@ -830,7 +982,6 @@
                 });
             });
         }
-
         // Bulk update scores
         const bulkUpdateBtn = document.getElementById('bulkUpdateScores');
         if (bulkUpdateBtn) {
@@ -844,12 +995,10 @@
                     });
                     return;
                 }
-
                 // Update all totals before saving
                 document.querySelectorAll('#scoresheetTableBody tr[data-id]').forEach(row => {
                     updateRowTotal(row);
                 });
-
                 const scores = [];
                 document.querySelectorAll('#scoresheetTableBody tr[data-id]').forEach(row => {
                     const broadsheetId = row.dataset.id;
@@ -857,18 +1006,17 @@
                     row.querySelectorAll('.score-input').forEach(input => {
                         assessments[input.dataset.field] = parseFloat(input.value) || 0;
                     });
-                    
+                 
                     // Get row total
-                    const totalSpan = row.querySelector('.total-display span');
+                    const totalSpan = row.querySelector('.col-total span');
                     const rowTotal = totalSpan ? parseFloat(totalSpan.dataset.total) || 0 : 0;
-                    
+                 
                     scores.push({
                         id: broadsheetId,
                         assessments: assessments,
                         raw_total: rowTotal // Send the calculated total
                     });
                 });
-
                 if (scores.length === 0) {
                     Swal.fire({
                         icon: 'warning',
@@ -877,10 +1025,8 @@
                     });
                     return;
                 }
-
                 const progressContainer = document.getElementById('progressContainer');
                 if (progressContainer) progressContainer.style.display = 'block';
-
                 const progressBar = document.getElementById('saveProgressBar');
                 let width = 0;
                 const interval = setInterval(() => {
@@ -890,7 +1036,6 @@
                         clearInterval(interval);
                     }
                 }, 200);
-
                 fetch(window.routes.bulkUpdate, {
                     method: 'POST',
                     headers: {
@@ -939,7 +1084,6 @@
                 });
             });
         }
-
         // Delete selected
         const deleteBtn = document.getElementById('deleteSelectedScoresBtn');
         if (deleteBtn) {
@@ -953,7 +1097,6 @@
                     });
                     return;
                 }
-
                 Swal.fire({
                     title: 'Are you sure?',
                     text: `You want to delete the selected scores? This action cannot be undone.`,
@@ -966,8 +1109,7 @@
                     if (result.isConfirmed) {
                         const progressContainer = document.getElementById('progressContainer');
                         if (progressContainer) progressContainer.style.display = 'block';
-
-                        Promise.all(ids.map(id => 
+                        Promise.all(ids.map(id =>
                             fetch(window.routes.destroy.replace('__ID__', id), {
                                 method: 'DELETE',
                                 headers: {
@@ -1017,7 +1159,6 @@
                 });
             });
         }
-
         // Import form handling
         const importSubmit = document.getElementById('importSubmit');
         if (importSubmit) {
@@ -1033,10 +1174,8 @@
                     });
                     return;
                 }
-
                 const importLoader = document.getElementById('importLoader');
                 if (importLoader) importLoader.style.display = 'block';
-
                 const uploadProgressBar = document.getElementById('uploadProgressBar');
                 let width = 0;
                 const interval = setInterval(() => {
@@ -1046,13 +1185,11 @@
                         clearInterval(interval);
                     }
                 }, 300);
-
                 setTimeout(() => {
                     importForm.submit();
                 }, 1000);
             });
         }
-
         // Image modal handler
         document.addEventListener('click', function (e) {
             if (e.target.classList.contains('student-image')) {
@@ -1061,56 +1198,51 @@
                 if (enlargedImage) enlargedImage.src = imgSrc;
             }
         });
-
-        // Sorting functionality
+        // Sorting functionality (only on visible columns)
         const sortHeaders = document.querySelectorAll('th.sort');
         sortHeaders.forEach(header => {
             header.addEventListener('click', function () {
+                if (this.style.display === 'none') return; // Skip if hidden
                 const sortBy = this.dataset.sort;
                 const tbody = document.getElementById('scoresheetTableBody');
                 let rows = Array.from(tbody.querySelectorAll('tr[data-id]'));
                 const noDataRow = document.getElementById('noDataRow');
                 if (noDataRow) noDataRow.style.display = 'none';
-
                 rows.sort((a, b) => {
                     let aVal, bVal;
                     if (sortBy === 'sn') {
-                        aVal = parseInt(a.querySelector('.sn').textContent) || 0;
-                        bVal = parseInt(b.querySelector('.sn').textContent) || 0;
+                        aVal = parseInt(a.querySelector('.col-sn').textContent) || 0;
+                        bVal = parseInt(b.querySelector('.col-sn').textContent) || 0;
                         return aVal - bVal;
                     } else if (sortBy === 'admissionno') {
-                        aVal = a.querySelector('.admissionno').textContent.trim();
-                        bVal = b.querySelector('.admissionno').textContent.trim();
+                        aVal = a.querySelector('.col-admissionno').textContent.trim();
+                        bVal = b.querySelector('.col-admissionno').textContent.trim();
                         return aVal.localeCompare(bVal, undefined, { numeric: true });
                     } else if (sortBy === 'name') {
-                        aVal = a.querySelector('.name').dataset.name.toLowerCase();
-                        bVal = b.querySelector('.name').dataset.name.toLowerCase();
+                        aVal = a.querySelector('.col-name').dataset.name.toLowerCase();
+                        bVal = b.querySelector('.col-name').dataset.name.toLowerCase();
                         return aVal.localeCompare(bVal);
                     } else if (sortBy === 'total') {
-                        aVal = parseFloat(a.querySelector('.total-display').dataset.total) || 0;
-                        bVal = parseFloat(b.querySelector('.total-display').dataset.total) || 0;
+                        aVal = parseFloat(a.querySelector('.col-total').dataset.total) || 0;
+                        bVal = parseFloat(b.querySelector('.col-total').dataset.total) || 0;
                         return bVal - aVal; // Descending for total
                     }
                     return 0;
                 });
-
                 // Renumber SN
                 rows.forEach((row, index) => {
-                    row.querySelector('.sn').textContent = index + 1;
+                    row.querySelector('.col-sn').textContent = index + 1;
                 });
-
                 rows.forEach(row => tbody.appendChild(row));
                 tableRows = rows; // Update reference
                 updateSearchAndCount();
             });
         });
     });
-
     // Helper function for number formatting (since PHP number_format isn't in JS)
     function number_format(number, decimals) {
         return parseFloat(number).toFixed(decimals || 1);
     }
-
     // Keyboard shortcut for save all
     document.addEventListener('keydown', function(e) {
         if (e.ctrlKey && e.key === 's') {
@@ -1119,7 +1251,6 @@
             if (bulkUpdateBtn) bulkUpdateBtn.click();
         }
     });
-
     // Include SweetAlert2 if not already in layout
     if (typeof Swal === 'undefined') {
         const script = document.createElement('script');

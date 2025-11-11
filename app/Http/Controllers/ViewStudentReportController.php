@@ -2,29 +2,30 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Broadsheets;
-use App\Models\Classcategory;
-use App\Models\CompulsorySubjectClass;
-use App\Models\PromotionStatus;
-use App\Models\Schoolarm;
-use App\Models\Schoolclass;
-use App\Models\SchoolInformation;
-use App\Models\Schoolsession;
-use App\Models\Schoolterm;
-use App\Models\Student;
-use App\Models\Studentclass;
-use App\Models\Studentpersonalityprofile;
-use App\Models\Subject;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Illuminate\View\View;
-use Illuminate\Http\Response;
 use Exception;
+use App\Models\Student;
+use App\Models\Subject;
+use App\Models\Schoolarm;
+use Illuminate\View\View;
+use App\Models\Schoolterm;
+use App\Models\Broadsheets;
+use App\Models\Schoolclass;
+use App\Models\Studentclass;
+use Illuminate\Http\Request;
+use App\Models\Classcategory;
+use App\Models\Schoolsession;
+use Illuminate\Http\Response;
+use App\Models\PromotionStatus;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\SchoolInformation;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Cache;
+use App\Models\CompulsorySubjectClass;
+use App\Models\Studentpersonalityprofile;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ViewStudentReportController extends Controller
 {
