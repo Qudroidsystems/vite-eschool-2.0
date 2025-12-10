@@ -84,7 +84,7 @@
             display: inline-block;
             min-height: 14px;
             font-weight: bold;
-            font-size: 12px; /* Increased font size */
+            font-size: 12px;
         }
 
         span.text-space-on-dots {
@@ -93,13 +93,6 @@
 
         span.text-dot-space2 {
             width: 150px;
-        }
-
-        .school-name1 {
-            font-size: 22px;
-            font-weight: 700;
-            color: #1e3a8a;
-            text-align: center;
         }
 
         .school-name2 {
@@ -165,15 +158,6 @@
             border-radius: 1px;
         }
 
-        .school-motto, .school-address, .school-website, .school-email {
-            font-size: 11px;
-            font-weight: 900;
-            color: #000000;
-            margin: 1px 0;
-            text-align: left;
-            line-height: 1.2;
-        }
-
         .student-info-section {
             margin-bottom: 4px;
         }
@@ -187,17 +171,6 @@
         .info-value {
             font-size: 11px;
             font-weight: 900;
-            color: #000000;
-        }
-
-        .rd1, .rd2, .rd3, .rd4, .rd5, .rd6, .rd7, .rd8, .rd9, .rd10 {
-            border-bottom: 2px dotted #6b7280;
-            margin-left: 6px;
-            min-width: 60px;
-            display: inline-block;
-            font-weight: 800;
-            padding-bottom: 1px;
-            font-size: 9px;
             color: #000000;
         }
 
@@ -235,18 +208,13 @@
             font-size: 8px;
         }
 
-        .result-table thead th:nth-child(3),
-        .result-table thead th:nth-child(4),
-        .result-table thead th:nth-child(5) {
-            width: 30px;
-        }
-
-        .result-table thead th:nth-child(6) {
-            width: 60px;
-        }
-
-        .result-table thead th:nth-child(8) {
-            width: 50px;
+        .result-table thead th.assessment-header {
+            width: 25px;
+            min-width: 25px;
+            max-width: 30px;
+            font-size: 7px;
+            overflow: hidden;
+            white-space: nowrap;
         }
 
         .result-table tbody tr {
@@ -276,55 +244,6 @@
             font-weight: 900;
         }
 
-        .highlight-bold {
-            font-weight: 900 !important;
-        }
-
-        .assessment-table {
-            width: 100%;
-            border: 2px solid #000000;
-            border-collapse: collapse;
-            margin-bottom: 6px;
-        }
-
-        .assessment-table thead th {
-            background: #fbbf24;
-            color: white;
-            font-weight: 600;
-            border: 1px solid #000000;
-            padding: 4px;
-            text-align: center;
-            font-size: 8px;
-        }
-
-        .assessment-table tbody td {
-            border: 1px solid #000000;
-            padding: 3px 4px;
-            background: white;
-            font-size: 7px;
-            color: #000000;
-            font-weight: bold;
-        }
-
-        .assessment-table tbody tr:nth-child(even) td {
-            background: #f0fdf4;
-        }
-
-        .grade-display {
-            background: #fbbf24;
-            color: white;
-            border-radius: 10px;
-            padding: 6px;
-            text-align: center;
-            margin-bottom: 8px;
-        }
-
-        .grade-display span {
-            font-size: 9px;
-            font-weight: 600;
-            margin: 0 4px;
-        }
-
         .remarks-table {
             width: 100%;
             border: 2px solid #000000;
@@ -351,11 +270,6 @@
             font-weight: bold;
         }
 
-        .remarks-table .promotion-status {
-            color: #000000;
-            font-weight: bold;
-        }
-
         .footer-section {
             background: #f1f5f9;
             border-radius: 6px;
@@ -363,13 +277,6 @@
             border: 1px solid #cbd5e1;
             text-align: center;
             margin-top: 6px;
-        }
-
-        .h5 {
-            font-size: 9px;
-            font-weight: bold;
-            margin-bottom: 4px;
-            color: #047857;
         }
 
         .student-info-table {
@@ -381,18 +288,6 @@
         .student-info-table td {
             padding: 1px;
             vertical-align: top;
-        }
-
-        .assessment-layout-table {
-            width: 100%;
-            margin-bottom: 8px;
-            table-layout: fixed;
-        }
-
-        .assessment-layout-table td {
-            width: 50%;
-            vertical-align: top;
-            padding: 0 1%;
         }
 
         .footer-layout-table {
@@ -411,6 +306,8 @@
 
         .info-row .result-details {
             margin-right: 4px;
+            display: inline-block;
+            width: 120px;
         }
 
         .info-row.students-count {
@@ -441,53 +338,35 @@
             margin-top: 6px;
         }
 
-        /* FIXED PROMOTION STATUS STYLES - Higher specificity and better coverage */
+        /* Promotion status styles */
         .promotion-status {
             font-weight: 900 !important;
             margin-left: 5px;
             font-size: 10px !important;
         }
 
-        /* Promotion status color classes with higher specificity */
         .remarks-table .promotion-status.promotion-promoted,
         .promotion-status.promotion-promoted {
-            color: #1e40af !important; /* Blue for PROMOTED */
+            color: #1e40af !important;
             font-weight: 900 !important;
         }
 
         .remarks-table .promotion-status.promotion-repeat,
         .promotion-status.promotion-repeat {
-            color: #dc2626 !important; /* Red for REPEAT/TRIAL */
+            color: #dc2626 !important;
             font-weight: 900 !important;
         }
 
         .remarks-table .promotion-status.promotion-parents,
         .promotion-status.promotion-parents {
-            color: #dc2626 !important; /* Red for PARENTS TO SEE PRINCIPAL */
+            color: #dc2626 !important;
             font-weight: 900 !important;
         }
 
         .remarks-table .promotion-status.promotion-default,
         .promotion-status.promotion-default {
-            color: #6b7280 !important; /* Gray for default/not applicable */
+            color: #6b7280 !important;
             font-weight: 900 !important;
-        }
-
-        /* Additional specific color classes for common statuses */
-        .promotion-status.status-promoted {
-            color: #1e40af !important;
-        }
-
-        .promotion-status.status-trial {
-            color: #f59e0b !important; /* Amber for trial */
-        }
-
-        .promotion-status.status-repeat {
-            color: #dc2626 !important;
-        }
-
-        .promotion-status.status-see-principal {
-            color: #dc2626 !important;
         }
     </style>
 </head>
@@ -500,12 +379,34 @@
                     @php
                         $schoolInfo = $studentData['schoolInfo'] ?? null;
                         $student = $studentData['students'] && $studentData['students']->isNotEmpty() ? $studentData['students']->first() : null;
+                        // Get assessments from studentData (added in controller)
+                        $assessments = $studentData['assessments'] ?? collect();
+                        // Count assessments to determine colspan
+                        $assessmentCount = $assessments->count();
+                        $totalColspan = 11 + $assessmentCount; // Original 11 columns + dynamic assessments
+                        
+                        // Fix image paths for DomPDF - use file:// protocol for local files
+                        $schoolLogoPath = $studentData['school_logo_path'] ?? null;
+                        $studentImagePath = $studentData['student_image_path'] ?? null;
+                        
+                        // Convert to absolute file paths for DomPDF
+                        if ($schoolLogoPath && file_exists($schoolLogoPath)) {
+                            $schoolLogoUrl = 'file://' . str_replace('\\', '/', realpath($schoolLogoPath));
+                        } else {
+                            $schoolLogoUrl = 'file://' . str_replace('\\', '/', realpath(public_path('storage/school_logos/default.jpg')));
+                        }
+                        
+                        if ($studentImagePath && file_exists($studentImagePath)) {
+                            $studentImageUrl = 'file://' . str_replace('\\', '/', realpath($studentImagePath));
+                        } else {
+                            $studentImageUrl = 'file://' . str_replace('\\', '/', realpath(public_path('storage/student_avatars/unnamed.jpg')));
+                        }
                     @endphp
                     <table class="header-table">
                         <tr>
                             <td width="25%">
                                 <div class="school-logo">
-                                    <img class="header-img" src="{{ $studentData['school_logo_path'] ?? public_path('storage/school_logos/default.jpg') }}" alt="School Logo">
+                                    <img class="header-img" src="{{ $schoolLogoUrl }}" alt="School Logo">
                                 </div>
                             </td>
                             <td width="50%">
@@ -536,9 +437,9 @@
                             <td width="25%">
                                 <div class="photo-frame">
                                     @if ($studentData['students'] && $studentData['students']->isNotEmpty() && $student->picture)
-                                        <img src="{{ $studentData['student_image_path'] ?? public_path('storage/student_avatars/unnamed.jpg') }}" alt="{{ $student->fname ?? 'Student' }}'s picture">
+                                        <img src="{{ $studentImageUrl }}" alt="{{ $student->fname ?? 'Student' }}'s picture">
                                     @else
-                                        <img src="{{ public_path('storage/student_avatars/unnamed.jpg') }}" alt="Default Photo">
+                                        <img src="{{ 'file://' . str_replace('\\', '/', realpath(public_path('storage/student_avatars/unnamed.jpg'))) }}" alt="Default Photo">
                                     @endif
                                 </div>
                             </td>
@@ -564,21 +465,21 @@
                                             <td width="41%">
                                                 <div class="info-row">
                                                     <span class="result-details">Name:</span>
-                                                    <span class="info-value font-bold">{{ strtoupper($student->lastname ?? 'ILEMOBAYOEEEE') }} {{ $student->fname ?? 'Eliabeeeee' }} {{ $student->othername ?? 'eeeee' }}</span>
+                                                    <span class="info-value font-bold">{{ strtoupper($student->lastname ?? '') }} {{ $student->fname ?? '' }} {{ $student->othername ?? '' }}</span>
                                                 </div>
                                                 <div class="info-row">
                                                     <span class="result-details">Session:</span>
-                                                    <span class="info-value font-bold">{{ $studentData['schoolsession'] ?? 'NO INFO' }}</span>
+                                                    <span class="info-value font-bold">{{ $studentData['schoolsession']->session ?? 'NO INFO' }}</span>
                                                 </div>
                                                 <div class="info-row">
                                                     <span class="result-details">Term:</span>
-                                                    <span class="info-value font-bold">{{ $studentData['schoolterm'] ?? 'NO INFO' }}</span>
+                                                    <span class="info-value font-bold">{{ $studentData['schoolterm']->term ?? 'NO INFO' }}</span>
                                                 </div>
                                             </td>
                                             <td width="29%">
                                                 <div class="info-row">
                                                     <span class="result-details">Class:</span>
-                                                    <span class="info-value font-bold">{{ $studentData['schoolclass']->schoolclass ?? 'NO INFO' }} {{ $studentData['schoolclass']->armRelation->arm ?? 'NO INFO' }}</span>
+                                                    <span class="info-value font-bold">{{ $studentData['schoolclass']->schoolclass ?? 'NO INFO' }} {{ $studentData['schoolclass']->arms->arm ?? '' }}</span>
                                                 </div>
                                                 <div class="info-row">
                                                     <span class="result-details">DOB:</span>
@@ -650,16 +551,16 @@
                     </table>
                 </div>
 
-                <!-- Results Table -->
+                <!-- Results Table - UPDATED FOR DYNAMIC ASSESSMENTS -->
                 <div class="result-table">
                     <table>
                         <thead>
                             <tr>
                                 <th></th>
                                 <th>Subjects</th>
-                                <th>a</th>
-                                <th>b</th>
-                                <th>c</th>
+                                @foreach ($assessments as $assessment)
+                                    <th class="assessment-header" title="{{ $assessment->name }}">{{ substr($assessment->name, 0, 3) }}</th>
+                                @endforeach
                                 <th>d</th>
                                 <th>e</th>
                                 <th>f</th>
@@ -672,13 +573,15 @@
                             <tr>
                                 <th>S/N</th>
                                 <th>Subjects</th>
-                                <th>T1</th>
-                                <th>T2</th>
-                                <th>T3</th>
+                                @foreach ($assessments as $assessment)
+                                    <th class="assessment-header" title="{{ $assessment->name }} (Max: {{ $assessment->max_score }})">
+                                        {{ substr($assessment->name, 0, 3) }}
+                                    </th>
+                                @endforeach
                                 <th>
                                     <div class="fraction">
-                                        <div class="numerator">a + b + c</div>
-                                        <div class="denominator">3</div>
+                                        <div class="numerator">Assess Total</div>
+                                        <div class="denominator">{{ $assessmentCount }}</div>
                                     </div>
                                 </th>
                                 <th>Term Exams</th>
@@ -700,23 +603,73 @@
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
                                     <td class="subject-name">{{ $score->subject_name ?? 'NO INFO' }}</td>
-                                    <td class="@if ($score->ca1 < 50 && is_numeric($score->ca1)) highlight-red @endif">{{ $score->ca1 ?? '-' }}</td>
-                                    <td class="@if ($score->ca2 < 50 && is_numeric($score->ca2)) highlight-red @endif">{{ $score->ca2 ?? '-' }}</td>
-                                    <td class="@if ($score->ca3 < 50 && is_numeric($score->ca3)) highlight-red @endif">{{ $score->ca3 ?? '-' }}</td>
-                                    <td class="@if ($score->ca1 && $score->ca2 && $score->ca3 && round(($score->ca1 + $score->ca2 + $score->ca3) / 3, 1) < 50) highlight-red @endif">
-                                        {{ $score->ca1 && $score->ca2 && $score->ca3 ? round(($score->ca1 + $score->ca2 + $score->ca3) / 3, 1) : '-' }}
+                                    
+                                    <!-- Dynamic Assessment Columns -->
+                                    @foreach ($assessments as $assessment)
+                                        @php
+                                            // Get the score for this assessment
+                                            $assessmentScore = 0;
+                                            if (isset($score->assessment_scores)) {
+                                                $found = $score->assessment_scores->firstWhere('assessment_id', $assessment->id);
+                                                $assessmentScore = $found ? $found->score : 0;
+                                            }
+                                            // Check if score is low (less than 50%)
+                                            $isLow = $assessmentScore < ($assessment->max_score * 0.5);
+                                        @endphp
+                                        <td class="@if ($isLow && is_numeric($assessmentScore)) highlight-red @endif">
+                                            {{ $assessmentScore ?? '-' }}
+                                        </td>
+                                    @endforeach
+                                    
+                                    <!-- Total of Assessments (Column d) -->
+                                    <td class="@if ($score->total < 50 && is_numeric($score->total)) highlight-red @endif">
+                                        {{ $score->total ?? '-' }}
                                     </td>
-                                    <td class="@if ($score->exam < 50 && is_numeric($score->exam)) highlight-red @endif">{{ $score->exam ?? '-' }}</td>
-                                    <td class="@if ($score->total < 50 && is_numeric($score->total)) highlight-red @endif">{{ $score->total ?? '-' }}</td>
-                                    <td class="@if ($score->bf < 50 && is_numeric($score->bf)) highlight-red @endif">{{ $score->bf ?? '-' }}</td>
-                                    <td class="@if ($score->cum < 50 && is_numeric($score->cum)) highlight-red @endif">{{ $score->cum ?? '-' }}</td>
-                                    <td class="@if (in_array($score->grade ?? '', ['F', 'F9', 'E', 'E8'])) highlight-red @endif">{{ $score->grade ?? '-' }}</td>
+                                    
+                                    <!-- Exam Column (now using the last assessment if it's an exam) -->
+                                    @php
+                                        $examScore = 0;
+                                        // Try to find an assessment named "Exam" or use the last one
+                                        $examAssessment = $assessments->firstWhere('name', 'like', '%exam%') ?? $assessments->last();
+                                        if ($examAssessment && isset($score->assessment_scores)) {
+                                            $found = $score->assessment_scores->firstWhere('assessment_id', $examAssessment->id);
+                                            $examScore = $found ? $found->score : 0;
+                                        }
+                                        $isLowExam = $examScore < ($examAssessment->max_score * 0.5);
+                                    @endphp
+                                    <td class="@if ($isLowExam && is_numeric($examScore)) highlight-red @endif">
+                                        {{ $examScore ?? '-' }}
+                                    </td>
+                                    
+                                    <!-- Total + Exam / 2 (Column f) -->
+                                    <td class="@if ($score->total < 50 && is_numeric($score->total)) highlight-red @endif">
+                                        {{ $score->total ?? '-' }}
+                                    </td>
+                                    
+                                    <!-- Brought Forward (Column g) -->
+                                    <td class="@if ($score->bf < 50 && is_numeric($score->bf)) highlight-red @endif">
+                                        {{ $score->bf ?? '-' }}
+                                    </td>
+                                    
+                                    <!-- Cumulative (Column h) -->
+                                    <td class="@if ($score->cum < 50 && is_numeric($score->cum)) highlight-red @endif">
+                                        {{ $score->cum ?? '-' }}
+                                    </td>
+                                    
+                                    <!-- Grade (Column i) -->
+                                    <td class="@if (in_array($score->grade ?? '', ['F', 'F9', 'E', 'E8'])) highlight-red @endif">
+                                        {{ $score->grade ?? '-' }}
+                                    </td>
+                                    
+                                    <!-- Position (Column j) -->
                                     <td>{{ $score->position ?? '-' }}</td>
+                                    
+                                    <!-- Class Average (Column k) -->
                                     <td>{{ $score->class_average ?? '-' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="13">No scores available.</td>
+                                    <td colspan="{{ $totalColspan }}" style="text-align: center;">No scores available.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -783,7 +736,7 @@
                         <tr>
                             <td>
                                 <span class="font-bold">This Result was issued on  </span>
-                                <span class="text-dot-space2"> 11th August, 2025</span>
+                                <span class="text-dot-space2"> {{ now()->format('jS F, Y') }}</span>
                         
                                 <span class="font-bold">and collected by</span>
                                 <span class="">.......................................</span>

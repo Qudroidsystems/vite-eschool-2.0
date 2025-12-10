@@ -26,7 +26,7 @@ class Student extends Model
         'nationality',
         'gender',
         'phone_number',
-       'future_ambition', // Updated from home_address
+        'future_ambition', // Updated from home_address
         'home_address2',
         'placeofbirth',
         'dateofbirth',

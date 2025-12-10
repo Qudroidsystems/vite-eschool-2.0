@@ -4,7 +4,7 @@
 <head>
 
     <meta charset="utf-8">
-    <title>{{ $pagetitle }} | Vite-ESchool</title>
+    <title>{{ $pagetitle }} | Vite-ESchool 2.0</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta content="school management software" name="description">
     <meta content="" name="author">

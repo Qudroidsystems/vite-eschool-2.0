@@ -24,6 +24,7 @@ use App\Models\BroadsheetRecord;
 use App\Models\StudentBatchModel;
 use Illuminate\Http\JsonResponse;
 use App\Models\ParentRegistration;
+use App\Models\StudentBillInvoice;
 use App\Models\StudentBillPayment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -33,6 +34,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Models\StudentBillPaymentBook;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use App\Models\StudentBillPaymentRecord;
 use App\Models\Studentpersonalityprofile;
 use App\Models\SubjectRegistrationStatus;
 use Illuminate\Support\Facades\Validator;
@@ -186,6 +188,7 @@ class StudentController extends Controller
                 'permanent_address' => 'required|string|max:255',
                 'student_category' => 'required|in:Day,Boarding',
                 'schoolclassid' => 'required|exists:schoolclass,id',
+                'schoolhouseid' => 'required|exists:schoolhouses,id',
                 'termid' => 'required|exists:schoolterm,id',
                 'sessionid' => 'required|exists:schoolsession,id',
                 'statusId' => 'required|in:1,2',
@@ -311,6 +314,7 @@ class StudentController extends Controller
 
             $studenthouses = new Studenthouse();
             $studenthouses->studentid = $studentId;
+            $studenthouses->schoolhouse = $request->studenthouseid;
             $studenthouses->termid = $request->termid;
             $studenthouses->sessionid = $request->sessionid;
             $studenthouses->save();
@@ -447,7 +451,7 @@ class StudentController extends Controller
         $lastAdmission = Student::max('admissionNo');
         $year = date('Y');
         $number = $lastAdmission ? (int)substr($lastAdmission, -4) + 1 : 1;
-        return sprintf('CSSK/STD/2025/%04d', $number);
+        return sprintf('TCC/2025/%04d', $number);
     }
 
     public function show($id)
@@ -850,6 +854,7 @@ class StudentController extends Controller
             throw $e;
         }
     }
+    
     public function destroy($id): JsonResponse
     {
         Log::debug("Deleting student ID {$id}");
@@ -858,23 +863,45 @@ class StudentController extends Controller
             DB::beginTransaction();
 
             $student = Student::findOrFail($id);
+            
+            // Delete student picture and image file
             $picture = Studentpicture::where('studentid', $id)->first();
             if ($picture && $picture->picture) {
                 $this->deleteImage($picture->picture);
             }
 
+            // Delete student bill payment records and related data
+            $billPayments = StudentBillPayment::where('student_id', $id)->get();
+            foreach ($billPayments as $billPayment) {
+                // Delete payment records
+                StudentBillPaymentRecord::where('student_bill_payment_id', $billPayment->id)->delete();
+                $billPayment->delete();
+            }
+
+            // Delete student bill payment books
+            StudentBillPaymentBook::where('student_id', $id)->delete();
+
+            // Delete student bill invoices
+            StudentBillInvoice::where('student_id', $id)->delete();
+
+            // Delete other student related records
             Studentclass::where('studentId', $id)->delete();
             PromotionStatus::where('studentId', $id)->delete();
             ParentRegistration::where('studentId', $id)->delete();
             Studentpicture::where('studentid', $id)->delete();
+            
+            // Delete broadsheet records
             $broadsheetRecords = BroadsheetRecord::where('student_id', $id)->get();
             foreach ($broadsheetRecords as $record) {
                 Broadsheets::where('broadsheet_record_id', $record->id)->delete();
                 $record->delete();
             }
+            
             SubjectRegistrationStatus::where('studentId', $id)->delete();
             Studenthouse::where('studentid', $id)->delete();
             Studentpersonalityprofile::where('studentid', $id)->delete();
+            
+            // Finally delete the student
             $student->delete();
 
             DB::commit();
@@ -902,11 +929,26 @@ class StudentController extends Controller
             DB::beginTransaction();
 
             foreach ($ids as $id) {
+                // Delete student picture and image file
                 $picture = Studentpicture::where('studentid', $id)->first();
                 if ($picture && $picture->picture) {
                     $this->deleteImage($picture->picture);
                 }
 
+                // Delete student bill payment records and related data
+                $billPayments = StudentBillPayment::where('student_id', $id)->get();
+                foreach ($billPayments as $billPayment) {
+                    StudentBillPaymentRecord::where('student_bill_payment_id', $billPayment->id)->delete();
+                    $billPayment->delete();
+                }
+
+                // Delete student bill payment books
+                StudentBillPaymentBook::where('student_id', $id)->delete();
+
+                // Delete student bill invoices
+                StudentBillInvoice::where('student_id', $id)->delete();
+
+                // Delete other student related records
                 Studentclass::where('studentId', $id)->delete();
                 PromotionStatus::where('studentId', $id)->delete();
                 ParentRegistration::where('studentId', $id)->delete();
@@ -964,6 +1006,20 @@ class StudentController extends Controller
                     $this->deleteImage($picture->picture);
                 }
 
+                // Delete student bill payment records and related data
+                $billPayments = StudentBillPayment::where('student_id', $studentId)->get();
+                foreach ($billPayments as $billPayment) {
+                    StudentBillPaymentRecord::where('student_bill_payment_id', $billPayment->id)->delete();
+                    $billPayment->delete();
+                }
+
+                // Delete student bill payment books
+                StudentBillPaymentBook::where('student_id', $studentId)->delete();
+
+                // Delete student bill invoices
+                StudentBillInvoice::where('student_id', $studentId)->delete();
+
+                // Delete broadsheet records
                 $broadsheetRecords = BroadsheetRecord::where('student_id', $studentId)->get();
                 foreach ($broadsheetRecords as $record) {
                     Broadsheets::where('broadsheet_record_id', $record->id)->delete();
@@ -981,8 +1037,8 @@ class StudentController extends Controller
                 ParentRegistration::where('studentId', $studentId)->delete();
                 Studentpicture::where('studentid', $studentId)->delete();
                 SubjectRegistrationStatus::where('studentId', $studentId)->delete();
-                Studenthouses::where('studentid', $studentId)->delete();
-                Studentpersonalityprofiles::where('studentid', $studentId)->delete();
+                Studenthouse::where('studentid', $studentId)->delete();
+                Studentpersonalityprofile::where('studentid', $studentId)->delete();
             }
 
             Student::where('batchid', $batch->id)->delete();
@@ -1208,14 +1264,14 @@ class StudentController extends Controller
                 ], 400);
             }
 
-            $lastStudent = Student::where('admissionNo', 'LIKE', "CSSK/STD/{$year}/%")
+            $lastStudent = Student::where('admissionNo', 'LIKE', "TCC/{$year}/%")
                 ->orderBy('id', 'desc')
                 ->first();
 
             $lastNumber = 870; // Start from 870 so next number is 871
             if ($lastStudent && $lastStudent->admissionNo) {
                 $parts = explode('/', $lastStudent->admissionNo);
-                if (count($parts) === 4 && $parts[0] === 'CSSK' && $parts[1] === 'STD' && $parts[2] === $year && is_numeric($parts[3])) {
+                if (count($parts) === 4 && $parts[0] === 'TCC' && $parts[2] === $year && is_numeric($parts[3])) {
                     $lastNumber = max(870, (int)$parts[3]);
                 } else {
                     Log::warning("Invalid admission number format: {$lastStudent->admissionNo}");
@@ -1223,7 +1279,7 @@ class StudentController extends Controller
             }
 
             $nextNumber = $lastNumber + 1;
-            $admissionNo = sprintf('CSSK/STD/%s/%04d', $year, $nextNumber);
+            $admissionNo = sprintf('TCC/%s/%04d', $year, $nextNumber);
 
             return response()->json([
                 'success' => true,
