@@ -2235,4 +2235,78 @@ class ViewStudentReportController extends Controller
             ]);
         }
     }
+
+
+    private function debugStudentQuery($studentIds, $schoolclassid, $sessionid, $termid)
+{
+    Log::info('DEBUG: Running direct database queries to check data');
+    
+    // Check if students exist
+    $studentsExist = Student::whereIn('id', $studentIds)->count();
+    Log::info('DEBUG: Students exist check', [
+        'student_ids' => $studentIds,
+        'students_found' => $studentsExist,
+        'expected' => count($studentIds)
+    ]);
+    
+    // Check if students are in the class
+    $studentsInClass = Studentclass::whereIn('studentId', $studentIds)
+        ->where('schoolclassid', $schoolclassid)
+        ->where('sessionid', $sessionid)
+        ->count();
+    
+    Log::info('DEBUG: Students in class check', [
+        'students_in_class' => $studentsInClass,
+        'expected' => count($studentIds)
+    ]);
+    
+    // Check if broadsheet records exist
+    $broadsheetRecords = DB::table('broadsheet_records')
+        ->whereIn('student_id', $studentIds)
+        ->where('schoolclass_id', $schoolclassid)
+        ->where('session_id', $sessionid)
+        ->count();
+    
+    Log::info('DEBUG: Broadsheet records check', [
+        'broadsheet_records' => $broadsheetRecords
+    ]);
+    
+    // Check if broadsheets exist for the term
+    $broadsheets = DB::table('broadsheets')
+        ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadSheet_record_id')
+        ->whereIn('broadsheet_records.student_id', $studentIds)
+        ->where('broadsheet_records.schoolclass_id', $schoolclassid)
+        ->where('broadsheet_records.session_id', $sessionid)
+        ->where('broadsheets.term_id', $termid)
+        ->count();
+    
+    Log::info('DEBUG: Broadsheets check', [
+        'broadsheets_found' => $broadsheets
+    ]);
+    
+    // Sample some data
+    if ($broadsheets > 0) {
+        $sampleData = DB::table('broadsheets')
+            ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadSheet_record_id')
+            ->join('studentRegistration', 'studentRegistration.id', '=', 'broadsheet_records.student_id')
+            ->join('subject', 'subject.id', '=', 'broadsheet_records.subject_id')
+            ->whereIn('broadsheet_records.student_id', $studentIds)
+            ->where('broadsheet_records.schoolclass_id', $schoolclassid)
+            ->where('broadsheet_records.session_id', $sessionid)
+            ->where('broadsheets.term_id', $termid)
+            ->select(
+                'studentRegistration.firstname',
+                'studentRegistration.lastname',
+                'subject.subject',
+                'broadsheets.total',
+                'broadsheets.grade'
+            )
+            ->limit(5)
+            ->get();
+        
+        Log::info('DEBUG: Sample broadsheet data', [
+            'sample_data' => $sampleData->toArray()
+        ]);
+    }
+}
 }
