@@ -550,8 +550,8 @@ class ViewStudentReportController extends Controller
                     'studentRegistration.othername as othername',
                     'studentRegistration.dateofbirth as dateofbirth',
                     'studentRegistration.gender as gender',
-                    'studentRegistration.present_address as present_address',
-                    'studentRegistration.permanent_address as permanent_address',
+                    'studentRegistration.home_address2 as present_address',
+                    'studentRegistration.home_address2 as permanent_address',
                     'studentRegistration.updated_at as updated_at',
                     'studentpicture.picture as picture'
                 ])
