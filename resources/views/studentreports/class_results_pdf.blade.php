@@ -532,7 +532,7 @@
                                         text-align: left;
                                     ">
                                         <div style="
-                                            font-size: 26px; 
+                                            font-size: 22px; 
                                             letter-spacing: 1.2px; 
                                             margin-bottom: 4px;
                                             color: #1e293b;
