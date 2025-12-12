@@ -113,7 +113,6 @@ class ViewStudentReportController extends Controller
         return $remark;
     }
 
-    // Get grade point for GPA calculation
     protected function getGradePoint($score, $isSenior = false)
     {
         Log::debug('Calculating grade point', ['score' => $score, 'isSenior' => $isSenior]);
@@ -147,7 +146,6 @@ class ViewStudentReportController extends Controller
         }
     }
 
-    // Compute overall GPA and CGPA for a student
     protected function computeOverallGPAAndCGPAForStudent($studentId, $schoolclass, $termId, $sessionId, $isSenior)
     {
         Log::info('Computing GPA/CGPA for student', [
@@ -158,7 +156,6 @@ class ViewStudentReportController extends Controller
             'class_name' => $schoolclass->schoolclass ?? 'Unknown'
         ]);
 
-        // Current Term GPA and Grade (across all subjects)
         $currentTermBroadsheets = Broadsheets::where('term_id', $termId)
             ->whereHas('broadsheetRecord', function ($q) use ($studentId, $sessionId) {
                 $q->where('student_id', $studentId)->where('session_id', $sessionId);
@@ -171,7 +168,6 @@ class ViewStudentReportController extends Controller
             'totals' => $currentTermBroadsheets->pluck('total')->toArray()
         ]);
 
-        // Compute average total score for GPA Grade using totals
         $averageTotal = $currentTermBroadsheets->avg('total') ?? 0.0;
         $category = $schoolclass->classcategories->first();
         $gpaGrade = $category ? $category->calculateGrade($averageTotal) : $this->getDefaultGrade($averageTotal);
@@ -197,7 +193,6 @@ class ViewStudentReportController extends Controller
             'grade_points' => $termGradePoints->toArray()
         ]);
 
-        // CGPA: Average of up to 3 most recent sessions' annual GPAs
         $annualGPAs = [];
         $studentSessionsInCategory = DB::table('broadsheet_records')
             ->join('schoolclass', 'schoolclass.id', '=', 'broadsheet_records.schoolclass_id')
@@ -278,7 +273,6 @@ class ViewStudentReportController extends Controller
             'cache_key' => $cacheKey
         ]);
 
-        // Force cache invalidation to ensure fresh calculations
         Cache::forget($cacheKey);
 
         $schoolclass = Schoolclass::with('classcategories')->where('id', $schoolclassid)->first(['id', 'schoolclass']);
@@ -294,7 +288,6 @@ class ViewStudentReportController extends Controller
         $className = $schoolclass->schoolclass;
         Log::debug('School class found', ['class_name' => $className, 'class_id' => $schoolclassid]);
         
-        // Get the first class category (many-to-many relationship)
         $isSenior = false;
         if ($schoolclass->classcategories->isNotEmpty()) {
             $classCategory = $schoolclass->classcategories->first();
@@ -539,7 +532,6 @@ class ViewStudentReportController extends Controller
                 'query_params' => compact('schoolclassid', 'sessionid', 'termid')
             ]);
             
-            // Fetch student basic info
             $students = Student::where('studentRegistration.id', $id)
                 ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
                 ->select([
@@ -577,7 +569,6 @@ class ViewStudentReportController extends Controller
                 $students = collect([]);
             }
 
-            // Get school class for assessments and GPA calculations
             $schoolclass = Schoolclass::with(['arms', 'classcategories'])->find($schoolclassid);
             
             Log::debug('School class fetched', [
@@ -601,7 +592,6 @@ class ViewStudentReportController extends Controller
                     'category_names' => $schoolclass->classcategories->pluck('name')->toArray()
                 ]);
                 
-                // Try to load assessments if model exists
                 try {
                     if (class_exists(\App\Models\Assessment::class)) {
                         $assessments = \App\Models\Assessment::whereIn('classcategory_id', $categoryIds)
@@ -632,11 +622,10 @@ class ViewStudentReportController extends Controller
                 ]);
             }
 
-            // Fetch scores with retry mechanism
             $scores = null;
             $attempts = 0;
             $maxAttempts = 3;
-            $retryDelay = 500; // milliseconds
+            $retryDelay = 500;
 
             Log::info('Fetching broadsheet scores', [
                 'student_id' => $id,
@@ -675,7 +664,6 @@ class ViewStudentReportController extends Controller
                     'query_time' => now()->format('H:i:s')
                 ]);
 
-                // For each score, fetch dynamic assessment scores if model exists
                 foreach ($scores as $score) {
                     try {
                         if (class_exists(\App\Models\BroadsheetAssessmentScore::class)) {
@@ -690,22 +678,18 @@ class ViewStudentReportController extends Controller
                                 'broadsheet_id' => $score->broadsheet_id
                             ]);
                             
-                            // Map first 4 assessments to ca1, ca2, ca3, exam for backward compatibility
                             $assessmentArray = $assessmentScores->values();
                             
-                            // Reset all CA fields to 0 first
                             $score->ca1 = 0;
                             $score->ca2 = 0;
                             $score->ca3 = 0;
                             $score->exam = 0;
                             
-                            // Map available assessments
                             if ($assessmentArray->count() > 0) $score->ca1 = $assessmentArray->get(0)->score ?? 0;
                             if ($assessmentArray->count() > 1) $score->ca2 = $assessmentArray->get(1)->score ?? 0;
                             if ($assessmentArray->count() > 2) $score->ca3 = $assessmentArray->get(2)->score ?? 0;
                             if ($assessmentArray->count() > 3) $score->exam = $assessmentArray->get(3)->score ?? 0;
                             
-                            // Store full assessment data
                             $score->assessment_scores = $assessmentScores;
                             $score->assessments = $assessments;
                             
@@ -728,7 +712,6 @@ class ViewStudentReportController extends Controller
                     }
                 }
 
-                // Verify if grades are populated
                 $hasValidGrades = $scores->every(function ($score) {
                     return $score->grade !== '-' && $score->grade !== null;
                 });
@@ -773,7 +756,6 @@ class ViewStudentReportController extends Controller
                 'total_attempts' => $attempts + 1
             ]);
 
-            // Calculate GPA and CGPA for the student
             $gpaData = [];
             if ($schoolclass && $schoolclass->classcategories->isNotEmpty()) {
                 try {
@@ -812,7 +794,6 @@ class ViewStudentReportController extends Controller
                 ]);
             }
 
-            // Fetch student personality profile
             try {
                 $studentpp = Studentpersonalityprofile::where('studentpersonalityprofiles.studentid', $id)
                     ->where('studentpersonalityprofiles.termid', $termid)
@@ -848,7 +829,6 @@ class ViewStudentReportController extends Controller
                 $studentpp = collect();
             }
 
-            // Fetch session and term details
             $schoolsession = Schoolsession::where('id', $sessionid)->first();
             $schoolterm = Schoolterm::where('id', $termid)->first();
             
@@ -859,7 +839,6 @@ class ViewStudentReportController extends Controller
                 'term_name' => $schoolterm->term ?? 'Not found'
             ]);
 
-            // Get number of students in class
             $numberOfStudents = Studentclass::where('schoolclassid', $schoolclassid)
                 ->where('sessionid', $sessionid)
                 ->count();
@@ -870,17 +849,15 @@ class ViewStudentReportController extends Controller
                 'student_count' => $numberOfStudents
             ]);
 
-            // Get school information
             $schoolInfo = SchoolInformation::first();
             
             Log::debug('School info fetched', [
                 'school_info_found' => !is_null($schoolInfo),
                 'school_name' => $schoolInfo->school_name ?? 'Not found',
-                'logo_path' => $schoolInfo->logo ?? 'No logo path',
-                'logo_path_exists' => !empty($schoolInfo->logo) && file_exists(public_path($schoolInfo->logo))
+                'logo_path' => $schoolInfo->logo ?? null,
+                'has_logo' => !empty($schoolInfo->logo)
             ]);
 
-            // Get promotion status
             $promotionStatusValue = null;
             try {
                 $promotionStatus = PromotionStatus::where('student_id', $id)
@@ -905,7 +882,6 @@ class ViewStudentReportController extends Controller
                 ]);
             }
 
-            // Fetch compulsory subjects for the class
             $compulsorySubjects = [];
             try {
                 $compulsorySubjects = CompulsorySubjectClass::where('class_id', $schoolclassid)
@@ -924,7 +900,6 @@ class ViewStudentReportController extends Controller
                 ]);
             }
 
-            // Add compulsory flag to scores
             if ($scores) {
                 $compulsoryCount = 0;
                 foreach ($scores as $score) {
@@ -985,7 +960,6 @@ class ViewStudentReportController extends Controller
         }
     }
 
-    // Method to get column selection data
     public function getColumnOptions(Request $request)
     {
         Log::info('Getting column options', ['request' => $request->all()]);
@@ -1028,7 +1002,6 @@ class ViewStudentReportController extends Controller
             }
         }
 
-        // Define column groups
         $columns = [
             'student_info' => [
                 'sn' => ['label' => 'SN', 'default' => true],
@@ -1061,7 +1034,6 @@ class ViewStudentReportController extends Controller
             ]
         ];
 
-        // Add dynamic assessments
         foreach ($assessments as $assessment) {
             $columns['assessments'][$assessment->id] = [
                 'label' => $assessment->name . ' (' . $assessment->max_score . ')',
@@ -1236,250 +1208,246 @@ class ViewStudentReportController extends Controller
         }
     }
 
-   public function exportClassResultsPdf(Request $request)
-{
-    try {
-        Log::info('========== START CLASS PDF EXPORT ==========', [
-            'request_data' => $request->all(),
-            'timestamp' => now()->toDateTimeString(),
-            'server_ip' => request()->server('SERVER_ADDR') ?? 'unknown',
-            'client_ip' => request()->ip(),
-            'user_agent' => request()->header('User-Agent'),
-            'memory_limit' => ini_get('memory_limit'),
-            'max_execution_time' => ini_get('max_execution_time')
-        ]);
+    public function exportClassResultsPdf(Request $request)
+    {
+        try {
+            Log::info('========== START CLASS PDF EXPORT ==========', [
+                'request_data' => $request->all(),
+                'timestamp' => now()->toDateTimeString(),
+                'server_ip' => request()->server('SERVER_ADDR') ?? 'unknown',
+                'client_ip' => request()->ip(),
+                'user_agent' => request()->header('User-Agent'),
+                'memory_limit' => ini_get('memory_limit'),
+                'max_execution_time' => ini_get('max_execution_time')
+            ]);
 
-        // Check server requirements first
-        $this->checkServerRequirements();
-        
-        ini_set('max_execution_time', 300);
-        ini_set('memory_limit', '512M');
+            $this->checkServerRequirements();
+            
+            // Debug storage structure
+            $this->debugStorageStructure();
+            
+            ini_set('max_execution_time', 300);
+            ini_set('memory_limit', '512M');
 
-        $schoolclassid = $request->input('schoolclassid');
-        $sessionid = $request->input('sessionid');
-        $termid = $request->input('termid', 3);
-        $studentIds = $request->input('studentIds', []);
-        $selectedColumns = $request->input('selectedColumns', []);
+            $schoolclassid = $request->input('schoolclassid');
+            $sessionid = $request->input('sessionid');
+            $termid = $request->input('termid', 3);
+            $studentIds = $request->input('studentIds', []);
+            $selectedColumns = $request->input('selectedColumns', []);
 
-        Log::info('Starting class results PDF generation', [
-            'schoolclassid' => $schoolclassid,
-            'sessionid' => $sessionid,
-            'termid' => $termid,
-            'studentIds_count' => count($studentIds),
-            'selectedColumns_count' => count($selectedColumns),
-            'selectedColumns_sample' => array_slice($selectedColumns, 0, 5)
-        ]);
+            Log::info('Starting class results PDF generation', [
+                'schoolclassid' => $schoolclassid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
+                'studentIds_count' => count($studentIds),
+                'selectedColumns_count' => count($selectedColumns),
+                'selectedColumns_sample' => array_slice($selectedColumns, 0, 5)
+            ]);
 
-        // Validate inputs more strictly
-        if (!$schoolclassid || !$sessionid || !$termid) {
-            Log::error('Missing required parameters for PDF export', $request->all());
-            return response()->json([
-                'success' => false,
-                'message' => 'Missing required parameters: schoolclassid, sessionid, termid'
-            ], 400);
-        }
+            if (!$schoolclassid || !$sessionid || !$termid) {
+                Log::error('Missing required parameters for PDF export', $request->all());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing required parameters: schoolclassid, sessionid, termid'
+                ], 400);
+            }
 
-        // Process each student
-        $allStudentData = [];
-        $processedCount = 0;
-        $failedCount = 0;
-        
-        Log::info('Starting to process individual student data', [
-            'total_students' => count($studentIds)
-        ]);
-        
-        foreach ($studentIds as $index => $studentId) {
-            Log::debug('Processing student', [
-                'index' => $index + 1,
-                'total' => count($studentIds),
-                'student_id' => $studentId
+            $allStudentData = [];
+            $processedCount = 0;
+            $failedCount = 0;
+            
+            Log::info('Starting to process individual student data', [
+                'total_students' => count($studentIds)
             ]);
             
-            $studentData = $this->getStudentResultData(
-                $studentId, 
-                $schoolclassid, 
-                $sessionid, 
-                $termid
-            );
-            
-            // DEBUG: Log what we get from getStudentResultData
-            Log::debug('Student data retrieved', [
-                'student_id' => $studentId,
-                'data_empty' => empty($studentData),
-                'has_students' => !empty($studentData['students']),
-                'students_count' => !empty($studentData['students']) ? $studentData['students']->count() : 0,
-                'has_scores' => !empty($studentData['scores']),
-                'scores_count' => !empty($studentData['scores']) ? $studentData['scores']->count() : 0,
-                'data_keys' => !empty($studentData) ? array_keys($studentData) : []
-            ]);
-            
-            if (!empty($studentData) && 
-                !empty($studentData['students']) && 
-                $studentData['students']->isNotEmpty()) {
-                
-                $studentData['selected_columns'] = $selectedColumns;
-                $allStudentData[] = $studentData;
-                $processedCount++;
-                
-                Log::debug('Student data added successfully', [
-                    'student_id' => $studentId,
-                    'student_name' => $studentData['students']->first()->fname . ' ' . $studentData['students']->first()->lastname
+            foreach ($studentIds as $index => $studentId) {
+                Log::debug('Processing student', [
+                    'index' => $index + 1,
+                    'total' => count($studentIds),
+                    'student_id' => $studentId
                 ]);
-            } else {
-                $failedCount++;
-                Log::warning('Skipped student due to empty data', [
+                
+                $studentData = $this->getStudentResultData(
+                    $studentId, 
+                    $schoolclassid, 
+                    $sessionid, 
+                    $termid
+                );
+                
+                Log::debug('Student data retrieved', [
                     'student_id' => $studentId,
-                    'iteration' => $index + 1,
                     'data_empty' => empty($studentData),
                     'has_students' => !empty($studentData['students']),
-                    'students_empty' => !empty($studentData['students']) && $studentData['students']->isEmpty()
+                    'students_count' => !empty($studentData['students']) ? $studentData['students']->count() : 0,
+                    'has_scores' => !empty($studentData['scores']),
+                    'scores_count' => !empty($studentData['scores']) ? $studentData['scores']->count() : 0,
+                    'data_keys' => !empty($studentData) ? array_keys($studentData) : []
                 ]);
+                
+                if (!empty($studentData) && 
+                    !empty($studentData['students']) && 
+                    $studentData['students']->isNotEmpty()) {
+                    
+                    $studentData['selected_columns'] = $selectedColumns;
+                    $allStudentData[] = $studentData;
+                    $processedCount++;
+                    
+                    Log::debug('Student data added successfully', [
+                        'student_id' => $studentId,
+                        'student_name' => $studentData['students']->first()->fname . ' ' . $studentData['students']->first()->lastname
+                    ]);
+                } else {
+                    $failedCount++;
+                    Log::warning('Skipped student due to empty data', [
+                        'student_id' => $studentId,
+                        'iteration' => $index + 1,
+                        'data_empty' => empty($studentData),
+                        'has_students' => !empty($studentData['students']),
+                        'students_empty' => !empty($studentData['students']) && $studentData['students']->isEmpty()
+                    ]);
+                }
             }
-        }
 
-        Log::info('Student data processing completed', [
-            'total_students' => count($studentIds),
-            'processed_count' => $processedCount,
-            'failed_count' => $failedCount,
-            'final_data_count' => count($allStudentData)
-        ]);
-
-        if (empty($allStudentData)) {
-            Log::error('All student data processing failed - no valid data collected', [
+            Log::info('Student data processing completed', [
                 'total_students' => count($studentIds),
                 'processed_count' => $processedCount,
-                'failed_count' => $failedCount
+                'failed_count' => $failedCount,
+                'final_data_count' => count($allStudentData)
             ]);
+
+            if (empty($allStudentData)) {
+                Log::error('All student data processing failed - no valid data collected', [
+                    'total_students' => count($studentIds),
+                    'processed_count' => $processedCount,
+                    'failed_count' => $failedCount
+                ]);
+                
+                $this->debugStudentQuery($studentIds, $schoolclassid, $sessionid, $termid);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to process student data. Check server logs for details.',
+                    'details' => 'No valid student data could be retrieved. Please verify student enrollment and scores.',
+                    'debug_info' => [
+                        'student_ids' => $studentIds,
+                        'class_id' => $schoolclassid,
+                        'session_id' => $sessionid,
+                        'term_id' => $termid
+                    ]
+                ], 500);
+            }
+
+            Log::info('Fixing image paths for all student data');
+            $this->fixImagePaths($allStudentData);
             
-            // Try a direct database query to debug
-            $this->debugStudentQuery($studentIds, $schoolclassid, $sessionid, $termid);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to process student data. Check server logs for details.',
-                'details' => 'No valid student data could be retrieved. Please verify student enrollment and scores.',
-                'debug_info' => [
-                    'student_ids' => $studentIds,
-                    'class_id' => $schoolclassid,
-                    'session_id' => $sessionid,
-                    'term_id' => $termid
-                ]
-            ], 500);
-        }
+            $schoolclass = Schoolclass::where('id', $schoolclassid)->with(['arms', 'classcategories'])->first(['id', 'schoolclass', 'arm']);
+            $schoolsession = Schoolsession::where('id', $sessionid)->value('session') ?? 'N/A';
+            $term = $this->getTermName($termid);
+            $className = $schoolclass ? ($schoolclass->schoolclass . ($schoolclass->arms ? $schoolclass->arms->arm : '')) : 'Class';
+            $filename = 'Class_Results_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $className) . '_' . 
+                        preg_replace('/[^A-Za-z0-9_-]/', '_', $schoolsession) . '_' . $term . '.pdf';
 
-        // Fix image paths
-        Log::info('Fixing image paths for all student data');
-        $this->fixImagePaths($allStudentData);
-        
-        $schoolclass = Schoolclass::where('id', $schoolclassid)->with(['arms', 'classcategories'])->first(['id', 'schoolclass', 'arm']);
-        $schoolsession = Schoolsession::where('id', $sessionid)->value('session') ?? 'N/A';
-        $term = $this->getTermName($termid);
-        $className = $schoolclass ? ($schoolclass->schoolclass . ($schoolclass->arms ? $schoolclass->arms->arm : '')) : 'Class';
-        $filename = 'Class_Results_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $className) . '_' . 
-                    preg_replace('/[^A-Za-z0-9_-]/', '_', $schoolsession) . '_' . $term . '.pdf';
-
-        Log::info('Preparing PDF data', [
-            'filename' => $filename,
-            'class_name' => $className,
-            'session' => $schoolsession,
-            'term' => $term,
-            'student_count_in_pdf' => count($allStudentData),
-            'selected_columns_count' => count($selectedColumns),
-            'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB'
-        ]);
-
-        $viewName = 'studentreports.class_results_pdf';
-        if (!view()->exists($viewName)) {
-            Log::error('PDF view not found', ['view' => $viewName]);
-            return response()->json([
-                'success' => false,
-                'message' => 'PDF template view not found: ' . $viewName,
-            ], 500);
-        }
-
-        $viewData = [
-            'allStudentData' => $allStudentData,
-            'metadata' => [
+            Log::info('Preparing PDF data', [
+                'filename' => $filename,
                 'class_name' => $className,
                 'session' => $schoolsession,
                 'term' => $term,
-                'generation_date' => now()->format('Y-m-d H:i:s'),
-                'student_count' => count($allStudentData),
-                'selected_columns' => $selectedColumns,
-            ],
-        ];
-
-        // Try to generate PDF and return it inline
-        Log::info('Generating PDF for inline display');
-        
-        $pdf = Pdf::loadView($viewName, $viewData)
-            ->setPaper('A4', 'portrait')
-            ->setOptions([
-                'dpi' => 96,
-                'defaultFont' => 'DejaVu Sans',
-                'isRemoteEnabled' => true,
-                'isHtml5ParserEnabled' => true,
-                'isFontSubsettingEnabled' => true,
-                'isPhpEnabled' => false,
-                'chroot' => [public_path(), storage_path()],
-                'tempDir' => storage_path('app/temp/'),
-                'fontCache' => storage_path('fonts/'),
-                'logOutputFile' => storage_path('logs/dompdf.log'),
-                'isJavascriptEnabled' => false,
-                'enable_css_float' => true,
-                'debugLayout' => false,
-                'debugCss' => false,
-                'debugKeepTemp' => false,
+                'student_count_in_pdf' => count($allStudentData),
+                'selected_columns_count' => count($selectedColumns),
+                'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB'
             ]);
 
-        $pdfContent = $pdf->output();
-        
-        if (empty($pdfContent)) {
-            Log::error('PDF content is empty');
+            $viewName = 'studentreports.class_results_pdf';
+            if (!view()->exists($viewName)) {
+                Log::error('PDF view not found', ['view' => $viewName]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'PDF template view not found: ' . $viewName,
+                ], 500);
+            }
+
+            $viewData = [
+                'allStudentData' => $allStudentData,
+                'metadata' => [
+                    'class_name' => $className,
+                    'session' => $schoolsession,
+                    'term' => $term,
+                    'generation_date' => now()->format('Y-m-d H:i:s'),
+                    'student_count' => count($allStudentData),
+                    'selected_columns' => $selectedColumns,
+                ],
+            ];
+
+            Log::info('Generating PDF for inline display');
+            
+            $pdf = Pdf::loadView($viewName, $viewData)
+                ->setPaper('A4', 'portrait')
+                ->setOptions([
+                    'dpi' => 96,
+                    'defaultFont' => 'DejaVu Sans',
+                    'isRemoteEnabled' => true,
+                    'isHtml5ParserEnabled' => true,
+                    'isFontSubsettingEnabled' => true,
+                    'isPhpEnabled' => false,
+                    'chroot' => [public_path(), storage_path()],
+                    'tempDir' => storage_path('app/temp/'),
+                    'fontCache' => storage_path('fonts/'),
+                    'logOutputFile' => storage_path('logs/dompdf.log'),
+                    'isJavascriptEnabled' => false,
+                    'enable_css_float' => true,
+                    'debugLayout' => false,
+                    'debugCss' => false,
+                    'debugKeepTemp' => false,
+                ]);
+
+            $pdfContent = $pdf->output();
+            
+            if (empty($pdfContent)) {
+                Log::error('PDF content is empty');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Generated PDF content is empty',
+                ], 500);
+            }
+
+            Log::info('PDF generated successfully, returning inline response', [
+                'size_bytes' => strlen($pdfContent),
+                'filename' => $filename
+            ]);
+
+            return response($pdfContent)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="' . $filename . '"')
+                ->header('Content-Length', strlen($pdfContent));
+
+        } catch (Exception $e) {
+            Log::error('========== ERROR CLASS PDF EXPORT ==========', [
+                'schoolclassid' => $schoolclassid ?? 'N/A',
+                'sessionid' => $sessionid ?? 'N/A',
+                'termid' => $termid ?? 'N/A',
+                'studentIds_count' => count($studentIds ?? []),
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString(),
+                'timestamp' => now()->toDateTimeString(),
+                'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB',
+                'peak_memory' => round(memory_get_peak_usage() / 1024 / 1024, 2) . ' MB'
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Generated PDF content is empty',
+                'message' => 'Failed to generate PDF: ' . $e->getMessage(),
+                'error_type' => get_class($e)
             ], 500);
+        } finally {
+            Log::info('========== END CLASS PDF EXPORT ==========', [
+                'timestamp' => now()->toDateTimeString(),
+                'execution_time' => round(microtime(true) - LARAVEL_START, 2) . ' seconds',
+                'final_memory' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB'
+            ]);
         }
-
-        Log::info('PDF generated successfully, returning inline response', [
-            'size_bytes' => strlen($pdfContent),
-            'filename' => $filename
-        ]);
-
-        return response($pdfContent)
-            ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'inline; filename="' . $filename . '"')
-            ->header('Content-Length', strlen($pdfContent));
-
-    } catch (Exception $e) {
-        Log::error('========== ERROR CLASS PDF EXPORT ==========', [
-            'schoolclassid' => $schoolclassid ?? 'N/A',
-            'sessionid' => $sessionid ?? 'N/A',
-            'termid' => $termid ?? 'N/A',
-            'studentIds_count' => count($studentIds ?? []),
-            'error_message' => $e->getMessage(),
-            'error_file' => $e->getFile(),
-            'error_line' => $e->getLine(),
-            'error_trace' => $e->getTraceAsString(),
-            'timestamp' => now()->toDateTimeString(),
-            'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB',
-            'peak_memory' => round(memory_get_peak_usage() / 1024 / 1024, 2) . ' MB'
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to generate PDF: ' . $e->getMessage(),
-            'error_type' => get_class($e)
-        ], 500);
-    } finally {
-        Log::info('========== END CLASS PDF EXPORT ==========', [
-            'timestamp' => now()->toDateTimeString(),
-            'execution_time' => round(microtime(true) - LARAVEL_START, 2) . ' seconds',
-            'final_memory' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB'
-        ]);
     }
-}
 
     private function checkServerRequirements()
     {
@@ -1501,7 +1469,6 @@ class ViewStudentReportController extends Controller
 
         Log::info('Server requirements check', $checks);
 
-        // Create missing directories
         if (!$checks['temp_dir_writable']) {
             $tempDir = storage_path('app/temp');
             if (!file_exists($tempDir)) {
@@ -1510,27 +1477,24 @@ class ViewStudentReportController extends Controller
             }
         }
 
-        // Check for default images
         $defaultStudentImage = public_path('storage/student_avatars/unnamed.jpg');
         $defaultSchoolLogo = public_path('storage/school_logos/default.jpg');
         
         if (!file_exists($defaultStudentImage)) {
             Log::warning('Default student image not found', ['path' => $defaultStudentImage]);
-            // Try to create directory
-            $studentAvatarDir = dirname($defaultStudentImage);
-            if (!file_exists($studentAvatarDir)) {
-                mkdir($studentAvatarDir, 0755, true);
-                Log::info('Created student avatars directory', ['path' => $studentAvatarDir]);
+            $studentDir = dirname($defaultStudentImage);
+            if (!file_exists($studentDir)) {
+                mkdir($studentDir, 0755, true);
+                Log::info('Created student avatars directory', ['path' => $studentDir]);
             }
         }
         
         if (!file_exists($defaultSchoolLogo)) {
             Log::warning('Default school logo not found', ['path' => $defaultSchoolLogo]);
-            // Try to create directory
-            $schoolLogoDir = dirname($defaultSchoolLogo);
-            if (!file_exists($schoolLogoDir)) {
-                mkdir($schoolLogoDir, 0755, true);
-                Log::info('Created school logos directory', ['path' => $schoolLogoDir]);
+            $logoDir = dirname($defaultSchoolLogo);
+            if (!file_exists($logoDir)) {
+                mkdir($logoDir, 0755, true);
+                Log::info('Created school logos directory', ['path' => $logoDir]);
             }
         }
 
@@ -1539,7 +1503,7 @@ class ViewStudentReportController extends Controller
 
     private function getAbsoluteImagePath($path)
     {
-        Log::debug('Getting absolute image path', ['original_path' => $path]);
+        Log::debug('🔍 Getting absolute image path', ['original_path' => $path]);
 
         if (empty($path)) {
             Log::debug('Empty path provided');
@@ -1559,7 +1523,7 @@ class ViewStudentReportController extends Controller
         // Check if it's a base64 image
         if (str_starts_with($path, 'data:image')) {
             Log::debug('Path is base64 image data');
-            return null; // Base64 image, handled separately
+            return null;
         }
 
         // Clean up the path
@@ -1569,82 +1533,118 @@ class ViewStudentReportController extends Controller
         $path = preg_replace('/^(http:\/\/|https:\/\/|\/\/)[^\/]+/', '', $path);
         $path = ltrim($path, DIRECTORY_SEPARATOR);
         
-        // For school logos, check common storage patterns
-        if (str_contains(strtolower($path), 'logo') || str_contains(strtolower($path), 'school')) {
-            $possiblePaths = [
-                // Laravel storage paths
-                storage_path('app/public/' . $path),
-                storage_path('app/public/school_logos/' . basename($path)),
-                storage_path('app/public/logos/' . basename($path)),
-                
-                // Public paths
-                public_path('storage/' . $path),
-                public_path('storage/school_logos/' . basename($path)),
-                public_path('storage/logos/' . basename($path)),
-                public_path('school_logos/' . basename($path)),
-                public_path('logos/' . basename($path)),
-                public_path('images/school_logos/' . basename($path)),
-                
-                // Try with the original path
-                public_path($path),
-                storage_path($path),
-            ];
-        } else {
-            // For other images
-            $possiblePaths = [
-                public_path($path),
-                storage_path('app/public/' . basename($path)),
-                public_path('storage/' . $path),
-                public_path('school_logos/' . basename($path)),
-                public_path('student_avatars/' . basename($path)),
-                storage_path('app/public/school_logos/' . basename($path)),
-                storage_path('app/public/student_avatars/' . basename($path)),
-            ];
-        }
+        // DEBUG: Log the path we're trying to find
+        Log::debug('Looking for image with cleaned path', ['cleaned_path' => $path]);
+        
+        // For school logos, check ALL possible storage locations
+        $possiblePaths = [
+            // Laravel storage paths (most common) - try with full path first
+            storage_path('app/public/' . $path),
+            storage_path('app/public/' . basename($path)),
+            
+            // If path has "school_logos/" prefix, try both with and without
+            storage_path('app/public/school_logos/' . basename($path)),
+            storage_path('app/public/school_logos/' . $path),
+            
+            // Public paths
+            public_path('storage/' . $path),
+            public_path('storage/' . basename($path)),
+            public_path('storage/school_logos/' . basename($path)),
+            public_path('storage/school_logos/' . $path),
+            
+            // Direct public paths
+            public_path($path),
+            public_path(basename($path)),
+            public_path('school_logos/' . basename($path)),
+            public_path('school_logos/' . $path),
+            
+            // Direct storage paths
+            storage_path($path),
+            storage_path(basename($path)),
+            
+            // Legacy paths
+            base_path('public/' . $path),
+            base_path('public/' . basename($path)),
+            base_path('public/storage/' . $path),
+            base_path('public/storage/' . basename($path)),
+            
+            // Check if it's in the root of storage
+            storage_path('app/' . $path),
+            storage_path('app/' . basename($path)),
+            
+            // Check if it's in the root of public
+            public_path('images/' . basename($path)),
+            public_path('uploads/' . basename($path)),
+            public_path('uploads/school_logos/' . basename($path)),
+        ];
 
+        // Add unique paths only
+        $possiblePaths = array_unique($possiblePaths);
+        
         Log::debug('Checking possible paths for image', [
             'original' => $path,
-            'possible_paths_count' => count($possiblePaths)
+            'possible_paths_count' => count($possiblePaths),
+            'sample_paths' => array_slice($possiblePaths, 0, 5)
         ]);
 
         foreach ($possiblePaths as $fullPath) {
             if (file_exists($fullPath)) {
-                Log::debug('Image found at path', [
+                Log::debug('✅ Image FOUND at path', [
                     'path' => $fullPath,
-                    'file_size' => filesize($fullPath) . ' bytes'
+                    'file_size' => filesize($fullPath) . ' bytes',
+                    'is_readable' => is_readable($fullPath),
+                    'mime_type' => mime_content_type($fullPath)
                 ]);
                 return $fullPath;
             }
         }
 
-        Log::debug('Image not found in any possible paths', ['original_path' => $path]);
+        Log::warning('❌ Image NOT found in any possible paths', [
+            'original_path' => $path,
+            'checked_paths_count' => count($possiblePaths)
+        ]);
         return null;
     }
 
-    /**
-     * Convert image to base64 data URI
-     */
     private function imageToBase64($imagePath)
     {
+        if (str_starts_with($imagePath, 'data:image')) {
+            return $imagePath;
+        }
+        
         if (!$imagePath || !file_exists($imagePath)) {
             Log::warning('Image file does not exist for base64 conversion', ['path' => $imagePath]);
             
-            // Try to return a default base64 placeholder
-            $placeholder = 'data:image/svg+xml;base64,' . base64_encode(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">' .
-                '<rect width="100" height="100" fill="#f0f0f0"/>' .
-                '<text x="50" y="50" text-anchor="middle" dy=".3em" fill="#999" font-size="12">No Image</text>' .
-                '</svg>'
-            );
-            return $placeholder;
+            $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+                    <rect width="100" height="100" fill="#f0f0f0" stroke="#ddd" stroke-width="2"/>
+                    <circle cx="50" cy="40" r="15" fill="#ddd"/>
+                    <rect x="35" y="60" width="30" height="25" fill="#ddd" rx="2"/>
+                    <text x="50" y="95" text-anchor="middle" fill="#999" font-family="Arial" font-size="8">
+                        No Image
+                    </text>
+                </svg>';
+            
+            return 'data:image/svg+xml;base64,' . base64_encode($svg);
         }
         
         try {
             $imageData = file_get_contents($imagePath);
-            $mimeType = mime_content_type($imagePath);
+            if (empty($imageData)) {
+                throw new \Exception('Image file is empty');
+            }
             
+            $mimeType = mime_content_type($imagePath);
             if (!$mimeType) {
-                $mimeType = 'image/jpeg'; // Default to JPEG if mime type detection fails
+                $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+                $mimeTypes = [
+                    'jpg' => 'image/jpeg',
+                    'jpeg' => 'image/jpeg',
+                    'png' => 'image/png',
+                    'gif' => 'image/gif',
+                    'svg' => 'image/svg+xml',
+                    'webp' => 'image/webp',
+                ];
+                $mimeType = $mimeTypes[$extension] ?? 'image/jpeg';
             }
             
             $base64 = base64_encode($imageData);
@@ -1653,24 +1653,24 @@ class ViewStudentReportController extends Controller
             Log::debug('Image converted to base64', [
                 'path' => $imagePath,
                 'mime_type' => $mimeType,
-                'data_length' => strlen($result),
-                'file_size' => filesize($imagePath) . ' bytes'
+                'file_size' => filesize($imagePath) . ' bytes',
+                'data_length' => strlen($base64) . ' bytes'
             ]);
             
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to convert image to base64', [
                 'path' => $imagePath,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             
-            // Return a simple placeholder
             return 'data:image/svg+xml;base64,' . base64_encode(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">' .
-                '<rect width="100" height="100" fill="#f0f0f0"/>' .
-                '<text x="50" y="50" text-anchor="middle" dy=".3em" fill="#999" font-size="12">Error</text>' .
-                '</svg>'
+                '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+                    <rect width="100" height="100" fill="#f8f9fa"/>
+                    <text x="50" y="50" text-anchor="middle" dy=".3em" fill="#6c757d" font-family="Arial" font-size="10">
+                        Error
+                    </text>
+                </svg>'
             );
         }
     }
@@ -1689,6 +1689,7 @@ class ViewStudentReportController extends Controller
             if (!file_exists($studentDir)) {
                 mkdir($studentDir, 0755, true);
             }
+            $this->createPlaceholderImage($defaultStudentImage, 'Student');
         }
         
         if (!file_exists($defaultSchoolLogo)) {
@@ -1697,10 +1698,11 @@ class ViewStudentReportController extends Controller
             if (!file_exists($logoDir)) {
                 mkdir($logoDir, 0755, true);
             }
+            $this->createPlaceholderImage($defaultSchoolLogo, 'School');
         }
         
         foreach ($studentData as $index => &$student) {
-            Log::debug("Processing student {$index} image paths");
+            Log::debug("📊 Processing student {$index} image paths");
             
             // Student image handling
             if (isset($student['students']) && $student['students']->isNotEmpty() && $student['students']->first()->picture) {
@@ -1709,14 +1711,14 @@ class ViewStudentReportController extends Controller
                 
                 if ($absolutePath && file_exists($absolutePath)) {
                     $student['student_image_base64'] = $this->imageToBase64($absolutePath);
-                    Log::debug('Student image found and converted', [
+                    Log::debug('✅ Student image found and converted', [
                         'student_index' => $index,
                         'original_path' => $imagePath,
                         'absolute_path' => $absolutePath,
                     ]);
                 } else {
                     $student['student_image_base64'] = $this->imageToBase64($defaultStudentImage);
-                    Log::warning('Using default student image', [
+                    Log::warning('⚠️ Using default student image', [
                         'student_index' => $index,
                         'original_path' => $imagePath,
                         'absolute_path' => $absolutePath,
@@ -1724,68 +1726,197 @@ class ViewStudentReportController extends Controller
                 }
             } else {
                 $student['student_image_base64'] = $this->imageToBase64($defaultStudentImage);
+                Log::debug('No student picture, using default', ['student_index' => $index]);
             }
             
-            // School logo handling - ADD MORE DEBUGGING
-            if (isset($student['schoolInfo']) && $student['schoolInfo']->logo) {
+            // School logo handling - WITH EXTRA DEBUGGING
+            if (isset($student['schoolInfo'])) {
+                $hasLogoInDatabase = !empty($student['schoolInfo']->logo);
                 $logoPath = $student['schoolInfo']->logo;
                 
-                // Log the original logo path from database
-                Log::debug('School logo path from database', [
+                Log::debug('🔍 School logo database check', [
                     'student_index' => $index,
-                    'logo_path' => $logoPath,
-                    'school_id' => $student['schoolInfo']->id ?? 'unknown',
-                    'school_name' => $student['schoolInfo']->school_name ?? 'unknown'
+                    'has_logo_in_db' => $hasLogoInDatabase,
+                    'logo_path_from_db' => $logoPath,
+                    'school_name' => $student['schoolInfo']->school_name ?? 'unknown',
+                    'school_id' => $student['schoolInfo']->id ?? 'unknown'
                 ]);
                 
-                $absolutePath = $this->getAbsoluteImagePath($logoPath);
-                
-                // Log the absolute path found
-                Log::debug('Absolute logo path search result', [
-                    'student_index' => $index,
-                    'absolute_path' => $absolutePath,
-                    'path_exists' => $absolutePath && file_exists($absolutePath),
-                    'is_default' => $absolutePath === $defaultSchoolLogo
-                ]);
-                
-                if ($absolutePath && file_exists($absolutePath)) {
-                    // Check if this is the default logo or the actual logo
-                    if ($absolutePath !== $defaultSchoolLogo) {
-                        $student['school_logo_base64'] = $this->imageToBase64($absolutePath);
-                        Log::info('Actual school logo found and converted', [
-                            'student_index' => $index,
-                            'original_path' => $logoPath,
-                            'absolute_path' => $absolutePath,
-                            'file_size' => filesize($absolutePath) . ' bytes'
+                if ($hasLogoInDatabase && $logoPath) {
+                    // DEBUG: List all files in storage directory to see what exists
+                    $storageDir = storage_path('app/public/school_logos');
+                    if (file_exists($storageDir)) {
+                        $files = scandir($storageDir);
+                        Log::debug('📁 Files in storage/school_logos directory', [
+                            'directory' => $storageDir,
+                            'files_count' => count($files),
+                            'files' => array_filter($files, function($file) {
+                                return !in_array($file, ['.', '..']);
+                            })
                         ]);
                     } else {
-                        $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
-                        Log::warning('Default logo used instead of actual logo', [
+                        Log::warning('Storage directory does not exist', ['path' => $storageDir]);
+                    }
+                    
+                    $absolutePath = $this->getAbsoluteImagePath($logoPath);
+                    
+                    Log::debug('🔍 Logo file search result', [
+                        'student_index' => $index,
+                        'logo_path_from_db' => $logoPath,
+                        'absolute_path_found' => $absolutePath,
+                        'file_exists' => $absolutePath && file_exists($absolutePath),
+                        'is_readable' => $absolutePath && is_readable($absolutePath)
+                    ]);
+                    
+                    if ($absolutePath && file_exists($absolutePath)) {
+                        $fileSize = filesize($absolutePath);
+                        if ($fileSize > 100) {
+                            $student['school_logo_base64'] = $this->imageToBase64($absolutePath);
+                            Log::info('✅ ACTUAL school logo found and used', [
+                                'student_index' => $index,
+                                'file_size' => $fileSize,
+                                'path' => $absolutePath,
+                                'school_name' => $student['schoolInfo']->school_name ?? 'unknown'
+                            ]);
+                        } else {
+                            Log::warning('⚠️ Logo file exists but is too small or invalid', [
+                                'student_index' => $index,
+                                'file_size' => $fileSize,
+                                'path' => $absolutePath
+                            ]);
+                            $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
+                        }
+                    } else {
+                        Log::warning('⚠️ Logo in database but file not found', [
                             'student_index' => $index,
-                            'original_path' => $logoPath,
+                            'logo_path' => $logoPath,
                             'absolute_path' => $absolutePath,
-                            'reason' => 'Path resolved to default logo'
+                            'trying_default' => true
                         ]);
+                        $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
                     }
                 } else {
-                    $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
-                    Log::warning('Using default school logo (file not found)', [
+                    Log::info('ℹ️ No logo in database, using default', [
                         'student_index' => $index,
-                        'original_path' => $logoPath,
-                        'absolute_path' => $absolutePath,
+                        'school_name' => $student['schoolInfo']->school_name ?? 'unknown'
                     ]);
+                    $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
                 }
             } else {
+                Log::warning('⚠️ No schoolInfo found, using default logo', ['student_index' => $index]);
                 $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
-                Log::info('No school logo in database, using default', [
-                    'student_index' => $index,
-                    'has_school_info' => isset($student['schoolInfo']),
-                    'has_logo' => isset($student['schoolInfo']) && !empty($student['schoolInfo']->logo)
-                ]);
             }
         }
         
-        Log::info('Image path fixing completed', ['students_processed' => count($studentData)]);
+        Log::info('✅ Image path fixing completed', ['students_processed' => count($studentData)]);
+    }
+
+    private function createPlaceholderImage($path, $text)
+    {
+        try {
+            $width = 300;
+            $height = 200;
+            
+            $image = imagecreatetruecolor($width, $height);
+            $backgroundColor = imagecolorallocate($image, 240, 240, 240);
+            $textColor = imagecolorallocate($image, 153, 153, 153);
+            
+            imagefill($image, 0, 0, $backgroundColor);
+            
+            $font = 5;
+            $textWidth = imagefontwidth($font) * strlen($text);
+            $textHeight = imagefontheight($font);
+            $x = ($width - $textWidth) / 2;
+            $y = ($height - $textHeight) / 2;
+            
+            imagestring($image, $font, $x, $y, $text, $textColor);
+            
+            imagejpeg($image, $path, 80);
+            imagedestroy($image);
+            
+            Log::info('Created placeholder image', ['path' => $path, 'text' => $text]);
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to create placeholder image', [
+                'path' => $path,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    private function debugStorageStructure()
+    {
+        Log::info('🔍 Debugging storage structure');
+        
+        $pathsToCheck = [
+            'storage/app/public' => storage_path('app/public'),
+            'storage/app/public/school_logos' => storage_path('app/public/school_logos'),
+            'public/storage' => public_path('storage'),
+            'public/storage/school_logos' => public_path('storage/school_logos'),
+            'public/school_logos' => public_path('school_logos'),
+            'storage' => storage_path(),
+            'public' => public_path(),
+        ];
+        
+        foreach ($pathsToCheck as $name => $path) {
+            if (file_exists($path)) {
+                if (is_dir($path)) {
+                    $files = scandir($path);
+                    $fileCount = count($files) - 2; // Exclude . and ..
+                    Log::info("📁 Directory: {$name}", [
+                        'path' => $path,
+                        'exists' => true,
+                        'is_dir' => true,
+                        'file_count' => $fileCount,
+                        'files_sample' => array_slice(array_filter($files, function($file) {
+                            return !in_array($file, ['.', '..']);
+                        }), 0, 10)
+                    ]);
+                } else {
+                    Log::info("📄 File: {$name}", [
+                        'path' => $path,
+                        'exists' => true,
+                        'is_dir' => false,
+                        'size' => filesize($path) . ' bytes'
+                    ]);
+                }
+            } else {
+                Log::warning("❌ Not found: {$name}", ['path' => $path]);
+            }
+        }
+        
+        // Check symbolic link
+        $linkPath = public_path('storage');
+        if (is_link($linkPath)) {
+            Log::info('🔗 Public storage is a symlink', [
+                'link' => $linkPath,
+                'target' => readlink($linkPath)
+            ]);
+        } else {
+            Log::info('📁 Public storage is not a symlink', ['path' => $linkPath]);
+        }
+        
+        // Check file permissions
+        $importantPaths = [
+            storage_path('app/public'),
+            public_path('storage'),
+            storage_path('app/public/school_logos'),
+            public_path('storage/school_logos'),
+        ];
+        
+        foreach ($importantPaths as $path) {
+            if (file_exists($path)) {
+                $perms = substr(sprintf('%o', fileperms($path)), -4);
+                $writable = is_writable($path);
+                Log::info("🔒 Permissions for: {$path}", [
+                    'permissions' => $perms,
+                    'writable' => $writable,
+                    'owner' => fileowner($path),
+                    'group' => filegroup($path)
+                ]);
+            }
+        }
     }
 
     private function ensureDirectoriesExist()
@@ -1878,7 +2009,6 @@ class ViewStudentReportController extends Controller
                 'scores_is_collection' => $studentData['scores'] instanceof \Illuminate\Support\Collection,
                 'scores_count' => $studentData['scores'] ? $studentData['scores']->count() : 0
             ]);
-            // Don't return false - some students might legitimately have no scores
         }
 
         $student = $studentData['students']->first();
@@ -1900,7 +2030,6 @@ class ViewStudentReportController extends Controller
         return true;
     }
 
-    // Test endpoint for debugging logo
     public function testLogoPath(Request $request)
     {
         try {
@@ -1931,7 +2060,6 @@ class ViewStudentReportController extends Controller
                 ]
             ];
             
-            // Check common locations
             $commonLocations = [
                 storage_path('app/public/' . basename($logoPath)),
                 public_path('storage/' . basename($logoPath)),
@@ -1957,8 +2085,6 @@ class ViewStudentReportController extends Controller
         }
     }
 
-    // ============= RESPONSE METHODS =============
-    
     private function base64Response($pdfContent, $filename)
     {
         Log::info('Returning base64 response', [
@@ -2047,7 +2173,6 @@ class ViewStudentReportController extends Controller
             ->header('Content-Length', strlen($pdfContent))
             ->header('Transfer-Encoding', 'chunked');
     }
-    // ============= END RESPONSE METHODS =============
 
     public function index(Request $request): View|JsonResponse 
     {
@@ -2238,13 +2363,11 @@ class ViewStudentReportController extends Controller
         return view('studentreports.studentmockresult')->with($data)->with('pagetitle', $pagetitle);
     }
 
-    // Test endpoint for debugging
     public function testPdfGeneration(Request $request)
     {
         Log::info('Test PDF generation endpoint called');
         
         try {
-            // Test with a known student ID
             $testStudentId = Student::first()->id ?? null;
             $testClassId = Schoolclass::first()->id ?? null;
             $testSessionId = Schoolsession::first()->id ?? null;
@@ -2263,12 +2386,11 @@ class ViewStudentReportController extends Controller
                 ]);
             }
             
-            // Test getStudentResultData
             $studentData = $this->getStudentResultData(
                 $testStudentId, 
                 $testClassId, 
                 $testSessionId, 
-                3 // Third term
+                3
             );
             
             $result = [
@@ -2315,12 +2437,10 @@ class ViewStudentReportController extends Controller
         }
     }
 
-
     private function debugStudentQuery($studentIds, $schoolclassid, $sessionid, $termid)
     {
         Log::info('DEBUG: Running direct database queries to check data');
         
-        // Check if students exist
         $studentsExist = Student::whereIn('id', $studentIds)->count();
         Log::info('DEBUG: Students exist check', [
             'student_ids' => $studentIds,
@@ -2328,7 +2448,6 @@ class ViewStudentReportController extends Controller
             'expected' => count($studentIds)
         ]);
         
-        // Check if students are in the class
         $studentsInClass = Studentclass::whereIn('studentId', $studentIds)
             ->where('schoolclassid', $schoolclassid)
             ->where('sessionid', $sessionid)
@@ -2339,7 +2458,6 @@ class ViewStudentReportController extends Controller
             'expected' => count($studentIds)
         ]);
         
-        // Check if broadsheet records exist
         $broadsheetRecords = DB::table('broadsheet_records')
             ->whereIn('student_id', $studentIds)
             ->where('schoolclass_id', $schoolclassid)
@@ -2350,7 +2468,6 @@ class ViewStudentReportController extends Controller
             'broadsheet_records' => $broadsheetRecords
         ]);
         
-        // Check if broadsheets exist for the term
         $broadsheets = DB::table('broadsheets')
             ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadSheet_record_id')
             ->whereIn('broadsheet_records.student_id', $studentIds)
@@ -2363,7 +2480,6 @@ class ViewStudentReportController extends Controller
             'broadsheets_found' => $broadsheets
         ]);
         
-        // Sample some data
         if ($broadsheets > 0) {
             $sampleData = DB::table('broadsheets')
                 ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadSheet_record_id')
