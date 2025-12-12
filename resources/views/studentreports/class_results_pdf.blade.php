@@ -135,6 +135,55 @@
             display: block;
         }
 
+        /* Horizontal School Header Styles */
+        .school-header-horizontal {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .school-header-row {
+            display: flex;
+            align-items: center;
+        }
+
+        .school-name-container {
+            flex: 1;
+        }
+
+        .school-details-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px 8px;
+            align-items: start;
+            margin-top: 2px;
+        }
+
+        .school-detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-height: 30px;
+        }
+
+        .school-detail-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #334155;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .school-detail-content {
+            font-size: 10px;
+            font-weight: 700;
+            color: #000000;
+            line-height: 1.1;
+            word-break: break-word;
+            padding: 1px 0;
+        }
+
         /* NEW IMPROVED STUDENT INFO SECTION */
         .student-info-section {
             margin-bottom: 6px;
@@ -160,7 +209,7 @@
         }
 
         .info-label {
-            font-size: 10px;
+            font-size: 12px;
             font-weight: 700;
             color: #334155;
             white-space: nowrap;
@@ -170,7 +219,7 @@
         }
 
         .info-content {
-            font-size: 11px;
+            font-size: 13px;
             font-weight: 900;
             color: #000000;
             flex: 1;
@@ -380,6 +429,19 @@
                 background: #f8fafc;
                 border: 2px solid #cbd5e1;
             }
+
+            .school-details-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px 12px;
+            }
+            
+            .school-detail-label {
+                font-size: 7px;
+            }
+            
+            .school-detail-content {
+                font-size: 8px;
+            }
         }
     </style>
 </head>
@@ -459,23 +521,41 @@
                                     <img class="header-img" src="{{ $logoSrc }}" alt="School Logo">
                                 </div>
                             </td>
-                            <td width="50%">
-                                <div class="info-item">
-                                    <p class="school-name2">{{ $schoolInfo->school_name ?? 'SCHOOL NAME' }}</p>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label" style="min-width: 50px;">Motto:</span>
-                                    <span class="info-content">{{ $schoolInfo->school_motto ?? 'NO INFO' }}</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label" style="min-width: 50px;">Address:</span>
-                                    <span class="info-content">{{ $schoolInfo->school_address ?? 'NO INFO' }}</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label" style="min-width: 50px;">Phone:</span>
-                                    <span class="info-content">{{ $schoolInfo->school_phone ?? 'NO INFO' }}</span>
-                                </div>
-                            </td>
+                          
+                            <td width="50%" style="padding-left: 10px; vertical-align: middle;">
+                                    <!-- Compact & Bold School Header – Exactly like your sample -->
+                                    <div style="
+                                        font-family: 'Arial Black', 'Helvetica Bold', sans-serif;
+                                        font-weight: 900;
+                                        color: #000;
+                                        line-height: 1.35;
+                                        text-align: left;
+                                    ">
+                                        <div style="
+                                            font-size: 26px; 
+                                            letter-spacing: 1.2px; 
+                                            margin-bottom: 4px;
+                                            color: #1e293b;
+                                        ">
+                                            {{ $schoolInfo->school_name ?? 'EXCELLENCE INTERNATIONAL COLLEGE' }}
+                                        </div>
+
+                                        <div style="font-size: 12px;">
+                                            <strong style="color: #1e40af;">Motto:</strong> 
+                                            <span style="margin-left: 6px;">{{ $schoolInfo->school_motto ?? 'Knowledge & Character' }}</span>
+                                        </div>
+
+                                        <div style="font-size: 12px;">
+                                            <strong style="color: #1e40af;">Address:</strong> 
+                                            <span style="margin-left: 6px;">{{ $schoolInfo->school_address ?? '12 Adeola Odeku, Victoria Island, Lagos' }}</span>
+                                        </div>
+
+                                        <div style="font-size: 12px;">
+                                            <strong style="color: #1e40af;">Phone:</strong> 
+                                            <span style="margin-left: 6px;">{{ $schoolInfo->school_phone ?? '0803 123 4567' }}</span>
+                                        </div>
+                                    </div>
+                                </td>
                             <td width="25%">
                                 @if(in_array('picture', $columnsToShow))
                                 <div class="photo-frame">
@@ -500,80 +580,88 @@
                         $profile = $studentData['studentpp'] && $studentData['studentpp']->isNotEmpty() ? $studentData['studentpp']->first() : null;
                     @endphp
                     
-                    <div class="student-info-section">
-                        <div class="student-info-grid">
-                            <!-- Column 1 -->
-                            <div class="info-item">
-                                <span class="info-label">Name:</span>
-                                <span class="info-content">{{ strtoupper($student->lastname ?? '') }} {{ $student->fname ?? '' }} {{ $student->othername ?? '' }}</span>
-                            </div>
-                            
-                            <div class="info-item">
-                                <span class="info-label">Session:</span>
-                                <span class="info-content">{{ $studentData['schoolsession']->session ?? 'NO INFO' }}</span>
-                            </div>
-                            
-                            <div class="info-item">
-                                <span class="info-label">Term:</span>
-                                <span class="info-content">{{ $studentData['schoolterm']->term ?? 'NO INFO' }}</span>
-                            </div>
-                            
-                            <!-- Column 2 -->
-                            <div class="info-item">
-                                <span class="info-label">Class:</span>
-                                <span class="info-content">{{ $studentData['schoolclass']->schoolclass ?? 'NO INFO' }} {{ $studentData['schoolclass']->arms->arm ?? '' }}</span>
-                            </div>
-                            
-                            @if(in_array('dob', $columnsToShow))
-                            <div class="info-item">
-                                <span class="info-label">DOB:</span>
-                                <span class="info-content">
-                                    @php
-                                        $dob = $student->dateofbirth ?? null;
-                                        $formattedDob = 'NO INFO';
-                                        if ($dob) {
-                                            try {
-                                                $formattedDob = \Carbon\Carbon::parse($dob)->format('jS F, Y');
-                                            } catch (\Exception $e) {
-                                                $formattedDob = $dob;
-                                            }
-                                        }
-                                    @endphp
-                                    {{ $formattedDob }}
-                                </span>
-                            </div>
-                            @endif
-                            
-                            <div class="info-item">
-                                <span class="info-label">Adm No:</span>
-                                <span class="info-content">{{ $student->admissionNo ?? 'NO INFO' }}</span>
-                            </div>
-                            
-                            <!-- Column 3 -->
-                            @if(in_array('gender', $columnsToShow))
-                            <div class="info-item">
-                                <span class="info-label">Sex:</span>
-                                <span class="info-content">{{ $student->gender ?? 'NO INFO' }}</span>
-                            </div>
-                            @endif
-                            
-                            <div class="info-item">
-                                <span class="info-label">School Opened:</span>
-                                <span class="info-content">
-                                    @php
-                                        $dateSchoolOpened = $schoolInfo->date_school_opened ?? null;
-                                        $formattedDateSchoolOpened = $dateSchoolOpened ? \Carbon\Carbon::parse($dateSchoolOpened)->format('jS F, Y') : 'NO INFO';
-                                    @endphp
-                                    {{ $formattedDateSchoolOpened }}
-                                </span>
-                            </div>
-                            
-                            <div class="info-item">
-                                <span class="info-label">Students in Class:</span>
-                                <span class="info-content">{{ $studentData['numberOfStudents'] ?? 'NO INFO' }}</span>
-                            </div>
-                        </div>
-                    </div>
+                    
+                 <!-- IMPROVED: Horizontal Inline Student Information (No Breaking, Bigger Text) -->
+<div class="student-info-section" style="
+    padding: 12px 14px; 
+    background: linear-gradient(to bottom, #f0f7ff 0%, #ffffff 100%); 
+    border: 2px solid #2aa886; 
+    border-radius: 8px; 
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+">
+    <div style="
+        font-size: 12.5px; 
+        line-height: 1.6; 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 16px 24px; 
+        align-items: center; 
+        font-weight: 700; 
+        color: #1e293b;
+    ">
+        <!-- Each item is wrapped in nowrap to prevent label/value split -->
+        <span style="white-space: nowrap;">
+            <span style="color: #1e40af; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;">Name:</span>
+            <strong style="color: #000; margin-left: 6px; font-size: 13.5px;">
+                {{ strtoupper($student->lastname ?? '') }} {{ $student->fname ?? '' }} {{ $student->othername ?? '' }}
+            </strong>
+        </span>
+
+        <span style="white-space: nowrap;">
+            <span style="color: #1e40af; font-size: 11px; text-transform: uppercase;">Session:</span>
+            <strong style="color: #000; margin-left: 6px;">{{ $studentData['schoolsession']->session ?? '—' }}</strong>
+        </span>
+
+        <span style="white-space: nowrap;">
+            <span style="color: #1e40af; font-size: 11px; text-transform: uppercase;">Term:</span>
+            <strong style="color: #000; margin-left: 6px;">{{ $studentData['schoolterm']->term ?? '—' }}</strong>
+        </span>
+
+        <span style="white-space: nowrap;">
+            <span style="color: #1e40af; font-size: 11px; text-transform: uppercase;">Class:</span>
+            <strong style="color: #000; margin-left: 6px;">
+                {{ $studentData['schoolclass']->schoolclass ?? '' }} {{ $studentData['schoolclass']->arms->arm ?? '' }}
+            </strong>
+        </span>
+
+        <span style="white-space: nowrap;">
+            <span style="color: #1e40af; font-size: 11px; text-transform: uppercase;">Adm No:</span>
+            <strong style="color: #000; margin-left: 6px; font-weight: 900;">
+                {{ $student->admissionNo ?? '—' }}
+            </strong>
+        </span>
+
+        @if(in_array('gender', $columnsToShow))
+        <span style="white-space: nowrap;">
+            <span style="color: #1e40af; font-size: 11px; text-transform: uppercase;">Sex:</span>
+            <strong style="color: #000; margin-left: 6px;">{{ $student->gender ?? '—' }}</strong>
+        </span>
+        @endif
+
+        @if(in_array('dob', $columnsToShow))
+        <span style="white-space: nowrap;">
+            <span style="color: #1e40af; font-size: 11px; text-transform: uppercase;">DOB:</span>
+            <strong style="color: #000; margin-left: 6px;">
+                {{ $student->dateofbirth ? \Carbon\Carbon::parse($student->dateofbirth)->format('jS M, Y') : '—' }}
+            </strong>
+        </span>
+        @endif
+
+        <span style="white-space: nowrap;">
+            <span style="color: #1e40af; font-size: 11px; text-transform: uppercase;">School Opened:</span>
+            <strong style="color: #000; margin-left: 6px;">
+                {{ $schoolInfo->date_school_opened ? \Carbon\Carbon::parse($schoolInfo->date_school_opened)->format('jS M, Y') : '—' }}
+            </strong>
+        </span>
+
+        <span style="white-space: nowrap;">
+            <span style="color: #1e40af; font-size: 11px; text-transform: uppercase;">No. in Class:</span>
+            <strong style="color: #000; margin-left: 6px;">{{ $studentData['numberOfStudents'] ?? '—' }}</strong>
+        </span>
+    </div>
+</div> 
+                                        
                 @else
                     <div class="student-info-section">
                         <div class="info-item">
