@@ -699,10 +699,12 @@
                                 <th class="col-name">Subject</th>
                                 @endif
                                 
-                                @foreach ($assessments as $assessment)
+                               @foreach ($assessments as $assessment)
                                     @if(in_array($assessment->id, $columnsToShow) || in_array('all_assessments', $columnsToShow))
-                                    <th class="col-assessment assessment-header">
+                                    <th class="col-assessment assessment-header" style="font-size: 7.5px; line-height: 1.2;">
                                         {{ $assessment->name }}
+                                        <br>
+                                        <small style="font-weight: bold; color: #ffffff;font-size: 7.5px; " >({{ $assessment->max_score }})</small>
                                     </th>
                                     @endif
                                 @endforeach
