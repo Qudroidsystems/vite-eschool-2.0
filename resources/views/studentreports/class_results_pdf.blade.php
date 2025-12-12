@@ -585,7 +585,7 @@
                                 @foreach ($assessments as $assessment)
                                     @if(in_array($assessment->id, $columnsToShow) || in_array('all_assessments', $columnsToShow))
                                     <th class="col-assessment assessment-header">
-                                        {{ substr($assessment->name, 0, 3) }}
+                                        {{ $assessment->name }}
                                     </th>
                                     @endif
                                 @endforeach

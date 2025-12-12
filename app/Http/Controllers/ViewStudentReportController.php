@@ -849,14 +849,35 @@ class ViewStudentReportController extends Controller
                 'student_count' => $numberOfStudents
             ]);
 
+            // Get school information - FIXED: Use school_logo column name
             $schoolInfo = SchoolInformation::first();
-            
-            Log::debug('School info fetched', [
-                'school_info_found' => !is_null($schoolInfo),
-                'school_name' => $schoolInfo->school_name ?? 'Not found',
-                'logo_path' => $schoolInfo->logo ?? null,
-                'has_logo' => !empty($schoolInfo->logo)
-            ]);
+
+            if ($schoolInfo) {
+                Log::debug('School info fetched', [
+                    'school_id' => $schoolInfo->id,
+                    'school_name' => $schoolInfo->school_name ?? 'Not found',
+                    'logo_path' => $schoolInfo->school_logo ?? null, // Changed from logo to school_logo
+                    'logo_column_name' => 'school_logo',
+                    'logo_value' => $schoolInfo->school_logo,
+                    'logo_is_null' => is_null($schoolInfo->school_logo),
+                    'logo_empty' => empty($schoolInfo->school_logo),
+                    'logo_is_string' => is_string($schoolInfo->school_logo),
+                    'logo_length' => strlen($schoolInfo->school_logo ?? ''),
+                    'has_logo' => !empty($schoolInfo->school_logo)
+                ]);
+            } else {
+                Log::warning('No school information found in database');
+                // Create a dummy school info object
+                $schoolInfo = new \stdClass();
+                $schoolInfo->id = 0;
+                $schoolInfo->school_name = 'School Name Not Found';
+                $schoolInfo->school_logo = null; // Changed from logo to school_logo
+                $schoolInfo->school_motto = 'Motto Not Found';
+                $schoolInfo->school_address = 'Address Not Found';
+                $schoolInfo->school_phone = 'Phone Not Found';
+                $schoolInfo->date_school_opened = null;
+                $schoolInfo->date_next_term_begins = null;
+            }
 
             $promotionStatusValue = null;
             try {
@@ -1731,15 +1752,17 @@ class ViewStudentReportController extends Controller
             
             // School logo handling - WITH EXTRA DEBUGGING
             if (isset($student['schoolInfo'])) {
-                $hasLogoInDatabase = !empty($student['schoolInfo']->logo);
-                $logoPath = $student['schoolInfo']->logo;
+                // FIXED: Use school_logo instead of logo
+                $hasLogoInDatabase = !empty($student['schoolInfo']->school_logo);
+                $logoPath = $student['schoolInfo']->school_logo;
                 
                 Log::debug('🔍 School logo database check', [
                     'student_index' => $index,
                     'has_logo_in_db' => $hasLogoInDatabase,
                     'logo_path_from_db' => $logoPath,
                     'school_name' => $student['schoolInfo']->school_name ?? 'unknown',
-                    'school_id' => $student['schoolInfo']->id ?? 'unknown'
+                    'school_id' => $student['schoolInfo']->id ?? 'unknown',
+                    'logo_column_used' => 'school_logo',
                 ]);
                 
                 if ($hasLogoInDatabase && $logoPath) {
@@ -2042,7 +2065,7 @@ class ViewStudentReportController extends Controller
                 ]);
             }
             
-            $logoPath = $schoolInfo->logo;
+            $logoPath = $schoolInfo->school_logo;
             $absolutePath = $this->getAbsoluteImagePath($logoPath);
             
             $result = [
@@ -2056,7 +2079,7 @@ class ViewStudentReportController extends Controller
                 'school_info' => [
                     'id' => $schoolInfo->id,
                     'name' => $schoolInfo->school_name,
-                    'logo_column' => $logoPath
+                    'school_logo_column' => $logoPath
                 ]
             ];
             
