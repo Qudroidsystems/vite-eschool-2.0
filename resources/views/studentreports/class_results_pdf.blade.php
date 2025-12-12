@@ -127,6 +127,7 @@
             width: 100px;
             height: 70px;
             display: block;
+            object-fit: contain;
         }
 
         .student-info-section {
@@ -161,6 +162,7 @@
             width: 80px;
             height: 100px;
             display: block;
+            object-fit: cover;
         }
 
         .result-table {
@@ -404,16 +406,6 @@
             foreach ($otherColumns as $col) {
                 if (in_array($col, $columnsToShow)) $currentVisibleColumnCount++;
             }
-            
-            // Logo debugging
-            $logoDebug = [];
-            if ($schoolInfo && $schoolInfo->logo) {
-                $logoDebug['database_path'] = $schoolInfo->logo;
-                $logoDebug['has_logo_base64'] = !empty($studentData['school_logo_base64']);
-                $logoDebug['base64_is_default'] = str_contains($studentData['school_logo_base64'] ?? '', 'default.jpg') || 
-                                                  str_contains($studentData['school_logo_base64'] ?? '', 'No Image') ||
-                                                  str_contains($studentData['school_logo_base64'] ?? '', 'Error');
-            }
         @endphp
         
         <div class="student-section">
@@ -425,56 +417,19 @@
                             <td width="25%">
                                 <div class="school-logo">
                                     @php
-                                        // Try multiple logo sources
-                                        $logoFound = false;
-                                        $logoSrc = '';
-                                        
-                                        // 1. First try base64 from controller
+                                        // Simple approach - use the base64 logo if provided, otherwise default
                                         if(!empty($studentData['school_logo_base64']) && 
                                            !str_contains($studentData['school_logo_base64'], 'No Image') &&
                                            !str_contains($studentData['school_logo_base64'], 'Error')) {
                                             $logoSrc = $studentData['school_logo_base64'];
-                                            $logoFound = true;
-                                        }
-                                        
-                                        // 2. If not found or is default, try direct file paths
-                                        if(!$logoFound && $schoolInfo && $schoolInfo->logo) {
-                                            $logoPath = $schoolInfo->logo;
-                                            $possiblePaths = [
-                                                public_path($logoPath),
-                                                storage_path('app/public/' . $logoPath),
-                                                public_path('storage/' . $logoPath),
-                                                public_path('storage/school_logos/' . basename($logoPath)),
-                                                storage_path('app/public/school_logos/' . basename($logoPath)),
-                                                public_path('school_logos/' . basename($logoPath)),
-                                            ];
-                                            
-                                            foreach($possiblePaths as $path) {
-                                                if(file_exists($path)) {
-                                                    try {
-                                                        $imageData = file_get_contents($path);
-                                                        $mime = mime_content_type($path) ?: 'image/jpeg';
-                                                        $logoSrc = 'data:' . $mime . ';base64,' . base64_encode($imageData);
-                                                        $logoFound = true;
-                                                        break;
-                                                    } catch(Exception $e) {
-                                                        continue;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        
-                                        // 3. Fallback to default logo
-                                        if(!$logoFound) {
-                                            $defaultPath = public_path('storage/school_logos/default.jpg');
+                                        } else {
+                                            // Use a proper default logo
+                                            $defaultPath = public_path('images/default-school-logo.png');
                                             if(file_exists($defaultPath)) {
-                                                try {
-                                                    $imageData = file_get_contents($defaultPath);
-                                                    $logoSrc = 'data:image/jpeg;base64,' . base64_encode($imageData);
-                                                } catch(Exception $e) {
-                                                    $logoSrc = 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f0f0f0"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="#999" font-size="12">School Logo</text></svg>');
-                                                }
+                                                $imageData = file_get_contents($defaultPath);
+                                                $logoSrc = 'data:image/png;base64,' . base64_encode($imageData);
                                             } else {
+                                                // Create a simple SVG default
                                                 $logoSrc = 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f0f0f0"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="#999" font-size="12">School Logo</text></svg>');
                                             }
                                         }
