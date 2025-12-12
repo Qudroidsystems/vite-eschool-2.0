@@ -1522,9 +1522,14 @@ class ViewStudentReportController extends Controller
         return $checks;
     }
 
-    private function getAbsoluteImagePath($path)
+    private function getAbsoluteImagePath($path, $isStudent = false)
     {
-        Log::debug('🔍 Getting absolute image path', ['original_path' => $path]);
+        Log::debug('🔍 Getting absolute image path', [
+            'original_path' => $path,
+            'is_student' => $isStudent,
+            'path_is_null' => is_null($path),
+            'path_is_empty' => empty($path)
+        ]);
 
         if (empty($path)) {
             Log::debug('Empty path provided');
@@ -1555,55 +1560,76 @@ class ViewStudentReportController extends Controller
         $path = ltrim($path, DIRECTORY_SEPARATOR);
         
         // DEBUG: Log the path we're trying to find
-        Log::debug('Looking for image with cleaned path', ['cleaned_path' => $path]);
+        Log::debug('Looking for image with cleaned path', [
+            'cleaned_path' => $path,
+            'is_student' => $isStudent
+        ]);
         
-        // For school logos, check ALL possible storage locations
-        $possiblePaths = [
-            // Laravel storage paths (most common) - try with full path first
-            storage_path('app/public/' . $path),
-            storage_path('app/public/' . basename($path)),
-            
-            // If path has "school_logos/" prefix, try both with and without
-            storage_path('app/public/school_logos/' . basename($path)),
-            storage_path('app/public/school_logos/' . $path),
-            
-            // Public paths
-            public_path('storage/' . $path),
-            public_path('storage/' . basename($path)),
-            public_path('storage/school_logos/' . basename($path)),
-            public_path('storage/school_logos/' . $path),
-            
-            // Direct public paths
-            public_path($path),
-            public_path(basename($path)),
-            public_path('school_logos/' . basename($path)),
-            public_path('school_logos/' . $path),
-            
-            // Direct storage paths
-            storage_path($path),
-            storage_path(basename($path)),
-            
-            // Legacy paths
-            base_path('public/' . $path),
-            base_path('public/' . basename($path)),
-            base_path('public/storage/' . $path),
-            base_path('public/storage/' . basename($path)),
-            
-            // Check if it's in the root of storage
-            storage_path('app/' . $path),
-            storage_path('app/' . basename($path)),
-            
-            // Check if it's in the root of public
-            public_path('images/' . basename($path)),
-            public_path('uploads/' . basename($path)),
-            public_path('uploads/school_logos/' . basename($path)),
-        ];
+        $possiblePaths = [];
+        
+        if ($isStudent) {
+            // STUDENT IMAGE PATHS - Filename only (no directory prefix)
+            $possiblePaths = [
+                // Check in student avatars directory first
+                public_path('storage/student_avatars/' . $path),
+                storage_path('app/public/student_avatars/' . $path),
+                
+                // Also check in the root of storage/public (some might be uploaded here)
+                public_path('storage/' . $path),
+                storage_path('app/public/' . $path),
+                
+                // Legacy paths
+                public_path('uploads/students/' . $path),
+                public_path('images/students/' . $path),
+                storage_path('app/uploads/students/' . $path),
+                
+                // Direct paths (if it already has student_avatars in the path)
+                public_path('storage/' . $path),
+                storage_path('app/public/' . $path),
+                
+                // Check if it's in the root of public
+                public_path($path),
+                storage_path($path),
+            ];
+        } else {
+            // SCHOOL LOGO PATHS - Has directory prefix
+            $possiblePaths = [
+                // Laravel storage paths (most common)
+                storage_path('app/public/' . $path),
+                public_path('storage/' . $path),
+                
+                // If path has "school_logos/" prefix, try both with and without
+                storage_path('app/public/school_logos/' . basename($path)),
+                public_path('storage/school_logos/' . basename($path)),
+                
+                // Direct public paths
+                public_path($path),
+                public_path(basename($path)),
+                public_path('school_logos/' . basename($path)),
+                
+                // Direct storage paths
+                storage_path($path),
+                storage_path(basename($path)),
+                
+                // Legacy paths
+                base_path('public/' . $path),
+                base_path('public/storage/' . $path),
+                
+                // Check if it's in the root of storage
+                storage_path('app/' . $path),
+                
+                // Check if it's in uploads
+                public_path('uploads/' . $path),
+                public_path('uploads/school_logos/' . basename($path)),
+            ];
+        }
 
         // Add unique paths only
         $possiblePaths = array_unique($possiblePaths);
         
         Log::debug('Checking possible paths for image', [
             'original' => $path,
+            'is_student' => $isStudent,
             'possible_paths_count' => count($possiblePaths),
             'sample_paths' => array_slice($possiblePaths, 0, 5)
         ]);
@@ -1614,7 +1640,8 @@ class ViewStudentReportController extends Controller
                     'path' => $fullPath,
                     'file_size' => filesize($fullPath) . ' bytes',
                     'is_readable' => is_readable($fullPath),
-                    'mime_type' => mime_content_type($fullPath)
+                    'mime_type' => function_exists('mime_content_type') ? @mime_content_type($fullPath) : 'unknown',
+                    'is_student' => $isStudent
                 ]);
                 return $fullPath;
             }
@@ -1622,6 +1649,7 @@ class ViewStudentReportController extends Controller
 
         Log::warning('❌ Image NOT found in any possible paths', [
             'original_path' => $path,
+            'is_student' => $isStudent,
             'checked_paths_count' => count($possiblePaths)
         ]);
         return null;
@@ -1725,10 +1753,10 @@ class ViewStudentReportController extends Controller
         foreach ($studentData as $index => &$student) {
             Log::debug("📊 Processing student {$index} image paths");
             
-            // Student image handling
+            // Student image handling - PASS isStudent = TRUE
             if (isset($student['students']) && $student['students']->isNotEmpty() && $student['students']->first()->picture) {
                 $imagePath = $student['students']->first()->picture;
-                $absolutePath = $this->getAbsoluteImagePath($imagePath);
+                $absolutePath = $this->getAbsoluteImagePath($imagePath, true); // Changed here
                 
                 if ($absolutePath && file_exists($absolutePath)) {
                     $student['student_image_base64'] = $this->imageToBase64($absolutePath);
@@ -1750,9 +1778,8 @@ class ViewStudentReportController extends Controller
                 Log::debug('No student picture, using default', ['student_index' => $index]);
             }
             
-            // School logo handling - WITH EXTRA DEBUGGING
+            // School logo handling - PASS isStudent = FALSE (default)
             if (isset($student['schoolInfo'])) {
-                // FIXED: Use school_logo instead of logo
                 $hasLogoInDatabase = !empty($student['schoolInfo']->school_logo);
                 $logoPath = $student['schoolInfo']->school_logo;
                 
@@ -1781,7 +1808,7 @@ class ViewStudentReportController extends Controller
                         Log::warning('Storage directory does not exist', ['path' => $storageDir]);
                     }
                     
-                    $absolutePath = $this->getAbsoluteImagePath($logoPath);
+                    $absolutePath = $this->getAbsoluteImagePath($logoPath, false); // Changed here
                     
                     Log::debug('🔍 Logo file search result', [
                         'student_index' => $index,
@@ -2098,6 +2125,70 @@ class ViewStudentReportController extends Controller
             }
             
             return response()->json($result);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    public function debugStudentPicturePath(Request $request)
+    {
+        try {
+            $studentId = $request->input('student_id');
+            $student = Student::find($studentId);
+            
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not found'
+                ]);
+            }
+            
+            $picturePath = $student->picture;
+            
+            // Check all possible locations
+            $locations = [
+                'public/storage/student_avatars/' . $picturePath,
+                'storage/app/public/student_avatars/' . $picturePath,
+                'public/storage/' . $picturePath,
+                'storage/app/public/' . $picturePath,
+                'public/uploads/students/' . $picturePath,
+                'public/images/students/' . $picturePath,
+            ];
+            
+            $results = [];
+            foreach ($locations as $location) {
+                $fullPath = base_path($location);
+                $results[$location] = [
+                    'path' => $fullPath,
+                    'exists' => file_exists($fullPath),
+                    'size' => file_exists($fullPath) ? filesize($fullPath) . ' bytes' : 'N/A'
+                ];
+            }
+            
+            // Also check database storage configuration
+            $disk = config('filesystems.default');
+            $studentDisk = config('filesystems.disks.' . $disk);
+            
+            return response()->json([
+                'success' => true,
+                'student' => [
+                    'id' => $student->id,
+                    'name' => $student->firstname . ' ' . $student->lastname,
+                    'picture_path_in_db' => $picturePath
+                ],
+                'file_check_results' => $results,
+                'storage_config' => [
+                    'default_disk' => $disk,
+                    'student_disk_config' => $studentDisk,
+                    'public_path' => public_path(),
+                    'storage_path' => storage_path(),
+                ]
+            ]);
             
         } catch (\Exception $e) {
             return response()->json([
