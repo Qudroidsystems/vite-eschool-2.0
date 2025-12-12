@@ -83,13 +83,25 @@
             line-height: 1.2;
         }
 
-        .school-logo {
-            width: 100px;
-            height: 70px;
-            border: 0px solid #1e40af;
-            border-radius: 1px;
-            text-align: center;
+       .school-logo {
+            width: 80px;
+            height: 100px;  /* Fixed height - no typo this time! */
+           border: 2px solid #47b492;
+           border-radius: 8px;
+            background: white;
+            padding: 2px;
             overflow: hidden;
+            text-align: center;
+            margin: 0 auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .school-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;  /* Scales down to fit without stretching */
+            object-position: center;
+            display: block;
         }
 
         .header-divider {
@@ -227,7 +239,7 @@
         }
 
         .photo-frame {
-            border: 3px solid #090909;
+            border: 2px solid #47b492;
             border-radius: 8px;
             background: white;
             padding: 2px;
