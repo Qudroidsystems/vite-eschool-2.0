@@ -21,4 +21,14 @@ class Schoolclass extends Model
     {
         return $this->belongsToMany(Classcategory::class, 'schoolclass_classcategory', 'schoolclass_id', 'classcategory_id');
     }
+    
+    public function arm()
+    {
+        return $this->belongsTo(Schoolarm::class, 'arm');
+    }
+
+    public function classcategory()
+    {
+        return $this->belongsTo(Classcategory::class, 'classcategoryid', 'id');
+    }
 }

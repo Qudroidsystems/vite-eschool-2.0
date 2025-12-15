@@ -49,6 +49,7 @@ use App\Http\Controllers\ViewStudentReportController;
 use \App\Http\Controllers\SchoolInformationController;
 use App\Http\Controllers\MockSubjectVettingController;
 use App\Http\Controllers\StudentImageUploadController;
+use App\Http\Controllers\MyPrincipalsCommentController;
 use App\Http\Controllers\MyMockSubjectVettingsController;
 use App\Http\Controllers\SchoolBillTermSessionController;
 use App\Http\Controllers\ViewStudentMockReportController;
@@ -230,11 +231,8 @@ Route::group(['middleware' => ['auth']], function () {
     
     
         // Marks Sheet Download Routes
-    Route::get('/scoresheet/download-marks-sheet', [MyScoreSheetController::class, 'downloadMarkSheet'])
-    ->name('scoresheet.download-marks-sheet');
-    
-    Route::post('/subjectscoresheet/bulk-update', [MyScoreSheetController::class, 'bulkUpdateScores'])
-    ->name('subjectscoresheet.bulk-update');
+    Route::get('/scoresheet/download-marks-sheet', [MyScoreSheetController::class, 'downloadMarkSheet'])->name('scoresheet.download-marks-sheet');
+    Route::post('/subjectscoresheet/bulk-update', [MyScoreSheetController::class, 'bulkUpdateScores']) ->name('subjectscoresheet.bulk-update');
 
     // School Information Management Routes (Optional - for admin panel)
 
@@ -335,6 +333,11 @@ Route::group(['middleware' => ['auth']], function () {
 
     //principal's comment
     Route::resource('principalscomment', PrincipalsCommentController::class);
+    Route::prefix('myprincipalscomment')->name('myprincipalscomment.')->group(function () {
+        Route::get('/', [MyPrincipalsCommentController::class, 'index'])->name('index');
+        Route::get('/broadsheet/{schoolclassid}/{sessionid}/{termid}', [MyPrincipalsCommentController::class, 'classBroadsheet'])->name('classbroadsheet');
+        Route::post('/broadsheet/{schoolclassid}/{sessionid}/{termid}', [MyPrincipalsCommentController::class, 'updateComments'])->name('updateComments');
+    });
 
     //subject vettings
     Route::resource('subjectvetting', SubjectVettingController::class);

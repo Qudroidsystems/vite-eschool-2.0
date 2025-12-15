@@ -198,6 +198,9 @@
         @include('layouts.pages-assets.css.principalscomment-list-css')
     @endif
 
+    @if (Route::is('myprincipalscomment.*'))
+        @include('layouts.pages-assets.css.myprincipalscomment-list-css')
+    @endif
     @if (Route::is('compulsorysubjectclass.*'))
         @include('layouts.pages-assets.css.compulsorysubjectclass-list-css')
     @endif
@@ -408,7 +411,8 @@
             </li>
             @endif
 
-            @if(auth()->user()->can('View my-class') || auth()->user()->can('View my-subject') || auth()->user()->can('View my-subject-vettings') || auth()->user()->can('View my-mock-subject-vettings') || auth()->user()->can('View myresult-room') || auth()->user()->can('View student-report') || auth()->user()->can('View student-mock-report'))
+            @if(auth()->user()->can('View my-class') || auth()->user()->can('View my-subject') || auth()->user()->can('View my-subject-vettings') || auth()->user()->can('View my-mock-subject-vettings') || auth()->user()->can('View myresult-room') || auth()->user()->can('View student-report')
+             || auth()->user()->can('View student-mock-report')|| auth()->user()->can('View my-principals-comment'))
             <li class="menu-title"><i class="ph-folder-open"></i> <span data-key="t-apps">CLASSES & RECORDS</span></li>
             @endif
             
@@ -438,6 +442,11 @@
                       @can('View my-mock-subject-vettings')
                               <li class="nav-item">
                                   <a href="{{ route('mymocksubjectvettings.index') }}" class="nav-link" data-key="t-products">Mock Subjects to Vet</a>
+                            </li>
+                      @endcan  
+                      @can('View my-principals-comment')
+                            <li class="nav-item">
+                                <a href="{{ route('myprincipalscomment.index') }}" class="nav-link" data-key="t-products">Principal's Comment</a>
                             </li>
                       @endcan  
                       
@@ -2160,6 +2169,11 @@
             @include('layouts.pages-assets.js.principalscomment-list-js')
       @endif
 
+        @if (Route::is('myprincipalscomment.*'))
+            @include('layouts.pages-assets.js.myprincipalscomment-list-js')
+       @endif
+
+
       @if (Route::is('compulsorysubjectclass.*'))
             @include('layouts.pages-assets.js.compulsorysubjectclass-list-js')
       @endif
@@ -2175,7 +2189,6 @@
       @if (Route::is('mysubjectvettings.*'))
             @include('layouts.pages-assets.js.mysubjectvettings-list-js')
       @endif
-
 
       @if (Route::is('mymocksubjectvettings.*'))
             @include('layouts.pages-assets.js.mymocksubjectvetting-list-js')
