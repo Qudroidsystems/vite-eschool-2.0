@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use App\Models\Schoolsession;
 use App\Models\Principalscomment;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Studentpersonalityprofile;
 
@@ -214,6 +213,58 @@ class MyPrincipalsCommentController extends Controller
             }
         }
 
+        // Define regular comments for combining
+        $regularComments = [
+            'Excellent result, keep it up!',
+            'A very good result, keep it up!',
+            'Good result, keep it up!',
+            "Average result, there's still room for improvement next term.",
+            'You can do better next term.',
+            'You need to sit up and be serious.',
+            'Wake up and be serious.'
+        ];
+
+        // Process existing comments to check if they are combined
+        foreach ($students as $student) {
+            $studentId = $student->id;
+            $existingComment = $profiles[$studentId] ?? '';
+            
+            // Check if the existing comment is already a combined comment
+            $isCombinedComment = false;
+            $baseComment = '';
+            $intelligentPart = '';
+            
+            if ($existingComment) {
+                // Check if this is a combined comment (contains a regular comment + intelligent comment)
+                foreach ($regularComments as $regularComment) {
+                    if (strpos($existingComment, $regularComment) === 0) {
+                        // Found a regular comment at the beginning
+                        $remaining = trim(substr($existingComment, strlen($regularComment)));
+                        
+                        // Check if there's additional content (likely intelligent comment)
+                        if (!empty($remaining) && (strpos($remaining, "\n\n") === 0 || strpos($remaining, "\n") === 0)) {
+                            $isCombinedComment = true;
+                            $baseComment = $regularComment;
+                            $intelligentPart = trim($remaining);
+                            break;
+                        }
+                    }
+                }
+                
+                // If not a combined comment, check if it's exactly one of the regular comments
+                if (!$isCombinedComment && in_array($existingComment, $regularComments)) {
+                    $baseComment = $existingComment;
+                    $intelligentPart = '';
+                }
+                
+                // If not a regular comment, check if it matches an intelligent comment pattern
+                if (!$isCombinedComment && empty($baseComment)) {
+                    // This might be just an intelligent comment or custom comment
+                    $intelligentPart = $existingComment;
+                }
+            }
+        }
+
         // Generate intelligent comments based on performance with student first names only
         foreach ($students as $student) {
             $studentId = $student->id;
@@ -246,26 +297,28 @@ class MyPrincipalsCommentController extends Controller
             $goodGrades = ($analysis['counts']['A'] ?? 0) + ($analysis['counts']['B'] ?? 0) + ($analysis['counts']['C'] ?? 0);
             $percentageGood = $totalGrades > 0 ? ($goodGrades / $totalGrades) * 100 : 0;
             
-            // Base comment with student first name and grade summary
+            // Generate intelligent comment with student first name and grade summary
+            $intelligentComment = '';
+            
             if (!empty($gradeSummary)) {
-                $comment = $studentFirstName . " has " . $gradeSummary . ". ";
+                $intelligentComment = $studentFirstName . " has " . $gradeSummary . ". ";
             }
             
             // Add performance assessment
             if ($percentageGood >= 80) {
-                $comment .= "Excellent result, keep it up!";
+                $intelligentComment .= "Excellent result, keep it up!";
             } elseif ($percentageGood >= 70) {
-                $comment .= "A very good result, keep it up!";
+                $intelligentComment .= "A very good result, keep it up!";
             } elseif ($percentageGood >= 60) {
-                $comment .= "Good result, keep it up!";
+                $intelligentComment .= "Good result, keep it up!";
             } elseif ($percentageGood >= 50) {
-                $comment .= "Average result, there's still room for improvement next term.";
+                $intelligentComment .= "Average result, there's still room for improvement next term.";
             } elseif ($percentageGood >= 40) {
-                $comment .= "You can do better next term.";
+                $intelligentComment .= "You can do better next term.";
             } elseif ($percentageGood >= 30) {
-                $comment .= "You need to sit up and be serious.";
+                $intelligentComment .= "You need to sit up and be serious.";
             } else {
-                $comment .= "Wake up and be serious.";
+                $intelligentComment .= "Wake up and be serious.";
             }
             
             // Add subject-specific advice for weak subjects with subject names
@@ -277,15 +330,15 @@ class MyPrincipalsCommentController extends Controller
                 }
                 
                 if (count($subjectList) == 1) {
-                    $comment .= "\n" . $studentFirstName . " should work harder to achieve a higher average in " . $subjectList[0] . ".";
+                    $intelligentComment .= "\n" . $studentFirstName . " should work harder to achieve a higher average in " . $subjectList[0] . ".";
                 } elseif (count($subjectList) == 2) {
-                    $comment .= "\n" . $studentFirstName . " should work harder to achieve a higher average in " . implode(' and ', $subjectList) . ".";
+                    $intelligentComment .= "\n" . $studentFirstName . " should work harder to achieve a higher average in " . implode(' and ', $subjectList) . ".";
                 } elseif (count($subjectList) > 2) {
-                    $comment .= "\n" . $studentFirstName . " should work harder to achieve a higher average in " . implode(', ', array_slice($subjectList, 0, -1)) . " and " . end($subjectList) . ".";
+                    $intelligentComment .= "\n" . $studentFirstName . " should work harder to achieve a higher average in " . implode(', ', array_slice($subjectList, 0, -1)) . " and " . end($subjectList) . ".";
                 }
             }
             
-            $intelligentComments[$studentId] = $comment;
+            $intelligentComments[$studentId] = $intelligentComment;
         }
 
         return view('myprincipalscomment.classbroadsheet')
@@ -328,29 +381,51 @@ class MyPrincipalsCommentController extends Controller
 
         try {
             $request->validate([
-                'teacher_comments.*' => 'nullable|string|max:1000',
+                'teacher_comments.*' => 'nullable|string|max:2000',
             ]);
 
             $comments = $request->input('teacher_comments', []);
+            $updatedCount = 0;
 
-            DB::transaction(function () use ($comments, $schoolclassid, $sessionid, $termid) {
+            DB::transaction(function () use ($comments, $schoolclassid, $sessionid, $termid, &$updatedCount) {
                 foreach ($comments as $studentId => $comment) {
-                    Studentpersonalityprofile::where('studentid', $studentId)
-                        ->where('schoolclassid', $schoolclassid)
-                        ->where('sessionid', $sessionid)
-                        ->where('termid', $termid)
-                        ->update([
-                            'staffid' => Auth::id(),
-                            'principalscomment' => $comment ? trim($comment) : null,
-                            'updated_at' => now(),
-                        ]);
+                    $comment = $comment ? trim($comment) : null;
+                    
+                    if ($comment) {
+                        // Check if we need to update or insert
+                        $existing = Studentpersonalityprofile::where('studentid', $studentId)
+                            ->where('schoolclassid', $schoolclassid)
+                            ->where('sessionid', $sessionid)
+                            ->where('termid', $termid)
+                            ->first();
+
+                        if ($existing) {
+                            // Update existing record
+                            if ($existing->principalscomment !== $comment) {
+                                $existing->update([
+                                    'staffid' => Auth::id(),
+                                    'principalscomment' => $comment,
+                                    'updated_at' => now(),
+                                ]);
+                                $updatedCount++;
+                            }
+                        } else {
+                            // Create new record
+                            Studentpersonalityprofile::create([
+                                'studentid' => $studentId,
+                                'schoolclassid' => $schoolclassid,
+                                'sessionid' => $sessionid,
+                                'termid' => $termid,
+                                'staffid' => Auth::id(),
+                                'principalscomment' => $comment,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                            $updatedCount++;
+                        }
+                    }
                 }
             });
-
-            // Check if any comments were actually updated
-            $updatedCount = count(array_filter($comments, function($comment) {
-                return !empty(trim($comment));
-            }));
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -385,5 +460,51 @@ class MyPrincipalsCommentController extends Controller
             
             return redirect()->back()->with('error', 'Error saving comments: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Helper function to check if a comment is a combined comment
+     */
+    private function isCombinedComment($comment, $regularComments)
+    {
+        if (empty($comment)) return false;
+        
+        foreach ($regularComments as $regularComment) {
+            if (strpos($comment, $regularComment) === 0) {
+                $remaining = trim(substr($comment, strlen($regularComment)));
+                if (!empty($remaining) && (strpos($remaining, "\n\n") === 0 || strpos($remaining, "\n") === 0)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Helper function to extract regular comment from combined comment
+     */
+    private function extractRegularComment($comment, $regularComments)
+    {
+        if (empty($comment)) return '';
+        
+        foreach ($regularComments as $regularComment) {
+            if (strpos($comment, $regularComment) === 0) {
+                return $regularComment;
+            }
+        }
+        
+        return '';
+    }
+
+    /**
+     * Helper function to extract intelligent part from combined comment
+     */
+    private function extractIntelligentPart($comment, $regularComment)
+    {
+        if (empty($comment) || empty($regularComment)) return $comment;
+        
+        $remaining = trim(substr($comment, strlen($regularComment)));
+        return trim($remaining, "\n\t\r ");
     }
 }

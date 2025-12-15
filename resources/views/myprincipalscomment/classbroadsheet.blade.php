@@ -83,6 +83,25 @@
         color: #155724 !important;
         margin-top: 5px;
     }
+    
+    /* Combined comment preview */
+    .combined-comment-preview {
+        border-left: 4px solid #007bff;
+        background-color: #f0f8ff !important;
+        margin-top: 10px;
+        border-radius: 8px;
+    }
+    
+    .combined-comment-preview .comment-preview-text {
+        white-space: pre-line;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 8px;
+    }
 
     /* Floating Tooltip for Desktop */
     .grades-tooltip {
@@ -345,16 +364,17 @@
         color: #667eea;
     }
 
-    /* Remove comment info icon on mobile */
-    @media (max-width: 991px) {
-        .desktop-table { display: none; }
-        .mobile-cards { display: block; }
-        .comment-info-icon { display: none; }
-    }
-    
+    /* Desktop view (992px and above) */
     @media (min-width: 992px) {
-        .mobile-cards { display: none; }
-        .desktop-table { display: block; }
+        .desktop-table { 
+            display: block !important; 
+        }
+        .mobile-cards { 
+            display: none !important; 
+        }
+        .comment-info-icon { 
+            display: block !important; 
+        }
         
         .grades-tooltip {
             max-height: 550px;
@@ -362,6 +382,42 @@
         
         .grades-tooltip .tooltip-body {
             max-height: 430px;
+        }
+    }
+    
+    /* Mobile view (below 992px) */
+    @media (max-width: 991.98px) {
+        .desktop-table { 
+            display: none !important; 
+        }
+        .mobile-cards { 
+            display: block !important; 
+        }
+        .comment-info-icon { 
+            display: none !important; 
+        }
+        
+        /* Mobile-specific adjustments */
+        .student-card {
+            margin-bottom: 1rem;
+        }
+        
+        .subjects-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+        }
+        
+        .subject-item {
+            padding: 10px 5px;
+        }
+        
+        .subject-name {
+            font-size: 0.75rem;
+            height: 2.8em;
+        }
+        
+        .subject-score {
+            font-size: 1.2rem;
         }
     }
 </style>
@@ -458,6 +514,27 @@
                                                             $studentGradesList = $studentGrades[$student->id] ?? [];
                                                             $intelligentComment = $intelligentComments[$student->id] ?? '';
                                                             $hasWeakSubjects = !empty($studentGradeAnalysis[$student->id]['weak_subjects'] ?? []);
+                                                            $currentComment = $profiles[$student->id] ?? '';
+                                                            $isIntelligentSelected = false;
+                                                            $isRegularSelected = false;
+                                                            $showCombinedPreview = false;
+                                                            
+                                                            // Check if the current comment matches any regular comment
+                                                            $regularComments = [
+                                                                'Excellent result, keep it up!',
+                                                                'A very good result, keep it up!',
+                                                                'Good result, keep it up!',
+                                                                "Average result, there's still room for improvement next term.",
+                                                                'You can do better next term.',
+                                                                'You need to sit up and be serious.',
+                                                                'Wake up and be serious.'
+                                                            ];
+                                                            
+                                                            if ($currentComment) {
+                                                                $isIntelligentSelected = ($currentComment === $intelligentComment);
+                                                                $isRegularSelected = in_array($currentComment, $regularComments);
+                                                                $showCombinedPreview = $isIntelligentSelected && $isRegularSelected;
+                                                            }
                                                         @endphp
                                                         <tr>
                                                             <td>{{ $index + 1 }}</td>
@@ -502,35 +579,50 @@
                                                                 </div>
                                                                 @endif
 
+                                                                <!-- Combined Comment Preview (shown when intelligent + regular is selected) -->
+                                                                @if($showCombinedPreview)
+                                                                <div class="combined-comment-preview">
+                                                                    <small class="text-muted d-block mb-1">
+                                                                        <i class="ri-link"></i> Combined comment preview:
+                                                                    </small>
+                                                                    <div class="comment-preview-text">
+                                                                        @php
+                                                                            $combinedComment = $currentComment . "\n\n" . $intelligentComment;
+                                                                            echo nl2br(e($combinedComment));
+                                                                        @endphp
+                                                                    </div>
+                                                                </div>
+                                                                @endif
+
                                                                 <select class="form-select teacher-comment-dropdown auto-save-comment"
                                                                         name="teacher_comments[{{ $student->id }}]"
                                                                         data-student-id="{{ $student->id }}"
-                                                                        data-original-value="{{ $profiles[$student->id] ?? '' }}"
+                                                                        data-original-value="{{ $currentComment }}"
                                                                         data-intelligent-comment="{{ $intelligentComment }}">
                                                                     <option value="">-- Select Comment --</option>
-                                                                    <option value="Excellent result, keep it up!" {{ ($profiles[$student->id] ?? '') == 'Excellent result, keep it up!' ? 'selected' : '' }}>
+                                                                    <option value="Excellent result, keep it up!" {{ $currentComment == 'Excellent result, keep it up!' ? 'selected' : '' }}>
                                                                         Excellent result, keep it up!
                                                                     </option>
-                                                                    <option value="A very good result, keep it up!" {{ ($profiles[$student->id] ?? '') == 'A very good result, keep it up!' ? 'selected' : '' }}>
+                                                                    <option value="A very good result, keep it up!" {{ $currentComment == 'A very good result, keep it up!' ? 'selected' : '' }}>
                                                                         A very good result, keep it up!
                                                                     </option>
-                                                                    <option value="Good result, keep it up!" {{ ($profiles[$student->id] ?? '') == 'Good result, keep it up!' ? 'selected' : '' }}>
+                                                                    <option value="Good result, keep it up!" {{ $currentComment == 'Good result, keep it up!' ? 'selected' : '' }}>
                                                                         Good result, keep it up!
                                                                     </option>
-                                                                    <option value="Average result, there's still room for improvement next term." {{ ($profiles[$student->id] ?? '') == "Average result, there's still room for improvement next term." ? 'selected' : '' }}>
+                                                                    <option value="Average result, there's still room for improvement next term." {{ $currentComment == "Average result, there's still room for improvement next term." ? 'selected' : '' }}>
                                                                         Average result, there's still room for improvement next term.
                                                                     </option>
-                                                                    <option value="You can do better next term." {{ ($profiles[$student->id] ?? '') == 'You can do better next term.' ? 'selected' : '' }}>
+                                                                    <option value="You can do better next term." {{ $currentComment == 'You can do better next term.' ? 'selected' : '' }}>
                                                                         You can do better next term.
                                                                     </option>
-                                                                    <option value="You need to sit up and be serious." {{ ($profiles[$student->id] ?? '') == 'You need to sit up and be serious.' ? 'selected' : '' }}>
+                                                                    <option value="You need to sit up and be serious." {{ $currentComment == 'You need to sit up and be serious.' ? 'selected' : '' }}>
                                                                         You need to sit up and be serious.
                                                                     </option>
-                                                                    <option value="Wake up and be serious." {{ ($profiles[$student->id] ?? '') == 'Wake up and be serious.' ? 'selected' : '' }}>
+                                                                    <option value="Wake up and be serious." {{ $currentComment == 'Wake up and be serious.' ? 'selected' : '' }}>
                                                                         Wake up and be serious.
                                                                     </option>
                                                                     @if($intelligentComment)
-                                                                    <option value="{{ $intelligentComment }}" class="intelligent-option">
+                                                                    <option value="{{ $intelligentComment }}" {{ $currentComment == $intelligentComment ? 'selected' : '' }} class="intelligent-option">
                                                                         💡 Use Personalized Intelligent Comment
                                                                         @if($hasWeakSubjects)
                                                                         <span class="badge bg-warning ms-2">Includes weak subjects</span>
@@ -588,6 +680,27 @@
                                                 $studentGradesList = $studentGrades[$student->id] ?? [];
                                                 $intelligentComment = $intelligentComments[$student->id] ?? '';
                                                 $hasWeakSubjects = !empty($studentGradeAnalysis[$student->id]['weak_subjects'] ?? []);
+                                                $currentComment = $profiles[$student->id] ?? '';
+                                                $isIntelligentSelected = false;
+                                                $isRegularSelected = false;
+                                                $showCombinedPreview = false;
+                                                
+                                                // Check if the current comment matches any regular comment
+                                                $regularComments = [
+                                                    'Excellent result, keep it up!',
+                                                    'A very good result, keep it up!',
+                                                    'Good result, keep it up!',
+                                                    "Average result, there's still room for improvement next term.",
+                                                    'You can do better next term.',
+                                                    'You need to sit up and be serious.',
+                                                    'Wake up and be serious.'
+                                                ];
+                                                
+                                                if ($currentComment) {
+                                                    $isIntelligentSelected = ($currentComment === $intelligentComment);
+                                                    $isRegularSelected = in_array($currentComment, $regularComments);
+                                                    $showCombinedPreview = $isIntelligentSelected && $isRegularSelected;
+                                                }
                                                 
                                                 // Calculate performance summary
                                                 $totalSubjects = count($subjects);
@@ -718,6 +831,22 @@
                                                     </div>
                                                     @endif
 
+                                                    <!-- Combined Comment Preview for Mobile -->
+                                                    @if($showCombinedPreview)
+                                                    <div class="combined-comment-preview mb-3">
+                                                        <div class="comment-label-mobile">
+                                                            <i class="ri-link"></i>
+                                                            Combined Comment Preview
+                                                        </div>
+                                                        <div class="comment-preview-text">
+                                                            @php
+                                                                $combinedComment = $currentComment . "\n\n" . $intelligentComment;
+                                                                echo nl2br(e($combinedComment));
+                                                            @endphp
+                                                        </div>
+                                                    </div>
+                                                    @endif
+
                                                     <!-- Principal's Comment Section -->
                                                     <div class="comment-section-mobile">
                                                         <div class="comment-label-mobile">
@@ -728,32 +857,32 @@
                                                             <select class="form-select teacher-comment-dropdown auto-save-comment"
                                                                     name="teacher_comments[{{ $student->id }}]"
                                                                     data-student-id="{{ $student->id }}"
-                                                                    data-original-value="{{ $profiles[$student->id] ?? '' }}"
+                                                                    data-original-value="{{ $currentComment }}"
                                                                     data-intelligent-comment="{{ $intelligentComment }}">
                                                                 <option value="">-- Select Comment --</option>
-                                                                <option value="Excellent result, keep it up!" {{ ($profiles[$student->id] ?? '') == 'Excellent result, keep it up!' ? 'selected' : '' }}>
+                                                                <option value="Excellent result, keep it up!" {{ $currentComment == 'Excellent result, keep it up!' ? 'selected' : '' }}>
                                                                     Excellent result, keep it up!
                                                                 </option>
-                                                                <option value="A very good result, keep it up!" {{ ($profiles[$student->id] ?? '') == 'A very good result, keep it up!' ? 'selected' : '' }}>
+                                                                <option value="A very good result, keep it up!" {{ $currentComment == 'A very good result, keep it up!' ? 'selected' : '' }}>
                                                                     A very good result, keep it up!
                                                                 </option>
-                                                                <option value="Good result, keep it up!" {{ ($profiles[$student->id] ?? '') == 'Good result, keep it up!' ? 'selected' : '' }}>
+                                                                <option value="Good result, keep it up!" {{ $currentComment == 'Good result, keep it up!' ? 'selected' : '' }}>
                                                                     Good result, keep it up!
                                                                 </option>
-                                                                <option value="Average result, there's still room for improvement next term." {{ ($profiles[$student->id] ?? '') == "Average result, there's still room for improvement next term." ? 'selected' : '' }}>
+                                                                <option value="Average result, there's still room for improvement next term." {{ $currentComment == "Average result, there's still room for improvement next term." ? 'selected' : '' }}>
                                                                     Average result, there's still room for improvement next term.
                                                                 </option>
-                                                                <option value="You can do better next term." {{ ($profiles[$student->id] ?? '') == 'You can do better next term.' ? 'selected' : '' }}>
+                                                                <option value="You can do better next term." {{ $currentComment == 'You can do better next term.' ? 'selected' : '' }}>
                                                                     You can do better next term.
                                                                 </option>
-                                                                <option value="You need to sit up and be serious." {{ ($profiles[$student->id] ?? '') == 'You need to sit up and be serious.' ? 'selected' : '' }}>
+                                                                <option value="You need to sit up and be serious." {{ $currentComment == 'You need to sit up and be serious.' ? 'selected' : '' }}>
                                                                     You need to sit up and be serious.
                                                                 </option>
-                                                                <option value="Wake up and be serious." {{ ($profiles[$student->id] ?? '') == 'Wake up and be serious.' ? 'selected' : '' }}>
+                                                                <option value="Wake up and be serious." {{ $currentComment == 'Wake up and be serious.' ? 'selected' : '' }}>
                                                                     Wake up and be serious.
                                                                 </option>
                                                                 @if($intelligentComment)
-                                                                <option value="{{ $intelligentComment }}" class="intelligent-option">
+                                                                <option value="{{ $intelligentComment }}" {{ $currentComment == $intelligentComment ? 'selected' : '' }} class="intelligent-option">
                                                                     💡 Use Personalized Intelligent Comment
                                                                     @if($hasWeakSubjects)
                                                                     <span class="badge bg-warning ms-2">Includes weak subjects</span>
@@ -811,6 +940,53 @@ function showToast(message, type = 'info') {
             toast.remove();
         }
     }, 3000);
+}
+
+// Function to combine regular comment with intelligent comment
+function combineComments(regularComment, intelligentComment) {
+    if (!regularComment || !intelligentComment) {
+        return intelligentComment || regularComment || '';
+    }
+    
+    // If the intelligent comment already contains the regular comment, just return intelligent comment
+    if (intelligentComment.includes(regularComment)) {
+        return intelligentComment;
+    }
+    
+    // Otherwise, combine them with a newline separator
+    return regularComment + "\n\n" + intelligentComment;
+}
+
+// Function to show combined comment preview
+function showCombinedPreview(studentId, regularComment, intelligentComment) {
+    const container = document.querySelector(`.auto-save-comment[data-student-id="${studentId}"]`).closest('.comment-cell, .comment-section-mobile');
+    if (!container) return;
+    
+    // Remove existing combined preview
+    const existingPreview = container.querySelector('.combined-comment-preview');
+    if (existingPreview) existingPreview.remove();
+    
+    const combinedComment = combineComments(regularComment, intelligentComment);
+    
+    if (combinedComment && regularComment && intelligentComment) {
+        const previewDiv = document.createElement('div');
+        previewDiv.className = 'combined-comment-preview';
+        previewDiv.innerHTML = `
+            <small class="text-muted d-block mb-1">
+                <i class="ri-link"></i> Combined comment preview:
+            </small>
+            <div class="comment-preview-text">${combinedComment.replace(/\n/g, '<br>')}</div>
+        `;
+        
+        // Insert after intelligent comment preview or before the select dropdown
+        const intelligentPreview = container.querySelector('.intelligent-comment-section');
+        if (intelligentPreview) {
+            intelligentPreview.after(previewDiv);
+        } else {
+            const select = container.querySelector('.teacher-comment-dropdown');
+            select.parentNode.insertBefore(previewDiv, select);
+        }
+    }
 }
 
 // Function to close all tooltips (desktop only)
@@ -883,16 +1059,49 @@ document.querySelectorAll('.auto-save-comment').forEach(select => {
     select.addEventListener('change', function () {
         const studentId = this.getAttribute('data-student-id');
         const comment = this.value;
-        const originalValue = this.getAttribute('data-original-value');
+        const originalComment = this.getAttribute('data-original-value');
         const intelligentComment = this.getAttribute('data-intelligent-comment');
         
-        // If user selected the intelligent comment option, use the actual comment
+        // Determine if this is a regular comment or intelligent comment
+        const regularComments = [
+            'Excellent result, keep it up!',
+            'A very good result, keep it up!',
+            'Good result, keep it up!',
+            "Average result, there's still room for improvement next term.",
+            'You can do better next term.',
+            'You need to sit up and be serious.',
+            'Wake up and be serious.'
+        ];
+        
+        const isRegularComment = regularComments.includes(comment);
+        const isIntelligentComment = (comment === intelligentComment);
+        
+        // Determine the final comment to save
         let finalComment = comment;
-        if (comment === intelligentComment) {
-            // This is the intelligent comment
+        
+        if (isRegularComment && intelligentComment && intelligentComment.trim() !== '') {
+            // Combine regular comment with intelligent comment
+            finalComment = combineComments(comment, intelligentComment);
+            
+            // Show preview of combined comment
+            showCombinedPreview(studentId, comment, intelligentComment);
+        } else if (isIntelligentComment) {
+            // This is the intelligent comment - use as is
+            finalComment = intelligentComment;
+            
+            // Remove combined preview if exists
+            const container = this.closest('.comment-cell, .comment-section-mobile');
+            const combinedPreview = container?.querySelector('.combined-comment-preview');
+            if (combinedPreview) combinedPreview.remove();
+        } else {
+            // Other custom comment or empty - remove combined preview
+            const container = this.closest('.comment-cell, .comment-section-mobile');
+            const combinedPreview = container?.querySelector('.combined-comment-preview');
+            if (combinedPreview) combinedPreview.remove();
         }
         
-        if (finalComment === originalValue) {
+        // Check if the comment has actually changed
+        if (finalComment === originalComment) {
             return;
         }
 
@@ -911,7 +1120,7 @@ document.querySelectorAll('.auto-save-comment').forEach(select => {
 
         const formData = new FormData();
         formData.append('_token', '{{ csrf_token() }}');
-        formData.append('teacher_comments[' + studentId + ']', finalComment);
+        formData.append('teacher_comments[' + studentId + ']', finalComment || '');
 
         const saveUrl = '{{ route("myprincipalscomment.updateComments", [$schoolclassid, $sessionid, $termid]) }}';
         
@@ -964,7 +1173,8 @@ document.querySelectorAll('.auto-save-comment').forEach(select => {
         .catch(err => {
             console.error('Auto-save error:', err);
             
-            this.value = originalValue;
+            // Revert to original value
+            this.value = originalComment;
             this.style.borderColor = '#dc3545';
             this.style.backgroundColor = '#f8d7da';
             this.disabled = false;
@@ -1108,6 +1318,39 @@ document.getElementById('commentsForm')?.addEventListener('submit', function(e) 
     
     const formData = new FormData(this);
     
+    // Process all dropdowns to combine comments before submission
+    document.querySelectorAll('.auto-save-comment').forEach(select => {
+        const studentId = select.getAttribute('data-student-id');
+        const comment = select.value;
+        const intelligentComment = select.getAttribute('data-intelligent-comment');
+        
+        if (comment && intelligentComment && intelligentComment.trim() !== '') {
+            const regularComments = [
+                'Excellent result, keep it up!',
+                'A very good result, keep it up!',
+                'Good result, keep it up!',
+                "Average result, there's still room for improvement next term.",
+                'You can do better next term.',
+                'You need to sit up and be serious.',
+                'Wake up and be serious.'
+            ];
+            
+            const isRegularComment = regularComments.includes(comment);
+            const isIntelligentComment = (comment === intelligentComment);
+            
+            if (isRegularComment) {
+                // Combine regular comment with intelligent comment
+                const finalComment = combineComments(comment, intelligentComment);
+                
+                // Update the form data
+                formData.set('teacher_comments[' + studentId + ']', finalComment);
+            } else if (isIntelligentComment) {
+                // Already using intelligent comment
+                console.log('Using intelligent comment as is for:', studentId);
+            }
+        }
+    });
+    
     fetch(this.action, {
         method: 'POST',
         body: formData,
@@ -1137,6 +1380,7 @@ document.getElementById('commentsForm')?.addEventListener('submit', function(e) 
         if (data.success) {
             showToast(data.message || 'All comments saved successfully!', 'success');
             
+            // Update original values for all dropdowns
             document.querySelectorAll('.auto-save-comment').forEach(select => {
                 select.setAttribute('data-original-value', select.value);
                 select.style.borderColor = '#28a745';
