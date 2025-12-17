@@ -18537,8 +18537,9 @@ namespace App\Models {
      * @property string|null $punctuality
      * @property string|null $schoolclassid
      * @property string|null $staffid
-     * @property int|null $studentid
+     * @property string|null $studentid
      * @property int $id
+     * @property-read \App\Models\Student $student
      * @method static \Illuminate\Database\Eloquent\Builder<Studentpersonalityprofile>|Studentpersonalityprofile whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Studentpersonalityprofile>|Studentpersonalityprofile whereStudentid($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Studentpersonalityprofile>|Studentpersonalityprofile whereStaffid($value)

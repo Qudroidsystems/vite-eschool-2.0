@@ -167,13 +167,19 @@ class PrincipalsCommentController extends Controller
 
     public function destroy($id)
     {
-        $record = Principalscomment::find($id);
-        if (!$record) {
-            return response()->json(['success' => false, 'message' => 'Assignment not found.'], 404);
+        try {
+            $record = Principalscomment::findOrFail($id);
+            $record->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Assignment deleted successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete assignment. Please try again.'
+            ], 500);
         }
-
-        $record->delete();
-
-        return response()->json(['success' => true, 'message' => 'Assignment deleted successfully.']);
     }
 }
