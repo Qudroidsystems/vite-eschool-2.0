@@ -31,4 +31,16 @@ public function armRelation()
 {
     return $this->belongsTo(Schoolarm::class, 'arm', 'id'); // Adjust based on your actual relationship
 }
+
+
+
+    public function term()
+    {
+        return $this->belongsTo(Schoolterm::class, 'termid', 'id');
+    }
+
+    public function session()
+    {
+        return $this->belongsTo(Schoolsession::class, 'sessionid', 'id');
+}
 }
