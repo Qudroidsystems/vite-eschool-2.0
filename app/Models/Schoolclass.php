@@ -21,7 +21,7 @@ class Schoolclass extends Model
     {
         return $this->belongsToMany(Classcategory::class, 'schoolclass_classcategory', 'schoolclass_id', 'classcategory_id');
     }
-    
+
     public function arm()
     {
         return $this->belongsTo(Schoolarm::class, 'arm');
@@ -31,4 +31,9 @@ class Schoolclass extends Model
     {
         return $this->belongsTo(Classcategory::class, 'classcategoryid', 'id');
     }
+    // In Schoolclass model
+public function armRelation()
+{
+    return $this->belongsTo(Schoolarm::class, 'arm', 'id'); // Adjust based on your actual relationship
+}
 }
