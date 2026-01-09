@@ -1,5 +1,4 @@
 @extends('layouts.master')
-
 @section('content')
 <div class="main-content">
     <div class="page-content">
@@ -19,7 +18,6 @@
                 </div>
             </div>
             <!-- End page title -->
-
             <!-- Schools by Status Chart -->
             <div class="row">
                 <div class="col-lg-12">
@@ -28,12 +26,11 @@
                             <h5 class="card-title mb-0">Schools by Status</h5>
                         </div>
                         <div class="card-body">
-                            <canvas id="schoolsByStatusChart" height="100"></canvas>
+                            <canvas id="schoolsByStatusChart" data-status='@json($status_counts)' height="100"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
-
             @if ($errors->any())
                 <div class="alert alert-danger">
                     <strong>Whoops!</strong> There were some problems with your input.<br><br>
@@ -44,7 +41,6 @@
                     </ul>
                 </div>
             @endif
-
             @if (session('status'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     {{ session('status') }}
@@ -57,7 +53,6 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
-
             <div id="schoolList">
                 <div class="row">
                     <div class="col-lg-12">
@@ -97,7 +92,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="card">
@@ -142,7 +136,7 @@
                                                     <td class="name" data-name="{{ $school->school_name }}" data-address="{{ $school->school_address }}" data-motto="{{ $school->school_motto }}" data-website="{{ $school->school_website }}">
                                                         <div class="d-flex align-items-center">
                                                             <div>
-                                                                <h6 class="mb-0"><a href="{{ route('school-information.show', $school->id) }}" class="text-reset products">{{ $school->school_name }}</a></h6>
+                                                                <h6 class="mb-0"><a href="{{ route('admin.school-info.show', $school->id) }}" class="text-reset products">{{ $school->school_name }}</a></h6>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -158,17 +152,17 @@
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('View schoolinformation')
                                                                 <li>
-                                                                    <a href="{{ route('school-information.show', $school->id) }}" class="btn btn-subtle-primary btn-icon btn-sm"><i class="ph-eye"></i></a>
+                                                                    <a href="{{ route('admin.school-info.show', $school->id) }}" class="btn btn-subtle-primary btn-icon btn-sm"><i class="ph-eye"></i></a>
                                                                 </li>
                                                             @endcan
                                                             @can('Update schoolinformation')
                                                                 <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn"><i class="ph-pencil"></i></a>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="{{ $school->id }}"><i class="ph-pencil"></i></a>
                                                                 </li>
-                                                            @endcan 
-                                                            @can('Delete schoolinformation') 
+                                                            @endcan
+                                                            @can('Delete schoolinformation')
                                                                 <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn"><i class="ph-trash"></i></a>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="{{ $school->id }}"><i class="ph-trash"></i></a>
                                                                 </li>
                                                             @endcan
                                                         </ul>
@@ -211,10 +205,9 @@
                     </div>
                 </div>
             </div>
-
             <!-- Add School Modal -->
             <div id="showModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 id="addModalLabel" class="modal-title">Add School</h5>
@@ -223,53 +216,151 @@
                         <form class="tablelist-form" autocomplete="off" id="add-school-form" enctype="multipart/form-data">
                             <div class="modal-body">
                                 <input type="hidden" id="add-id-field" name="id">
-                                <div class="mb-3">
-                                    <label for="school_name" class="form-label">School Name</label>
-                                    <input type="text" id="school_name" name="school_name" class="form-control" placeholder="Enter school name" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="school_address" class="form-label">Address</label>
-                                    <textarea id="school_address" name="school_address" class="form-control" placeholder="Enter school address" required></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="school_phone" class="form-label">Phone</label>
-                                    <input type="text" id="school_phone" name="school_phone" class="form-control" placeholder="Enter school phone" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="school_email" class="form-label">Email</label>
-                                    <input type="email" id="school_email" name="school_email" class="form-control" placeholder="Enter school email" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="school_logo" class="form-label">Logo</label>
-                                    <input type="file" id="school_logo" name="school_logo" class="form-control" accept="image/jpeg,image/png,image/jpg">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="school_motto" class="form-label">Motto</label>
-                                    <input type="text" id="school_motto" name="school_motto" class="form-control" placeholder="Enter school motto">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="school_website" class="form-label">Website</label>
-                                    <input type="url" id="school_website" name="school_website" class="form-control" placeholder="Enter school website">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="no_of_times_school_opened" class="form-label">Number of Times School Opened</label>
-                                    <input type="number" id="no_of_times_school_opened" name="no_of_times_school_opened" class="form-control" placeholder="Enter number of times school opened" min="0" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="date_school_opened" class="form-label">Date School Opened</label>
-                                    <input type="date" id="date_school_opened" name="date_school_opened" class="form-control" placeholder="Select date school opened">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="date_next_term_begins" class="form-label">Date Next Term Begins</label>
-                                    <input type="date" id="date_next_term_begins" name="date_next_term_begins" class="form-control" placeholder="Select date next term begins">
-                                </div>
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1">
-                                        <label class="form-check-label" for="is_active">Active</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="school_name" class="form-label">School Name <span class="text-danger">*</span></label>
+                                            <input type="text" id="school_name" name="school_name" class="form-control" placeholder="Enter school name" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="school_email" class="form-label">Email <span class="text-danger">*</span></label>
+                                            <input type="email" id="school_email" name="school_email" class="form-control" placeholder="Enter school email" required>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="alert alert-danger d-none" id="alert-error-msg"></div>
+                                <div class="mb-3">
+                                    <label for="school_address" class="form-label">Address <span class="text-danger">*</span></label>
+                                    <textarea id="school_address" name="school_address" class="form-control" placeholder="Enter school address" rows="2" required></textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="school_phone" class="form-label">Phone <span class="text-danger">*</span></label>
+                                            <input type="text" id="school_phone" name="school_phone" class="form-control" placeholder="Enter school phone" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="school_website" class="form-label">Website</label>
+                                            <input type="url" id="school_website" name="school_website" class="form-control" placeholder="https://example.com">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="school_motto" class="form-label">Motto</label>
+                                            <input type="text" id="school_motto" name="school_motto" class="form-control" placeholder="Enter school motto">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="no_of_times_school_opened" class="form-label">Times Opened <span class="text-danger">*</span></label>
+                                            <input type="number" id="no_of_times_school_opened" name="no_of_times_school_opened" class="form-control" placeholder="0" min="0" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="date_school_opened" class="form-label">Date School Opened</label>
+                                            <input type="date" id="date_school_opened" name="date_school_opened" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="date_next_term_begins" class="form-label">Next Term Begins</label>
+                                            <input type="date" id="date_next_term_begins" name="date_next_term_begins" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- School Logo Section with Cropper -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card border">
+                                            <div class="card-header bg-light">
+                                                <h6 class="card-title mb-0">School Logo</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label for="school_logo" class="form-label">Upload School Logo</label>
+                                                    <input type="file" id="school_logo" name="school_logo" class="form-control" accept="image/jpeg,image/png,image/jpg,image/webp">
+                                                    <small class="text-muted">For official documents, letterheads, etc. (Recommended: 300x300px)</small>
+                                                </div>
+                                                <!-- School Logo Cropper -->
+                                                <div id="school-logo-cropper-container" class="d-none">
+                                                    <div class="cropper-container mb-3">
+                                                        <img id="school-logo-cropper" style="max-width: 100%; max-height: 300px;">
+                                                    </div>
+                                                    <div class="cropper-controls mb-3">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Width (px)</label>
+                                                                <input type="number" id="school-crop-width" class="form-control" value="300" min="100" max="1000">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Height (px)</label>
+                                                                <input type="number" id="school-crop-height" class="form-control" value="300" min="100" max="1000">
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-3">
+                                                            <button type="button" id="school-crop-btn" class="btn btn-primary btn-sm me-2">Crop Image</button>
+                                                            <button type="button" id="school-reset-crop-btn" class="btn btn-secondary btn-sm">Reset</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div id="school-logo-preview" class="text-center mt-2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card border">
+                                            <div class="card-header bg-light">
+                                                <h6 class="card-title mb-0">App Logo (For Website)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label for="app_logo" class="form-label">Upload App Logo</label>
+                                                    <input type="file" id="app_logo" name="app_logo" class="form-control" accept="image/jpeg,image/png,image/jpg,image/webp">
+                                                    <small class="text-muted">For website header, favicon, login page (Recommended: 200x200px, PNG)</small>
+                                                </div>
+                                                <!-- App Logo Cropper -->
+                                                <div id="app-logo-cropper-container" class="d-none">
+                                                    <div class="cropper-container mb-3">
+                                                        <img id="app-logo-cropper" style="max-width: 100%; max-height: 300px;">
+                                                    </div>
+                                                    <div class="cropper-controls mb-3">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Width (px)</label>
+                                                                <input type="number" id="app-crop-width" class="form-control" value="200" min="50" max="1000">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Height (px)</label>
+                                                                <input type="number" id="app-crop-height" class="form-control" value="200" min="50" max="1000">
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-3">
+                                                            <button type="button" id="app-crop-btn" class="btn btn-primary btn-sm me-2">Crop Image</button>
+                                                            <button type="button" id="app-reset-crop-btn" class="btn btn-secondary btn-sm">Reset</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div id="app-logo-preview" class="text-center mt-2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1">
+                                        <label class="form-check-label" for="is_active">Set as Active School</label>
+                                        <small class="text-muted d-block mt-1">Only one school can be active at a time</small>
+                                    </div>
+                                </div>
+                                <div class="alert alert-danger d-none" id="add-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
@@ -279,10 +370,9 @@
                     </div>
                 </div>
             </div>
-
             <!-- Edit School Modal -->
             <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 id="editModalLabel" class="modal-title">Edit School</h5>
@@ -291,63 +381,160 @@
                         <form class="tablelist-form" autocomplete="off" id="edit-school-form" enctype="multipart/form-data">
                             <div class="modal-body">
                                 <input type="hidden" id="edit-id-field" name="id">
-                                <div class="mb-3">
-                                    <label for="edit_school_name" class="form-label">School Name</label>
-                                    <input type="text" id="edit_school_name" name="school_name" class="form-control" placeholder="Enter school name" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit_school_address" class="form-label">Address</label>
-                                    <textarea id="edit_school_address" name="school_address" class="form-control" placeholder="Enter school address" required></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit_school_phone" class="form-label">Phone</label>
-                                    <input type="text" id="edit_school_phone" name="school_phone" class="form-control" placeholder="Enter school phone" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit_school_email" class="form-label">Email</label>
-                                    <input type="email" id="edit_school_email" name="school_email" class="form-control" placeholder="Enter school email" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit_school_logo" class="form-label">Logo</label>
-                                    <input type="file" id="edit_school_logo" name="school_logo" class="form-control" accept="image/jpeg,image/png,image/jpg">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit_school_motto" class="form-label">Motto</label>
-                                    <input type="text" id="edit_school_motto" name="school_motto" class="form-control" placeholder="Enter school motto">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit_school_website" class="form-label">Website</label>
-                                    <input type="url" id="edit_school_website" name="school_website" class="form-control" placeholder="Enter school website">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit_no_of_times_school_opened" class="form-label">Number of Times School Opened</label>
-                                    <input type="number" id="edit_no_of_times_school_opened" name="no_of_times_school_opened" class="form-control" placeholder="Enter number of times school opened" min="0" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit_date_school_opened" class="form-label">Date School Opened</label>
-                                    <input type="date" id="edit_date_school_opened" name="date_school_opened" class="form-control" placeholder="Select date school opened">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit_date_next_term_begins" class="form-label">Date Next Term Begins</label>
-                                    <input type="date" id="edit_date_next_term_begins" name="date_next_term_begins" class="form-control" placeholder="Select date next term begins">
-                                </div>
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_is_active" name="is_active" value="1">
-                                        <label class="form-check-label" for="edit_is_active">Active</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_school_name" class="form-label">School Name <span class="text-danger">*</span></label>
+                                            <input type="text" id="edit_school_name" name="school_name" class="form-control" placeholder="Enter school name" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_school_email" class="form-label">Email <span class="text-danger">*</span></label>
+                                            <input type="email" id="edit_school_email" name="school_email" class="form-control" placeholder="Enter school email" required>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="alert alert-danger d-none" id="alert-error-msg"></div>
+                                <div class="mb-3">
+                                    <label for="edit_school_address" class="form-label">Address <span class="text-danger">*</span></label>
+                                    <textarea id="edit_school_address" name="school_address" class="form-control" placeholder="Enter school address" rows="2" required></textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_school_phone" class="form-label">Phone <span class="text-danger">*</span></label>
+                                            <input type="text" id="edit_school_phone" name="school_phone" class="form-control" placeholder="Enter school phone" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_school_website" class="form-label">Website</label>
+                                            <input type="url" id="edit_school_website" name="school_website" class="form-control" placeholder="https://example.com">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_school_motto" class="form-label">Motto</label>
+                                            <input type="text" id="edit_school_motto" name="school_motto" class="form-control" placeholder="Enter school motto">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_no_of_times_school_opened" class="form-label">Times Opened <span class="text-danger">*</span></label>
+                                            <input type="number" id="edit_no_of_times_school_opened" name="no_of_times_school_opened" class="form-control" placeholder="0" min="0" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_date_school_opened" class="form-label">Date School Opened</label>
+                                            <input type="date" id="edit_date_school_opened" name="date_school_opened" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_date_next_term_begins" class="form-label">Next Term Begins</label>
+                                            <input type="date" id="edit_date_next_term_begins" name="date_next_term_begins" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- School Logo Section with Cropper -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card border">
+                                            <div class="card-header bg-light">
+                                                <h6 class="card-title mb-0">School Logo</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label for="edit_school_logo" class="form-label">Upload School Logo</label>
+                                                    <input type="file" id="edit_school_logo" name="school_logo" class="form-control" accept="image/jpeg,image/png,image/jpg,image/webp">
+                                                    <small class="text-muted">For official documents, letterheads, etc. (Recommended: 300x300px)</small>
+                                                </div>
+                                                <!-- School Logo Cropper -->
+                                                <div id="edit-school-logo-cropper-container" class="d-none">
+                                                    <div class="cropper-container mb-3">
+                                                        <img id="edit-school-logo-cropper" style="max-width: 100%; max-height: 300px;">
+                                                    </div>
+                                                    <div class="cropper-controls mb-3">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Width (px)</label>
+                                                                <input type="number" id="edit-school-crop-width" class="form-control" value="300" min="100" max="1000">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Height (px)</label>
+                                                                <input type="number" id="edit-school-crop-height" class="form-control" value="300" min="100" max="1000">
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-3">
+                                                            <button type="button" id="edit-school-crop-btn" class="btn btn-primary btn-sm me-2">Crop Image</button>
+                                                            <button type="button" id="edit-school-reset-crop-btn" class="btn btn-secondary btn-sm">Reset</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div id="edit-school-logo-preview" class="text-center mt-2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card border">
+                                            <div class="card-header bg-light">
+                                                <h6 class="card-title mb-0">App Logo (For Website)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label for="edit_app_logo" class="form-label">Upload App Logo</label>
+                                                    <input type="file" id="edit_app_logo" name="app_logo" class="form-control" accept="image/jpeg,image/png,image/jpg,image/webp">
+                                                    <small class="text-muted">For website header, favicon, login page (Recommended: 200x200px, PNG)</small>
+                                                </div>
+                                                <!-- App Logo Cropper -->
+                                                <div id="edit-app-logo-cropper-container" class="d-none">
+                                                    <div class="cropper-container mb-3">
+                                                        <img id="edit-app-logo-cropper" style="max-width: 100%; max-height: 300px;">
+                                                    </div>
+                                                    <div class="cropper-controls mb-3">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Width (px)</label>
+                                                                <input type="number" id="edit-app-crop-width" class="form-control" value="200" min="50" max="1000">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Height (px)</label>
+                                                                <input type="number" id="edit-app-crop-height" class="form-control" value="200" min="50" max="1000">
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-3">
+                                                            <button type="button" id="edit-app-crop-btn" class="btn btn-primary btn-sm me-2">Crop Image</button>
+                                                            <button type="button" id="edit-app-reset-crop-btn" class="btn btn-secondary btn-sm">Reset</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div id="edit-app-logo-preview" class="text-center mt-2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="edit_is_active" name="is_active" value="1">
+                                        <label class="form-check-label" for="edit_is_active">Set as Active School</label>
+                                        <small class="text-muted d-block mt-1">Only one school can be active at a time</small>
+                                    </div>
+                                </div>
+                                <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn btn-primary" id="update-btn">Update</button>
+                                <button type="submit" class="btn btn-primary" id="update-btn">Update School</button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
-
             <!-- Delete School Modal -->
             <div id="deleteRecordModal" class="modal fade zoomIn" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
@@ -362,7 +549,7 @@
                                 </div>
                                 <div class="mt-4">
                                     <h3 class="mb-2">Are you sure?</h3>
-                                    <p class="text-muted fs-lg mx-3 mb-0">Are you sure you want to remove this record?</p>
+                                    <p class="text-muted fs-lg mx-3 mb-0">Are you sure you want to remove this school?</p>
                                 </div>
                             </div>
                             <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
@@ -375,46 +562,18 @@
             </div>
         </div>
         <!-- End Page-content -->
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                var ctx = document.getElementById("schoolsByStatusChart").getContext("2d");
-                new Chart(ctx, {
-                    type: "bar",
-                    data: {
-                        labels: @json(array_keys($status_counts)),
-                        datasets: [{
-                            label: "Schools by Status",
-                            data: @json(array_values($status_counts)),
-                            backgroundColor: ["#28a745", "#6c757d"],
-                            borderColor: ["#28a745", "#6c757d"],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: "Number of Schools"
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: "Status"
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: "top"
-                            }
-                        }
-                    }
-                });
-            });
-        </script>
     </div>
+</div>
+
+<!-- Include Cropper.js -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+{{-- <script src="{{ asset('assets/js/schoolinformation-list.init.js') }}"></script> --}}
 @endsection

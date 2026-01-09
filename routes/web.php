@@ -61,15 +61,12 @@ use App\Http\Controllers\StudentpersonalityprofileController;
 
 
 
-
-
-
-
-
-
+// Redirect root to the login page
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/login');
 });
+
+
 
 Auth::routes();
 Route::get('/home', [HomeController::class, 'index'])->name('home');
@@ -82,10 +79,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
     Route::get('/users/all', [UserController::class, 'allUsers'])->name('users.all');
     Route::get('/users/paginate', [UserController::class, 'paginate'])->name('users.paginate');
+    Route::get('/user/overview/{id}', [UserController::class, 'show'])->name('users.overview');
     Route::get('/users/roles', [UserController::class, 'roles']);
     Route::resource('permissions', PermissionController::class);
 
-    
+
 
     Route::get('users/add-student', [UserController::class, 'createFromStudentForm'])->name('users.add-student-form');
     Route::post('users/create-from-student', [UserController::class, 'createFromStudent'])->name('users.createFromStudent');
@@ -93,11 +91,35 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::post('/users/store-student', [UserController::class, 'storeStudent'])->name('users.store-student');
 
-    Route::resource('biodata', BiodataController::class);
-    Route::get('/overview/{id}', [OverviewController::class, 'show'])->name('user.overview');
-    Route::get('/settings/{id}', [BiodataController::class, 'show'])->name('user.settings');
-    Route::post('ajaxemailupdate', [BiodataController::class, 'ajaxemailupdate']);
-    Route::post('ajaxpasswordupdate', [BiodataController::class, 'ajaxpasswordupdate']);
+
+    // ===================================================================
+    // PROFILE & BIODATA ROUTES - FULLY CORRECTED AND CLEANED
+    // ===================================================================
+    Route::prefix('profile')->name('profile.')->group(function () {
+        // View profile settings
+        Route::get('/settings/{id}', [BiodataController::class, 'show'])->name('settings');
+
+        // Personal info update
+        Route::post('/update-info', [BiodataController::class, 'updateProfile'])->name('update-info');
+
+        // Avatar upload (AJAX - matches Blade JS)
+        Route::post('/update-avatar', [BiodataController::class, 'updateAvatar'])->name('update-avatar');
+
+        // Student updates
+        Route::post('/update-student-info', [BiodataController::class, 'updateStudentInfo'])->name('update-student-info');
+        Route::post('/update-parent-info', [BiodataController::class, 'updateParentInfo'])->name('update-parent-info');
+
+        // Staff updates
+        Route::post('/update-employment-info', [BiodataController::class, 'updateEmploymentInfo'])->name('update-employment-info');
+        Route::post('/add-qualification', [BiodataController::class, 'storeQualification'])->name('add-qualification');
+        Route::post('/update-qualification/{id}', [BiodataController::class, 'updateQualification'])->name('update-qualification');
+        Route::delete('/delete-qualification/{id}', [BiodataController::class, 'deleteQualification'])->name('delete-qualification');
+
+        // Security: Email & Password change (AJAX - matches Blade JS)
+        Route::post('/update-email', [BiodataController::class, 'ajaxemailupdate'])->name('update-email');
+        Route::post('/update-password', [BiodataController::class, 'ajaxpasswordupdate'])->name('update-password');
+    });
+
 
     Route::get('/adduser/{id}', [RoleController::class, 'adduser'])->name('roles.adduser');
     Route::post('/updateuserrole', [RoleController::class, 'updateuserrole'])->name('roles.updateuserrole');
@@ -111,7 +133,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::delete('subjectclass/deletesubjectclass/{subjectclassid}', [SubjectClassController::class, 'deletesubjectclass'])->name('subjectclass.deletesubjectclass');
     Route::get('/subjectclass/assignments/{subjectteacherid}', [SubjectClassController::class, 'assignments'])->name('subjectclass.assignments');
     Route::get('/subjectclass/assignments-by-teacher/{subjectTeacherId}', [SubjectClassController::class, 'assignmentsBySubjectTeacher'])->name('subjectclass.assignmentsByTeacher');
-  
+
 
     Route::resource('staff', StaffController::class);
 
@@ -168,7 +190,7 @@ Route::group(['middleware' => ['auth']], function () {
     // Route::get('/generate-admission-number/{year}', [StudentController::class, 'generateAdmissionNumber'])->name('student.generate-admission-number');
     // Route::get('/student/data', [StudentController::class, 'data'])->name('students.data');
     Route::get('/students/last-admission-number', [StudentController::class, 'getLastAdmissionNumber'])->name('student.getLastAdmissionNumber');
-    
+
     Route::resource('classoperation', ClassOperationController::class);
 
     Route::resource('classcategories', ClasscategoryController::class);
@@ -188,7 +210,7 @@ Route::group(['middleware' => ['auth']], function () {
     // Route::get('/subjectscoresheet/{schoolclassid}/{subjectclassid}/{userid}/{termid}/{session_id}', [MyScoreSheetController::class, 'index'])->name('subjectscoresheet.index');
     // Route::get('/subjectscoresheet-mock/{schoolclassid}/{subjectclassid}/{userid}/{termid}/{sessionid}', [MyScoreSheetController::class, 'index'])->name('subjectscoresheet-mock.index');
     Route::resource('studentresults', StudentResultsController::class);
-    
+
 
     // Terminal Scoresheet Routes
     // Route::resource('subjectscoresheet', MyScoreSheetController::class);
@@ -202,7 +224,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/subjectscoresheet/grade-preview', [MyScoreSheetController::class, 'calculateGradePreview'])->name('subjectscoresheet.grade-preview');
     Route::post('subjectscoresheet/bulk-update', [MyScoreSheetController::class, 'bulkUpdateScores'])->name('subjectscoresheet.bulk-update');
     Route::get('/subjectscoresheet/import-progress', [MyScoreSheetController::class, 'importProgress'])->name('subjectscoresheet.import_progress');
-    
+
     Route::post('/studentreports/column-options', [ViewStudentReportController::class, 'getColumnOptions'])->name('studentreports.column-options');
 
     // Mock Scoresheet Routes
@@ -221,25 +243,29 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/subassessment/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}/{subassessmentid}', [MyScoreSheetController::class, 'subassessmentScoresheet'])->name('subassessment.scoresheet');
     Route::get('/assessment/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}/{assessmentid}', [MyScoreSheetController::class, 'assessmentScoresheet'])->name('assessment.scoresheet');
     Route::post('/subjectscoresheet/single-update', [MyScoreSheetController::class, 'singleUpdateScore'])->name('subjectscoresheet.single-update');
-    
-    
-    
-   
-    Route::get('/studentassessments', [StudentAssessmentController::class, 'index'])->name('assessments');
-   
 
-    
-    
+
+
+
+    Route::get('/studentassessments', [StudentAssessmentController::class, 'index'])->name('assessments');
+
+
+
+
         // Marks Sheet Download Routes
     Route::get('/scoresheet/download-marks-sheet', [MyScoreSheetController::class, 'downloadMarkSheet'])->name('scoresheet.download-marks-sheet');
     Route::post('/subjectscoresheet/bulk-update', [MyScoreSheetController::class, 'bulkUpdateScores']) ->name('subjectscoresheet.bulk-update');
 
-    // School Information Management Routes (Optional - for admin panel)
+    Route::prefix('school-info')->name('admin.school-info.')->group(function () {
+        Route::get('/', [SchoolInformationController::class, 'index'])->name('index');
+        Route::post('/', [SchoolInformationController::class, 'store'])->name('store');
+        Route::post('/{id}', [SchoolInformationController::class, 'update'])->name('update');
+        Route::delete('/{id}', [SchoolInformationController::class, 'destroy'])->name('destroy');
+        Route::get('/{id}', [SchoolInformationController::class, 'show'])->name('show');
 
-    Route::get('/school-info', [SchoolInformationController::class, 'index'])->name('admin.school-info.index');
-    Route::post('/school-info', [SchoolInformationController::class, 'store'])->name('admin.school-info.store');
-    Route::put('/school-info/{id}', [SchoolInformationController::class, 'update'])->name('admin.school-info.update');
-
+        // Make sure this line exists exactly like this:
+        Route::get('/{id}/edit-json', [SchoolInformationController::class, 'editJson'])->name('edit-json');
+    });
 
     Route::resource('schoolbill', SchoolBillController::class);
     Route::get('/billid/{billid}', [SchoolBillController::class, 'deletebill'])->name('schoolbill.deletebill');
@@ -265,26 +291,26 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('analysisClassTermSession', [AnalysisController::class, 'analysisClassTermSession'])->name('analysis.analysisClassTermSession');
     Route::get('analysis/export-pdf/{class_id}/{termid_id}/{session_id}', 'App\Http\Controllers\AnalysisController@exportPDF')->name('analysis.exportPDF');
     Route::get('/analysis/pdf/{class_id}/{termid_id}/{session_id}/{action?}', [AnalysisController::class, 'exportPDF'])->name('analysis.viewPDF')->where('action', 'view|download');
-    
+
 
     // School-wide payment analysis routes
     Route::get('/school-wide-payment-analysis/{termid_id}/{session_id}/{action?}/{format?}','App\Http\Controllers\AnalysisController@schoolWidePaymentAnalysis')->name('school.wide.payment.analysis')->where(['action' => 'view|download','format' => 'pdf|word' ]);
-    
+
 
 
     Route::get('/viewstudent/{schoolclassid}/{termid}/{sessionid}', [ViewStudentController::class, 'show'])->name('viewstudent');
- 
+
     Route::get('/studentreports', [ViewStudentReportController::class, 'index'])->name('studentreports.index');
     Route::get('/studentresult/{id}/{schoolclassid}/{sessionid}/{termid}', [ViewStudentReportController::class, 'studentresult'])->name('studentresult');
     Route::get('/student-reports/registered-classes', [ViewStudentReportController::class, 'registeredClasses'])->name('studentreports.registeredClasses');
     Route::get('/class-broadsheet/{schoolclassid}/{sessionid}/{termid}', [ViewStudentReportController::class, 'classBroadsheet'])->name('classbroadsheet');
     // Route::get('/studentreports/export/{id}/{schoolclassid}/{sessionid}/{termid}', [ViewStudentReportController::class, 'exportStudentResultPdf'])->name('studentreports.exportStudentResultPdf');
     Route::match(['get', 'post'], '/studentreports/export-class-results-pdf', [ViewStudentReportController::class, 'exportClassResultsPdf'])->name('studentreports.exportClassResultsPdf');
-    
+
 
 
     Route::get('/studentmockreports', [ViewStudentMockReportController::class, 'index'])->name('studentmockreports.index');
-  
+
     // Display individual student mock result
     Route::get('/studentmockresult/{id}/{schoolclassid}/{sessionid}/{termid}', [ViewStudentMockReportController::class, 'studentmockresult'])->name('studentmockreports.studentmockresult');
 
@@ -301,13 +327,13 @@ Route::group(['middleware' => ['auth']], function () {
 
 
 
-    
+
     Route::resource('subjectoperation', SubjectOperationController::class);
     Route::get('/subjects', [SubjectOperationController::class, 'index'])->name('subjects.index');
 
     Route::post('/subjectregistration', [SubjectOperationController::class, 'store'])->name('subjects.store');
     Route::get('/subjectoperation/subjectinfo/{id}/{schoolclassid}/{termid}/{sessionid}', [SubjectOperationController::class, 'subjectinfo'])->name('subjects.subjectinfo');
-    
+
     Route::delete('/subjects/registered-classes', [SubjectOperationController::class, 'destroy'])->name('subjects.destroy');
     Route::get('/subjects/registered-classes', [SubjectOperationController::class, 'getRegisteredClasses'])->name('subjects.registered-classes');
     // Route for batch unregistration
@@ -326,7 +352,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::get('/classbroadsheet/{schoolclassid}/{sessionid}/{termid}', [ClassBroadsheetController::class, 'classBroadsheet'])->name('classbroadsheet.viewcomments');
     Route::patch('/classbroadsheet/{schoolclassid}/{sessionid}/{termid}/comments', [ClassBroadsheetController::class, 'updateComments'])->name('classbroadsheet.updateComments');
-    
+
 
     // compulsory subject class
     Route::resource('compulsorysubjectclass', CompulsorySubjectClassController::class);
@@ -357,14 +383,14 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/mymocksubjectvettings/results', [MyMockSubjectVettingsController::class, 'results'])->name('mymocksubjectvettings.results');
     Route::put('/mymocksubjectvettings/{id}', [MyMockSubjectVettingsController::class, 'update'])->name('mymocksubjectvettings.update');
 
-    
+
 
     Route::post('/broadsheets/update-vetted-status', [MySubjectVettingsController::class, 'updateVettedStatus'])->name('broadsheets.update-vetted-status');
 
     //school information
     Route::resource('school-information', SchoolInformationController::class);
 
-    
+
 
 
 
@@ -382,8 +408,8 @@ Route::group(['middleware' => ['auth']], function () {
     // Add this new route for viewing student answers
     Route::get('/exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])->name('exams.student.answers');
     Route::get('/exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
-    ->name('exams.students.question-paper');  
-     
+    ->name('exams.students.question-paper');
+
     Route::resource('questions', QuestionController::class);
     Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);
     Route::get('/{question}/details', [QuestionController::class, 'details'])->name('questions.details');
@@ -396,7 +422,7 @@ Route::group(['middleware' => ['auth']], function () {
     // //Exams routes...
     // Route::resource('exams', ExamController::class);
 
-    
+
     // //Questions routes...
     // Route::resource('questions', QuestionController::class);
     // Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);
@@ -410,7 +436,7 @@ Route::group(['middleware' => ['auth']], function () {
     // Route::resource('cbt', CBTController::class);
     // Route::get('/cbt/{examid}/takecbt', [CBTController::class, 'takeCBT'])->name('cbt.take');
     // Route::post('/cbt/submit', [CBTController::class, 'submit'])->name('cbt.submit');
-    
+
 
     Route::post('/admin/exams/{exam}/pause', [ExamPauseController::class, 'pause'])->name('admin.exams.pause');
     Route::post('/admin/exams/{exam}/resume', [ExamPauseController::class, 'resume'])->name('admin.exams.resume');

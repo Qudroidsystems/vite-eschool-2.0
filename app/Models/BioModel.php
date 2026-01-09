@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BioModel extends Model
 {
     use HasFactory;
+
     protected $table = "staff_bio";
+    protected $primaryKey = "id";
 
     protected $fillable = [
         'user_id',
@@ -24,15 +26,38 @@ class BioModel extends Model
         'dob',
     ];
 
-
-
     /**
-     * Get the user that owns the StaffBioModel
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * Get the user that owns the BioModel
      */
-    public function staffId(): BelongsTo
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get full name
+     */
+    public function getFullNameAttribute(): string
+    {
+        $names = [$this->firstname, $this->lastname];
+        if ($this->othernames && $this->othernames !== 'no info') {
+            $names[] = $this->othernames;
+        }
+        return implode(' ', array_filter($names));
+    }
+
+    /**
+     * Get formatted date of birth
+     */
+    public function getFormattedDobAttribute(): ?string
+    {
+        if ($this->dob && $this->dob !== 'no info') {
+            try {
+                return date('F j, Y', strtotime($this->dob));
+            } catch (\Exception $e) {
+                return $this->dob;
+            }
+        }
+        return null;
     }
 }

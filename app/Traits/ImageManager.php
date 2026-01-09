@@ -1,69 +1,74 @@
 <?php
+
 namespace App\Traits;
 
 use App\Models\Studentpicture;
+use App\Models\Staffpicture;
 use App\Models\User;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
-trait ImageManager {
-
-    public function uploads($file, $path,$userid)
+trait ImageManager
+{
+    public function uploads($file, $path, $userid)
     {
-        if($file) {
-            $fileName   = $userid . '_'.$file->getClientOriginalName();
-            //$avatarName = $filename.'_'.$userid.'_'.$file->extension();
+        if ($file) {
+            $fileName = $userid . '_' . time() . '.' . $file->getClientOriginalExtension();
 
-               // /* Store $imageName name in DATABASE from HERE */
-            USer::where("id", $userid)->update(["avatar" => $fileName]);
-            Storage::disk('public')->put('images/staffavatar/' . $fileName, File::get($file));
-            $file_name  = $file->getClientOriginalName();
-            $file_type  = $file->getClientOriginalExtension();
-            $filePath   = $path . $fileName;
+            // Save to correct folder: staff_avatars (with underscore)
+            Storage::disk('public')->put('staff_avatars/' . $fileName, File::get($file));
 
-            return $file = [
-                'fileName' => $file_name,
-                'fileType' => $file_type,
-                'filePath' => $filePath,
+            // Update Staffpicture record
+            Staffpicture::updateOrCreate(
+                ['staffId' => $userid],
+                ['picture' => $fileName]
+            );
+
+            // Optional: update user avatar column
+            User::where('id', $userid)->update(['avatar' => $fileName]);
+
+            return [
+                'fileName' => $fileName,
+                'fileType' => $file->getClientOriginalExtension(),
+                'filePath' => 'staff_avatars/' . $fileName,
                 'fileSize' => $this->fileSize($file)
             ];
         }
     }
 
-    public function studentuploads($file, $path,$userid)
+    public function studentuploads($file, $path, $userid)
     {
-        if($file) {
-            $fileName   = $userid . '_'.$file->getClientOriginalName();
-            //$avatarName = $filename.'_'.$userid.'_'.$file->extension();
+        if ($file) {
+            $fileName = $userid . '_' . time() . '.' . $file->getClientOriginalExtension();
 
-               // /* Store $imageName name in DATABASE from HERE */
-            Studentpicture::where("studentid", $userid)->update(["picture" => $fileName]);
-            Storage::disk('public')->put('images/studentavatar/' . $fileName, File::get($file));
-            $file_name  = $file->getClientOriginalName();
-            $file_type  = $file->getClientOriginalExtension();
-            $filePath   = $path . $fileName;
+            // Save to correct folder: student_avatars (with underscore)
+            Storage::disk('public')->put('student_avatars/' . $fileName, File::get($file));
 
-            return $file = [
-                'fileName' => $file_name,
-                'fileType' => $file_type,
-                'filePath' => $filePath,
+            // Update Studentpicture record
+            Studentpicture::updateOrCreate(
+                ['studentid' => $userid],
+                ['picture' => $fileName]
+            );
+
+            User::where('id', $userid)->update(['avatar' => $fileName]);
+
+            return [
+                'fileName' => $fileName,
+                'fileType' => $file->getClientOriginalExtension(),
+                'filePath' => 'student_avatars/' . $fileName,
                 'fileSize' => $this->fileSize($file)
             ];
         }
     }
+
     public function fileSize($file, $precision = 2)
     {
         $size = $file->getSize();
-
-        if ( $size > 0 ) {
-            $size = (int) $size;
+        if ($size > 0) {
             $base = log($size) / log(1024);
-            $suffixes = array(' bytes', ' KB', ' MB', ' GB', ' TB');
+            $suffixes = [' bytes', ' KB', ' MB', ' GB', ' TB'];
             return round(pow(1024, $base - floor($base)), $precision) . $suffixes[floor($base)];
         }
-
         return $size;
     }
 }
-
-?>

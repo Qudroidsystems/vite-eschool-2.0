@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use App\Models\Schoolterm;
-use App\Models\Schoolclass;
-use App\Models\Studentclass;
-use App\Models\Schoolsession;
-use App\Models\Studentpicture;
 use App\Models\ParentRegistration;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Schoolclass;
+use App\Models\Schoolsession;
+use App\Models\Schoolterm;
+use App\Models\Studentclass;
+use App\Models\Studentpicture;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Student extends Model
 {
@@ -63,6 +64,13 @@ class Student extends Model
         'updated_at' => 'datetime',
     ];
 
+      // Add relationship to User
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class, 'student_id', 'id');
+    }
+
+
     public function picture()
     {
         return $this->hasOne(Studentpicture::class, 'studentid', 'id');
@@ -112,5 +120,38 @@ class Student extends Model
     public function parent()
     {
         return $this->hasOne(ParentRegistration::class, 'studentId', 'id');
+    }
+
+     public function currentClass()
+    {
+        return $this->hasOne(Studentclass::class, 'studentId', 'id')
+            ->whereIn('sessionid', function ($query) {
+                $query->select('id')
+                      ->from('schoolsession')
+                      ->where('status', 'Current')
+                      ->orWhereRaw('id = (SELECT MAX(id) FROM schoolsession)');
+            })
+            ->with(['schoolclass.armRelation', 'term', 'session'])
+            ->withDefault([
+                'schoolclass' => ['schoolclass' => 'Not Assigned', 'armRelation' => null],
+                'term' => ['term' => 'N/A'],
+                'session' => ['session' => 'N/A']
+            ]);
+    }
+
+    public function classHistory()
+    {
+        return $this->hasMany(Studentclass::class, 'studentId', 'id')
+            ->with(['schoolclass.armRelation', 'term', 'session', 'promotion'])
+            ->orderByDesc('sessionid')
+            ->orderByDesc('termid');
+    }
+
+    public function promotion()
+    {
+        return $this->hasOne(PromotionStatus::class, 'studentId', 'id')
+            ->whereColumn('schoolclassid', 'studentclass.schoolclassid')
+            ->whereColumn('sessionid', 'studentclass.sessionid')
+            ->whereColumn('termid', 'studentclass.termid');
     }
 }
