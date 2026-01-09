@@ -129,7 +129,7 @@ class RoleController extends Controller
                 'users.created_at as created_at',
                 'model_has_roles.role_id as roleid'
             ])
-            ->paginate(5); // Set per-page limit to match frontend (perPage = 5)
+            ->paginate(500); // Set per-page limit to match frontend (perPage = 5)
 
         $role = Role::find($id);
         $rolePermissions = Permission::join("role_has_permissions", "role_has_permissions.permission_id", "=", "permissions.id")
