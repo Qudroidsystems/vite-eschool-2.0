@@ -399,4 +399,54 @@ public function bulkRemoveUsers(Request $request)
     }
 }
 
+
+public function getRoleUsers(Role $role, Request $request)
+{
+    try {
+        $perPage = $request->get('per_page', 10);
+        $page = $request->get('page', 1);
+
+        $usersWithRole = $role->users()
+            ->with(['student.currentClass.class', 'staffemploymentDetails'])
+            ->orderBy('name')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        // Get total count
+        $userRoleCount = $role->users()->count();
+
+        if ($request->ajax()) {
+            $html = view('roles.partials.users_table_rows', [
+                'users' => $usersWithRole,
+                'role' => $role
+            ])->render();
+
+            $pagination = view('roles.partials.pagination', [
+                'users' => $usersWithRole
+            ])->render();
+
+            return response()->json([
+                'success' => true,
+                'html' => $html,
+                'pagination' => $pagination,
+                'total' => $userRoleCount,
+                'current_page' => $usersWithRole->currentPage(),
+                'last_page' => $usersWithRole->lastPage(),
+                'per_page' => $usersWithRole->perPage()
+            ]);
+        }
+
+        return view('roles.show', compact('role', 'usersWithRole', 'userRoleCount'));
+
+    } catch (\Exception $e) {
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load users: ' . $e->getMessage()
+            ], 500);
+        }
+
+        return back()->with('error', 'Failed to load users: ' . $e->getMessage());
+    }
+}
+
 }

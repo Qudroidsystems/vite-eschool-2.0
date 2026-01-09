@@ -859,96 +859,129 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Bulk Removal Functionality
     const bulkRemoveBtn = document.getElementById('bulkRemoveBtn');
-    const checkAllCheckbox = document.getElementById('checkAll');
     const bulkRemoveModal = document.getElementById('bulkRemoveModal');
     const confirmBulkRemoveBtn = document.getElementById('confirmBulkRemove');
     const selectedUsersInput = document.getElementById('selectedUsers');
     const selectedUsersList = document.getElementById('selectedUsersList');
 
-    // Get all user checkboxes in the table
-    function getUserCheckboxes() {
-        return document.querySelectorAll('#userList .user-checkbox');
-    }
+    // Current page tracking
+    let currentPage = 1;
+    let totalPages = 1;
 
-    // Show/hide bulk remove button based on selections
-    function updateBulkRemoveButton() {
-        const userCheckboxes = getUserCheckboxes();
-        const checkedBoxes = document.querySelectorAll('#userList .user-checkbox:checked');
-        const selectedCount = checkedBoxes.length;
+    // Initialize
+    initializeTable();
 
-        if (bulkRemoveBtn) {
-            if (selectedCount > 0) {
-                bulkRemoveBtn.style.display = 'inline-block';
-                bulkRemoveBtn.textContent = `Remove Selected (${selectedCount})`;
-            } else {
-                bulkRemoveBtn.style.display = 'none';
+    // Function to initialize the table with event listeners
+    function initializeTable() {
+        // Get all user checkboxes in the table
+        function getUserCheckboxes() {
+            return document.querySelectorAll('#userList .user-checkbox');
+        }
+
+        // Show/hide bulk remove button based on selections
+        function updateBulkRemoveButton() {
+            const userCheckboxes = getUserCheckboxes();
+            const checkedBoxes = document.querySelectorAll('#userList .user-checkbox:checked');
+            const selectedCount = checkedBoxes.length;
+
+            if (bulkRemoveBtn) {
+                if (selectedCount > 0) {
+                    bulkRemoveBtn.style.display = 'inline-block';
+                    bulkRemoveBtn.textContent = `Remove Selected (${selectedCount})`;
+                } else {
+                    bulkRemoveBtn.style.display = 'none';
+                }
             }
         }
-    }
 
-    // Update "check all" state
-    function updateCheckAllState() {
-        const userCheckboxes = getUserCheckboxes();
-        if (checkAllCheckbox && userCheckboxes.length > 0) {
-            const allChecked = Array.from(userCheckboxes).every(cb => cb.checked);
-            const someChecked = Array.from(userCheckboxes).some(cb => cb.checked);
-            checkAllCheckbox.checked = allChecked;
-            checkAllCheckbox.indeterminate = someChecked && !allChecked;
+        // Check all functionality
+        function initializeCheckAll() {
+            const checkAllCheckbox = document.getElementById('checkAll');
+            if (checkAllCheckbox) {
+                // Remove existing event listener first
+                const newCheckAll = checkAllCheckbox.cloneNode(true);
+                checkAllCheckbox.parentNode.replaceChild(newCheckAll, checkAllCheckbox);
+
+                // Add new event listener
+                const newCheckAllElement = document.getElementById('checkAll');
+                newCheckAllElement.addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    const userCheckboxes = getUserCheckboxes();
+
+                    userCheckboxes.forEach(checkbox => {
+                        checkbox.checked = isChecked;
+                        const row = checkbox.closest('tr');
+                        if (row) {
+                            row.classList.toggle('table-active', isChecked);
+                        }
+                    });
+                    updateBulkRemoveButton();
+                });
+            }
         }
+
+        // Individual checkbox handlers
+        function initializeTableCheckboxes() {
+            const userCheckboxes = getUserCheckboxes();
+            if (userCheckboxes.length > 0) {
+                userCheckboxes.forEach((checkbox) => {
+                    // Remove any existing event listeners first by cloning
+                    const newCheckbox = checkbox.cloneNode(true);
+                    checkbox.parentNode.replaceChild(newCheckbox, checkbox);
+
+                    // Add event listener to new checkbox
+                    newCheckbox.addEventListener('change', function() {
+                        const row = this.closest('tr');
+                        if (row) {
+                            row.classList.toggle('table-active', this.checked);
+                        }
+                        updateCheckAllState();
+                        updateBulkRemoveButton();
+                    });
+                });
+            }
+        }
+
+        // Update "check all" state
+        function updateCheckAllState() {
+            const userCheckboxes = getUserCheckboxes();
+            const checkAllCheckbox = document.getElementById('checkAll');
+            if (checkAllCheckbox && userCheckboxes.length > 0) {
+                const allChecked = Array.from(userCheckboxes).every(cb => cb.checked);
+                const someChecked = Array.from(userCheckboxes).some(cb => cb.checked);
+                checkAllCheckbox.checked = allChecked;
+                checkAllCheckbox.indeterminate = someChecked && !allChecked;
+            }
+        }
+
+        // Initialize all table handlers
+        initializeCheckAll();
+        initializeTableCheckboxes();
+        updateCheckAllState();
         updateBulkRemoveButton();
+
+        // Also initialize remove buttons for single deletion
+        initializeRemoveButtons();
     }
 
-    // Check all functionality
-    if (checkAllCheckbox) {
-        // Remove existing event listener first
-        const newCheckAll = checkAllCheckbox.cloneNode(true);
-        checkAllCheckbox.parentNode.replaceChild(newCheckAll, checkAllCheckbox);
-
-        // Add new event listener
-        document.getElementById('checkAll').addEventListener('change', function() {
-            const isChecked = this.checked;
-            const userCheckboxes = getUserCheckboxes();
-
-            userCheckboxes.forEach(checkbox => {
-                checkbox.checked = isChecked;
-                const row = checkbox.closest('tr');
-                if (row) {
-                    row.classList.toggle('table-active', isChecked);
-                }
+    // Initialize remove buttons for single user deletion
+    function initializeRemoveButtons() {
+        const removeButtons = document.querySelectorAll('.remove-item-btn');
+        removeButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                // The modal will handle this, we just need to ensure the data is available
+                console.log('Remove button clicked for user:', this.getAttribute('data-user-name'));
             });
-            updateBulkRemoveButton();
         });
     }
-
-    // Individual checkbox handlers
-    function initializeTableCheckboxes() {
-        const userCheckboxes = getUserCheckboxes();
-        if (userCheckboxes.length > 0) {
-            userCheckboxes.forEach((checkbox, index) => {
-                // Remove any existing event listeners first
-                const newCheckbox = checkbox.cloneNode(true);
-                checkbox.parentNode.replaceChild(newCheckbox, checkbox);
-
-                // Add event listener to new checkbox
-                newCheckbox.addEventListener('change', function() {
-                    const row = this.closest('tr');
-                    if (row) {
-                        row.classList.toggle('table-active', this.checked);
-                    }
-                    updateCheckAllState();
-                });
-            });
-        }
-    }
-
-    // Initialize table checkboxes
-    initializeTableCheckboxes();
 
     // Bulk remove button click handler
     if (bulkRemoveBtn) {
         bulkRemoveBtn.addEventListener('click', function() {
             const checkedBoxes = document.querySelectorAll('#userList .user-checkbox:checked');
             const selectedCount = checkedBoxes.length;
+
+            console.log('Checked boxes found:', checkedBoxes.length); // Debug log
 
             if (selectedCount === 0) {
                 Swal.fire({
@@ -965,7 +998,9 @@ document.addEventListener("DOMContentLoaded", function () {
             const selectedNames = [];
 
             checkedBoxes.forEach(checkbox => {
-                selectedIds.push(checkbox.value);
+                const userId = checkbox.value;
+                selectedIds.push(userId);
+
                 // Get user name from the table row
                 const row = checkbox.closest('tr');
                 if (row) {
@@ -978,6 +1013,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         selectedNames.push(name);
                     }
                 }
+                console.log('Selected user:', userId); // Debug log
             });
 
             // Update modal content
@@ -1008,6 +1044,8 @@ document.addEventListener("DOMContentLoaded", function () {
         confirmBulkRemoveBtn.addEventListener('click', function() {
             const selectedIds = JSON.parse(selectedUsersInput.value || '[]');
             const roleId = document.querySelector('input[name="role_id"]').value;
+
+            console.log('Attempting to remove users:', selectedIds); // Debug log
 
             if (selectedIds.length === 0) {
                 Swal.fire({
@@ -1055,7 +1093,8 @@ document.addEventListener("DOMContentLoaded", function () {
                         confirmButtonColor: '#405189',
                         timer: 2000
                     }).then(() => {
-                        location.reload();
+                        // Reload the current page data instead of full page reload
+                        loadPage(currentPage);
                     });
                 } else {
                     Swal.fire({
@@ -1086,6 +1125,117 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     }
+
+    // JavaScript Pagination
+    function loadPage(page) {
+        const roleId = {{ $role->id }};
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        // Show loading
+        const tableBody = document.getElementById('usersTableBody');
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        fetch(`/roles/${roleId}/users?page=${page}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update table
+                tableBody.innerHTML = data.html;
+
+                // Update pagination
+                document.getElementById('pagination-container').innerHTML = data.pagination;
+
+                // Update counts
+                document.getElementById('totalUsersCount').textContent = data.total;
+                currentPage = data.current_page;
+                totalPages = data.last_page;
+
+                // Re-initialize table event listeners
+                initializeTable();
+
+                // Attach pagination event listeners
+                attachPaginationListeners();
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load users.',
+                    confirmButtonColor: '#405189'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'An error occurred while loading users.',
+                confirmButtonColor: '#405189'
+            });
+        });
+    }
+
+    function attachPaginationListeners() {
+        // Previous button
+        const prevBtn = document.querySelector('.pagination-prev');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!this.classList.contains('disabled') && currentPage > 1) {
+                    loadPage(currentPage - 1);
+                }
+            });
+        }
+
+        // Next button
+        const nextBtn = document.querySelector('.pagination-next');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!this.classList.contains('disabled') && currentPage < totalPages) {
+                    loadPage(currentPage + 1);
+                }
+            });
+        }
+
+        // Page number buttons - use event delegation for dynamically added elements
+        document.getElementById('pagination-container').addEventListener('click', function(e) {
+            if (e.target.classList.contains('page-link') && e.target.hasAttribute('data-page')) {
+                e.preventDefault();
+                const page = parseInt(e.target.getAttribute('data-page'));
+                if (page && page !== currentPage) {
+                    loadPage(page);
+                }
+            }
+
+            // Also handle clicks on parent elements of page links
+            const pageLinkParent = e.target.closest('.page-link[data-page]');
+            if (pageLinkParent) {
+                e.preventDefault();
+                const page = parseInt(pageLinkParent.getAttribute('data-page'));
+                if (page && page !== currentPage) {
+                    loadPage(page);
+                }
+            }
+        });
+    }
+
+    // Initialize pagination listeners
+    attachPaginationListeners();
 
     // Initialize Add User Modal functionality
     const addUserModal = document.getElementById('addUserModalgrid');
@@ -1315,7 +1465,8 @@ document.addEventListener("DOMContentLoaded", function () {
                             confirmButtonColor: '#405189',
                             timer: 2000
                         }).then(() => {
-                            location.reload();
+                            // Reload current page
+                            loadPage(currentPage);
                         });
                     } else {
                         Swal.fire({
@@ -1344,23 +1495,6 @@ document.addEventListener("DOMContentLoaded", function () {
             };
         });
     }
-
-    // Pagination handling
-    const paginationLinks = document.querySelectorAll('#pagination-element a[data-url]');
-    if (paginationLinks.length > 0) {
-        paginationLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const url = this.getAttribute('data-url');
-                if (url && !this.classList.contains('disabled')) {
-                    window.location.href = url;
-                }
-            });
-        });
-    }
-
-    // Initialize bulk remove button state
-    updateBulkRemoveButton();
 });
 
 // Initialize tooltips

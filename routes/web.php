@@ -74,7 +74,8 @@ Route::get('/home', [HomeController::class, 'index'])->name('home');
 Route::group(['middleware' => ['auth']], function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('roles/bulk-remove-users', [RoleController::class, 'bulkRemoveUsers'])->name('roles.bulkremoveusers');
-
+   // Get role users with pagination (for AJAX)
+    Route::get('/roles/{role}/users', [RoleController::class, 'getRoleUsers'])->name('roles.users');
     Route::resource('roles', RoleController::class);
     Route::resource('users', UserController::class);
     Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
