@@ -283,4 +283,6 @@ class SchoolInformationController extends Controller
             ], 500);
         }
     }
+
+    
 }

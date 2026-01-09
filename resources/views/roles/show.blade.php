@@ -110,82 +110,94 @@ use Spatie\Permission\Models\Permission;
                                     @can('Update user-role')
                                         <button type="button" class="btn btn-light btn-sm btn-active-success my-1" data-bs-toggle="modal" data-bs-target="#addUserModalgrid">Add User</button>
                                     @endcan
+                                    @can('Remove user-role')
+                                        <button type="button" class="btn btn-light btn-sm btn-active-danger my-1" id="bulkRemoveBtn" style="display: none;">Remove Selected</button>
+                                    @endcan
                                 </div>
                             </div>
                         </div>
                         <div class="card-body">
                             <div class="tab-content" id="popularPropertyContent">
                                 <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-centered align-middle table-nowrap mb-0" id="userList">
-                                            <thead class="table-active">
-                                                <tr>
-                                                    <th>
-                                                        <div class="form-check">
-                                                            <input class="form-check-input" type="checkbox" value="option" id="checkAll">
-                                                            <label class="form-check-label" for="checkAll"></label>
-                                                        </div>
-                                                    </th>
-                                                    <th class="sort cursor-pointer" data-sort="name">User</th>
-                                                    <th class="sort cursor-pointer" data-sort="datereg">Joined Date</th>
-                                                    <th>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="list form-check-all">
-                                                @forelse ($usersWithRole as $user)
-                                                    <tr data-id="{{ $user->id }}">
-                                                        <td class="id" data-id="{{ $user->id }}">
-                                                            <div class="form-check">
-                                                                <input class="form-check-input" type="checkbox" name="chk_child">
-                                                                <label class="form-check-label"></label>
-                                                            </div>
-                                                        </td>
-                                                        <td class="name">
-                                                            <div class="d-flex align-items-center">
-                                                                <div class="avatar-xs me-2">
-                                                                    <img src="{{ $user->avatar_url }}"
-                                                                         alt="{{ $user->name }}"
-                                                                         class="rounded-circle avatar-xs"
-                                                                         onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&color=7F9CF5&background=EBF4FF'">
-                                                                </div>
-                                                                <div>
-                                                                    <h6 class="mb-0">
-                                                                        <a href="{{ route('users.show', $user->id) }}" class="text-reset products">{{ $user->name }}</a>
-                                                                    </h6>
-                                                                    <small class="text-muted">
-                                                                        @if($user->isStudent() && $user->student)
-                                                                            {{ $user->student->admissionNo ?? '' }}
-                                                                        @elseif($user->isStaff() && $user->staffemploymentDetails)
-                                                                            {{ $user->staffemploymentDetails->designation ?? 'Staff' }}
-                                                                        @endif
-                                                                    </small>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td class="datereg">{{ $user->created_at->format('Y-m-d') }}</td>
-                                                        <td>
-                                                            <ul class="d-flex gap-2 list-unstyled mb-0">
-                                                                @can('Remove user-role')
-                                                                    <li>
-                                                                        <a class="dropdown-item remove-item-btn" href="javascript:void(0);"
-                                                                           data-bs-toggle="modal"
-                                                                           data-bs-target="#deleteRecordModal"
-                                                                           data-url="{{ route('roles.removeuserrole', ['userid' => $user->id, 'roleid' => $role->id]) }}">
-                                                                            <i class="bi bi-trash3 me-1 align-baseline"></i> Remove User
-                                                                        </a>
-                                                                    </li>
-                                                                @endcan
-                                                            </ul>
-                                                        </td>
-                                                    </tr>
-                                                @empty
+                                    <form id="bulkRemoveForm" action="{{ route('roles.bulkremoveusers') }}" method="POST">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="role_id" value="{{ $role->id }}">
+                                        <input type="hidden" name="selected_users" id="selectedUsers" value="">
+
+                                        <div class="table-responsive">
+                                            <table class="table table-centered align-middle table-nowrap mb-0" id="userList">
+                                                <thead class="table-active">
                                                     <tr>
-                                                        <td colspan="4" class="noresult" style="display: block;">No results found</td>
+                                                        <th>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" value="option" id="checkAll">
+                                                                <label class="form-check-label" for="checkAll"></label>
+                                                            </div>
+                                                        </th>
+                                                        <th class="sort cursor-pointer" data-sort="name">User</th>
+                                                        <th class="sort cursor-pointer" data-sort="datereg">Joined Date</th>
+                                                        <th>Action</th>
                                                     </tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                </thead>
+                                                <tbody class="list form-check-all" id="usersTableBody">
+                                                    @forelse ($usersWithRole as $user)
+                                                        <tr data-id="{{ $user->id }}">
+                                                            <td class="id" data-id="{{ $user->id }}">
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input user-checkbox" type="checkbox" name="user_ids[]" value="{{ $user->id }}" data-user-name="{{ $user->name }}">
+                                                                    <label class="form-check-label"></label>
+                                                                </div>
+                                                            </td>
+                                                            <td class="name">
+                                                                <div class="d-flex align-items-center">
+                                                                    <div class="avatar-xs me-2">
+                                                                        <img src="{{ $user->avatar_url }}"
+                                                                             alt="{{ $user->name }}"
+                                                                             class="rounded-circle avatar-xs"
+                                                                             onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&color=7F9CF5&background=EBF4FF'">
+                                                                    </div>
+                                                                    <div>
+                                                                        <h6 class="mb-0">
+                                                                            <a href="{{ route('users.show', $user->id) }}" class="text-reset products">{{ $user->name }}</a>
+                                                                        </h6>
+                                                                        <small class="text-muted">
+                                                                            @if($user->isStudent() && $user->student)
+                                                                                {{ $user->student->admissionNo ?? '' }}
+                                                                            @elseif($user->isStaff() && $user->staffemploymentDetails)
+                                                                                {{ $user->staffemploymentDetails->designation ?? 'Staff' }}
+                                                                            @endif
+                                                                        </small>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="datereg">{{ $user->created_at->format('Y-m-d') }}</td>
+                                                            <td>
+                                                                <ul class="d-flex gap-2 list-unstyled mb-0">
+                                                                    @can('Remove user-role')
+                                                                        <li>
+                                                                            <a class="dropdown-item remove-item-btn" href="javascript:void(0);"
+                                                                               data-bs-toggle="modal"
+                                                                               data-bs-target="#deleteRecordModal"
+                                                                               data-url="{{ route('roles.removeuserrole', ['userid' => $user->id, 'roleid' => $role->id]) }}"
+                                                                               data-user-name="{{ $user->name }}">
+                                                                                <i class="bi bi-trash3 me-1 align-baseline"></i> Remove User
+                                                                            </a>
+                                                                        </li>
+                                                                    @endcan
+                                                                </ul>
+                                                            </td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="4" class="noresult" style="display: block;">No results found</td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </form>
+
                                     <div class="row mt-3 align-items-center" id="pagination-element">
                                         <div class="col-sm">
                                             <div class="text-muted text-center text-sm-start">
@@ -217,7 +229,7 @@ use Spatie\Permission\Models\Permission;
                 </div>
             </div>
 
-            <!-- Delete confirmation modal -->
+            <!-- Delete confirmation modal (Single User) -->
             <div id="deleteRecordModal" class="modal fade zoomIn" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -231,12 +243,44 @@ use Spatie\Permission\Models\Permission;
                                 </div>
                                 <div class="mt-4">
                                     <h3 class="mb-2">Are you sure?</h3>
-                                    <p class="text-muted fs-lg mx-3 mb-0">Are you sure you want to remove this user from the role?</p>
+                                    <p class="text-muted fs-lg mx-3 mb-0" id="singleDeleteMessage">Are you sure you want to remove this user from the role?</p>
                                 </div>
                             </div>
                             <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
                                 <button type="button" class="btn w-sm btn-light btn-hover" data-bs-dismiss="modal">Close</button>
                                 <button type="button" class="btn w-sm btn-danger btn-hover" id="delete-record">Yes, Remove It!</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Remove Confirmation Modal -->
+            <div id="bulkRemoveModal" class="modal fade zoomIn" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Remove Multiple Users</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-md-5">
+                            <div class="text-center">
+                                <div class="text-danger">
+                                    <i class="bi bi-people display-4"></i>
+                                </div>
+                                <div class="mt-4">
+                                    <h3 class="mb-2">Remove Selected Users?</h3>
+                                    <p class="text-muted fs-lg mx-3 mb-0" id="bulkRemoveMessage">
+                                        Are you sure you want to remove <span id="selectedCount">0</span> user(s) from this role?
+                                    </p>
+                                    <div class="mt-3" id="selectedUsersList" style="max-height: 150px; overflow-y: auto;">
+                                        <!-- Selected users will be listed here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
+                                <button type="button" class="btn w-sm btn-light btn-hover" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn w-sm btn-danger btn-hover" id="confirmBulkRemove">Yes, Remove Them!</button>
                             </div>
                         </div>
                     </div>
@@ -281,231 +325,176 @@ use Spatie\Permission\Models\Permission;
                                 <!-- Tab content -->
                                 <div class="tab-content">
                                     <!-- Staff Tab -->
-                                    <!-- Staff Tab -->
-<div class="tab-pane fade show active" id="staff-tab" role="tabpanel">
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Staff Members</h6>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="select-all-staff">
-                    <label class="form-check-label" for="select-all-staff">
-                        Select All Staff
-                    </label>
-                </div>
-            </div>
-        </div>
-    </div>
+                                    <div class="tab-pane fade show active" id="staff-tab" role="tabpanel">
+                                        <div class="row mb-3">
+                                            <div class="col-12">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">Staff Members</h6>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="select-all-staff">
+                                                        <label class="form-check-label" for="select-all-staff">
+                                                            Select All Staff
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
-    <div class="row" id="staff-list-container">
-        <!-- Staff list will be populated here -->
-        @php
-            // Get all users not already in this role
-            $allUsersNotInRole = \App\Models\User::whereDoesntHave('roles', function ($q) use ($role) {
-                $q->where('name', $role->name);
-            })->get();
+                                        <div class="row" id="staff-list-container">
+                                            @php
+                                                $allUsersNotInRole = \App\Models\User::whereDoesntHave('roles', function ($q) use ($role) {
+                                                    $q->where('name', $role->name);
+                                                })->get();
 
-            // Identify staff users by:
-            // 1. Users who have staff employment details
-            // 2. Users with staff pictures
-            // 3. Users with qualifications (typically staff)
-            // 4. Users who are not students (no student_id)
-            $staffUsers = $allUsersNotInRole->filter(function ($user) {
-                // Check for staff employment details
-                if ($user->staffemploymentDetails) {
-                    return true;
-                }
+                                                $staffUsers = $allUsersNotInRole->filter(function ($user) {
+                                                    if ($user->staffemploymentDetails) return true;
+                                                    if ($user->staffPicture) return true;
+                                                    if ($user->qualifications()->exists()) return true;
+                                                    if (!$user->student_id) return true;
+                                                    return false;
+                                                })->reject(function ($user) {
+                                                    if ($user->student) return true;
+                                                    if (stripos($user->name, 'student') !== false) return true;
+                                                    return false;
+                                                })->sortBy('name');
+                                            @endphp
 
-                // Check for staff picture
-                if ($user->staffPicture) {
-                    return true;
-                }
-
-                // Check for qualifications (staff typically have these)
-                if ($user->qualifications()->exists()) {
-                    return true;
-                }
-
-                // Check if user has a student_id - if not, likely staff
-                if (!$user->student_id) {
-                    return true;
-                }
-
-                return false;
-            })->sortBy('name');
-
-            // Also exclude users who are definitely students
-            $staffUsers = $staffUsers->reject(function ($user) {
-                // Explicitly exclude users with student records
-                if ($user->student) {
-                    return true;
-                }
-
-                // Exclude users who have student in their name (like student accounts)
-                if (stripos($user->name, 'student') !== false) {
-                    return true;
-                }
-
-                return false;
-            });
-        @endphp
-
-        @forelse($staffUsers as $staff)
-        <div class="col-xl-4 col-lg-6 col-md-6">
-            <div class="card user-card mb-3" data-user-id="{{ $staff->id }}">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-md me-3">
-                            <img src="{{ $staff->avatar_url }}"
-                                 alt="{{ $staff->name }}"
-                                 class="rounded-circle avatar-md"
-                                 onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($staff->name) }}&color=7F9CF5&background=EBF4FF'">
-                        </div>
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1">{{ $staff->name }}</h6>
-                            <p class="text-muted mb-0">{{ $staff->email }}</p>
-                            <p class="text-muted mb-0 small">
-                                @if($staff->staffemploymentDetails)
-                                    {{ $staff->staffemploymentDetails->designation ?? 'Staff Member' }}
-                                @elseif($staff->qualifications()->exists())
-                                    Staff ({{ $staff->qualifications->count() }} qualification(s))
-                                @else
-                                    Staff Member
-                                @endif
-                            </p>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input staff-checkbox user-checkbox"
-                                   type="checkbox"
-                                   value="{{ $staff->id }}"
-                                   name="users[]"
-                                   id="staff-{{ $staff->id }}"
-                                   data-type="staff">
-                            <label class="form-check-label" for="staff-{{ $staff->id }}"></label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @empty
-        <div class="col-12">
-            <div class="alert alert-info mb-0">
-                <i class="fas fa-info-circle me-2"></i>
-                @if($allUsersNotInRole->isEmpty())
-                    All users are already assigned to this role.
-                @else
-                    No staff members found.
-                    <br><small>Staff are identified by: having staff employment details, staff pictures, qualifications, or not having a student ID.</small>
-                @endif
-            </div>
-        </div>
-        @endforelse
-    </div>
-</div>
+                                            @forelse($staffUsers as $staff)
+                                            <div class="col-xl-4 col-lg-6 col-md-6">
+                                                <div class="card user-card mb-3" data-user-id="{{ $staff->id }}">
+                                                    <div class="card-body">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-md me-3">
+                                                                <img src="{{ $staff->avatar_url }}"
+                                                                     alt="{{ $staff->name }}"
+                                                                     class="rounded-circle avatar-md"
+                                                                     onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($staff->name) }}&color=7F9CF5&background=EBF4FF'">
+                                                            </div>
+                                                            <div class="flex-grow-1">
+                                                                <h6 class="mb-1">{{ $staff->name }}</h6>
+                                                                <p class="text-muted mb-0">{{ $staff->email }}</p>
+                                                                <p class="text-muted mb-0 small">
+                                                                    @if($staff->staffemploymentDetails)
+                                                                        {{ $staff->staffemploymentDetails->designation ?? 'Staff Member' }}
+                                                                    @elseif($staff->qualifications()->exists())
+                                                                        Staff ({{ $staff->qualifications->count() }} qualification(s))
+                                                                    @else
+                                                                        Staff Member
+                                                                    @endif
+                                                                </p>
+                                                            </div>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input staff-checkbox user-checkbox"
+                                                                       type="checkbox"
+                                                                       value="{{ $staff->id }}"
+                                                                       name="users[]"
+                                                                       id="staff-{{ $staff->id }}"
+                                                                       data-type="staff">
+                                                                <label class="form-check-label" for="staff-{{ $staff->id }}"></label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @empty
+                                            <div class="col-12">
+                                                <div class="alert alert-info mb-0">
+                                                    <i class="fas fa-info-circle me-2"></i>
+                                                    @if($allUsersNotInRole->isEmpty())
+                                                        All users are already assigned to this role.
+                                                    @else
+                                                        No staff members found.
+                                                        <br><small>Staff are identified by: having staff employment details, staff pictures, qualifications, or not having a student ID.</small>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            @endforelse
+                                        </div>
+                                    </div>
 
                                     <!-- Student Tab -->
-                                   <!-- Student Tab -->
-<div class="tab-pane fade" id="student-tab" role="tabpanel">
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Students</h6>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="select-all-students">
-                    <label class="form-check-label" for="select-all-students">
-                        Select All Students
-                    </label>
-                </div>
-            </div>
-        </div>
-    </div>
+                                    <div class="tab-pane fade" id="student-tab" role="tabpanel">
+                                        <div class="row mb-3">
+                                            <div class="col-12">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">Students</h6>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="select-all-students">
+                                                        <label class="form-check-label" for="select-all-students">
+                                                            Select All Students
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
-    <div class="row" id="student-list-container">
-        <!-- Student list will be populated here -->
-        @php
-            // Identify student users
-            $studentUsers = $allUsersNotInRole->filter(function ($user) {
-                // Check if user has student_id
-                if ($user->student_id) {
-                    return true;
-                }
+                                        <div class="row" id="student-list-container">
+                                            @php
+                                                $studentUsers = $allUsersNotInRole->filter(function ($user) {
+                                                    if ($user->student_id) return true;
+                                                    if ($user->student) return true;
+                                                    if (stripos($user->name, 'student') !== false) return true;
+                                                    if ($user->staffemploymentDetails || $user->staffPicture || $user->qualifications()->exists()) return false;
+                                                    return false;
+                                                })->sortBy('name');
+                                            @endphp
 
-                // Check if user has student record
-                if ($user->student) {
-                    return true;
-                }
-
-                // Check if user name contains "student"
-                if (stripos($user->name, 'student') !== false) {
-                    return true;
-                }
-
-                // Exclude users we identified as staff
-                if ($user->staffemploymentDetails || $user->staffPicture || $user->qualifications()->exists()) {
-                    return false;
-                }
-
-                // Default: consider as student if not clearly staff
-                return false;
-            })->sortBy('name');
-        @endphp
-
-        @forelse($studentUsers as $studentUser)
-        <div class="col-xl-4 col-lg-6 col-md-6">
-            <div class="card user-card mb-3" data-user-id="{{ $studentUser->id }}">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-md me-3">
-                            <img src="{{ $studentUser->avatar_url }}"
-                                 alt="{{ $studentUser->name }}"
-                                 class="rounded-circle avatar-md"
-                                 onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($studentUser->name) }}&color=7F9CF5&background=EBF4FF'">
-                        </div>
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1">{{ $studentUser->name }}</h6>
-                            <p class="text-muted mb-0">
-                                @if($studentUser->student && $studentUser->student->admissionNo)
-                                    {{ $studentUser->student->admissionNo }}
-                                @elseif($studentUser->student_id)
-                                    Student ID: {{ $studentUser->student_id }}
-                                @else
-                                    Student
-                                @endif
-                            </p>
-                            <p class="text-muted mb-0 small">
-                                @if($studentUser->student && $studentUser->student->currentClass)
-                                    Class: {{ $studentUser->student->currentClass->schoolclass->schoolclass ?? 'Not Assigned' }}
-                                @endif
-                            </p>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input student-checkbox user-checkbox"
-                                   type="checkbox"
-                                   value="{{ $studentUser->id }}"
-                                   name="users[]"
-                                   id="student-{{ $studentUser->id }}"
-                                   data-type="student">
-                            <label class="form-check-label" for="student-{{ $studentUser->id }}"></label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @empty
-        <div class="col-12">
-            <div class="alert alert-info mb-0">
-                <i class="fas fa-info-circle me-2"></i>
-                @if($allUsersNotInRole->isEmpty())
-                    All users are already assigned to this role.
-                @else
-                    No students found.
-                    <br><small>Students are identified by: having student_id, student records, or not being identified as staff.</small>
-                @endif
-            </div>
-        </div>
-        @endforelse
-    </div>
-</div>
+                                            @forelse($studentUsers as $studentUser)
+                                            <div class="col-xl-4 col-lg-6 col-md-6">
+                                                <div class="card user-card mb-3" data-user-id="{{ $studentUser->id }}">
+                                                    <div class="card-body">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-md me-3">
+                                                                <img src="{{ $studentUser->avatar_url }}"
+                                                                     alt="{{ $studentUser->name }}"
+                                                                     class="rounded-circle avatar-md"
+                                                                     onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($studentUser->name) }}&color=7F9CF5&background=EBF4FF'">
+                                                            </div>
+                                                            <div class="flex-grow-1">
+                                                                <h6 class="mb-1">{{ $studentUser->name }}</h6>
+                                                                <p class="text-muted mb-0">
+                                                                    @if($studentUser->student && $studentUser->student->admissionNo)
+                                                                        {{ $studentUser->student->admissionNo }}
+                                                                    @elseif($studentUser->student_id)
+                                                                        Student ID: {{ $studentUser->student_id }}
+                                                                    @else
+                                                                        Student
+                                                                    @endif
+                                                                </p>
+                                                                <p class="text-muted mb-0 small">
+                                                                    @if($studentUser->student && $studentUser->student->currentClass)
+                                                                        Class: {{ $studentUser->student->currentClass->schoolclass->schoolclass ?? 'Not Assigned' }}
+                                                                    @endif
+                                                                </p>
+                                                            </div>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input student-checkbox user-checkbox"
+                                                                       type="checkbox"
+                                                                       value="{{ $studentUser->id }}"
+                                                                       name="users[]"
+                                                                       id="student-{{ $studentUser->id }}"
+                                                                       data-type="student">
+                                                                <label class="form-check-label" for="student-{{ $studentUser->id }}"></label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @empty
+                                            <div class="col-12">
+                                                <div class="alert alert-info mb-0">
+                                                    <i class="fas fa-info-circle me-2"></i>
+                                                    @if($allUsersNotInRole->isEmpty())
+                                                        All users are already assigned to this role.
+                                                    @else
+                                                        No students found.
+                                                        <br><small>Students are identified by: having student_id, student records, or not being identified as staff.</small>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            @endforelse
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="row mt-3">
@@ -756,25 +745,37 @@ use Spatie\Permission\Models\Permission;
                     color: #405189;
                 }
 
-                /* Responsive adjustments */
-                @media (max-width: 768px) {
-                    .user-card .d-flex {
-                        flex-direction: column;
-                        text-align: center;
-                    }
+                /* Bulk remove button styling */
+                #bulkRemoveBtn {
+                    transition: all 0.3s ease;
+                }
 
-                    .user-card .avatar-md {
-                        margin: 0 auto 1rem auto;
-                    }
+                #bulkRemoveBtn:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 6px rgba(220, 53, 69, 0.1);
+                }
 
-                    .user-card .form-check {
-                        margin: 1rem auto 0 auto;
-                    }
+                /* Selected rows highlighting */
+                tr.table-active {
+                    background-color: rgba(220, 53, 69, 0.05) !important;
+                }
 
-                    .nav-tabs-custom .nav-link {
-                        padding: 0.5rem 1rem;
-                        font-size: 0.875rem;
-                    }
+                /* Selected users list styling */
+                #selectedUsersList {
+                    background-color: #f8f9fa;
+                    border-radius: 8px;
+                    padding: 10px;
+                }
+
+                #selectedUsersList div {
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    background-color: white;
+                    margin-bottom: 2px;
+                }
+
+                #selectedUsersList div:hover {
+                    background-color: #f1f3f4;
                 }
 
                 /* Avatar sizes */
@@ -836,6 +837,191 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         updateSelectAllState();
+    }
+
+    // Bulk Removal Functionality
+    const bulkRemoveBtn = document.getElementById('bulkRemoveBtn');
+    const checkAllCheckbox = document.getElementById('checkAll');
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    const bulkRemoveModal = document.getElementById('bulkRemoveModal');
+    const confirmBulkRemoveBtn = document.getElementById('confirmBulkRemove');
+    const selectedUsersInput = document.getElementById('selectedUsers');
+    const bulkRemoveMessage = document.getElementById('bulkRemoveMessage');
+    const selectedUsersList = document.getElementById('selectedUsersList');
+    const bulkRemoveForm = document.getElementById('bulkRemoveForm');
+
+    // Show/hide bulk remove button based on selections
+    function updateBulkRemoveButton() {
+        const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+        const selectedCount = checkedBoxes.length;
+
+        if (bulkRemoveBtn) {
+            if (selectedCount > 0) {
+                bulkRemoveBtn.style.display = 'inline-block';
+                bulkRemoveBtn.textContent = `Remove Selected (${selectedCount})`;
+            } else {
+                bulkRemoveBtn.style.display = 'none';
+            }
+        }
+    }
+
+    // Update "check all" state
+    function updateCheckAllState() {
+        if (checkAllCheckbox && userCheckboxes.length > 0) {
+            const allChecked = Array.from(userCheckboxes).every(cb => cb.checked);
+            const someChecked = Array.from(userCheckboxes).some(cb => cb.checked);
+            checkAllCheckbox.checked = allChecked;
+            checkAllCheckbox.indeterminate = someChecked && !allChecked;
+        }
+        updateBulkRemoveButton();
+    }
+
+    // Check all functionality
+    if (checkAllCheckbox) {
+        checkAllCheckbox.addEventListener('change', function() {
+            userCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+                const row = checkbox.closest('tr');
+                if (row) {
+                    row.classList.toggle('table-active', this.checked);
+                }
+            });
+            updateBulkRemoveButton();
+        });
+    }
+
+    // Individual checkbox handlers
+    userCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const row = this.closest('tr');
+            if (row) {
+                row.classList.toggle('table-active', this.checked);
+            }
+            updateCheckAllState();
+        });
+    });
+
+    // Bulk remove button click handler
+    if (bulkRemoveBtn) {
+        bulkRemoveBtn.addEventListener('click', function() {
+            const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+            const selectedCount = checkedBoxes.length;
+
+            if (selectedCount === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Users Selected',
+                    text: 'Please select at least one user to remove.',
+                    confirmButtonColor: '#405189'
+                });
+                return;
+            }
+
+            // Get selected user IDs and names
+            const selectedIds = [];
+            const selectedNames = [];
+
+            checkedBoxes.forEach(checkbox => {
+                selectedIds.push(checkbox.value);
+                selectedNames.push(checkbox.getAttribute('data-user-name'));
+            });
+
+            // Update modal content
+            document.getElementById('selectedCount').textContent = selectedCount;
+
+            // Update selected users list
+            selectedUsersList.innerHTML = '';
+            selectedNames.forEach((name, index) => {
+                const div = document.createElement('div');
+                div.className = 'text-start mb-1';
+                div.innerHTML = `<i class="fas fa-user me-2 text-muted"></i> ${name}`;
+                selectedUsersList.appendChild(div);
+            });
+
+            // Store selected IDs in hidden input
+            selectedUsersInput.value = JSON.stringify(selectedIds);
+
+            // Show modal
+            const modal = new bootstrap.Modal(bulkRemoveModal);
+            modal.show();
+        });
+    }
+
+    // Confirm bulk removal
+    if (confirmBulkRemoveBtn) {
+        confirmBulkRemoveBtn.addEventListener('click', function() {
+            const selectedIds = JSON.parse(selectedUsersInput.value || '[]');
+
+            if (selectedIds.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No users selected.',
+                    confirmButtonColor: '#405189'
+                });
+                return;
+            }
+
+            // Show loading state
+            const originalText = confirmBulkRemoveBtn.innerHTML;
+            confirmBulkRemoveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Removing...';
+            confirmBulkRemoveBtn.disabled = true;
+
+            // Submit form via AJAX
+            fetch(bulkRemoveForm.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    _method: 'DELETE',
+                    role_id: document.querySelector('input[name="role_id"]').value,
+                    selected_users: selectedIds
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: data.message,
+                        confirmButtonColor: '#405189',
+                        timer: 2000
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to remove users.',
+                        confirmButtonColor: '#405189'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An error occurred while removing users.',
+                    confirmButtonColor: '#405189'
+                });
+            })
+            .finally(() => {
+                // Reset button
+                confirmBulkRemoveBtn.innerHTML = originalText;
+                confirmBulkRemoveBtn.disabled = false;
+
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(bulkRemoveModal);
+                modal.hide();
+            });
+        });
     }
 
     // Initialize Add User Modal functionality
@@ -1019,17 +1205,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Delete Record Modal Handling
+    // Delete Record Modal Handling (Single User Removal)
     const deleteRecordModal = document.getElementById('deleteRecordModal');
     const deleteRecordButton = document.getElementById('delete-record');
     if (deleteRecordModal && deleteRecordButton) {
         deleteRecordModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const url = button.getAttribute('data-url');
-            const userName = button.closest('tr').querySelector('.name a').textContent;
+            const userName = button.getAttribute('data-user-name');
 
             // Update modal message with user name
-            const modalMessage = deleteRecordModal.querySelector('.text-muted.fs-lg');
+            const modalMessage = document.getElementById('singleDeleteMessage');
             if (modalMessage && userName) {
                 modalMessage.textContent = `Are you sure you want to remove ${userName} from this role?`;
             }
@@ -1104,36 +1290,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Table checkbox handling
-    const tableCheckAll = document.getElementById('checkAll');
-    const tableCheckboxes = document.querySelectorAll('#userList tbody input[name="chk_child"]');
-
-    if (tableCheckAll && tableCheckboxes.length > 0) {
-        tableCheckAll.addEventListener('change', function() {
-            tableCheckboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-                const row = checkbox.closest('tr');
-                if (row) {
-                    row.classList.toggle('table-active', this.checked);
-                }
-            });
-        });
-
-        tableCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const row = this.closest('tr');
-                if (row) {
-                    row.classList.toggle('table-active', this.checked);
-                }
-
-                // Update "check all" state
-                const allChecked = Array.from(tableCheckboxes).every(cb => cb.checked);
-                const someChecked = Array.from(tableCheckboxes).some(cb => cb.checked);
-                tableCheckAll.checked = allChecked;
-                tableCheckAll.indeterminate = someChecked && !allChecked;
-            });
-        });
-    }
+    // Initialize bulk remove button state
+    updateBulkRemoveButton();
 });
 
 // Initialize tooltips

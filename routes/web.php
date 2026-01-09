@@ -83,7 +83,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/users/roles', [UserController::class, 'roles']);
     Route::resource('permissions', PermissionController::class);
 
-
+    Route::delete('/roles/bulk-remove-users', [RoleController::class, 'bulkRemoveUsers'])
+         ->name('roles.bulkremoveusers');
 
     Route::get('users/add-student', [UserController::class, 'createFromStudentForm'])->name('users.add-student-form');
     Route::post('users/create-from-student', [UserController::class, 'createFromStudent'])->name('users.createFromStudent');
