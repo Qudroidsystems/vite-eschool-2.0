@@ -353,5 +353,50 @@ class RoleController extends Controller
                         ->with('success','Role deleted successfully')->with('pagetitle',$pagetitle);
     }
 
+public function bulkRemoveUsers(Request $request)
+{
+    try {
+        $request->validate([
+            'role_id' => 'required|exists:roles,id',
+            'selected_users' => 'required|array',
+            'selected_users.*' => 'exists:users,id'
+        ]);
+
+        $role = Role::findOrFail($request->role_id);
+        $users = User::whereIn('id', $request->selected_users)->get();
+
+        $removedCount = 0;
+        $removedNames = [];
+
+        foreach ($users as $user) {
+            if ($user->hasRole($role->name)) {
+                $user->removeRole($role);
+                $removedCount++;
+                $removedNames[] = $user->name;
+            }
+        }
+
+        if ($removedCount > 0) {
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully removed {$removedCount} user(s) from the {$role->name} role.",
+                'removed_count' => $removedCount,
+                'removed_users' => $removedNames
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'No users were removed. They may not have had this role.'
+            ]);
+        }
+
+    } catch (\Exception $e) {
+        \Log::error('Bulk remove users error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to remove users: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
 }

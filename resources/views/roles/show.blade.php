@@ -846,9 +846,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const bulkRemoveModal = document.getElementById('bulkRemoveModal');
     const confirmBulkRemoveBtn = document.getElementById('confirmBulkRemove');
     const selectedUsersInput = document.getElementById('selectedUsers');
-    const bulkRemoveMessage = document.getElementById('bulkRemoveMessage');
     const selectedUsersList = document.getElementById('selectedUsersList');
-    const bulkRemoveForm = document.getElementById('bulkRemoveForm');
 
     // Show/hide bulk remove button based on selections
     function updateBulkRemoveButton() {
@@ -876,32 +874,35 @@ document.addEventListener("DOMContentLoaded", function () {
         updateBulkRemoveButton();
     }
 
-    // Check all functionality
+    // Check all functionality - FIXED
     if (checkAllCheckbox) {
         checkAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
             userCheckboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
+                checkbox.checked = isChecked;
                 const row = checkbox.closest('tr');
                 if (row) {
-                    row.classList.toggle('table-active', this.checked);
+                    row.classList.toggle('table-active', isChecked);
                 }
             });
             updateBulkRemoveButton();
         });
     }
 
-    // Individual checkbox handlers
-    userCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const row = this.closest('tr');
-            if (row) {
-                row.classList.toggle('table-active', this.checked);
-            }
-            updateCheckAllState();
+    // Individual checkbox handlers - FIXED
+    if (userCheckboxes.length > 0) {
+        userCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const row = this.closest('tr');
+                if (row) {
+                    row.classList.toggle('table-active', this.checked);
+                }
+                updateCheckAllState();
+            });
         });
-    });
+    }
 
-    // Bulk remove button click handler
+    // Bulk remove button click handler - FIXED
     if (bulkRemoveBtn) {
         bulkRemoveBtn.addEventListener('click', function() {
             const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
@@ -931,9 +932,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Update selected users list
             selectedUsersList.innerHTML = '';
-            selectedNames.forEach((name, index) => {
+            selectedNames.forEach((name) => {
                 const div = document.createElement('div');
-                div.className = 'text-start mb-1';
+                div.className = 'text-start mb-1 px-2 py-1';
                 div.innerHTML = `<i class="fas fa-user me-2 text-muted"></i> ${name}`;
                 selectedUsersList.appendChild(div);
             });
@@ -947,10 +948,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Confirm bulk removal
+    // Confirm bulk removal - FIXED
     if (confirmBulkRemoveBtn) {
         confirmBulkRemoveBtn.addEventListener('click', function() {
             const selectedIds = JSON.parse(selectedUsersInput.value || '[]');
+            const roleId = document.querySelector('input[name="role_id"]').value;
 
             if (selectedIds.length === 0) {
                 Swal.fire({
@@ -967,22 +969,28 @@ document.addEventListener("DOMContentLoaded", function () {
             confirmBulkRemoveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Removing...';
             confirmBulkRemoveBtn.disabled = true;
 
-            // Submit form via AJAX
-            fetch(bulkRemoveForm.action, {
+            // Get CSRF token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            // Submit form via AJAX - FIXED URL
+            fetch("{{ route('roles.bulkremoveusers') }}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-CSRF-TOKEN': csrfToken,
                     'Accept': 'application/json',
                 },
                 body: JSON.stringify({
-                    _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    _method: 'DELETE',
-                    role_id: document.querySelector('input[name="role_id"]').value,
+                    role_id: roleId,
                     selected_users: selectedIds
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     Swal.fire({
@@ -1024,7 +1032,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Initialize Add User Modal functionality
+    // Initialize Add User Modal functionality - FIXED
     const addUserModal = document.getElementById('addUserModalgrid');
     let addUserModalInitialized = false;
 
@@ -1050,8 +1058,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // Initialize counts
         updateCounts();
 
-        // Select All Staff functionality
-        if (selectAllStaffCheckbox) {
+        // Select All Staff functionality - FIXED
+        if (selectAllStaffCheckbox && staffCheckboxes.length > 0) {
             selectAllStaffCheckbox.addEventListener("change", function () {
                 const isChecked = this.checked;
                 console.log('Select All Staff toggled:', isChecked);
@@ -1065,11 +1073,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
 
                 updateCounts();
+                updateSelectAllStates();
             });
         }
 
-        // Select All Students functionality
-        if (selectAllStudentsCheckbox) {
+        // Select All Students functionality - FIXED
+        if (selectAllStudentsCheckbox && studentCheckboxes.length > 0) {
             selectAllStudentsCheckbox.addEventListener("change", function () {
                 const isChecked = this.checked;
                 console.log('Select All Students toggled:', isChecked);
@@ -1083,36 +1092,42 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
 
                 updateCounts();
+                updateSelectAllStates();
             });
         }
 
-        // Individual checkbox change handlers
-        allUserCheckboxes.forEach((checkbox) => {
-            checkbox.addEventListener("change", function () {
-                const card = this.closest('.user-card');
-                if (card) {
-                    card.classList.toggle('selected', this.checked);
-                }
-                updateCounts();
-                updateSelectAllStates();
+        // Individual checkbox change handlers - FIXED
+        if (allUserCheckboxes.length > 0) {
+            allUserCheckboxes.forEach((checkbox) => {
+                checkbox.addEventListener("change", function () {
+                    const card = this.closest('.user-card');
+                    if (card) {
+                        card.classList.toggle('selected', this.checked);
+                    }
+                    updateCounts();
+                    updateSelectAllStates();
+                });
             });
-        });
+        }
 
-        // Card click handler (toggle checkbox)
-        userCards.forEach((card) => {
-            card.addEventListener('click', function (e) {
-                // Don't toggle if clicking on checkbox or label
-                if (e.target.type === 'checkbox' || e.target.tagName === 'LABEL') {
-                    return;
-                }
+        // Card click handler (toggle checkbox) - FIXED
+        if (userCards.length > 0) {
+            userCards.forEach((card) => {
+                card.addEventListener('click', function (e) {
+                    // Don't toggle if clicking on checkbox or label
+                    if (e.target.type === 'checkbox' || e.target.tagName === 'LABEL') {
+                        return;
+                    }
 
-                const checkbox = this.querySelector('input[type="checkbox"]');
-                if (checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                    checkbox.dispatchEvent(new Event('change'));
-                }
+                    const checkbox = this.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        const event = new Event('change');
+                        checkbox.dispatchEvent(event);
+                    }
+                });
             });
-        });
+        }
 
         // Form submission validation
         if (addUserForm) {
@@ -1136,11 +1151,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Tab change handler
         const tabLinks = document.querySelectorAll('a[data-bs-toggle="tab"]');
-        tabLinks.forEach(link => {
-            link.addEventListener('shown.bs.tab', function (e) {
-                updateSelectAllStates();
+        if (tabLinks.length > 0) {
+            tabLinks.forEach(link => {
+                link.addEventListener('shown.bs.tab', function (e) {
+                    updateSelectAllStates();
+                });
             });
-        });
+        }
 
         // Update counts function
         function updateCounts() {
@@ -1158,13 +1175,15 @@ document.addEventListener("DOMContentLoaded", function () {
         // Get selected count
         function getSelectedCount() {
             let count = 0;
-            allUserCheckboxes.forEach(checkbox => {
-                if (checkbox.checked) count++;
-            });
+            if (allUserCheckboxes.length > 0) {
+                allUserCheckboxes.forEach(checkbox => {
+                    if (checkbox.checked) count++;
+                });
+            }
             return count;
         }
 
-        // Update select all states
+        // Update select all states - FIXED
         function updateSelectAllStates() {
             // Update staff select all
             if (selectAllStaffCheckbox && staffCheckboxes.length > 0) {
@@ -1205,7 +1224,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Delete Record Modal Handling (Single User Removal)
+    // Delete Record Modal Handling (Single User Removal) - FIXED
     const deleteRecordModal = document.getElementById('deleteRecordModal');
     const deleteRecordButton = document.getElementById('delete-record');
     if (deleteRecordModal && deleteRecordButton) {
@@ -1235,7 +1254,12 @@ document.addEventListener("DOMContentLoaded", function () {
                         'Accept': 'application/json',
                     },
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         Swal.fire({
@@ -1280,15 +1304,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Pagination handling
     const paginationLinks = document.querySelectorAll('#pagination-element a[data-url]');
-    paginationLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const url = this.getAttribute('data-url');
-            if (url && !this.classList.contains('disabled')) {
-                window.location.href = url;
-            }
+    if (paginationLinks.length > 0) {
+        paginationLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = this.getAttribute('data-url');
+                if (url && !this.classList.contains('disabled')) {
+                    window.location.href = url;
+                }
+            });
         });
-    });
+    }
 
     // Initialize bulk remove button state
     updateBulkRemoveButton();
@@ -1302,7 +1328,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 <!-- Include Font Awesome for icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
