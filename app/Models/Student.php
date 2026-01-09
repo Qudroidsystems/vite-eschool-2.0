@@ -154,4 +154,6 @@ class Student extends Model
             ->whereColumn('sessionid', 'studentclass.sessionid')
             ->whereColumn('termid', 'studentclass.termid');
     }
+
+    
 }

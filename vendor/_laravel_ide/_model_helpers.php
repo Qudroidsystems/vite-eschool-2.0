@@ -18220,7 +18220,7 @@ namespace App\Models {
      * @property string|null $schoolclassid
      * @property int|null $studentId
      * @property mixed $id
-     * @property-read \App\Models\Studentclass $currentClass
+     * @property-read \App\Models\Schoolclass $schoolclass
      * @method static \Illuminate\Database\Eloquent\Builder<Studentclass>|Studentclass whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Studentclass>|Studentclass whereStudentid($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Studentclass>|Studentclass whereSchoolclassid($value)

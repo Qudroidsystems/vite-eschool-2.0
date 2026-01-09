@@ -19,21 +19,10 @@ class Studentclass extends Model
 
     ];
 
-    public function currentClass()
-{
-    return $this->hasOne(Studentclass::class, 'studentId', 'id')
-        ->whereIn('sessionid', function ($query) {
-            $query->select('id')
-                  ->from('schoolsession')
-                  ->where('status', 'Current')
-                  ->orWhereRaw('id = (SELECT MAX(id) FROM schoolsession)');
-        })
-        ->with(['schoolclass.armRelation', 'term', 'session'])
-        ->withDefault([
-            'schoolclass' => ['schoolclass' => 'Not Assigned', 'armRelation' => null],
-            'term' => ['term' => 'N/A'],
-            'session' => ['session' => 'N/A']
-        ]);
-}
 
+// In Studentclass model
+public function schoolclass()
+{
+    return $this->belongsTo(Schoolclass::class, 'schoolclassid', 'id');
+}
 }
