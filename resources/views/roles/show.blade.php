@@ -342,88 +342,104 @@ use Spatie\Permission\Models\Permission;
                                     </div>
 
                                     <!-- Student Tab -->
-                                    <div class="tab-pane fade" id="student-tab" role="tabpanel">
-                                        <div class="row mb-3">
-                                            <div class="col-12">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <h6 class="mb-0">Students</h6>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" id="select-all-students">
-                                                        <label class="form-check-label" for="select-all-students">
-                                                            Select All Students
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                   <!-- Student Tab -->
+<div class="tab-pane fade" id="student-tab" role="tabpanel">
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Students</h6>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="select-all-students">
+                    <label class="form-check-label" for="select-all-students">
+                        Select All Students
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                                        <div class="row" id="student-list-container">
-                                            @php
-                                                $studentUsers = $allUsersNotInRole->filter(function ($user) {
-                                                    if ($user->student_id) return true;
-                                                    if ($user->student) return true;
-                                                    if (stripos($user->name, 'student') !== false) return true;
-                                                    if ($user->staffemploymentDetails || $user->staffPicture || $user->qualifications()->exists()) return false;
-                                                    return false;
-                                                })->sortBy('name');
-                                            @endphp
+    <div class="row" id="student-list-container">
+        @php
+            $studentUsers = $allUsersNotInRole->filter(function ($user) {
+                if ($user->student_id) return true;
+                if ($user->student) return true;
+                if (stripos($user->name, 'student') !== false) return true;
+                if ($user->staffemploymentDetails || $user->staffPicture || $user->qualifications()->exists()) return false;
+                return false;
+            })->sortBy('name');
+        @endphp
 
-                                            @forelse($studentUsers as $studentUser)
-                                            <div class="col-xl-4 col-lg-6 col-md-6">
-                                                <div class="card user-card mb-3" data-user-id="{{ $studentUser->id }}">
-                                                    <div class="card-body">
-                                                        <div class="d-flex align-items-center">
-                                                            <div class="avatar-md me-3">
-                                                                <img src="{{ $studentUser->avatar_url }}"
-                                                                     alt="{{ $studentUser->name }}"
-                                                                     class="rounded-circle avatar-md"
-                                                                     onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($studentUser->name) }}&color=7F9CF5&background=EBF4FF'">
-                                                            </div>
-                                                            <div class="flex-grow-1">
-                                                                <h6 class="mb-1">{{ $studentUser->name }}</h6>
-                                                                <p class="text-muted mb-0">
-                                                                    @if($studentUser->student && $studentUser->student->admissionNo)
-                                                                        {{ $studentUser->student->admissionNo }}
-                                                                    @elseif($studentUser->student_id)
-                                                                        Student ID: {{ $studentUser->student_id }}
-                                                                    @else
-                                                                        Student
-                                                                    @endif
-                                                                </p>
-                                                                <p class="text-muted mb-0 small">
-                                                                    @if($studentUser->student && $studentUser->student->currentClass)
-                                                                        Class: {{ $studentUser->student->currentClass->class->schoolclass ?? 'Not Assigned' }}
-                                                                    @endif
-                                                                </p>
-                                                            </div>
-                                                            <div class="form-check">
-                                                                <input class="form-check-input student-checkbox user-checkbox"
-                                                                       type="checkbox"
-                                                                       value="{{ $studentUser->id }}"
-                                                                       name="users[]"
-                                                                       id="student-{{ $studentUser->id }}"
-                                                                       data-type="student">
-                                                                <label class="form-check-label" for="student-{{ $studentUser->id }}"></label>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            @empty
-                                            <div class="col-12">
-                                                <div class="alert alert-info mb-0">
-                                                    <i class="fas fa-info-circle me-2"></i>
-                                                    @if($allUsersNotInRole->isEmpty())
-                                                        All users are already assigned to this role.
-                                                    @else
-                                                        No students found.
-                                                        <br><small>Students are identified by: having student_id, student records, or not being identified as staff.</small>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                            @endforelse
-                                        </div>
-                                    </div>
+        @forelse($studentUsers as $studentUser)
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card user-card mb-3" data-user-id="{{ $studentUser->id }}">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-md me-3">
+                            <img src="{{ $studentUser->avatar_url }}"
+                                 alt="{{ $studentUser->name }}"
+                                 class="rounded-circle avatar-md"
+                                 onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($studentUser->name) }}&color=7F9CF5&background=EBF4FF'">
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ $studentUser->name }}</h6>
+                            <p class="text-muted mb-0">
+                                @if($studentUser->student && $studentUser->student->admissionNo)
+                                    {{ $studentUser->student->admissionNo }}
+                                @elseif($studentUser->student_id)
+                                    Student ID: {{ $studentUser->student_id }}
+                                @else
+                                    Student
+                                @endif
+                            </p>
+                            <p class="text-muted mb-0 small">
+                                @php
+                                    $classInfo = 'Not Assigned';
+                                    if ($studentUser->student && $studentUser->student->currentClass) {
+                                        try {
+                                            // Try multiple ways to get the class name
+                                            if ($studentUser->student->currentClass->schoolclass) {
+                                                if (is_object($studentUser->student->currentClass->schoolclass)) {
+                                                    $classInfo = $studentUser->student->currentClass->schoolclass->schoolclass ?? 'Not Assigned';
+                                                } else {
+                                                    $classInfo = $studentUser->student->currentClass->schoolclass;
+                                                }
+                                            }
+                                        } catch (\Exception $e) {
+                                            // Silently continue with default
+                                        }
+                                    }
+                                @endphp
+                                Class: {{ $classInfo }}
+                            </p>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input student-checkbox user-checkbox"
+                                   type="checkbox"
+                                   value="{{ $studentUser->id }}"
+                                   name="users[]"
+                                   id="student-{{ $studentUser->id }}"
+                                   data-type="student">
+                            <label class="form-check-label" for="student-{{ $studentUser->id }}"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @empty
+        <div class="col-12">
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                @if($allUsersNotInRole->isEmpty())
+                    All users are already assigned to this role.
+                @else
+                    No students found.
+                    <br><small>Students are identified by: having student_id, student records, or not being identified as staff.</small>
+                @endif
+            </div>
+        </div>
+        @endforelse
+    </div>
+</div>
                                 </div>
 
                                 <div class="row mt-3">

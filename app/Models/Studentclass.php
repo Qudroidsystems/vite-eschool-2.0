@@ -25,4 +25,10 @@ public function schoolclass()
 {
     return $this->belongsTo(Schoolclass::class, 'schoolclassid', 'id');
 }
+
+// In Schoolclass model
+public function armRelation()
+{
+    return $this->belongsTo(Schoolarm::class, 'arm', 'id'); // Adjust based on your actual relationship
+}
 }

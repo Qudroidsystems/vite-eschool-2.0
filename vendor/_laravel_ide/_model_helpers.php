@@ -18221,6 +18221,7 @@ namespace App\Models {
      * @property int|null $studentId
      * @property mixed $id
      * @property-read \App\Models\Schoolclass $schoolclass
+     * @property-read \App\Models\Schoolarm $armRelation
      * @method static \Illuminate\Database\Eloquent\Builder<Studentclass>|Studentclass whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Studentclass>|Studentclass whereStudentid($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Studentclass>|Studentclass whereSchoolclassid($value)
