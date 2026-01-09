@@ -104,7 +104,7 @@ use Spatie\Permission\Models\Permission;
                 <div class="col-xxl-8 col-lg-8">
                     <div class="card">
                         <div class="card-header d-flex align-items-center">
-                            <h4 class="card-title mb-0 flex-grow-1">Users Assigned: ({{ $userRoleCount }})</h4>
+                            <h4 class="card-title mb-0 flex-grow-1">Users Assigned: (<span id="totalUsersCount">{{ $userRoleCount }}</span>)</h4>
                             <div class="flex-shrink-0">
                                 <div class="nav nav-pills gap-1" id="popularProperty" role="tablist" aria-orientation="vertical">
                                     @can('Update user-role')
@@ -141,90 +141,15 @@ use Spatie\Permission\Models\Permission;
                                                     </tr>
                                                 </thead>
                                                 <tbody class="list form-check-all" id="usersTableBody">
-                                                    @forelse ($usersWithRole as $user)
-                                                        <tr data-id="{{ $user->id }}">
-                                                            <td class="id" data-id="{{ $user->id }}">
-                                                                <div class="form-check">
-                                                                    <input class="form-check-input user-checkbox"
-                                                                           type="checkbox"
-                                                                           name="user_ids[]"
-                                                                           value="{{ $user->id }}"
-                                                                           data-user-name="{{ htmlspecialchars($user->name, ENT_QUOTES, 'UTF-8') }}">
-                                                                    <label class="form-check-label"></label>
-                                                                </div>
-                                                            </td>
-                                                            <td class="name">
-                                                                <div class="d-flex align-items-center">
-                                                                    <div class="avatar-xs me-2">
-                                                                        <img src="{{ $user->avatar_url }}"
-                                                                             alt="{{ $user->name }}"
-                                                                             class="rounded-circle avatar-xs"
-                                                                             onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&color=7F9CF5&background=EBF4FF'">
-                                                                    </div>
-                                                                    <div>
-                                                                        <h6 class="mb-0">
-                                                                            <a href="{{ route('users.show', $user->id) }}" class="text-reset products">{{ $user->name }}</a>
-                                                                        </h6>
-                                                                        <small class="text-muted">
-                                                                            @if($user->isStudent() && $user->student)
-                                                                                {{ $user->student->admissionNo ?? '' }}
-                                                                            @elseif($user->isStaff() && $user->staffemploymentDetails)
-                                                                                {{ $user->staffemploymentDetails->designation ?? 'Staff' }}
-                                                                            @endif
-                                                                        </small>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                            <td class="datereg">{{ $user->created_at->format('Y-m-d') }}</td>
-                                                            <td>
-                                                                <ul class="d-flex gap-2 list-unstyled mb-0">
-                                                                    @can('Remove user-role')
-                                                                        <li>
-                                                                            <a class="dropdown-item remove-item-btn" href="javascript:void(0);"
-                                                                               data-bs-toggle="modal"
-                                                                               data-bs-target="#deleteRecordModal"
-                                                                               data-url="{{ route('roles.removeuserrole', ['userid' => $user->id, 'roleid' => $role->id]) }}"
-                                                                               data-user-name="{{ htmlspecialchars($user->name, ENT_QUOTES, 'UTF-8') }}">
-                                                                                <i class="bi bi-trash3 me-1 align-baseline"></i> Remove User
-                                                                            </a>
-                                                                        </li>
-                                                                    @endcan
-                                                                </ul>
-                                                            </td>
-                                                        </tr>
-                                                    @empty
-                                                        <tr>
-                                                            <td colspan="4" class="noresult" style="display: block;">No results found</td>
-                                                        </tr>
-                                                    @endforelse
+                                                    @include('roles.partials.users_table_rows', ['users' => $usersWithRole])
                                                 </tbody>
                                             </table>
                                         </div>
                                     </form>
 
-                                    <div class="row mt-3 align-items-center" id="pagination-element">
-                                        <div class="col-sm">
-                                            <div class="text-muted text-center text-sm-start">
-                                                Showing <span class="fw-semibold">{{ $usersWithRole->count() }}</span> of <span class="fw-semibold">{{ $usersWithRole->total() }}</span> Results
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-auto mt-3 mt-sm-0">
-                                            <div class="pagination-wrap hstack gap-2 justify-content-center">
-                                                <a class="page-item pagination-prev {{ $usersWithRole->onFirstPage() ? 'disabled' : '' }}" href="javascript:void(0);" data-url="{{ $usersWithRole->previousPageUrl() }}">
-                                                    <i class="mdi mdi-chevron-left align-middle"></i>
-                                                </a>
-                                                <ul class="pagination listjs-pagination mb-0">
-                                                    @foreach ($usersWithRole->links()->elements[0] as $page => $url)
-                                                        <li class="page-item {{ $usersWithRole->currentPage() == $page ? 'active' : '' }}">
-                                                            <a class="page-link" href="javascript:void(0);" data-url="{{ $url }}">{{ $page }}</a>
-                                                        </li>
-                                                    @endforeach
-                                                </ul>
-                                                <a class="page-item pagination-next {{ $usersWithRole->hasMorePages() ? '' : 'disabled' }}" href="javascript:void(0);" data-url="{{ $usersWithRole->nextPageUrl() }}">
-                                                    <i class="mdi mdi-chevron-right align-middle"></i>
-                                                </a>
-                                            </div>
-                                        </div>
+                                    <!-- Pagination will be loaded here by JavaScript -->
+                                    <div class="row mt-3 align-items-center" id="pagination-container">
+                                        @include('roles.partials.pagination', ['users' => $usersWithRole])
                                     </div>
                                 </div>
                             </div>
@@ -467,7 +392,7 @@ use Spatie\Permission\Models\Permission;
                                                                 </p>
                                                                 <p class="text-muted mb-0 small">
                                                                     @if($studentUser->student && $studentUser->student->currentClass)
-                                                                        Class: {{ $studentUser->student->currentClass->schoolclass->schoolclass ?? 'Not Assigned' }}
+                                                                        Class: {{ $studentUser->student->currentClass->class->schoolclass ?? 'Not Assigned' }}
                                                                     @endif
                                                                 </p>
                                                             </div>
@@ -895,29 +820,25 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // Check all functionality
-        function initializeCheckAll() {
-            const checkAllCheckbox = document.getElementById('checkAll');
-            if (checkAllCheckbox) {
-                // Remove existing event listener first
-                const newCheckAll = checkAllCheckbox.cloneNode(true);
-                checkAllCheckbox.parentNode.replaceChild(newCheckAll, checkAllCheckbox);
+        const checkAllCheckbox = document.getElementById('checkAll');
+        if (checkAllCheckbox) {
+            // Remove existing event listener first
+            checkAllCheckbox.replaceWith(checkAllCheckbox.cloneNode(true));
 
-                // Add new event listener
-                const newCheckAllElement = document.getElementById('checkAll');
-                newCheckAllElement.addEventListener('change', function() {
-                    const isChecked = this.checked;
-                    const userCheckboxes = getUserCheckboxes();
+            // Add new event listener
+            document.getElementById('checkAll').addEventListener('change', function() {
+                const isChecked = this.checked;
+                const userCheckboxes = getUserCheckboxes();
 
-                    userCheckboxes.forEach(checkbox => {
-                        checkbox.checked = isChecked;
-                        const row = checkbox.closest('tr');
-                        if (row) {
-                            row.classList.toggle('table-active', isChecked);
-                        }
-                    });
-                    updateBulkRemoveButton();
+                userCheckboxes.forEach(checkbox => {
+                    checkbox.checked = isChecked;
+                    const row = checkbox.closest('tr');
+                    if (row) {
+                        row.classList.toggle('table-active', isChecked);
+                    }
                 });
-            }
+                updateBulkRemoveButton();
+            });
         }
 
         // Individual checkbox handlers
@@ -925,7 +846,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const userCheckboxes = getUserCheckboxes();
             if (userCheckboxes.length > 0) {
                 userCheckboxes.forEach((checkbox) => {
-                    // Remove any existing event listeners first by cloning
+                    // Remove any existing event listeners first
                     const newCheckbox = checkbox.cloneNode(true);
                     checkbox.parentNode.replaceChild(newCheckbox, checkbox);
 
@@ -954,25 +875,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        // Initialize all table handlers
-        initializeCheckAll();
+        // Initialize table checkboxes
         initializeTableCheckboxes();
         updateCheckAllState();
         updateBulkRemoveButton();
-
-        // Also initialize remove buttons for single deletion
-        initializeRemoveButtons();
-    }
-
-    // Initialize remove buttons for single user deletion
-    function initializeRemoveButtons() {
-        const removeButtons = document.querySelectorAll('.remove-item-btn');
-        removeButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
-                // The modal will handle this, we just need to ensure the data is available
-                console.log('Remove button clicked for user:', this.getAttribute('data-user-name'));
-            });
-        });
     }
 
     // Bulk remove button click handler
@@ -980,8 +886,6 @@ document.addEventListener("DOMContentLoaded", function () {
         bulkRemoveBtn.addEventListener('click', function() {
             const checkedBoxes = document.querySelectorAll('#userList .user-checkbox:checked');
             const selectedCount = checkedBoxes.length;
-
-            console.log('Checked boxes found:', checkedBoxes.length); // Debug log
 
             if (selectedCount === 0) {
                 Swal.fire({
@@ -998,9 +902,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const selectedNames = [];
 
             checkedBoxes.forEach(checkbox => {
-                const userId = checkbox.value;
-                selectedIds.push(userId);
-
+                selectedIds.push(checkbox.value);
                 // Get user name from the table row
                 const row = checkbox.closest('tr');
                 if (row) {
@@ -1013,7 +915,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         selectedNames.push(name);
                     }
                 }
-                console.log('Selected user:', userId); // Debug log
             });
 
             // Update modal content
@@ -1044,8 +945,6 @@ document.addEventListener("DOMContentLoaded", function () {
         confirmBulkRemoveBtn.addEventListener('click', function() {
             const selectedIds = JSON.parse(selectedUsersInput.value || '[]');
             const roleId = document.querySelector('input[name="role_id"]').value;
-
-            console.log('Attempting to remove users:', selectedIds); // Debug log
 
             if (selectedIds.length === 0) {
                 Swal.fire({
@@ -1212,25 +1111,16 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
-        // Page number buttons - use event delegation for dynamically added elements
-        document.getElementById('pagination-container').addEventListener('click', function(e) {
-            if (e.target.classList.contains('page-link') && e.target.hasAttribute('data-page')) {
+        // Page number buttons
+        const pageLinks = document.querySelectorAll('.page-link[data-page]');
+        pageLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
                 e.preventDefault();
-                const page = parseInt(e.target.getAttribute('data-page'));
+                const page = parseInt(this.getAttribute('data-page'));
                 if (page && page !== currentPage) {
                     loadPage(page);
                 }
-            }
-
-            // Also handle clicks on parent elements of page links
-            const pageLinkParent = e.target.closest('.page-link[data-page]');
-            if (pageLinkParent) {
-                e.preventDefault();
-                const page = parseInt(pageLinkParent.getAttribute('data-page'));
-                if (page && page !== currentPage) {
-                    loadPage(page);
-                }
-            }
+            });
         });
     }
 
