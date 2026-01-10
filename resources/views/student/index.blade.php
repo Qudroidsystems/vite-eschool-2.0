@@ -1,1722 +1,3 @@
-@extends('layouts.master')
-@section('content')
-<?php
-use Spatie\Permission\Models\Role;
-?>
-<div class="main-content">
-    <div class="page-content">
-        <div class="container-fluid">
-            <!-- Start page title -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                        <h4 class="mb-sm-0">Students</h4>
-                        <div class="page-title-right">
-                            <ol class="breadcrumb m-0">
-                                <li class="breadcrumb-item"><a href="javascript:void(0);">Student Management</a></li>
-                                <li class="breadcrumb-item active">Students</li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- End page title -->
-            <style>
-                .card {
-                    border: none;
-                    border-radius: 15px;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    transition: transform 0.3s ease, box-shadow 0.3s ease;
-                    margin-bottom: 20px;
-                }
-
-                .card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-                }
-
-                .card-body {
-                    padding: 25px;
-                    text-align: center;
-                }
-
-                .card-icon {
-                    font-size: 3rem;
-                    margin-bottom: 15px;
-                    display: block;
-                }
-
-                .card-title {
-                    font-size: 0.95rem;
-                    font-weight: 600;
-                    color: #6c757d;
-                    margin-bottom: 10px;
-                }
-
-                .card-text {
-                    font-size: 2.5rem;
-                    font-weight: bold;
-                    margin: 0;
-                }
-
-                /* Color schemes for different card types */
-                .population-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-                .staff-card { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
-                .old-student-card { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
-                .new-student-card { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
-                .active-card { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
-                .inactive-card { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
-                .male-card { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
-                .female-card { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333; }
-                .christian-card { background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); color: white; }
-                .muslim-card { background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%); color: white; }
-                .other-religion-card { background: linear-gradient(135deg, #e3ffe7 0%, #d9e7ff 100%); color: #333; }
-
-                /* Student Card Styling */
-                .student-card {
-                    border: 1px solid #e9ecef;
-                    border-radius: 12px;
-                    transition: all 0.3s ease;
-                    margin-bottom: 20px;
-                    background: white;
-                    position: relative;
-                    overflow: hidden;
-                    height: 100%;
-                }
-                .student-card:hover {
-                    border-color: #405189;
-                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-                    transform: translateY(-5px);
-                }
-                .student-card.selected {
-                    border-color: #405189;
-                    background-color: rgba(64, 81, 137, 0.02);
-                }
-                .student-card .card-body {
-                    padding: 20px;
-                }
-                .student-card .avatar-container {
-                    width: 80px;
-                    height: 80px;
-                    margin: 0 auto 15px auto;
-                    position: relative;
-                }
-                .student-card .avatar {
-                    width: 100%;
-                    height: 100%;
-                    border-radius: 50%;
-                    object-fit: cover;
-                    border: 3px solid #fff;
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 28px;
-                    font-weight: bold;
-                    color: white;
-                }
-                .student-card .avatar-initials {
-                    width: 100%;
-                    height: 100%;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 28px;
-                    font-weight: bold;
-                    color: white;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                }
-                .student-card .student-name {
-                    font-size: 16px;
-                    font-weight: 600;
-                    color: #495057;
-                    margin-bottom: 5px;
-                    text-align: center;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-                .student-card .student-admission {
-                    font-size: 12px;
-                    color: #6c757d;
-                    margin-bottom: 8px;
-                    text-align: center;
-                }
-                .student-card .student-details {
-                    font-size: 12px;
-                    color: #6c757d;
-                    text-align: center;
-                    line-height: 1.4;
-                }
-                .student-card .student-details div {
-                    margin-bottom: 3px;
-                }
-                .student-card .action-buttons {
-                    position: absolute;
-                    top: 10px;
-                    right: 10px;
-                    display: flex;
-                    gap: 5px;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                }
-                .student-card:hover .action-buttons {
-                    opacity: 1;
-                }
-                .student-card .action-btn {
-                    width: 30px;
-                    height: 30px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 14px;
-                    border: none;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                }
-                .student-card .view-btn {
-                    background-color: rgba(13, 110, 253, 0.1);
-                    color: #0d6efd;
-                }
-                .student-card .edit-btn {
-                    background-color: rgba(25, 135, 84, 0.1);
-                    color: #198754;
-                }
-                .student-card .delete-btn {
-                    background-color: rgba(220, 53, 69, 0.1);
-                    color: #dc3545;
-                }
-                .student-card .action-btn:hover {
-                    transform: scale(1.1);
-                }
-                .student-card .checkbox-container {
-                    position: absolute;
-                    top: 10px;
-                    left: 10px;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                }
-                .student-card:hover .checkbox-container {
-                    opacity: 1;
-                }
-                .student-card .form-check-input {
-                    width: 18px;
-                    height: 18px;
-                    cursor: pointer;
-                }
-                .student-card .status-badge {
-                    position: absolute;
-                    top: 10px;
-                    right: 10px;
-                    font-size: 10px;
-                    padding: 3px 8px;
-                    border-radius: 12px;
-                    z-index: 1;
-                }
-                .student-card .status-active {
-                    background-color: rgba(25, 135, 84, 0.1);
-                    color: #198754;
-                    border: 1px solid rgba(25, 135, 84, 0.2);
-                }
-                .student-card .status-inactive {
-                    background-color: rgba(255, 193, 7, 0.1);
-                    color: #ffc107;
-                    border: 1px solid rgba(255, 193, 7, 0.2);
-                }
-                /* Empty state */
-                .empty-state {
-                    text-align: center;
-                    padding: 40px 20px;
-                }
-                .empty-state i {
-                    font-size: 48px;
-                    color: #6c757d;
-                    margin-bottom: 20px;
-                }
-                .empty-state h5 {
-                    color: #6c757d;
-                    margin-bottom: 10px;
-                }
-                .empty-state p {
-                    color: #6c757d;
-                    margin-bottom: 0;
-                }
-                /* Loading state */
-                .loading-state {
-                    text-align: center;
-                    padding: 40px 20px;
-                }
-                .loading-state .spinner-border {
-                    width: 3rem;
-                    height: 3rem;
-                    margin-bottom: 20px;
-                }
-
-                /* View toggle buttons */
-                .btn-group .btn-outline-secondary.active {
-                    background-color: #405189;
-                    color: white;
-                    border-color: #405189;
-                }
-
-                /* View containers */
-                .view-container {
-                    transition: all 0.3s ease;
-                }
-            </style>
-            <div class="container">
-                <h2 class="mb-4 text-center">School Dashboard Statistics</h2>
-
-                <!-- Dashboard Statistics -->
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card population-card">
-                            <div class="card-body">
-                                <i class="fas fa-users card-icon"></i>
-                                <h5 class="card-title">Total Population</h5>
-                                <p class="card-text">{{ $total_population }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card staff-card">
-                            <div class="card-body">
-                                <i class="fas fa-chalkboard-teacher card-icon"></i>
-                                <h5 class="card-title">Staff Count</h5>
-                                <p class="card-text">{{ $staff_count }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card old-student-card">
-                            <div class="card-body">
-                                <i class="fas fa-user-graduate card-icon"></i>
-                                <h5 class="card-title">Old Students</h5>
-                                <p class="card-text">{{ $status_counts['Old Student'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card new-student-card">
-                            <div class="card-body">
-                                <i class="fas fa-user-plus card-icon"></i>
-                                <h5 class="card-title">New Students</h5>
-                                <p class="card-text">{{ $status_counts['New Student'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card active-card">
-                            <div class="card-body">
-                                <i class="fas fa-user-check card-icon"></i>
-                                <h5 class="card-title">Active Students</h5>
-                                <p class="card-text">{{ $student_status_counts['Active'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card inactive-card">
-                            <div class="card-body">
-                                <i class="fas fa-user-times card-icon"></i>
-                                <h5 class="card-title">Inactive Students</h5>
-                                <p class="card-text">{{ $student_status_counts['Inactive'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card male-card">
-                            <div class="card-body">
-                                <i class="fas fa-mars card-icon"></i>
-                                <h5 class="card-title">Male Students</h5>
-                                <p class="card-text">{{ $gender_counts['Male'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card female-card">
-                            <div class="card-body">
-                                <i class="fas fa-venus card-icon"></i>
-                                <h5 class="card-title">Female Students</h5>
-                                <p class="card-text">{{ $gender_counts['Female'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card christian-card">
-                            <div class="card-body">
-                                <i class="fas fa-cross card-icon"></i>
-                                <h5 class="card-title">Christian Students</h5>
-                                <p class="card-text">{{ $religion_counts['Christianity'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card muslim-card">
-                            <div class="card-body">
-                                <i class="fas fa-moon card-icon"></i>
-                                <h5 class="card-title">Muslim Students</h5>
-                                <p class="card-text">{{ $religion_counts['Islam'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card other-religion-card">
-                            <div class="card-body">
-                                <i class="fas fa-globe card-icon"></i>
-                                <h5 class="card-title">Other Religions</h5>
-                                <p class="card-text">{{ $religion_counts['Others'] }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Charts -->
-            <div class="row">
-                <div class="col-lg-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Students by Status</h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="studentsByStatusChart" height="100"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Students by Active/Inactive Status</h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="studentsByActiveStatusChart" height="100"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Display Success Message -->
-            @if (session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-            <!-- Display Error Message -->
-            @if (session('error'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-            <!-- Display Validation Errors -->
-            @if ($errors->any())
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <strong>Whoops!</strong> There were some problems with your input.<br><br>
-                    <ul>
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-            @if (session('status'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('status') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-            <!-- Unified Students View Container -->
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="card">
-                        <div class="card-header d-flex align-items-center">
-                            <div class="flex-grow-1 d-flex align-items-center gap-2">
-                                <div class="form-check me-2">
-                                    <input class="form-check-input" type="checkbox" value="option" id="checkAll">
-                                    <label class="form-check-label" for="checkAll"></label>
-                                </div>
-                                <h5 class="card-title mb-0">Students <span class="badge bg-dark-subtle text-dark ms-1" id="totalStudents">0</span></h5>
-                            </div>
-                            <div class="flex-shrink-0">
-                                <div class="d-flex flex-wrap align-items-start gap-2">
-                                    <!-- View Toggle Buttons -->
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-outline-secondary active" id="tableViewBtn" onclick="toggleView('table')">
-                                            <i class="fas fa-table"></i> Table
-                                        </button>
-                                        <button type="button" class="btn btn-outline-secondary" id="cardViewBtn" onclick="toggleView('card')">
-                                            <i class="fas fa-th-large"></i> Cards
-                                        </button>
-                                    </div>
-
-                                    @can('Delete student')
-                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">
-                                            <i class="ri-delete-bin-2-line"></i> Remove Selected
-                                        </button>
-                                    @endcan
-                                    @can('Create student')
-                                        <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addStudentModal">
-                                            <i class="bi bi-plus-circle align-baseline me-1"></i> Add Student
-                                        </button>
-                                    @endcan
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <!-- Search and Filter Bar -->
-                            <div class="row mb-4">
-                                <div class="col-md-3">
-                                    <div class="search-box">
-                                        <input type="text" class="form-control search" id="search-input" placeholder="Search by name or admission no">
-                                        <i class="ri-search-line search-icon"></i>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <select class="form-control" id="schoolclass-filter" data-choices data-choices-search-false>
-                                        <option value="all">All Classes</option>
-                                        @foreach ($schoolclasses as $class)
-                                            <option value="{{ $class->id }}">{{ $class->schoolclass }} - {{ $class->arm }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select class="form-control" id="status-filter" data-choices data-choices-search-false>
-                                        <option value="all">All Statuses</option>
-                                        <option value="1">Old Student</option>
-                                        <option value="2">New Student</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select class="form-control" id="gender-filter" data-choices data-choices-search-false>
-                                        <option value="all">All Genders</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="button" class="btn btn-secondary w-100" onclick="filterData();">
-                                        <i class="bi bi-funnel align-baseline me-1"></i> Filter
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Table View (Default - Visible) -->
-                            <div id="tableView" class="view-container">
-                                <div class="table-responsive">
-                                    <table class="table table-centered align-middle table-nowrap mb-0" id="studentTable">
-                                        <thead class="table-active">
-                                            <tr>
-                                                <th>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" value="option" id="checkAllTable">
-                                                        <label class="form-check-label" for="checkAllTable"></label>
-                                                    </div>
-                                                </th>
-                                                <th class="sort cursor-pointer" data-sort="name">Student</th>
-                                                <th class="sort cursor-pointer" data-sort="admissionNo">Admission No</th>
-                                                <th class="sort cursor-pointer" data-sort="class">Class</th>
-                                                <th class="sort cursor-pointer" data-sort="status">Status</th>
-                                                <th class="sort cursor-pointer" data-sort="gender">Gender</th>
-                                                <th class="sort cursor-pointer" data-sort="datereg">Registered</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="list form-check-all" id="studentTableBody">
-                                            <!-- JS renders rows here -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <!-- Cards View (Hidden by default) -->
-                            <div id="cardView" class="view-container d-none">
-                                <div class="row" id="studentsCardsContainer">
-                                    <!-- Students will be rendered here as cards -->
-                                </div>
-                            </div>
-
-                            <!-- Pagination -->
-                            <div class="row mt-3 align-items-center" id="pagination-element">
-                                <div class="col-sm">
-                                    <div class="text-muted text-center text-sm-start">
-                                        Showing <span class="fw-semibold" id="showingCount">0</span> of <span class="fw-semibold" id="totalCount">0</span> Results
-                                    </div>
-                                </div>
-                                <div class="col-sm-auto mt-3 mt-sm-0">
-                                    <div class="pagination-wrap hstack gap-2 justify-content-center">
-                                        <a class="page-item pagination-prev disabled" href="javascript:void(0);" id="prevPage">
-                                            <i class="mdi mdi-chevron-left align-middle"></i>
-                                        </a>
-                                        <ul class="pagination listjs-pagination mb-0" id="paginationLinks"></ul>
-                                        <a class="page-item pagination-next" href="javascript:void(0);" id="nextPage">
-                                            <i class="mdi mdi-chevron-right align-middle"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Add Student Modal -->
-        <div id="addStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">
-                            <i class="fas fa-user-plus me-2"></i>
-                            Student Registration
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form class="tablelist-form" id="addStudentForm" enctype="multipart/form-data" autocomplete="off" method="POST" action="{{ route('student.store') }}">
-                        @csrf
-                        <div class="modal-body p-4">
-                            <!-- Progress Steps -->
-                            <div class="progress-steps mb-4">
-                                <div class="step active">1</div>
-                                <div class="step">2</div>
-                                <div class="step">3</div>
-                                <div class="step">4</div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <!-- Section A: Academic Details -->
-                                    <div class="card">
-                                        <div class="card-header bg-primary text-white">
-                                            <h6 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>Academic Details</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="mb-3">
-                                                <label class="form-label">Admission Number Mode <span class="text-danger">*</span></label>
-                                                <div class="d-flex gap-3">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="admissionMode" id="admissionAuto" value="auto" required onchange="toggleAdmissionInput()">
-                                                        <label class="form-check-label" for="admissionAuto">
-                                                            <i class="fas fa-magic me-1"></i>Auto Generate
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="admissionMode" id="admissionManual" value="manual" required onchange="toggleAdmissionInput()">
-                                                        <label class="form-check-label" for="admissionManual">
-                                                            <i class="fas fa-edit me-1"></i>Manual Entry
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="admissionNo" class="form-label">Admission Number <span class="text-danger">*</span></label>
-                                                <div class="input-group">
-                                                    <select class="form-control" id="admissionYear" name="admissionYear" required onchange="updateAdmissionNumber()">
-                                                        @for ($year = date('Y'); $year >= date('Y') - 5; $year--)
-                                                            <option value="{{ $year }}" {{ $year == date('Y') ? 'selected' : '' }}>{{ $year }}</option>
-                                                        @endfor
-                                                    </select>
-                                                    <input type="text" id="admissionNo" name="admissionNo" class="form-control" placeholder="CSSK/STD/YYYY/001" required>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="admissionDate" class="form-label">Admission Date <span class="text-danger">*</span></label>
-                                                <input type="date" id="admissionDate" name="admissionDate" class="form-control" required max="{{ date('Y-m-d') }}">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="schoolclassid" class="form-label">Class <span class="text-danger">*</span></label>
-                                                <select id="schoolclassid" name="schoolclassid" class="form-control" required>
-                                                    <option value="">Select Class</option>
-                                                    @foreach ($schoolclasses as $class)
-                                                        <option value="{{ $class->id }}">{{ $class->schoolclass }} - {{ $class->arm }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="termid" class="form-label">Term <span class="text-danger">*</span></label>
-                                                        <select id="termid" name="termid" class="form-control" required>
-                                                            <option value="">Select Term</option>
-                                                            @foreach ($schoolterms as $term)
-                                                                <option value="{{ $term->id }}">{{ $term->name }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="sessionid" class="form-label">Session <span class="text-danger">*</span></label>
-                                                        <select id="sessionid" name="sessionid" class="form-control" required>
-                                                            <option value="">Select Session</option>
-                                                            @foreach ($schoolsessions as $session)
-                                                                <option value="{{ $session->id }}">{{ $session->name }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Student Status <span class="text-danger">*</span></label>
-                                                <div class="d-flex gap-3">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="statusId" id="statusOld" value="1" required>
-                                                        <label class="form-check-label" for="statusOld">
-                                                            <i class="fas fa-user-clock me-1"></i>Old Student
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="statusId" id="statusNew" value="2" required>
-                                                        <label class="form-check-label" for="statusNew">
-                                                            <i class="fas fa-user-plus me-1"></i>New Student
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Student Activity Status <span class="text-danger">*</span></label>
-                                                <div class="d-flex gap-3">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="student_status" id="statusActive" value="Active" required>
-                                                        <label class="form-check-label" for="statusActive">
-                                                            <i class="fas fa-check-circle text-success me-1"></i>Active
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="student_status" id="statusInactive" value="Inactive" required>
-                                                        <label class="form-check-label" for="statusInactive">
-                                                            <i class="fas fa-pause-circle text-warning me-1"></i>Inactive
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="student_category" class="form-label">Student Category <span class="text-danger">*</span></label>
-                                                <select id="student_category" name="student_category" class="form-control" required>
-                                                    <option value="">Select Category</option>
-                                                    <option value="Day">Day Student</option>
-                                                    <option value="Boarding">Boarding Student</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Personal Details -->
-                                <div class="col-md-6">
-                                    <!-- Section B: Student's Personal Details -->
-                                    <div class="card">
-                                        <div class="card-header bg-info text-white">
-                                            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Personal Details</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="mb-3 text-center">
-                                                <div class="upload-area border border-2 border-dashed border-primary rounded p-3">
-                                                    <img id="addStudentAvatar" src="https://via.placeholder.com/120x120/667eea/ffffff?text=Photo" alt="Avatar Preview" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #667eea; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
-                                                    <div>
-                                                        <label for="avatar" class="btn btn-outline-primary btn-sm">
-                                                            <i class="fas fa-camera me-1"></i>Choose Photo
-                                                        </label>
-                                                        <input type="file" id="avatar" name="avatar" class="d-none" accept=".png,.jpg,.jpeg" onchange="previewImage(this)">
-                                                        <div class="form-text mt-2">Max 2MB (PNG, JPG, JPEG)</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="mb-3">
-                                                    <label for="title" class="form-label">Title</label>
-                                                    <select id="title" name="title" class="form-control">
-                                                        <option value="">Select</option>
-                                                        <option value="Master">Master</option>
-                                                        <option value="Miss">Miss</option>
-                                                    </select>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="lastname" class="form-label">Last Name <span class="text-danger">*</span></label>
-                                                    <input type="text" id="lastname" name="lastname" class="form-control" placeholder="Last name" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="firstname" class="form-label">First Name <span class="text-danger">*</span></label>
-                                                    <input type="text" id="firstname" name="firstname" class="form-control" placeholder="First name" required>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="othername" class="form-label">Other Names</label>
-                                                <input type="text" id="othername" name="othername" class="form-control" placeholder="Middle name(s)">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Gender <span class="text-danger">*</span></label>
-                                                <div class="d-flex gap-3">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="gender" id="genderMale" value="Male" required>
-                                                        <label class="form-check-label" for="genderMale">
-                                                            <i class="fas fa-male text-primary me-1"></i>Male
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="gender" id="genderFemale" value="Female" required>
-                                                        <label class="form-check-label" for="genderFemale">
-                                                            <i class="fas fa-female text-danger me-1"></i>Female
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="dateofbirth" class="form-label">Date of Birth <span class="text-danger">*</span></label>
-                                                        <input type="date" id="addDOB" name="dateofbirth" class="form-control" required onchange="calculateAge(this.value)">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Age <span class="text-danger">*</span></label>
-                                                        <input type="number" id="addAgeInput" name="age" class="form-control" readonly required>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="phone_number" class="form-label">Phone Number</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text bg-primary text-white">
-                                                        <i class="fas fa-phone"></i>
-                                                    </span>
-                                                    <input type="text" id="phone_number" name="phone_number" class="form-control" placeholder="+234 xxx xxx xxxx">
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="placeofbirth" class="form-label">Place of Birth</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text bg-primary text-white">
-                                                        <i class="fas fa-envelope"></i>
-                                                    </span>
-                                                    <input type="input" id="placeofbirth" name="placeofbirth" class="form-control" placeholder="Place of birth">
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="email" class="form-label">Email</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text bg-primary text-white">
-                                                        <i class="fas fa-envelope"></i>
-                                                    </span>
-                                                    <input type="email" id="email" name="email" class="form-control" placeholder="student@example.com">
-                                                </div>
-                                            </div>
-                                           <div class="mb-3">
-                                                <label for="future_ambition" class="form-label">Future Ambition <span class="text-danger">*</span></label>
-                                                <textarea id="future_ambition" name="future_ambition" class="form-control" rows="2" placeholder="Enter future ambition" required></textarea>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="permanent_address" class="form-label">Permanent Address <span class="text-danger">*</span></label>
-                                                <textarea id="permanent_address" name="permanent_address" class="form-control" rows="2" placeholder="Enter permanent address" required></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Additional Information, Parent/Guardian Details, and Previous School Details -->
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <!-- Section C: Additional Details -->
-                                    <div class="card">
-                                        <div class="card-header bg-success text-white">
-                                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Additional Information</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="row">
-                                                <div class="col-md-10">
-                                                    <div class="mb-3">
-                                                        <label for="nationality" class="form-label">Nationality</label>
-                                                        <input type="text" id="nationality" name="nationality" class="form-control" placeholder="Nationality" required>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="addState" class="form-label">State of Origin <span class="text-danger">*</span></label>
-                                                        <select id="addState" name="state" class="form-control" required>
-                                                            <option value="">Select State</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="addLocal" class="form-label">Local Government <span class="text-danger">*</span></label>
-                                                        <select id="addLocal" name="local" class="form-control" required>
-                                                            <option value="">Select LGA</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="city" class="form-label">City</label>
-                                                        <input type="text" id="city" name="city" class="form-control" placeholder="Enter city">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="religion" class="form-label">Religion <span class="text-danger">*</span></label>
-                                                        <select id="religion" name="religion" class="form-control" required>
-                                                            <option value="">Select Religion</option>
-                                                            <option value="Christianity">Christianity</option>
-                                                            <option value="Islam">Islam</option>
-                                                            <option value="Others">Others</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="blood_group" class="form-label">Blood Group</label>
-                                                        <select id="blood_group" name="blood_group" class="form-control">
-                                                            <option value="">Select Blood Group</option>
-                                                            <option value="A+">A+</option>
-                                                            <option value="A-">A-</option>
-                                                            <option value="B+">B+</option>
-                                                            <option value="B-">B-</option>
-                                                            <option value="AB+">AB+</option>
-                                                            <option value="AB-">AB-</option>
-                                                            <option value="O+">O+</option>
-                                                            <option value="O-">O-</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="mother_tongue" class="form-label">Mother Tongue</label>
-                                                        <input type="text" id="mother_tongue" name="mother_tongue" class="form-control" placeholder="Native language">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="nin_number" class="form-label">NIN Number</label>
-                                                        <input type="text" id="nin_number" name="nin_number" class="form-control" placeholder="11-digit NIN" maxlength="11">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="sport_house" class="form-label">School House</label>
-                                                        <select id="schoolclassid" name="schoolclassid" class="form-control" required>
-                                                            <option value="">Select School House</option>
-                                                            @foreach ($schoolhouses as $schoolhouse)
-                                                                <option value="{{ $schoolhouse->id }}">{{ $schoolhouse->house }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <!-- Section D: Parent/Guardian Details -->
-                                    <div class="card">
-                                        <div class="card-header bg-warning text-dark">
-                                            <h6 class="mb-0"><i class="fas fa-users me-2"></i>Parent/Guardian Details</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="mb-3">
-                                                <label for="father_name" class="form-label">Father's Name</label>
-                                                <input type="text" id="father_name" name="father_name" class="form-control" placeholder="Father's full name">
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="father_phone" class="form-label">Father's Phone</label>
-                                                        <input type="text" id="father_phone" name="father_phone" class="form-control" placeholder="+234 xxx xxx xxxx">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="father_occupation" class="form-label">Father's Occupation</label>
-                                                        <input type="text" id="father_occupation" name="father_occupation" class="form-control" placeholder="Occupation">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="father_city" class="form-label">Father's City</label>
-                                                <input type="text" id="father_city" name="father_city" class="form-control" placeholder="City of residence">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="mother_name" class="form-label">Mother's Name</label>
-                                                <input type="text" id="mother_name" name="mother_name" class="form-control" placeholder="Mother's full name">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="mother_phone" class="form-label">Mother's Phone</label>
-                                                <input type="text" id="mother_phone" name="mother_phone" class="form-control" placeholder="+234 xxx xxx xxxx">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="parent_email" class="form-label">Parent's Email</label>
-                                                <input type="email" id="parent_email" name="parent_email" class="form-control" placeholder="parent@example.com">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="parent_address" class="form-label">Parent's Address</label>
-                                                <textarea id="parent_address" name="parent_address" class="form-control" rows="2" placeholder="Parent's address"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <!-- Section E: Previous School Details -->
-                                    <div class="card">
-                                        <div class="card-header bg-secondary text-white">
-                                            <h6 class="mb-0"><i class="fas fa-school me-2"></i>Previous School Details</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="mb-3">
-                                                <label for="last_school" class="form-label">Last School Attended</label>
-                                                <input type="text" id="last_school" name="last_school" class="form-control" placeholder="Previous school name">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="last_class" class="form-label">Last Class Attended</label>
-                                                <input type="text" id="last_class" name="last_class" class="form-control" placeholder="e.g., JSS 2">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="reason_for_leaving" class="form-label">Reason for Leaving</label>
-                                                <textarea id="reason_for_leaving" name="reason_for_leaving" class="form-control" rows="2" placeholder="Reason for leaving previous school"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="alert alert-danger d-none" id="alert-error-msg"></div>
-                        </div>
-                        <div class="modal-footer bg-light">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-1"></i>Cancel
-                            </button>
-                            <button type="submit" class="btn btn-primary" id="add-btn">
-                                <i class="fas fa-save me-1"></i>Register Student
-                            </button>
-                            <button type="button" class="btn btn-success" onclick="printStudentDetails()">
-                                <i class="fas fa-print me-1"></i>Print PDF
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <!-- Edit Student Modal -->
-        <div id="editStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">
-                            <i class="fas fa-user-edit me-2"></i>Edit Student
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form class="tablelist-form" id="editStudentForm" enctype="multipart/form-data" autocomplete="off" method="POST" action="{{ route('student.update', ':id') }}">
-                        @csrf
-                        @method('PATCH')
-                        <div class="modal-body p-4">
-                            <input type="hidden" id="editStudentId" name="id">
-
-                            <!-- Progress Steps -->
-                            <div class="progress-steps mb-4">
-                                <div class="step active">1</div>
-                                <div class="step">2</div>
-                                <div class="step">3</div>
-                                <div class="step">4</div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                   <!-- Academic Details section -->
-                                    <div class="card">
-                                        <div class="card-header bg-primary text-white">
-                                            <h6 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>Academic Details</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="mb-3">
-                                                <label class="form-label">Admission Number Mode <span class="text-danger">*</span></label>
-                                                <div class="d-flex gap-3">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="admissionMode" id="editAdmissionAuto" value="auto" required onchange="toggleAdmissionInput('edit')">
-                                                        <label class="form-check-label" for="editAdmissionAuto">
-                                                            <i class="fas fa-magic me-1"></i>Auto Generate
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="admissionMode" id="editAdmissionManual" value="manual" required onchange="toggleAdmissionInput('edit')">
-                                                        <label class="form-check-label" for="editAdmissionManual">
-                                                            <i class="fas fa-edit me-1"></i>Manual Entry
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editAdmissionNo" class="form-label">Admission Number <span class="text-danger">*</span></label>
-                                                <div class="input-group">
-                                                    <select class="form-control" id="editAdmissionYear" name="admissionYear" required onchange="updateAdmissionNumber('edit')">
-                                                        @for ($year = date('Y'); $year >= date('Y') - 5; $year--)
-                                                            <option value="{{ $year }}" {{ $year == date('Y') ? 'selected' : '' }}>{{ $year }}</option>
-                                                        @endfor
-                                                    </select>
-                                                    <input type="text" id="editAdmissionNo" name="admissionNo" class="form-control" placeholder="CSSK/STD/YYYY/001" required>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editAdmissionDate" class="form-label">Admission Date <span class="text-danger">*</span></label>
-                                                <input type="date" id="editAdmissionDate" name="admissionDate" class="form-control" required max="{{ date('Y-m-d') }}">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editSchoolclassid" class="form-label">Class <span class="text-danger">*</span></label>
-                                                <select id="editSchoolclassid" name="schoolclassid" class="form-control" required>
-                                                    <option value="">Select Class</option>
-                                                    @foreach ($schoolclasses as $class)
-                                                        <option value="{{ $class->id }}">{{ $class->schoolclass }} - {{ $class->arm }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="editTermid" class="form-label">Term <span class="text-danger">*</span></label>
-                                                        <select id="editTermid" name="termid" class="form-control" required>
-                                                            <option value="">Select Term</option>
-                                                            @foreach ($schoolterms as $term)
-                                                                <option value="{{ $term->id }}">{{ $term->name }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="editSessionid" class="form-label">Session <span class="text-danger">*</span></label>
-                                                        <select id="editSessionid" name="sessionid" class="form-control" required>
-                                                            <option value="">Select Session</option>
-                                                            @foreach ($schoolsessions as $session)
-                                                                <option value="{{ $session->id }}">{{ $session->name }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Student Status <span class="text-danger">*</span></label>
-                                                <div class="d-flex gap-3">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="statusId" id="editStatusOld" value="1" required>
-                                                        <label class="form-check-label" for="editStatusOld">
-                                                            <i class="fas fa-user-clock me-1"></i>Old Student
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="statusId" id="editStatusNew" value="2" required>
-                                                        <label class="form-check-label" for="editStatusNew">
-                                                            <i class="fas fa-user-plus me-1"></i>New Student
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Student Activity Status <span class="text-danger">*</span></label>
-                                                <div class="d-flex gap-3">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="student_status" id="editStatusActive" value="Active" required>
-                                                        <label class="form-check-label" for="editStatusActive">
-                                                            <i class="fas fa-check-circle text-success me-1"></i>Active
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="student_status" id="editStatusInactive" value="Inactive" required>
-                                                        <label class="form-check-label" for="editStatusInactive">
-                                                            <i class="fas fa-pause-circle text-warning me-1"></i>Inactive
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editStudentCategory" class="form-label">Student Category <span class="text-danger">*</span></label>
-                                                <select id="editStudentCategory" name="student_category" class="form-control" required>
-                                                    <option value="">Select Category</option>
-                                                    <option value="Day">Day Student</option>
-                                                    <option value="Boarding">Boarding Student</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Personal Details -->
-                                <div class="col-md-6">
-                                 <!-- Personal Details section -->
-                                <div class="card">
-                                    <div class="card-header bg-info text-white">
-                                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Personal Details</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="mb-3 text-center">
-                                            <div class="upload-area border border-2 border-dashed border-primary rounded p-3">
-                                                <img id="editStudentAvatar" src="{{ asset('theme/layouts/assets/media/avatars/blank.png') }}" alt="Avatar Preview" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #667eea; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
-                                                <div>
-                                                    <label for="editAvatar" class="btn btn-outline-primary btn-sm">
-                                                        <i class="fas fa-camera me-1"></i>Choose Photo
-                                                    </label>
-                                                    <input type="file" id="editAvatar" name="avatar" class="d-none" accept=".png,.jpg,.jpeg" onchange="previewImage(this, 'editStudentAvatar')">
-                                                    <div class="form-text mt-2">Max 2MB (PNG, JPG, JPEG)</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-4">
-                                                <div class="mb-3">
-                                                    <label for="editTitle" class="form-label">Title</label>
-                                                    <select id="editTitle" name="title" class="form-control">
-                                                        <option value="">Select</option>
-                                                        <option value="Master">Master</option>
-                                                        <option value="Miss">Miss</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                             <div class="col-md-4">
-                                                <div class="mb-3">
-                                                    <label for="editLastname" class="form-label">Last Name <span class="text-danger">*</span></label>
-                                                    <input type="text" id="editLastname" name="lastname" class="form-control" placeholder="Last name" required>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="mb-3">
-                                                    <label for="editFirstname" class="form-label">First Name <span class="text-danger">*</span></label>
-                                                    <input type="text" id="editFirstname" name="firstname" class="form-control" placeholder="First name" required>
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="editOthername" class="form-label">Other Names</label>
-                                            <input type="text" id="editOthername" name="othername" class="form-control" placeholder="Middle name(s)">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Gender <span class="text-danger">*</span></label>
-                                            <div class="d-flex gap-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="gender" id="editGenderMale" value="Male" required>
-                                                    <label class="form-check-label" for="editGenderMale">
-                                                        <i class="fas fa-male text-primary me-1"></i>Male
-                                                    </label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="gender" id="editGenderFemale" value="Female" required>
-                                                    <label class="form-check-label" for="editGenderFemale">
-                                                        <i class="fas fa-female text-danger me-1"></i>Female
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="editDOB" class="form-label">Date of Birth <span class="text-danger">*</span></label>
-                                                    <input type="date" id="editDOB" name="dateofbirth" class="form-control" required onchange="calculateAge(this.value, 'editAgeInput')">
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label class="form-label">Age <span class="text-danger">*</span></label>
-                                                    <input type="number" id="editAgeInput" name="age" class="form-control" readonly required>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="editPhoneNumber" class="form-label">Phone Number</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-primary text-white">
-                                                    <i class="fas fa-phone"></i>
-                                                </span>
-                                                <input type="text" id="editPhoneNumber" name="phone_number" class="form-control" placeholder="+234 xxx xxx xxxx">
-                                            </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="editPlaceofbirth" class="form-label">Place of Birth</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-primary text-white">
-                                                    <i class="fas fa-map-marker-alt"></i>
-                                                </span>
-                                                <input type="text" id="editPlaceofbirth" name="placeofbirth" class="form-control" placeholder="Place of birth">
-                                            </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="editEmail" class="form-label">Email</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-primary text-white">
-                                                    <i class="fas fa-envelope"></i>
-                                                </span>
-                                                <input type="email" id="editEmail" name="email" class="form-control" placeholder="student@example.com">
-                                            </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="editFutureAmbition" class="form-label">Future Ambition <span class="text-danger">*</span></label>
-                                            <textarea id="editFutureAmbition" name="future_ambition" class="form-control" rows="2" placeholder="Enter future ambition" required></textarea>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="editPermanentAddress" class="form-label">Permanent Address <span class="text-danger">*</span></label>
-                                            <textarea id="editPermanentAddress" name="permanent_address" class="form-control" rows="2" placeholder="Enter permanent address" required></textarea>
-                                        </div>
-                                    </div>
-                                </div>
-                                </div>
-                                <div class="col-md-6">
-                            <!-- Additional Information section -->
-                                <div class="card">
-                                    <div class="card-header bg-success text-white">
-                                        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Additional Information</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <div class="mb-3">
-                                                    <label for="editNationality" class="form-label">Nationality</label>
-                                                    <input type="text" id="editNationality" name="nationality" class="form-control" placeholder="Nationality" required>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="editState" class="form-label">State of Origin <span class="text-danger">*</span></label>
-                                                    <select id="editState" name="state" class="form-control" required>
-                                                        <option value="">Select State</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="editLocal" class="form-label">Local Government of Origin<span class="text-danger">*</span></label>
-                                                    <select id="editLocal" name="local" class="form-control" required>
-                                                        <option value="">Select LGA</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="editCity" class="form-label">City</label>
-                                                    <input type="text" id="editCity" name="city" class="form-control" placeholder="Enter city">
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="editReligion" class="form-label">Religion <span class="text-danger">*</span></label>
-                                                    <select id="editReligion" name="religion" class="form-control" required>
-                                                        <option value="">Select Religion</option>
-                                                        <option value="Christianity">Christianity</option>
-                                                        <option value="Islam">Islam</option>
-                                                        <option value="Others">Others</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="editBloodGroup" class="form-label">Blood Group</label>
-                                                    <select id="editBloodGroup" name="blood_group" class="form-control">
-                                                        <option value="">Select Blood Group</option>
-                                                        <option value="A+">A+</option>
-                                                        <option value="A-">A-</option>
-                                                        <option value="B+">B+</option>
-                                                        <option value="B-">B-</option>
-                                                        <option value="AB+">AB+</option>
-                                                        <option value="AB-">AB-</option>
-                                                        <option value="O+">O+</option>
-                                                        <option value="O-">O-</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="editMotherTongue" class="form-label">Mother Tongue</label>
-                                                    <input type="text" id="editMotherTongue" name="mother_tongue" class="form-control" placeholder="Native language">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="editNinNumber" class="form-label">NIN Number</label>
-                                                    <input type="text" id="editNinNumber" name="nin_number" class="form-control" placeholder="11-digit NIN" maxlength="11">
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="editSchoolHouse" class="form-label">School House</label>
-                                                    <select id="editSchoolHouse" name="school_house" class="form-control">
-                                                        <option value="">Select School House</option>
-                                                        @foreach ($schoolhouses as $schoolhouse)
-                                                            <option value="{{ $schoolhouse->id }}">{{ $schoolhouse->house }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                    <!-- Section D: Parent/Guardian Details -->
-                                    <div class="card">
-                                        <div class="card-header bg-warning text-dark">
-                                            <h6 class="mb-0"><i class="fas fa-users me-2"></i>Parent/Guardian Details</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="mb-3">
-                                                <label for="editFatherName" class="form-label">Father's Name</label>
-                                                <input type="text" id="editFatherName" name="father_name" class="form-control" placeholder="Father's full name">
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="editFatherPhone" class="form-label">Father's Phone</label>
-                                                        <input type="text" id="editFatherPhone" name="father_phone" class="form-control" placeholder="+234 xxx xxx xxxx">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="editFatherOccupation" class="form-label">Father's Occupation</label>
-                                                        <input type="text" id="editFatherOccupation" name="father_occupation" class="form-control" placeholder="Occupation">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editFatherCity" class="form-label">Father's City</label>
-                                                <input type="text" id="editFatherCity" name="father_city" class="form-control" placeholder="City of residence">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editMotherName" class="form-label">Mother's Name</label>
-                                                <input type="text" id="editMotherName" name="mother_name" class="form-control" placeholder="Mother's full name">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editMotherPhone" class="form-label">Mother's Phone</label>
-                                                <input type="text" id="editMotherPhone" name="mother_phone" class="form-control" placeholder="+234 xxx xxx xxxx">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editParentEmail" class="form-label">Parent's Email</label>
-                                                <input type="email" id="editParentEmail" name="parent_email" class="form-control" placeholder="parent@example.com">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editParentAddress" class="form-label">Parent's Address</label>
-                                                <textarea id="editParentAddress" name="parent_address" class="form-control" rows="2" placeholder="Parent's address"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <!-- Section E: Previous School Details -->
-                                    <div class="card">
-                                        <div class="card-header bg-secondary text-white">
-                                            <h6 class="mb-0"><i class="fas fa-school me-2"></i>Previous School Details</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="mb-3">
-                                                <label for="editLastSchool" class="form-label">Last School Attended</label>
-                                                <input type="text" id="editLastSchool" name="last_school" class="form-control" placeholder="Previous school name">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editLastClass" class="form-label">Last Class Attended</label>
-                                                <input type="text" id="editLastClass" name="last_class" class="form-control" placeholder="e.g., JSS 2">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="editReasonForLeaving" class="form-label">Reason for Leaving</label>
-                                                <textarea id="editReasonForLeaving" name="reason_for_leaving" class="form-control" rows="2" placeholder="Reason for leaving previous school"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
-                        </div>
-
-                        <div class="modal-footer bg-light">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-1"></i>Cancel
-                            </button>
-                            <button type="submit" class="btn btn-primary" id="edit-btn">
-                                <i class="fas fa-save me-1"></i>Update Student
-                            </button>
-                            <button type="button" class="btn btn-success" onclick="printStudentDetails('edit')">
-                                <i class="fas fa-print me-1"></i>Print PDF
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <!-- View Student Modal -->
-        <div id="viewStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered modal-fullscreen-lg-down modal-xl">
-                <div class="modal-content modern-modal">
-                    <!-- Header with Gradient -->
-                    <div class="modal-header modern-header">
-                        <div class="header-content">
-                            <div class="header-icon">
-                                <i class="fas fa-graduation-cap"></i>
-                            </div>
-                            <div class="header-text">
-                                <h4 class="modal-title mb-0">Student Details</h4>
-                                <p class="header-subtitle mb-0">Comprehensive Student Information</p>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-close modern-close" data-bs-dismiss="modal" aria-label="Close">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div class="modal-body modern-body">
-                        <div class="registration-form">
-                            <!-- Student Photo Section -->
-                            <div class="student-header">
-                                <div class="photo-container">
-                                    <div class="photo-frame">
-                                        <img id="viewStudentPhoto" src="https://via.placeholder.com/150x150/6366f1/ffffff?text=PHOTO" alt="Student Photo" class="student-photo">
-                                        <div class="photo-overlay">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Progressive Tabs Navigation -->
-                            <div class="form-navigation">
-                                <nav class="nav nav-pills nav-justified modern-tabs" id="pills-tab" role="tablist">
-                                    <button class="nav-link active" id="academic-tab" data-bs-toggle="pill" data-bs-target="#academic" type="button" role="tab">
-                                        <i class="fas fa-school"></i>
-                                        <span>Academic</span>
-                                        <div class="tab-progress"></div>
-                                    </button>
-                                    <button class="nav-link" id="personal-tab" data-bs-toggle="pill" data-bs-target="#personal" type="button" role="tab">
-                                        <i class="fas fa-user"></i>
-                                        <span>Personal</span>
-                                        <div class="tab-progress"></div>
-                                    </button>
-                                    <button class="nav-link" id="guardian-tab" data-bs-toggle="pill" data-bs-target="#guardian" type="button" role="tab">
-                                        <i class="fas fa-users"></i>
-                                        <span>Guardian</span>
-                                        <div class="tab-progress"></div>
-                                    </button>
-                                    <button class="nav-link" id="previous-tab" data-bs-toggle="pill" data-bs-target="#previous" type="button" role="tab">
-                                        <i class="fas fa-history"></i>
-                                        <span>Previous</span>
-                                        <div class="tab-progress"></div>
-                                    </button>
-                                </nav>
-                            </div>
-
-                            <!-- Tab Content -->
-                            <div class="tab-content modern-tabs-content" id="pills-tabContent">
-
-                                <!-- Academic Details Tab -->
-                                <div class="tab-pane fade show active" id="academic" role="tabpanel">
-                                    <div class="form-section">
-                                        <div class="section-header">
-                                            <h5><i class="fas fa-school me-2"></i>Academic Information</h5>
-                                        </div>
-                                        <div class="form-grid">
-                                            <div class="form-group">
-                                                <label class="form-label">Academic Year</label>
-                                                <div class="form-value" id="viewAcademicYear">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Registration No.</label>
-                                                <div class="form-value highlight" id="viewRegistrationNo">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Admission Date</label>
-                                                <div class="form-value" id="viewAdmissionDate">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Class</label>
-                                                <div class="form-value class-badge" id="viewClass">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Term</label>
-                                                <div class="form-value" id="viewTerm">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Category</label>
-                                                <div class="category-badges">
-                                                    <span class="category-badge day" id="dayBadge">
-                                                        <i class="fas fa-sun"></i> Day Student
-                                                    </span>
-                                                    <span class="category-badge boarding" id="boardingBadge">
-                                                        <i class="fas fa-home"></i> Boarding
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Personal Details Tab -->
-                                <div class="tab-pane fade" id="personal" role="tabpanel">
-                                    <div class="form-section">
-                                        <div class="section-header">
-                                            <h5><i class="fas fa-user me-2"></i>Personal Information</h5>
-                                        </div>
-                                        <div class="form-grid">
-                                            <div class="form-group full-width">
-                                                <div class="name-container">
-                                                    <div class="name-part">
-                                                        <label class="form-label">Surname</label>
-                                                        <div class="form-value" id="viewSurname">-</div>
-                                                    </div>
-                                                    <div class="name-part">
-                                                        <label class="form-label">First Name</label>
-                                                        <div class="form-value" id="viewFirstName">-</div>
-                                                    </div>
-                                                    <div class="name-part">
-                                                        <label class="form-label">Middle Name</label>
-                                                        <div class="form-value" id="viewMiddleName">-</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Gender</label>
-                                                <div class="form-value gender-badge" id="viewGender">
-                                                    <i class="fas fa-user"></i> -
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Date of Birth</label>
-                                                <div class="form-value" id="viewDateOfBirth">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Blood Group</label>
-                                                <div class="form-value blood-group" id="viewBloodGroup">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Mother Tongue</label>
-                                                <div class="form-value" id="viewMotherTongue">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Religion</label>
-                                                <div class="form-value" id="viewReligion">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Sport House</label>
-                                                <div class="form-value " id="viewSportHouse">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Mobile Number</label>
-                                                <div class="form-value contact" id="viewMobileNumber">
-                                                    <i class="fas fa-phone"></i> -
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Email</label>
-                                                <div class="form-value contact" id="viewEmail">
-                                                    <i class="fas fa-envelope"></i> -
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">NIN</label>
-                                                <div class="form-value" id="viewNIN">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">City</label>
-                                                <div class="form-value" id="viewCity">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">State</label>
-                                                <div class="form-value" id="viewState">-</div>
-                                            </div>
-                                            <div class="form-group full-width">
-                                                <label class="form-label">Permanent Address</label>
-                                                <div class="form-value address-field" id="viewPermanentAddress">-</div>
-                                            </div>
-                                            <div class="form-group full-width">
-                                                <label class="form-label">Future Ambition</label>
-                                                <div class="form-value address-field" id="viewFutureAmbition">-</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Guardian Details Tab -->
-                                <div class="tab-pane fade" id="guardian" role="tabpanel">
-                                    <div class="form-section">
-                                        <div class="section-header">
-                                            <h5><i class="fas fa-users me-2"></i>Guardian Information</h5>
-                                        </div>
-                                        <div class="form-grid">
-                                            <div class="form-group">
-                                                <label class="form-label">Father's Name</label>
-                                                <div class="form-value" id="viewFatherName">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Mother's Name</label>
-                                                <div class="form-value" id="viewMotherName">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Occupation</label>
-                                                <div class="form-value occupation-badge" id="viewOccupation">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">City</label>
-                                                <div class="form-value" id="viewParentCity">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Mobile Number</label>
-                                                <div class="form-value contact" id="viewParentMobile">
-                                                    <i class="fas fa-phone"></i> -
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Email</label>
-                                                <div class="form-value contact" id="viewParentEmail">
-                                                    <i class="fas fa-envelope"></i> -
-                                                </div>
-                                            </div>
-                                            <div class="form-group full-width">
-                                                <label class="form-label">Address</label>
-                                                <div class="form-value address-field" id="viewParentAddress">-</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Previous School Tab -->
-                                <div class="tab-pane fade" id="previous" role="tabpanel">
-                                    <div class="form-section">
-                                        <div class="section-header">
-                                            <h5><i class="fas fa-history me-2"></i>Previous School Information</h5>
-                                        </div>
-                                        <div class="form-grid">
-                                            <div class="form-group full-width">
-                                                <label class="form-label">School Name</label>
-                                                <div class="form-value school-name" id="viewSchoolName">
-                                                    <i class="fas fa-school"></i> -
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Previous Class</label>
-                                                <div class="form-value class-badge" id="viewPreviousClass">-</div>
-                                            </div>
-                                            <div class="form-group full-width">
-                                                <label class="form-label">Reason for Leaving</label>
-                                                <div class="form-value reason-field" id="viewReasonLeaving">-</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Modern Footer -->
-                    <div class="modal-footer modern-footer">
-                        <div class="footer-actions">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-2"></i>Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 // Initialize admission number on page load
 updateAdmissionNumber();
@@ -1908,7 +189,7 @@ function toggleView(viewType) {
     }
 }
 
-// Render students as cards
+// Render students as cards - SIMPLIFIED VERSION
 function renderStudentsCards(students) {
     console.log('Rendering students as cards:', students);
     const container = document.getElementById('studentsCardsContainer');
@@ -1941,15 +222,19 @@ function renderStudentsCards(students) {
     }
 
     students.forEach(student => {
+        console.log('Processing student for card:', student);
+
         // Get initials for avatar
         const firstName = student.firstname || '';
         const lastName = student.lastname || '';
         const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || '??';
 
-        // Get avatar URL
+        // Get avatar URL - handle different possible field names
         let avatarUrl = defaultAvatar;
         if (student.picture) {
             avatarUrl = `/storage/images/student_avatars/${student.picture}`;
+        } else if (student.avatar) {
+            avatarUrl = `/storage/images/student_avatars/${student.avatar}`;
         }
 
         // Determine status
@@ -2083,56 +368,65 @@ function initializeStudentCheckboxes() {
     });
 }
 
-// View student details
+// View student details - SIMPLIFIED
 function viewStudent(id) {
-    console.log('View student from card view:', id);
+    console.log('View student:', id);
     if (!ensureAxios()) return;
 
-    // Try multiple endpoints
-    const endpoints = [
-        `/student/${id}/view`,
-        `/student/${id}`,
-        `/api/student/${id}`
-    ];
+    // Try your working endpoint first
+    axios.get(`/student/${id}/edit`)
+        .then((response) => {
+            console.log('Student data received for view:', response.data);
+            let student = response.data.student || response.data;
 
-    let requestMade = false;
+            if (!student) {
+                throw new Error('Student data is empty');
+            }
 
-    for (const endpoint of endpoints) {
-        axios.get(endpoint)
-            .then((response) => {
-                if (requestMade) return;
-                requestMade = true;
+            // Populate the view modal
+            populateViewModal(student);
 
-                console.log('Student data received for view:', response.data);
-                let student = response.data.student || response.data.data || response.data;
-
-                if (!student) {
-                    throw new Error('Student data is empty');
-                }
-
-                populateViewModal(student);
-                // Show the view modal
-                const viewModal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
+            // Show the view modal
+            const viewModalElement = document.getElementById('viewStudentModal');
+            if (viewModalElement) {
+                const viewModal = new bootstrap.Modal(viewModalElement);
                 viewModal.show();
-            })
-            .catch((error) => {
-                console.log(`Endpoint ${endpoint} failed:`, error.message);
-                // Continue to next endpoint
-            });
-    }
+            } else {
+                console.error('View modal element not found');
+            }
+        })
+        .catch((error) => {
+            console.error('Error fetching student for view:', error);
 
-    // If all endpoints fail, show error
-    setTimeout(() => {
-        if (!requestMade) {
-            Swal.fire({
-                title: 'Error!',
-                text: 'Failed to load student data from all endpoints',
-                icon: 'error',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
-            });
-        }
-    }, 2000);
+            // Fallback: try the show endpoint
+            axios.get(`/student/${id}`)
+                .then((response) => {
+                    console.log('Student data received (fallback):', response.data);
+                    let student = response.data.student || response.data.data || response.data;
+
+                    if (!student) {
+                        throw new Error('Student data is empty');
+                    }
+
+                    populateViewModal(student);
+
+                    const viewModalElement = document.getElementById('viewStudentModal');
+                    if (viewModalElement) {
+                        const viewModal = new bootstrap.Modal(viewModalElement);
+                        viewModal.show();
+                    }
+                })
+                .catch((fallbackError) => {
+                    console.error('Fallback also failed:', fallbackError);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to load student data. Please try again.',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                });
+        });
 }
 
 // Function to populate view modal
@@ -2141,29 +435,37 @@ function populateViewModal(student) {
 
     // Student Photo
     const photoElement = document.getElementById('viewStudentPhoto');
-    if (photoElement && student.picture) {
-        photoElement.src = `/storage/images/student_avatars/${student.picture}`;
+    if (photoElement) {
+        if (student.picture) {
+            photoElement.src = `/storage/images/student_avatars/${student.picture}`;
+        } else if (student.avatar) {
+            photoElement.src = `/storage/images/student_avatars/${student.avatar}`;
+        }
     }
 
     // Academic Details
-    if (document.getElementById('viewAcademicYear')) {
-        document.getElementById('viewAcademicYear').textContent = student.admissionYear || '-';
+    document.getElementById('viewAcademicYear').textContent = student.admissionYear || student.admission_year || '-';
+    document.getElementById('viewRegistrationNo').textContent = student.admissionNo || student.admission_no || '-';
+
+    if (student.admissionDate) {
+        document.getElementById('viewAdmissionDate').textContent = new Date(student.admissionDate).toLocaleDateString();
+    } else {
+        document.getElementById('viewAdmissionDate').textContent = '-';
     }
-    if (document.getElementById('viewRegistrationNo')) {
-        document.getElementById('viewRegistrationNo').textContent = student.admissionNo || '-';
+
+    // Class information
+    const classElement = document.getElementById('viewClass');
+    if (classElement) {
+        if (student.schoolclass && student.arm) {
+            classElement.textContent = `${student.schoolclass} - ${student.arm}`;
+        } else if (student.class_name) {
+            classElement.textContent = student.class_name;
+        } else {
+            classElement.textContent = '-';
+        }
     }
-    if (document.getElementById('viewAdmissionDate')) {
-        document.getElementById('viewAdmissionDate').textContent = student.admissionDate ?
-            new Date(student.admissionDate).toLocaleDateString() : '-';
-    }
-    if (document.getElementById('viewClass')) {
-        const classValue = student.schoolclass ?
-            `${student.schoolclass}${student.arm ? ' - ' + student.arm : ''}` : '-';
-        document.getElementById('viewClass').textContent = classValue;
-    }
-    if (document.getElementById('viewTerm')) {
-        document.getElementById('viewTerm').textContent = student.term_name || student.term || '-';
-    }
+
+    document.getElementById('viewTerm').textContent = student.term_name || student.term || '-';
 
     // Category badges
     const dayBadge = document.getElementById('dayBadge');
@@ -2182,114 +484,92 @@ function populateViewModal(student) {
     }
 
     // Personal Details
-    if (document.getElementById('viewSurname')) {
-        document.getElementById('viewSurname').textContent = student.lastname || '-';
-    }
-    if (document.getElementById('viewFirstName')) {
-        document.getElementById('viewFirstName').textContent = student.firstname || '-';
-    }
-    if (document.getElementById('viewMiddleName')) {
-        document.getElementById('viewMiddleName').textContent = student.othername || '-';
-    }
-    if (document.getElementById('viewGender')) {
-        const genderElement = document.getElementById('viewGender');
+    document.getElementById('viewSurname').textContent = student.lastname || student.last_name || '-';
+    document.getElementById('viewFirstName').textContent = student.firstname || student.first_name || '-';
+    document.getElementById('viewMiddleName').textContent = student.othername || student.other_name || student.middle_name || '-';
+
+    const genderElement = document.getElementById('viewGender');
+    if (genderElement) {
         const gender = student.gender || '-';
         genderElement.innerHTML = gender === 'Male' ?
             '<i class="fas fa-male"></i> Male' :
             gender === 'Female' ? '<i class="fas fa-female"></i> Female' :
             '<i class="fas fa-user"></i> -';
     }
-    if (document.getElementById('viewDateOfBirth')) {
-        document.getElementById('viewDateOfBirth').textContent = student.dateofbirth ?
-            new Date(student.dateofbirth).toLocaleDateString() : '-';
+
+    if (student.dateofbirth) {
+        document.getElementById('viewDateOfBirth').textContent = new Date(student.dateofbirth).toLocaleDateString();
+    } else {
+        document.getElementById('viewDateOfBirth').textContent = '-';
     }
-    if (document.getElementById('viewBloodGroup')) {
-        document.getElementById('viewBloodGroup').textContent = student.blood_group || '-';
+
+    document.getElementById('viewBloodGroup').textContent = student.blood_group || '-';
+    document.getElementById('viewMotherTongue').textContent = student.mother_tongue || '-';
+    document.getElementById('viewReligion').textContent = student.religion || '-';
+    document.getElementById('viewSportHouse').textContent = student.school_house || student.sport_house || '-';
+
+    const mobileElement = document.getElementById('viewMobileNumber');
+    if (mobileElement) {
+        const phone = student.phone_number || '-';
+        mobileElement.innerHTML = phone !== '-' ?
+            `<i class="fas fa-phone"></i> ${phone}` : '-';
     }
-    if (document.getElementById('viewMotherTongue')) {
-        document.getElementById('viewMotherTongue').textContent = student.mother_tongue || '-';
-    }
-    if (document.getElementById('viewReligion')) {
-        document.getElementById('viewReligion').textContent = student.religion || '-';
-    }
-    if (document.getElementById('viewSportHouse')) {
-        document.getElementById('viewSportHouse').textContent = student.school_house || student.sport_house || '-';
-    }
-    if (document.getElementById('viewMobileNumber')) {
-        const mobileNumber = student.phone_number || '-';
-        document.getElementById('viewMobileNumber').innerHTML = mobileNumber !== '-' ?
-            `<i class="fas fa-phone"></i> ${mobileNumber}` : '-';
-    }
-    if (document.getElementById('viewEmail')) {
+
+    const emailElement = document.getElementById('viewEmail');
+    if (emailElement) {
         const email = student.email || '-';
-        document.getElementById('viewEmail').innerHTML = email !== '-' ?
+        emailElement.innerHTML = email !== '-' ?
             `<i class="fas fa-envelope"></i> ${email}` : '-';
     }
-    if (document.getElementById('viewNIN')) {
-        document.getElementById('viewNIN').textContent = student.nin_number || '-';
-    }
-    if (document.getElementById('viewCity')) {
-        document.getElementById('viewCity').textContent = student.city || '-';
-    }
-    if (document.getElementById('viewState')) {
-        document.getElementById('viewState').textContent = student.state || '-';
-    }
-    if (document.getElementById('viewPermanentAddress')) {
-        document.getElementById('viewPermanentAddress').textContent = student.permanent_address || '-';
-    }
-    if (document.getElementById('viewFutureAmbition')) {
-        document.getElementById('viewFutureAmbition').textContent = student.future_ambition || '-';
-    }
+
+    document.getElementById('viewNIN').textContent = student.nin_number || '-';
+    document.getElementById('viewCity').textContent = student.city || '-';
+    document.getElementById('viewState').textContent = student.state || '-';
+    document.getElementById('viewPermanentAddress').textContent = student.permanent_address || '-';
+    document.getElementById('viewFutureAmbition').textContent = student.future_ambition || '-';
 
     // Guardian Details
-    if (document.getElementById('viewFatherName')) {
-        document.getElementById('viewFatherName').textContent = student.father_name || '-';
-    }
-    if (document.getElementById('viewMotherName')) {
-        document.getElementById('viewMotherName').textContent = student.mother_name || '-';
-    }
-    if (document.getElementById('viewOccupation')) {
-        document.getElementById('viewOccupation').textContent = student.father_occupation || '-';
-    }
-    if (document.getElementById('viewParentCity')) {
-        document.getElementById('viewParentCity').textContent = student.father_city || '-';
-    }
-    if (document.getElementById('viewParentMobile')) {
+    document.getElementById('viewFatherName').textContent = student.father_name || '-';
+    document.getElementById('viewMotherName').textContent = student.mother_name || '-';
+    document.getElementById('viewOccupation').textContent = student.father_occupation || '-';
+    document.getElementById('viewParentCity').textContent = student.father_city || '-';
+
+    const parentMobileElement = document.getElementById('viewParentMobile');
+    if (parentMobileElement) {
         const parentPhone = student.father_phone || student.mother_phone || '-';
-        document.getElementById('viewParentMobile').innerHTML = parentPhone !== '-' ?
+        parentMobileElement.innerHTML = parentPhone !== '-' ?
             `<i class="fas fa-phone"></i> ${parentPhone}` : '-';
     }
-    if (document.getElementById('viewParentEmail')) {
+
+    const parentEmailElement = document.getElementById('viewParentEmail');
+    if (parentEmailElement) {
         const parentEmail = student.parent_email || '-';
-        document.getElementById('viewParentEmail').innerHTML = parentEmail !== '-' ?
+        parentEmailElement.innerHTML = parentEmail !== '-' ?
             `<i class="fas fa-envelope"></i> ${parentEmail}` : '-';
     }
-    if (document.getElementById('viewParentAddress')) {
-        document.getElementById('viewParentAddress').textContent = student.parent_address || '-';
-    }
+
+    document.getElementById('viewParentAddress').textContent = student.parent_address || '-';
 
     // Previous School Details
-    if (document.getElementById('viewSchoolName')) {
+    const schoolElement = document.getElementById('viewSchoolName');
+    if (schoolElement) {
         const schoolName = student.last_school || '-';
-        document.getElementById('viewSchoolName').innerHTML = schoolName !== '-' ?
+        schoolElement.innerHTML = schoolName !== '-' ?
             `<i class="fas fa-school"></i> ${schoolName}` : '-';
     }
-    if (document.getElementById('viewPreviousClass')) {
-        document.getElementById('viewPreviousClass').textContent = student.last_class || '-';
-    }
-    if (document.getElementById('viewReasonLeaving')) {
-        document.getElementById('viewReasonLeaving').textContent = student.reason_for_leaving || '-';
-    }
+
+    document.getElementById('viewPreviousClass').textContent = student.last_class || '-';
+    document.getElementById('viewReasonLeaving').textContent = student.reason_for_leaving || '-';
 }
 
 function editStudent(id) {
-    console.log('Edit student from card view:', id);
+    console.log('Edit student:', id);
     if (!ensureAxios()) return;
 
     axios.get(`/student/${id}/edit`)
         .then((response) => {
             console.log('Student data received for edit:', response.data);
-            let student = response.data.student || response.data.data || response.data;
+            let student = response.data.student || response.data;
 
             if (!student) {
                 throw new Error('Student data is empty');
@@ -2299,8 +579,11 @@ function editStudent(id) {
             populateEditForm(student);
 
             // Show the edit modal
-            const editModal = new bootstrap.Modal(document.getElementById('editStudentModal'));
-            editModal.show();
+            const editModalElement = document.getElementById('editStudentModal');
+            if (editModalElement) {
+                const editModal = new bootstrap.Modal(editModalElement);
+                editModal.show();
+            }
         })
         .catch((error) => {
             console.error('Error editing student:', error);
@@ -2324,12 +607,17 @@ function deleteStudent(id) {
         buttonsStyling: false
     }).then((result) => {
         if (result.isConfirmed && ensureAxios()) {
-            axios.delete(`/student/${id}`)
+            axios.delete(`/student/${id}/destroy`)
                 .then(() => {
                     // Remove the card
                     const card = document.querySelector(`.student-card[data-id="${id}"]`);
                     if (card) {
                         card.closest('.col-xl-3').remove();
+                    }
+                    // Remove the table row
+                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    if (row) {
+                        row.remove();
                     }
                     // Refresh the list
                     fetchStudents();
@@ -2355,102 +643,84 @@ function deleteStudent(id) {
     });
 }
 
-// Fetch students from the server
+// Fetch students from the server - SIMPLIFIED
 function fetchStudents() {
     if (!ensureAxios()) return;
     console.log('Fetching students from /students/data');
 
-    const endpoints = [
-        '/students/data',
-        '/api/students',
-        '/student/data'
-    ];
+    axios.get('/students/data')
+        .then((response) => {
+            console.log('Full API response:', response.data);
 
-    let requestMade = false;
+            let studentsArray = [];
 
-    for (const endpoint of endpoints) {
-        axios.get(endpoint)
-            .then((response) => {
-                if (requestMade) return;
-                requestMade = true;
+            // Handle different response formats
+            if (Array.isArray(response.data)) {
+                studentsArray = response.data;
+            } else if (response.data.students && Array.isArray(response.data.students)) {
+                studentsArray = response.data.students;
+            } else if (response.data.data && Array.isArray(response.data.data)) {
+                studentsArray = response.data.data;
+            } else if (response.data.success && Array.isArray(response.data.data)) {
+                studentsArray = response.data.data;
+            } else {
+                console.log('Unexpected response format, trying to extract students:', response.data);
+                // Try to extract students from the response
+                studentsArray = Object.values(response.data).filter(item =>
+                    item && (item.id || item.student_id)
+                );
+            }
 
-                console.log('Full API response from', endpoint, ':', response.data);
+            console.log('Students array:', studentsArray);
 
-                let studentsArray = [];
+            if (studentsArray.length > 0) {
+                console.log('First student data:', studentsArray[0]);
+            }
 
-                // Handle different response formats
-                if (Array.isArray(response.data)) {
-                    studentsArray = response.data;
-                } else if (response.data.students && Array.isArray(response.data.students)) {
-                    studentsArray = response.data.students;
-                } else if (response.data.data && Array.isArray(response.data.data)) {
-                    studentsArray = response.data.data;
-                } else if (response.data.success && Array.isArray(response.data.data)) {
-                    studentsArray = response.data.data;
-                } else {
-                    throw new Error('Invalid response format');
-                }
+            allStudents = studentsArray.map(student => ({
+                id: student.id || student.student_id || '',
+                admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
+                firstname: student.firstname || student.first_name || '',
+                lastname: student.lastname || student.last_name || '',
+                othername: student.othername || student.other_name || student.middle_name || '',
+                gender: student.gender || '',
+                statusId: student.statusId || student.status_id || student.student_status_id || '',
+                student_status: student.student_status || student.status || '',
+                created_at: student.created_at || student.created_date || student.registration_date || '',
+                picture: student.picture || student.avatar || student.profile_picture || '',
+                schoolclass: student.schoolclass || student.class || student.class_name || '',
+                arm: student.arm || student.section || '',
+                schoolclassid: student.schoolclassid || student.class_id || ''
+            }));
 
-                console.log('Students array:', studentsArray);
+            console.log('Processed students:', allStudents);
+            console.log('Processed students count:', allStudents.length);
 
-                // Log first student to see structure
-                if (studentsArray.length > 0) {
-                    console.log('First student data:', studentsArray[0]);
-                }
+            // Update counts
+            updateCounts(allStudents.length);
 
-                allStudents = studentsArray.map(student => ({
-                    id: student.id || student.student_id || '',
-                    admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
-                    firstname: student.firstname || student.first_name || '',
-                    lastname: student.lastname || student.last_name || '',
-                    othername: student.othername || student.other_name || student.middle_name || '',
-                    gender: student.gender || '',
-                    statusId: student.statusId || student.status_id || student.student_status_id || '',
-                    student_status: student.student_status || student.status || '',
-                    created_at: student.created_at || student.created_date || student.registration_date || '',
-                    picture: student.picture || student.avatar || student.profile_picture || '',
-                    schoolclass: student.schoolclass || student.class || student.class_name || '',
-                    arm: student.arm || student.section || '',
-                    schoolclassid: student.schoolclassid || student.class_id || ''
-                }));
+            // Check which view is active and render accordingly
+            const tableView = document.getElementById('tableView');
+            const isTableView = !tableView.classList.contains('d-none');
 
-                console.log('Processed students:', allStudents);
-                console.log('Processed students count:', allStudents.length);
-
-                // Update counts
-                updateCounts(allStudents.length);
-
-                // Check which view is active and render accordingly
-                const tableView = document.getElementById('tableView');
-                const isTableView = !tableView.classList.contains('d-none');
-
-                if (isTableView) {
-                    renderStudents(allStudents);
-                } else {
-                    renderStudentsCards(allStudents);
-                }
-            })
-            .catch((error) => {
-                console.log(`Endpoint ${endpoint} failed:`, error.message);
-                // Continue to next endpoint
-            });
-    }
-
-    // If all endpoints fail, show error
-    setTimeout(() => {
-        if (!requestMade) {
-            console.error('All student endpoints failed');
+            if (isTableView) {
+                renderStudents(allStudents);
+            } else {
+                renderStudentsCards(allStudents);
+            }
+        })
+        .catch((error) => {
+            console.error('Error fetching students:', error);
             Swal.fire({
                 title: "Error!",
-                text: "Failed to load students from all endpoints",
+                text: "Failed to load students. Please try again.",
                 icon: "error",
                 customClass: { confirmButton: "btn btn-primary" },
                 buttonsStyling: false
             });
             renderStudents([]);
             renderStudentsCards([]);
-        }
-    }, 3000);
+        });
 }
 
 // Render students in the table
@@ -2459,13 +729,6 @@ function renderStudents(students) {
     const tbody = document.getElementById('studentTableBody');
     if (!tbody) {
         console.error('studentTableBody element not found');
-        Swal.fire({
-            title: "Error!",
-            text: "Table body element not found",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
         return;
     }
 
@@ -2493,13 +756,11 @@ function renderStudents(students) {
             <td class="name" data-name="${student.lastname} ${student.firstname} ${student.othername || ''}">
                 <div class="d-flex align-items-center">
                     <div class="symbol symbol-50px me-3">
-                        <img src="${studentImage}" alt="" class="rounded-circle avatar-sm student-image" style="object-fit:cover;" data-bs-toggle="modal" data-bs-target="#imageViewModal" data-image="${studentImage}"/>
+                        <img src="${studentImage}" alt="" class="rounded-circle avatar-sm student-image" style="object-fit:cover; width: 50px; height: 50px;"/>
                     </div>
                     <div>
                         <h6 class="mb-0">
-                            <a href="/student/${student.id}" class="text-reset products">
-                                <b>${student.lastname}</b> ${student.firstname} ${student.othername || ''}
-                            </a>
+                            <b>${student.lastname}</b> ${student.firstname} ${student.othername || ''}
                         </h6>
                     </div>
                 </div>
@@ -2520,7 +781,6 @@ function renderStudents(students) {
         tbody.appendChild(row);
     });
 
-    console.log('Table rows after rendering:', tbody.innerHTML);
     updatePagination();
     initializeCheckboxes();
 }
@@ -2562,6 +822,8 @@ function updatePagination() {
 
             if (isTableView) {
                 renderStudents(pageStudents);
+            } else {
+                renderStudentsCards(pageStudents);
             }
 
             document.getElementById('showingCount').textContent = pageStudents.length;
@@ -2586,6 +848,8 @@ function updatePagination() {
 
             if (isTableView) {
                 renderStudents(pageStudents);
+            } else {
+                renderStudentsCards(pageStudents);
             }
 
             updatePaginationForPage(newPage);
@@ -2606,6 +870,8 @@ function updatePagination() {
 
             if (isTableView) {
                 renderStudents(pageStudents);
+            } else {
+                renderStudentsCards(pageStudents);
             }
 
             updatePaginationForPage(newPage);
@@ -2709,7 +975,7 @@ function deleteMultiple() {
         if (result.isConfirmed && ensureAxios()) {
             // Delete each student individually
             const deletePromises = ids.map(id =>
-                axios.delete(`/student/${id}`)
+                axios.delete(`/student/${id}/destroy`)
             );
 
             Promise.all(deletePromises)
@@ -2766,29 +1032,6 @@ function initializeCheckboxes() {
 function populateEditForm(student) {
     console.log('Populating edit form with student:', student);
 
-    // Clear any numbers at the top
-    const editModalContent = document.querySelector('#editStudentModal .modal-content');
-    if (editModalContent) {
-        const textNodes = [];
-        const walker = document.createTreeWalker(
-            editModalContent,
-            NodeFilter.SHOW_TEXT,
-            null,
-            false
-        );
-
-        let node;
-        while (node = walker.nextNode()) {
-            if (node.textContent.trim() && /^\d+$/.test(node.textContent.trim())) {
-                textNodes.push(node);
-            }
-        }
-
-        textNodes.forEach(node => {
-            node.parentNode.removeChild(node);
-        });
-    }
-
     // Updated fields array
     const fields = [
         { id: 'editStudentId', value: student.id },
@@ -2799,7 +1042,6 @@ function populateEditForm(student) {
         { id: 'editFirstname', value: student.firstname || student.first_name || '' },
         { id: 'editLastname', value: student.lastname || student.last_name || '' },
         { id: 'editOthername', value: student.othername || student.other_name || student.middle_name || '' },
-        { id: 'editPresentAddress', value: student.present_address || '' },
         { id: 'editPermanentAddress', value: student.permanent_address || '' },
         { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
         { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
@@ -2828,9 +1070,6 @@ function populateEditForm(student) {
         { id: 'editParentEmail', value: student.parent_email || '' },
         { id: 'editParentAddress', value: student.parent_address || '' },
         { id: 'editStudentCategory', value: student.student_category || '' },
-        { id: 'editLastSchool', value: student.last_school || '' },
-        { id: 'editLastClass', value: student.last_class || '' },
-        { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' },
         { id: 'editSchoolHouse', value: student.school_house || student.sport_house || '' }
     ];
 
@@ -2881,8 +1120,6 @@ function populateEditForm(student) {
         avatarElement.src = avatarUrl;
         avatarElement.setAttribute('data-original-src', avatarUrl);
         console.log('Set avatar to:', avatarUrl);
-    } else {
-        console.warn('Avatar element with ID "editStudentAvatar" not found');
     }
 
     // Calculate age if date of birth exists
@@ -2913,16 +1150,12 @@ window.showage = function (date, displayId = 'addAge') {
         const ageInput = document.getElementById(ageInputId);
         if (ageInput) {
             ageInput.value = age;
-        } else {
-            console.warn(`Age input element with ID '${ageInputId}' not found`);
         }
     } else {
         const ageInputId = displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput';
         const ageInput = document.getElementById(ageInputId);
         if (ageInput) {
             ageInput.value = '';
-        } else {
-            console.warn(`Age input element with ID '${ageInputId}' not found`);
         }
     }
 };
@@ -2967,75 +1200,6 @@ function initializeStudentList() {
     if (genderFilter) {
         genderFilter.addEventListener('change', filterData);
     }
-
-    // Add event listeners for table actions
-    const tableBody = document.getElementById('studentTableBody');
-    if (tableBody) {
-        tableBody.addEventListener('click', function(e) {
-            // View button
-            if (e.target.closest('.view-item-btn')) {
-                const button = e.target.closest('.view-item-btn');
-                const id = button.getAttribute('data-id');
-                console.log('View button clicked for student ID:', id);
-                viewStudent(id);
-            }
-
-            // Edit button
-            if (e.target.closest('.edit-item-btn')) {
-                const button = e.target.closest('.edit-item-btn');
-                const id = button.getAttribute('data-id');
-                console.log('Edit button clicked for student ID:', id);
-                editStudent(id);
-            }
-
-            // Delete button
-            if (e.target.closest('.remove-item-btn')) {
-                const button = e.target.closest('.remove-item-btn');
-                const id = button.getAttribute('data-id');
-                console.log('Delete button clicked for student ID:', id);
-
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: "You won't be able to revert this!",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' },
-                    buttonsStyling: false
-                }).then((result) => {
-                    if (result.isConfirmed && ensureAxios()) {
-                        axios.delete(`/student/${id}`)
-                            .then(() => {
-                                // Remove the row
-                                const row = document.querySelector(`tr[data-id="${id}"]`);
-                                if (row) {
-                                    row.remove();
-                                    // Update counts
-                                    allStudents = allStudents.filter(s => s.id != id);
-                                    updateCounts(allStudents.length);
-                                }
-                                Swal.fire({
-                                    title: 'Deleted!',
-                                    text: 'Student has been deleted',
-                                    icon: 'success',
-                                    customClass: { confirmButton: 'btn btn-primary' },
-                                    buttonsStyling: false
-                                });
-                            })
-                            .catch((error) => {
-                                console.error('Error deleting student:', error);
-                                Swal.fire({
-                                    title: 'Error!',
-                                    text: error.response?.data?.message || 'Failed to delete student',
-                                    icon: 'error',
-                                    customClass: { confirmButton: 'btn btn-primary' },
-                                    buttonsStyling: false
-                                });
-                            });
-                    }
-                });
-            }
-        });
-    }
 }
 
 // Call initializeStudentList on page load
@@ -3044,4 +1208,3 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeStudentList();
 });
 </script>
-@endsection
