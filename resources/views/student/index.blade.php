@@ -1742,7 +1742,7 @@ function toggleView(viewType) {
     }
 }
 
-// Render students as cards
+// Render students as cards - FIXED VERSION
 function renderStudentsCards(students) {
     console.log('Rendering students as cards:', students);
     const container = document.getElementById('studentsCardsContainer');
@@ -1803,63 +1803,74 @@ function renderStudentsCards(students) {
             day: 'numeric'
         }) : 'N/A';
 
-        const cardHtml = `
-            <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
-                <div class="student-card" data-id="${student.id}"
-                     data-name="${student.lastname} ${student.firstname} ${student.othername}"
-                     data-admission="${student.admissionNo}"
-                     data-class="${student.schoolclassid}"
-                     data-status="${student.statusId}"
-                     data-gender="${student.gender}"
-                     data-student-status="${student.student_status}">
+        // Escape any special characters in student names
+        const safeLastName = student.lastname ? student.lastname.replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
+        const safeFirstName = student.firstname ? student.firstname.replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
+        const safeOtherName = student.othername ? student.othername.replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
 
-                    <!-- Checkbox for bulk selection -->
-                    <div class="checkbox-container">
-                        <div class="form-check">
-                            <input class="form-check-input student-checkbox" type="checkbox" name="chk_child" value="${student.id}">
-                        </div>
+        // Create card HTML
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'col-xl-3 col-lg-4 col-md-6 col-sm-6';
+
+        // Build the avatar HTML separately to handle quotes properly
+        let avatarHtml = '';
+        if (student.picture) {
+            avatarHtml = `<img src="${avatarUrl}" alt="${safeFirstName} ${safeLastName}" class="avatar" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=&quot;avatar-initials&quot;>${initials}</div>';" />`;
+        } else {
+            avatarHtml = `<div class="avatar-initials">${initials}</div>`;
+        }
+
+        cardDiv.innerHTML = `
+            <div class="student-card" data-id="${student.id}"
+                 data-name="${safeLastName} ${safeFirstName} ${safeOtherName}"
+                 data-admission="${student.admissionNo || ''}"
+                 data-class="${student.schoolclassid || ''}"
+                 data-status="${student.statusId || ''}"
+                 data-gender="${student.gender || ''}"
+                 data-student-status="${student.student_status || ''}">
+
+                <!-- Checkbox for bulk selection -->
+                <div class="checkbox-container">
+                    <div class="form-check">
+                        <input class="form-check-input student-checkbox" type="checkbox" name="chk_child" value="${student.id}">
                     </div>
+                </div>
 
-                    <!-- Status Badge -->
-                    <span class="status-badge ${statusClass}">${statusText}</span>
+                <!-- Status Badge -->
+                <span class="status-badge ${statusClass}">${statusText}</span>
 
-                    <!-- Action Buttons -->
-                    <div class="action-buttons">
-                        <button class="action-btn view-btn" title="View Details" onclick="viewStudent(${student.id})">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="action-btn edit-btn" title="Edit" onclick="editStudent(${student.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="action-btn delete-btn" title="Delete" onclick="deleteStudent(${student.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn view-btn" title="View Details" onclick="viewStudent(${student.id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn edit-btn" title="Edit" onclick="editStudent(${student.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete-btn" title="Delete" onclick="deleteStudent(${student.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
 
-                    <!-- Avatar with initials fallback -->
-                    <div class="avatar-container">
-                        ${student.picture ?
-                            `<img src="${avatarUrl}" alt="${student.firstname} ${student.lastname}" class="avatar"
-                                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\"avatar-initials\">${initials}</div>';">` :
-                            `<div class="avatar-initials">${initials}</div>`
-                        }
-                    </div>
+                <!-- Avatar with initials fallback -->
+                <div class="avatar-container">
+                    ${avatarHtml}
+                </div>
 
-                    <!-- Student Information -->
-                    <h6 class="student-name">${student.lastname} ${student.firstname}</h6>
-                    <p class="student-admission">${student.admissionNo || 'No Admission No'}</p>
+                <!-- Student Information -->
+                <h6 class="student-name">${safeLastName} ${safeFirstName}</h6>
+                <p class="student-admission">${student.admissionNo || 'No Admission No'}</p>
 
-                    <div class="student-details">
-                        <div><strong>Class:</strong> ${student.schoolclass || 'N/A'} ${student.arm || ''}</div>
-                        <div><strong>Type:</strong> ${studentType}</div>
-                        <div><strong>Gender:</strong> ${student.gender || 'N/A'}</div>
-                        <div><strong>Registered:</strong> ${regDate}</div>
-                    </div>
+                <div class="student-details">
+                    <div><strong>Class:</strong> ${student.schoolclass || 'N/A'} ${student.arm || ''}</div>
+                    <div><strong>Type:</strong> ${studentType}</div>
+                    <div><strong>Gender:</strong> ${student.gender || 'N/A'}</div>
+                    <div><strong>Registered:</strong> ${regDate}</div>
                 </div>
             </div>
         `;
 
-        container.innerHTML += cardHtml;
+        container.appendChild(cardDiv);
     });
 
     initializeStudentCheckboxes();
@@ -2014,10 +2025,18 @@ function fetchStudents() {
     console.log('Fetching students from /students/data');
     axios.get('/students/data')
         .then((response) => {
-            console.log('Students data received:', response.data);
+            console.log('Full API response:', response.data);
+            console.log('Students array:', response.data.students);
+
             if (!response.data.success || !Array.isArray(response.data.students)) {
                 throw new Error(response.data.message || 'Invalid response format');
             }
+
+            // Log first student to see structure
+            if (response.data.students.length > 0) {
+                console.log('First student data:', response.data.students[0]);
+            }
+
             allStudents = response.data.students.map(student => ({
                 id: student.id || '',
                 admissionNo: student.admissionNo || '',
@@ -2033,7 +2052,9 @@ function fetchStudents() {
                 arm: student.arm || '',
                 schoolclassid: student.schoolclassid || ''
             }));
-            console.log('Processed students:', allStudents.length);
+
+            console.log('Processed students:', allStudents);
+            console.log('Processed students count:', allStudents.length);
 
             // Update counts
             document.querySelector('#totalStudents').textContent = allStudents.length;
@@ -2052,6 +2073,7 @@ function fetchStudents() {
         })
         .catch((error) => {
             console.error('Error fetching students:', error);
+            console.error('Error response:', error.response);
             Swal.fire({
                 title: "Error!",
                 text: error.response?.data?.message || error.message || "Failed to load students.",
@@ -2066,7 +2088,7 @@ function fetchStudents() {
 
 // Render students in the table
 function renderStudents(students) {
-    console.log('Rendering students:', students);
+    console.log('Rendering students in table:', students);
     const tbody = document.getElementById('studentTableBody');
     if (!tbody) {
         console.error('studentTableBody element not found');
@@ -2088,7 +2110,7 @@ function renderStudents(students) {
         return;
     }
     students.forEach(student => {
-        console.log('Rendering student:', student);
+        console.log('Rendering student in table:', student);
         const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
 
         const actionButtons = [
@@ -2096,7 +2118,7 @@ function renderStudents(students) {
             `<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal" title="Edit"><i class="ph-pencil"></i></a></li>`,
             `<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}" title="Delete"><i class="ph-trash"></i></a></li>`
         ];
-        console.log('Action buttons for student:', actionButtons);
+
         const row = document.createElement('tr');
         row.setAttribute('data-id', student.id);
         row.innerHTML = `
@@ -2132,6 +2154,7 @@ function renderStudents(students) {
         `;
         tbody.appendChild(row);
     });
+
     console.log('Table rows after rendering:', tbody.innerHTML);
     initializeList();
     initializeCheckboxes();
@@ -2150,6 +2173,14 @@ function initializeList() {
         });
         return;
     }
+
+    // Find the main container
+    const listContainer = document.querySelector('.card-body');
+    if (!listContainer) {
+        console.error('List container not found');
+        return;
+    }
+
     const options = {
         valueNames: ['name', 'admissionNo', 'class', 'status', 'gender', 'datereg'],
         page: itemsPerPage,
@@ -2171,8 +2202,9 @@ function initializeList() {
             </tr>
         `
     };
+
     try {
-        studentList = new List('studentList', options);
+        studentList = new List(listContainer, options);
         studentList.on('updated', function () {
             updatePagination();
             document.getElementById('showingCount').textContent = studentList.visibleItems.length;
@@ -2198,6 +2230,9 @@ function updatePagination() {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const currentPage = studentList.page ? Math.ceil(studentList.i / itemsPerPage) : 1;
     const paginationLinks = document.getElementById('paginationLinks');
+
+    if (!paginationLinks) return;
+
     paginationLinks.innerHTML = '';
 
     for (let i = 1; i <= totalPages; i++) {
@@ -2210,10 +2245,18 @@ function updatePagination() {
         paginationLinks.appendChild(li);
     }
 
-    document.getElementById('prevPage').classList.toggle('disabled', currentPage === 1);
-    document.getElementById('nextPage').classList.toggle('disabled', currentPage === totalPages);
-    document.getElementById('prevPage').onclick = currentPage > 1 ? () => studentList.show((currentPage - 2) * itemsPerPage + 1, itemsPerPage) : null;
-    document.getElementById('nextPage').onclick = currentPage < totalPages ? () => studentList.show(currentPage * itemsPerPage + 1, itemsPerPage) : null;
+    const prevPage = document.getElementById('prevPage');
+    const nextPage = document.getElementById('nextPage');
+
+    if (prevPage) {
+        prevPage.classList.toggle('disabled', currentPage === 1);
+        prevPage.onclick = currentPage > 1 ? () => studentList.show((currentPage - 2) * itemsPerPage + 1, itemsPerPage) : null;
+    }
+
+    if (nextPage) {
+        nextPage.classList.toggle('disabled', currentPage === totalPages);
+        nextPage.onclick = currentPage < totalPages ? () => studentList.show(currentPage * itemsPerPage + 1, itemsPerPage) : null;
+    }
 }
 
 // Filter function for both views
@@ -2371,6 +2414,7 @@ function deleteMultiple() {
 function initializeCheckboxes() {
     const checkAll = document.getElementById('checkAll');
     if (!checkAll) return;
+
     checkAll.addEventListener('change', function () {
         document.querySelectorAll('input[name="chk_child"]').forEach(checkbox => {
             checkbox.checked = this.checked;
@@ -2710,389 +2754,422 @@ function initializeStudentList() {
     // Populate states and LGAs
     populateStates('addState', 'addLocal');
     populateStates('editState', 'editLocal');
+
+    // Initial fetch of students
     fetchStudents();
 
     // Initialize view toggle
-    document.getElementById('tableViewBtn')?.addEventListener('click', () => toggleView('table'));
-    document.getElementById('cardViewBtn')?.addEventListener('click', () => toggleView('card'));
+    const tableViewBtn = document.getElementById('tableViewBtn');
+    const cardViewBtn = document.getElementById('cardViewBtn');
+
+    if (tableViewBtn) {
+        tableViewBtn.addEventListener('click', () => toggleView('table'));
+    }
+
+    if (cardViewBtn) {
+        cardViewBtn.addEventListener('click', () => toggleView('card'));
+    }
 
     // Filter event listeners
-    document.querySelector('#search-input')?.addEventListener('input', filterData);
-    document.getElementById('schoolclass-filter')?.addEventListener('change', filterData);
-    document.getElementById('status-filter')?.addEventListener('change', filterData);
-    document.getElementById('gender-filter')?.addEventListener('change', filterData);
+    const searchInput = document.querySelector('#search-input');
+    const schoolClassFilter = document.getElementById('schoolclass-filter');
+    const statusFilter = document.getElementById('status-filter');
+    const genderFilter = document.getElementById('gender-filter');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', filterData);
+    }
+
+    if (schoolClassFilter) {
+        schoolClassFilter.addEventListener('change', filterData);
+    }
+
+    if (statusFilter) {
+        statusFilter.addEventListener('change', filterData);
+    }
+
+    if (genderFilter) {
+        genderFilter.addEventListener('change', filterData);
+    }
 
     // Avatar upload for Add Student modal
-    document.getElementById('avatar')?.addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        const preview = document.getElementById('addStudentAvatar');
-        if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                Swal.fire({
-                    title: "Error!",
-                    text: "File size exceeds 2MB limit.",
-                    icon: "error",
-                    customClass: { confirmButton: "btn btn-info" },
-                    buttonsStyling: false
-                });
-                event.target.value = '';
+    const avatarInput = document.getElementById('avatar');
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('addStudentAvatar');
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "File size exceeds 2MB limit.",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-info" },
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = defaultAvatar;
+                    return;
+                }
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                if (!allowedTypes.includes(file.type)) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "Only PNG, JPG, and JPEG files are allowed.",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-info" },
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = defaultAvatar;
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
                 preview.src = defaultAvatar;
-                return;
-            }
-            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-            if (!allowedTypes.includes(file.type)) {
-                Swal.fire({
-                    title: "Error!",
-                    text: "Only PNG, JPG, and JPEG files are allowed.",
-                    icon: "error",
-                    customClass: { confirmButton: "btn btn-info" },
-                    buttonsStyling: false
-                });
-                event.target.value = '';
-                preview.src = defaultAvatar;
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                preview.src = e.target.result;
                 preview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        } else {
-            preview.src = defaultAvatar;
-            preview.style.display = 'block';
-        }
-    });
+            }
+        });
+    }
 
     // Avatar upload for Edit Student modal
-    document.getElementById('editAvatar')?.addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        const preview = document.getElementById('editStudentAvatar');
-        if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                Swal.fire({
-                    title: "Error!",
-                    text: "File size exceeds 2MB limit.",
-                    icon: "error",
-                    customClass: { confirmButton: "btn btn-info" },
-                    buttonsStyling: false
-                });
-                event.target.value = '';
+    const editAvatarInput = document.getElementById('editAvatar');
+    if (editAvatarInput) {
+        editAvatarInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('editStudentAvatar');
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "File size exceeds 2MB limit.",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-info" },
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
+                    return;
+                }
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                if (!allowedTypes.includes(file.type)) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "Only PNG, JPG, and JPEG files are allowed.",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-info" },
+                        buttonsStyling: false
+                    });
+                    event.target.value = '';
+                    preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
                 preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
-                return;
             }
-            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-            if (!allowedTypes.includes(file.type)) {
-                Swal.fire({
-                    title: "Error!",
-                    text: "Only PNG, JPG, and JPEG files are allowed.",
-                    icon: "error",
-                    customClass: { confirmButton: "btn btn-info" },
-                    buttonsStyling: false
-                });
-                event.target.value = '';
-                preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                preview.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        } else {
-            preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
-        }
-    });
+        });
+    }
 
     // Table row click events (Edit/Delete)
-    document.getElementById('studentTableBody')?.addEventListener('click', function(e) {
-        if (e.target.closest('.view-item-btn')) {
-            const button = e.target.closest('.view-item-btn');
-            const id = button.getAttribute('data-id');
-            console.log('View button clicked for student ID:', id);
-            if (!ensureAxios()) return;
+    const tableBody = document.getElementById('studentTableBody');
+    if (tableBody) {
+        tableBody.addEventListener('click', function(e) {
+            if (e.target.closest('.view-item-btn')) {
+                const button = e.target.closest('.view-item-btn');
+                const id = button.getAttribute('data-id');
+                console.log('View button clicked for student ID:', id);
+                if (!ensureAxios()) return;
 
-            // Try to get more detailed student data with relationships
-            axios.get(`/student/${id}/view`).then((response) => {
-                console.log('Student data received for view:', response.data);
-                const student = response.data.student || response.data;
-                if (!student) {
-                    throw new Error('Student data is empty');
-                }
-
-                // Populate the view modal with student data
-                populateViewModal(student);
-
-            }).catch((error) => {
-                console.error('View endpoint failed, trying edit endpoint:', error);
-                // Fallback to edit endpoint if view endpoint doesn't exist
-                axios.get(`/student/${id}/edit`).then((response) => {
-                    console.log('Student data received for view (fallback):', response.data);
-                    const student = response.data.student;
+                // Try to get more detailed student data with relationships
+                axios.get(`/student/${id}/view`).then((response) => {
+                    console.log('Student data received for view:', response.data);
+                    const student = response.data.student || response.data;
                     if (!student) {
                         throw new Error('Student data is empty');
                     }
 
-                    // Enhanced data merging from multiple sources
-                    const currentStudent = allStudents.find(s => s.id == id);
-                    if (currentStudent) {
-                        student.schoolclass = student.schoolclass || currentStudent.schoolclass;
-                        student.arm = student.arm || currentStudent.arm;
-                    }
-
-                    // Try to get term name from the terms dropdown data
-                    const termSelect = document.getElementById('termid') || document.getElementById('editTermid');
-                    if (termSelect && student.termid) {
-                        const termOption = termSelect.querySelector(`option[value="${student.termid}"]`);
-                        if (termOption) {
-                            student.term_name = termOption.textContent;
-                            console.log('Found term name from dropdown:', student.term_name);
-                        }
-                    }
-
-                    // Try to get school house name from the houses dropdown data
-                    const houseSelects = [
-                        document.getElementById('school_house'),
-                        document.getElementById('sport_house'),
-                        document.querySelector('select[name="school_house"]'),
-                        document.querySelector('select[name="sport_house"]')
-                    ];
-
-                    for (const houseSelect of houseSelects) {
-                        if (houseSelect && (student.school_house_id || student.sport_house_id)) {
-                            const houseId = student.school_house_id || student.sport_house_id;
-                            const houseOption = houseSelect.querySelector(`option[value="${houseId}"]`);
-                            if (houseOption) {
-                                student.school_house = houseOption.textContent;
-                                console.log('Found house name from dropdown:', student.school_house);
-                                break;
-                            }
-                        }
-                    }
-
-                    // Log all available student data for debugging
-                    console.log('Complete student data for debugging:', student);
-                    console.log('Available term-related fields:', {
-                        termid: student.termid,
-                        term_name: student.term_name,
-                        term: student.term,
-                        schoolterm_name: student.schoolterm_name,
-                        schoolterm: student.schoolterm
-                    });
-                    console.log('Available house-related fields:', {
-                        school_house_id: student.school_house_id,
-                        sport_house_id: student.sport_house_id,
-                        school_house: student.school_house,
-                        sport_house: student.sport_house,
-                        house: student.house,
-                        schoolhouse: student.schoolhouse
-                    });
-
                     // Populate the view modal with student data
                     populateViewModal(student);
 
-                }).catch((fallbackError) => {
-                    console.error('Error fetching student for view:', {
-                        message: fallbackError.message,
-                        status: fallbackError.response?.status,
-                        data: fallbackError.response?.data
-                    });
-                    Swal.fire({
-                        title: 'Error!',
-                        text: fallbackError.response?.data?.message || 'Failed to load student data. Check console for details.',
-                        icon: 'error',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                });
-            });
-        }
+                }).catch((error) => {
+                    console.error('View endpoint failed, trying edit endpoint:', error);
+                    // Fallback to edit endpoint if view endpoint doesn't exist
+                    axios.get(`/student/${id}/edit`).then((response) => {
+                        console.log('Student data received for view (fallback):', response.data);
+                        const student = response.data.student;
+                        if (!student) {
+                            throw new Error('Student data is empty');
+                        }
 
-        if (e.target.closest('.edit-item-btn')) {
-            const button = e.target.closest('.edit-item-btn');
-            const id = button.getAttribute('data-id');
-            console.log('Edit button clicked for student ID:', id);
-            if (!ensureAxios()) return;
+                        // Enhanced data merging from multiple sources
+                        const currentStudent = allStudents.find(s => s.id == id);
+                        if (currentStudent) {
+                            student.schoolclass = student.schoolclass || currentStudent.schoolclass;
+                            student.arm = student.arm || currentStudent.arm;
+                        }
 
-            axios.get(`/student/${id}/edit`).then((response) => {
-                console.log('Student data received:', response.data);
-                const student = response.data.student;
-                if (!student) {
-                    throw new Error('Student data is empty');
-                }
+                        // Try to get term name from the terms dropdown data
+                        const termSelect = document.getElementById('termid') || document.getElementById('editTermid');
+                        if (termSelect && student.termid) {
+                            const termOption = termSelect.querySelector(`option[value="${student.termid}"]`);
+                            if (termOption) {
+                                student.term_name = termOption.textContent;
+                                console.log('Found term name from dropdown:', student.term_name);
+                            }
+                        }
 
-                populateEditForm(student);
-            }).catch((error) => {
-                console.error('Error fetching student:', {
-                    message: error.message,
-                    status: error.response?.status,
-                    data: error.response?.data
-                });
-                Swal.fire({
-                    title: 'Error!',
-                    text: error.response?.data?.message || 'Failed to load student data. Check console for details.',
-                    icon: 'error',
-                    customClass: { confirmButton: 'btn btn-primary' },
-                    buttonsStyling: false
-                });
-            });
-        }
+                        // Try to get school house name from the houses dropdown data
+                        const houseSelects = [
+                            document.getElementById('school_house'),
+                            document.getElementById('sport_house'),
+                            document.querySelector('select[name="school_house"]'),
+                            document.querySelector('select[name="sport_house"]')
+                        ];
 
-        if (e.target.closest('.remove-item-btn')) {
-            const button = e.target.closest('.remove-item-btn');
-            const id = button.getAttribute('data-id');
-            const row = document.querySelector(`tr[data-id="${id}"]`);
-            if (!row) {
-                console.error(`Row with data-id="${id}" not found`);
-                Swal.fire({
-                    title: 'Error!',
-                    text: 'Table row not found for deletion',
-                    icon: 'error',
-                    customClass: { confirmButton: 'btn btn-primary' },
-                    buttonsStyling: false
-                });
-                return;
-            }
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
-                icon: 'warning',
-                showCancelButton: true,
-                customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' },
-                buttonsStyling: false
-            }).then((result) => {
-                if (result.isConfirmed && ensureAxios()) {
-                    axios.delete(`/student/${id}/destroy`).then(() => {
-                        row.remove();
-                        studentList.reIndex();
-                        Swal.fire({
-                            title: 'Deleted!',
-                            text: 'Student has been deleted',
-                            icon: 'success',
-                            customClass: { confirmButton: 'btn btn-primary' },
-                            buttonsStyling: false
+                        for (const houseSelect of houseSelects) {
+                            if (houseSelect && (student.school_house_id || student.sport_house_id)) {
+                                const houseId = student.school_house_id || student.sport_house_id;
+                                const houseOption = houseSelect.querySelector(`option[value="${houseId}"]`);
+                                if (houseOption) {
+                                    student.school_house = houseOption.textContent;
+                                    console.log('Found house name from dropdown:', student.school_house);
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Log all available student data for debugging
+                        console.log('Complete student data for debugging:', student);
+
+                        // Populate the view modal with student data
+                        populateViewModal(student);
+
+                    }).catch((fallbackError) => {
+                        console.error('Error fetching student for view:', {
+                            message: fallbackError.message,
+                            status: fallbackError.response?.status,
+                            data: fallbackError.response?.data
                         });
-                    }).catch((error) => {
-                        console.error('Error deleting student:', error);
                         Swal.fire({
                             title: 'Error!',
-                            text: error.response?.data?.message || 'Failed to delete student',
+                            text: fallbackError.response?.data?.message || 'Failed to load student data. Check console for details.',
                             icon: 'error',
                             customClass: { confirmButton: 'btn btn-primary' },
                             buttonsStyling: false
                         });
                     });
+                });
+            }
+
+            if (e.target.closest('.edit-item-btn')) {
+                const button = e.target.closest('.edit-item-btn');
+                const id = button.getAttribute('data-id');
+                console.log('Edit button clicked for student ID:', id);
+                if (!ensureAxios()) return;
+
+                axios.get(`/student/${id}/edit`).then((response) => {
+                    console.log('Student data received:', response.data);
+                    const student = response.data.student;
+                    if (!student) {
+                        throw new Error('Student data is empty');
+                    }
+
+                    populateEditForm(student);
+                }).catch((error) => {
+                    console.error('Error fetching student:', {
+                        message: error.message,
+                        status: error.response?.status,
+                        data: error.response?.data
+                    });
+                    Swal.fire({
+                        title: 'Error!',
+                        text: error.response?.data?.message || 'Failed to load student data. Check console for details.',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                });
+            }
+
+            if (e.target.closest('.remove-item-btn')) {
+                const button = e.target.closest('.remove-item-btn');
+                const id = button.getAttribute('data-id');
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                if (!row) {
+                    console.error(`Row with data-id="${id}" not found`);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Table row not found for deletion',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                    return;
                 }
-            });
-        }
-    });
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You won't be able to revert this!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed && ensureAxios()) {
+                        axios.delete(`/student/${id}/destroy`).then(() => {
+                            row.remove();
+                            if (studentList) {
+                                studentList.reIndex();
+                            }
+                            Swal.fire({
+                                title: 'Deleted!',
+                                text: 'Student has been deleted',
+                                icon: 'success',
+                                customClass: { confirmButton: 'btn btn-primary' },
+                                buttonsStyling: false
+                            });
+                        }).catch((error) => {
+                            console.error('Error deleting student:', error);
+                            Swal.fire({
+                                title: 'Error!',
+                                text: error.response?.data?.message || 'Failed to delete student',
+                                icon: 'error',
+                                customClass: { confirmButton: 'btn btn-primary' },
+                                buttonsStyling: false
+                            });
+                        });
+                    }
+                });
+            }
+        });
+    }
 
     // Add Student form submission
-    document.getElementById('addStudentForm')?.addEventListener('submit', function (e) {
-        e.preventDefault();
-        if (!ensureAxios()) return;
+    const addStudentForm = document.getElementById('addStudentForm');
+    if (addStudentForm) {
+        addStudentForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!ensureAxios()) return;
 
-        const formData = new FormData(this);
-        console.log('Submitting addStudentForm with data:');
-        for (let pair of formData.entries()) {
-            console.log(`${pair[0]}: ${pair[1]}`);
-        }
+            const formData = new FormData(this);
+            console.log('Submitting addStudentForm with data:');
+            for (let pair of formData.entries()) {
+                console.log(`${pair[0]}: ${pair[1]}`);
+            }
 
-        axios.post('/student', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        }).then((response) => {
-            console.log('Add student response:', response.data);
-            if (!response.data.success) {
-                throw new Error(response.data.message || 'Failed to add student');
-            }
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message || 'Student added successfully',
-                icon: 'success',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
-            }).then(() => {
-                fetchStudents();
-                document.getElementById('addStudentForm').reset();
-                document.getElementById('addStudentAvatar').src = defaultAvatar;
-                document.getElementById('addStudentModal').querySelector('.btn-close').click();
-            });
-        }).catch((error) => {
-            console.error('Error adding student:', {
-                message: error.message,
-                status: error.response?.status,
-                data: error.response?.data
-            });
-            let errorMessage = error.response?.data?.message || 'Failed to add student. Check console for details.';
-            if (error.response?.status === 422 && error.response?.data?.errors) {
-                errorMessage = Object.values(error.response.data.errors).flat().join('\n');
-            }
-            Swal.fire({
-                title: 'Error!',
-                text: errorMessage,
-                icon: 'error',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
+            axios.post('/student', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            }).then((response) => {
+                console.log('Add student response:', response.data);
+                if (!response.data.success) {
+                    throw new Error(response.data.message || 'Failed to add student');
+                }
+                Swal.fire({
+                    title: 'Success!',
+                    text: response.data.message || 'Student added successfully',
+                    icon: 'success',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                }).then(() => {
+                    fetchStudents();
+                    addStudentForm.reset();
+                    document.getElementById('addStudentAvatar').src = defaultAvatar;
+                    document.getElementById('addStudentModal').querySelector('.btn-close').click();
+                });
+            }).catch((error) => {
+                console.error('Error adding student:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    data: error.response?.data
+                });
+                let errorMessage = error.response?.data?.message || 'Failed to add student. Check console for details.';
+                if (error.response?.status === 422 && error.response?.data?.errors) {
+                    errorMessage = Object.values(error.response.data.errors).flat().join('\n');
+                }
+                Swal.fire({
+                    title: 'Error!',
+                    text: errorMessage,
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                });
             });
         });
-    });
+    }
 
     // Edit Student form submission
-    document.getElementById('editStudentForm')?.addEventListener('submit', function (e) {
-        e.preventDefault();
-        if (!ensureAxios()) return;
+    const editStudentForm = document.getElementById('editStudentForm');
+    if (editStudentForm) {
+        editStudentForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!ensureAxios()) return;
 
-        const id = document.getElementById('editStudentId').value;
-        const formData = new FormData(this);
-        console.log('Submitting editStudentForm with data:');
-        for (let pair of formData.entries()) {
-            console.log(`${pair[0]}: ${pair[1]}`);
-        }
+            const id = document.getElementById('editStudentId').value;
+            const formData = new FormData(this);
+            console.log('Submitting editStudentForm with data:');
+            for (let pair of formData.entries()) {
+                console.log(`${pair[0]}: ${pair[1]}`);
+            }
 
-        axios.post(`/student/${id}`, formData, {
-            headers: { 'X-HTTP-Method-Override': 'PATCH', 'Content-Type': 'multipart/form-data' }
-        }).then((response) => {
-            console.log('Edit student response:', response.data);
-            if (!response.data.success) {
-                throw new Error(response.data.message || 'Failed to update student');
-            }
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message || 'Student updated successfully',
-                icon: 'success',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
-            }).then(() => {
-                fetchStudents();
-                document.getElementById('editStudentModal').querySelector('.btn-close').click();
-            });
-        }).catch((error) => {
-            console.error('Error updating student:', {
-                message: error.message,
-                status: error.response?.status,
-                data: error.response?.data
-            });
-            let errorMessage = error.response?.data?.message || 'Failed to update student. Check console for details.';
-            if (error.response?.status === 422 && error.response?.data?.errors) {
-                errorMessage = Object.values(error.response.data.errors).flat().join('\n');
-            }
-            Swal.fire({
-                title: 'Error!',
-                text: errorMessage,
-                icon: 'error',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
+            axios.post(`/student/${id}`, formData, {
+                headers: { 'X-HTTP-Method-Override': 'PATCH', 'Content-Type': 'multipart/form-data' }
+            }).then((response) => {
+                console.log('Edit student response:', response.data);
+                if (!response.data.success) {
+                    throw new Error(response.data.message || 'Failed to update student');
+                }
+                Swal.fire({
+                    title: 'Success!',
+                    text: response.data.message || 'Student updated successfully',
+                    icon: 'success',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                }).then(() => {
+                    fetchStudents();
+                    document.getElementById('editStudentModal').querySelector('.btn-close').click();
+                });
+            }).catch((error) => {
+                console.error('Error updating student:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    data: error.response?.data
+                });
+                let errorMessage = error.response?.data?.message || 'Failed to update student. Check console for details.';
+                if (error.response?.status === 422 && error.response?.data?.errors) {
+                    errorMessage = Object.values(error.response.data.errors).flat().join('\n');
+                }
+                Swal.fire({
+                    title: 'Error!',
+                    text: errorMessage,
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn btn-primary' },
+                    buttonsStyling: false
+                });
             });
         });
-    });
+    }
 
     // Image view modal
-    document.getElementById('imageViewModal')?.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const imageSrc = button.getAttribute('data-image');
-        const modalImage = this.querySelector('#enlargedImage');
-        modalImage.src = imageSrc;
-    });
+    const imageViewModal = document.getElementById('imageViewModal');
+    if (imageViewModal) {
+        imageViewModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const imageSrc = button.getAttribute('data-image');
+            const modalImage = this.querySelector('#enlargedImage');
+            if (modalImage && imageSrc) {
+                modalImage.src = imageSrc;
+            }
+        });
+    }
 
     // Debug permissions
     console.log('Permissions:', window.appPermissions || 'Not defined');
@@ -3105,8 +3182,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Add event listeners for view toggle buttons
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('tableViewBtn')?.addEventListener('click', () => toggleView('table'));
-    document.getElementById('cardViewBtn')?.addEventListener('click', () => toggleView('card'));
+    const tableViewBtn = document.getElementById('tableViewBtn');
+    const cardViewBtn = document.getElementById('cardViewBtn');
+
+    if (tableViewBtn) {
+        tableViewBtn.addEventListener('click', () => toggleView('table'));
+    }
+
+    if (cardViewBtn) {
+        cardViewBtn.addEventListener('click', () => toggleView('card'));
+    }
 });
 </script>
 @endsection
