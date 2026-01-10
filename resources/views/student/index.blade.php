@@ -1742,7 +1742,7 @@ function toggleView(viewType) {
     }
 }
 
-// Render students as cards - FIXED VERSION
+// Render students as cards - SIMPLIFIED VERSION
 function renderStudentsCards(students) {
     console.log('Rendering students as cards:', students);
     const container = document.getElementById('studentsCardsContainer');
@@ -1775,8 +1775,6 @@ function renderStudentsCards(students) {
     }
 
     students.forEach(student => {
-        console.log('Rendering student card:', student);
-
         // Get initials for avatar
         const firstName = student.firstname || '';
         const lastName = student.lastname || '';
@@ -1803,73 +1801,98 @@ function renderStudentsCards(students) {
             day: 'numeric'
         }) : 'N/A';
 
-        // Escape any special characters in student names
-        const safeLastName = student.lastname ? student.lastname.replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
-        const safeFirstName = student.firstname ? student.firstname.replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
-        const safeOtherName = student.othername ? student.othername.replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
-
-        // Create card HTML
+        // Create a simple card without complex template literals
         const cardDiv = document.createElement('div');
         cardDiv.className = 'col-xl-3 col-lg-4 col-md-6 col-sm-6';
 
-        // Build the avatar HTML separately to handle quotes properly
-        let avatarHtml = '';
-        if (student.picture) {
-            avatarHtml = `<img src="${avatarUrl}" alt="${safeFirstName} ${safeLastName}" class="avatar" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=&quot;avatar-initials&quot;>${initials}</div>';" />`;
-        } else {
-            avatarHtml = `<div class="avatar-initials">${initials}</div>`;
-        }
+        // Build the card using DOM methods to avoid template literal issues
+        const studentCard = document.createElement('div');
+        studentCard.className = 'student-card';
+        studentCard.setAttribute('data-id', student.id);
+        studentCard.setAttribute('data-name', `${student.lastname} ${student.firstname} ${student.othername || ''}`);
+        studentCard.setAttribute('data-admission', student.admissionNo || '');
+        studentCard.setAttribute('data-class', student.schoolclassid || '');
+        studentCard.setAttribute('data-status', student.statusId || '');
+        studentCard.setAttribute('data-gender', student.gender || '');
+        studentCard.setAttribute('data-student-status', student.student_status || '');
 
-        cardDiv.innerHTML = `
-            <div class="student-card" data-id="${student.id}"
-                 data-name="${safeLastName} ${safeFirstName} ${safeOtherName}"
-                 data-admission="${student.admissionNo || ''}"
-                 data-class="${student.schoolclassid || ''}"
-                 data-status="${student.statusId || ''}"
-                 data-gender="${student.gender || ''}"
-                 data-student-status="${student.student_status || ''}">
-
-                <!-- Checkbox for bulk selection -->
-                <div class="checkbox-container">
-                    <div class="form-check">
-                        <input class="form-check-input student-checkbox" type="checkbox" name="chk_child" value="${student.id}">
-                    </div>
-                </div>
-
-                <!-- Status Badge -->
-                <span class="status-badge ${statusClass}">${statusText}</span>
-
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <button class="action-btn view-btn" title="View Details" onclick="viewStudent(${student.id})">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="action-btn edit-btn" title="Edit" onclick="editStudent(${student.id})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn delete-btn" title="Delete" onclick="deleteStudent(${student.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-
-                <!-- Avatar with initials fallback -->
-                <div class="avatar-container">
-                    ${avatarHtml}
-                </div>
-
-                <!-- Student Information -->
-                <h6 class="student-name">${safeLastName} ${safeFirstName}</h6>
-                <p class="student-admission">${student.admissionNo || 'No Admission No'}</p>
-
-                <div class="student-details">
-                    <div><strong>Class:</strong> ${student.schoolclass || 'N/A'} ${student.arm || ''}</div>
-                    <div><strong>Type:</strong> ${studentType}</div>
-                    <div><strong>Gender:</strong> ${student.gender || 'N/A'}</div>
-                    <div><strong>Registered:</strong> ${regDate}</div>
-                </div>
+        // Checkbox container
+        const checkboxContainer = document.createElement('div');
+        checkboxContainer.className = 'checkbox-container';
+        checkboxContainer.innerHTML = `
+            <div class="form-check">
+                <input class="form-check-input student-checkbox" type="checkbox" name="chk_child" value="${student.id}">
             </div>
         `;
 
+        // Status badge
+        const statusBadge = document.createElement('span');
+        statusBadge.className = `status-badge ${statusClass}`;
+        statusBadge.textContent = statusText;
+
+        // Action buttons
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'action-buttons';
+        actionButtons.innerHTML = `
+            <button class="action-btn view-btn" title="View Details" onclick="viewStudent(${student.id})">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="action-btn edit-btn" title="Edit" onclick="editStudent(${student.id})">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn delete-btn" title="Delete" onclick="deleteStudent(${student.id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+
+        // Avatar container
+        const avatarContainer = document.createElement('div');
+        avatarContainer.className = 'avatar-container';
+
+        const avatarImg = document.createElement('img');
+        avatarImg.src = avatarUrl;
+        avatarImg.alt = `${student.firstname} ${student.lastname}`;
+        avatarImg.className = 'avatar';
+        avatarImg.onerror = function() {
+            this.style.display = 'none';
+            const initialsDiv = document.createElement('div');
+            initialsDiv.className = 'avatar-initials';
+            initialsDiv.textContent = initials;
+            avatarContainer.innerHTML = '';
+            avatarContainer.appendChild(initialsDiv);
+        };
+        avatarContainer.appendChild(avatarImg);
+
+        // Student name
+        const studentName = document.createElement('h6');
+        studentName.className = 'student-name';
+        studentName.textContent = `${student.lastname} ${student.firstname}`;
+
+        // Admission number
+        const studentAdmission = document.createElement('p');
+        studentAdmission.className = 'student-admission';
+        studentAdmission.textContent = student.admissionNo || 'No Admission No';
+
+        // Student details
+        const studentDetails = document.createElement('div');
+        studentDetails.className = 'student-details';
+        studentDetails.innerHTML = `
+            <div><strong>Class:</strong> ${student.schoolclass || 'N/A'} ${student.arm || ''}</div>
+            <div><strong>Type:</strong> ${studentType}</div>
+            <div><strong>Gender:</strong> ${student.gender || 'N/A'}</div>
+            <div><strong>Registered:</strong> ${regDate}</div>
+        `;
+
+        // Assemble the card
+        studentCard.appendChild(checkboxContainer);
+        studentCard.appendChild(statusBadge);
+        studentCard.appendChild(actionButtons);
+        studentCard.appendChild(avatarContainer);
+        studentCard.appendChild(studentName);
+        studentCard.appendChild(studentAdmission);
+        studentCard.appendChild(studentDetails);
+
+        cardDiv.appendChild(studentCard);
         container.appendChild(cardDiv);
     });
 
@@ -1879,9 +1902,13 @@ function renderStudentsCards(students) {
 
 // Update counts display
 function updateCounts(count) {
-    document.getElementById('totalStudents').textContent = count;
-    document.getElementById('totalCount').textContent = count;
-    document.getElementById('showingCount').textContent = count;
+    const totalStudents = document.getElementById('totalStudents');
+    const totalCount = document.getElementById('totalCount');
+    const showingCount = document.getElementById('showingCount');
+
+    if (totalStudents) totalStudents.textContent = count;
+    if (totalCount) totalCount.textContent = count;
+    if (showingCount) showingCount.textContent = count;
 }
 
 // Initialize student checkboxes for card view
@@ -1929,55 +1956,83 @@ function viewStudent(id) {
     console.log('View student from card view:', id);
     if (!ensureAxios()) return;
 
-    axios.get(`/student/${id}/view`).then((response) => {
-        console.log('Student data received for view:', response.data);
-        const student = response.data.student || response.data;
-        if (!student) {
-            throw new Error('Student data is empty');
+    // Try multiple endpoints
+    const endpoints = [
+        `/student/${id}/view`,
+        `/student/${id}`,
+        `/api/student/${id}`
+    ];
+
+    let requestMade = false;
+
+    for (const endpoint of endpoints) {
+        axios.get(endpoint)
+            .then((response) => {
+                if (requestMade) return;
+                requestMade = true;
+
+                console.log('Student data received for view:', response.data);
+                let student = response.data.student || response.data.data || response.data;
+
+                if (!student) {
+                    throw new Error('Student data is empty');
+                }
+
+                populateViewModal(student);
+                // Show the view modal
+                const viewModal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
+                viewModal.show();
+            })
+            .catch((error) => {
+                console.log(`Endpoint ${endpoint} failed:`, error.message);
+                // Continue to next endpoint
+            });
+    }
+
+    // If all endpoints fail, show error
+    setTimeout(() => {
+        if (!requestMade) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to load student data from all endpoints',
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
         }
-        populateViewModal(student);
-        // Show the view modal
-        const viewModal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
-        viewModal.show();
-    }).catch((error) => {
-        console.error('Error viewing student:', error);
-        Swal.fire({
-            title: 'Error!',
-            text: error.response?.data?.message || 'Failed to load student data',
-            icon: 'error',
-            customClass: { confirmButton: 'btn btn-primary' },
-            buttonsStyling: false
-        });
-    });
+    }, 2000);
 }
 
 function editStudent(id) {
     console.log('Edit student from card view:', id);
     if (!ensureAxios()) return;
 
-    axios.get(`/student/${id}/edit`).then((response) => {
-        console.log('Student data received for edit:', response.data);
-        const student = response.data.student;
-        if (!student) {
-            throw new Error('Student data is empty');
-        }
+    axios.get(`/student/${id}/edit`)
+        .then((response) => {
+            console.log('Student data received for edit:', response.data);
+            let student = response.data.student || response.data.data || response.data;
 
-        // Populate the edit form
-        populateEditForm(student);
+            if (!student) {
+                throw new Error('Student data is empty');
+            }
 
-        // Show the edit modal
-        const editModal = new bootstrap.Modal(document.getElementById('editStudentModal'));
-        editModal.show();
-    }).catch((error) => {
-        console.error('Error editing student:', error);
-        Swal.fire({
-            title: 'Error!',
-            text: error.response?.data?.message || 'Failed to load student data',
-            icon: 'error',
-            customClass: { confirmButton: 'btn btn-primary' },
-            buttonsStyling: false
+            // Populate the edit form
+            populateEditForm(student);
+
+            // Show the edit modal
+            const editModal = new bootstrap.Modal(document.getElementById('editStudentModal'));
+            editModal.show();
+        })
+        .catch((error) => {
+            console.error('Error editing student:', error);
+            Swal.fire({
+                title: 'Error!',
+                text: error.response?.data?.message || 'Failed to load student data',
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
         });
-    });
 }
 
 function deleteStudent(id) {
@@ -1990,31 +2045,33 @@ function deleteStudent(id) {
         buttonsStyling: false
     }).then((result) => {
         if (result.isConfirmed && ensureAxios()) {
-            axios.delete(`/student/${id}/destroy`).then(() => {
-                // Remove the card
-                const card = document.querySelector(`.student-card[data-id="${id}"]`);
-                if (card) {
-                    card.closest('.col-xl-3').remove();
-                }
-                // Refresh the list
-                fetchStudents();
-                Swal.fire({
-                    title: 'Deleted!',
-                    text: 'Student has been deleted',
-                    icon: 'success',
-                    customClass: { confirmButton: 'btn btn-primary' },
-                    buttonsStyling: false
+            axios.delete(`/student/${id}`)
+                .then(() => {
+                    // Remove the card
+                    const card = document.querySelector(`.student-card[data-id="${id}"]`);
+                    if (card) {
+                        card.closest('.col-xl-3').remove();
+                    }
+                    // Refresh the list
+                    fetchStudents();
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'Student has been deleted',
+                        icon: 'success',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                })
+                .catch((error) => {
+                    console.error('Error deleting student:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: error.response?.data?.message || 'Failed to delete student',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
                 });
-            }).catch((error) => {
-                console.error('Error deleting student:', error);
-                Swal.fire({
-                    title: 'Error!',
-                    text: error.response?.data?.message || 'Failed to delete student',
-                    icon: 'error',
-                    customClass: { confirmButton: 'btn btn-primary' },
-                    buttonsStyling: false
-                });
-            });
         }
     });
 }
@@ -2023,67 +2080,98 @@ function deleteStudent(id) {
 function fetchStudents() {
     if (!ensureAxios()) return;
     console.log('Fetching students from /students/data');
-    axios.get('/students/data')
-        .then((response) => {
-            console.log('Full API response:', response.data);
-            console.log('Students array:', response.data.students);
 
-            if (!response.data.success || !Array.isArray(response.data.students)) {
-                throw new Error(response.data.message || 'Invalid response format');
-            }
+    const endpoints = [
+        '/students/data',
+        '/api/students',
+        '/student/data'
+    ];
 
-            // Log first student to see structure
-            if (response.data.students.length > 0) {
-                console.log('First student data:', response.data.students[0]);
-            }
+    let requestMade = false;
 
-            allStudents = response.data.students.map(student => ({
-                id: student.id || '',
-                admissionNo: student.admissionNo || '',
-                firstname: student.firstname || '',
-                lastname: student.lastname || '',
-                othername: student.othername || '',
-                gender: student.gender || '',
-                statusId: student.statusId || '',
-                student_status: student.student_status || '',
-                created_at: student.created_at || '',
-                picture: student.picture || '',
-                schoolclass: student.schoolclass || '',
-                arm: student.arm || '',
-                schoolclassid: student.schoolclassid || ''
-            }));
+    for (const endpoint of endpoints) {
+        axios.get(endpoint)
+            .then((response) => {
+                if (requestMade) return;
+                requestMade = true;
 
-            console.log('Processed students:', allStudents);
-            console.log('Processed students count:', allStudents.length);
+                console.log('Full API response from', endpoint, ':', response.data);
 
-            // Update counts
-            document.querySelector('#totalStudents').textContent = allStudents.length;
-            document.querySelector('#totalCount').textContent = allStudents.length;
-            document.getElementById('showingCount').textContent = allStudents.length;
+                let studentsArray = [];
 
-            // Check which view is active and render accordingly
-            const tableView = document.getElementById('tableView');
-            const isTableView = !tableView.classList.contains('d-none');
+                // Handle different response formats
+                if (Array.isArray(response.data)) {
+                    studentsArray = response.data;
+                } else if (response.data.students && Array.isArray(response.data.students)) {
+                    studentsArray = response.data.students;
+                } else if (response.data.data && Array.isArray(response.data.data)) {
+                    studentsArray = response.data.data;
+                } else if (response.data.success && Array.isArray(response.data.data)) {
+                    studentsArray = response.data.data;
+                } else {
+                    throw new Error('Invalid response format');
+                }
 
-            if (isTableView) {
-                renderStudents(allStudents);
-            } else {
-                renderStudentsCards(allStudents);
-            }
-        })
-        .catch((error) => {
-            console.error('Error fetching students:', error);
-            console.error('Error response:', error.response);
+                console.log('Students array:', studentsArray);
+
+                // Log first student to see structure
+                if (studentsArray.length > 0) {
+                    console.log('First student data:', studentsArray[0]);
+                }
+
+                allStudents = studentsArray.map(student => ({
+                    id: student.id || student.student_id || '',
+                    admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
+                    firstname: student.firstname || student.first_name || '',
+                    lastname: student.lastname || student.last_name || '',
+                    othername: student.othername || student.other_name || student.middle_name || '',
+                    gender: student.gender || '',
+                    statusId: student.statusId || student.status_id || student.student_status_id || '',
+                    student_status: student.student_status || student.status || '',
+                    created_at: student.created_at || student.created_date || student.registration_date || '',
+                    picture: student.picture || student.avatar || student.profile_picture || '',
+                    schoolclass: student.schoolclass || student.class || student.class_name || '',
+                    arm: student.arm || student.section || '',
+                    schoolclassid: student.schoolclassid || student.class_id || ''
+                }));
+
+                console.log('Processed students:', allStudents);
+                console.log('Processed students count:', allStudents.length);
+
+                // Update counts
+                updateCounts(allStudents.length);
+
+                // Check which view is active and render accordingly
+                const tableView = document.getElementById('tableView');
+                const isTableView = !tableView.classList.contains('d-none');
+
+                if (isTableView) {
+                    renderStudents(allStudents);
+                } else {
+                    renderStudentsCards(allStudents);
+                }
+            })
+            .catch((error) => {
+                console.log(`Endpoint ${endpoint} failed:`, error.message);
+                // Continue to next endpoint
+            });
+    }
+
+    // If all endpoints fail, show error
+    setTimeout(() => {
+        if (!requestMade) {
+            console.error('All student endpoints failed');
             Swal.fire({
                 title: "Error!",
-                text: error.response?.data?.message || error.message || "Failed to load students.",
+                text: "Failed to load students from all endpoints",
                 icon: "error",
                 customClass: { confirmButton: "btn btn-primary" },
                 buttonsStyling: false
             });
             renderStudents([]);
             renderStudentsCards([]);
-        });
+        }
+    }, 3000);
 }
 
 // Render students in the table
@@ -2101,23 +2189,19 @@ function renderStudents(students) {
         });
         return;
     }
+
     tbody.innerHTML = '';
+
     if (students.length === 0) {
         const row = document.createElement('tr');
         row.innerHTML = `<td colspan="8" class="text-center">No students found</td>`;
         tbody.appendChild(row);
-        initializeList();
+        updatePagination();
         return;
     }
-    students.forEach(student => {
-        console.log('Rendering student in table:', student);
-        const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
 
-        const actionButtons = [
-            `<li><a href="javascript:void(0);" class="btn btn-subtle-info btn-icon btn-sm view-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#viewStudentModal" title="View Details"><i class="ph-eye"></i></a></li>`,
-            `<li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal" title="Edit"><i class="ph-pencil"></i></a></li>`,
-            `<li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}" title="Delete"><i class="ph-trash"></i></a></li>`
-        ];
+    students.forEach(student => {
+        const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
 
         const row = document.createElement('tr');
         row.setAttribute('data-id', student.id);
@@ -2127,7 +2211,7 @@ function renderStudents(students) {
                     <input class="form-check-input" type="checkbox" name="chk_child">
                 </div>
             </td>
-            <td class="name" data-name="${student.lastname} ${student.firstname} ${student.othername}">
+            <td class="name" data-name="${student.lastname} ${student.firstname} ${student.othername || ''}">
                 <div class="d-flex align-items-center">
                     <div class="symbol symbol-50px me-3">
                         <img src="${studentImage}" alt="" class="rounded-circle avatar-sm student-image" style="object-fit:cover;" data-bs-toggle="modal" data-bs-target="#imageViewModal" data-image="${studentImage}"/>
@@ -2135,20 +2219,22 @@ function renderStudents(students) {
                     <div>
                         <h6 class="mb-0">
                             <a href="/student/${student.id}" class="text-reset products">
-                                <b>${student.lastname}</b> ${student.firstname} ${student.othername}
+                                <b>${student.lastname}</b> ${student.firstname} ${student.othername || ''}
                             </a>
                         </h6>
                     </div>
                 </div>
             </td>
-            <td class="admissionNo" data-admissionNo="${student.admissionNo}">${student.admissionNo}</td>
-            <td class="class" data-class="${student.schoolclassid}">${student.schoolclass} - ${student.arm}</td>
+            <td class="admissionNo" data-admissionno="${student.admissionNo}">${student.admissionNo}</td>
+            <td class="class" data-class="${student.schoolclassid}">${student.schoolclass || ''} ${student.arm ? ' - ' + student.arm : ''}</td>
             <td class="status" data-status="${student.statusId}">${student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : ''}</td>
             <td class="gender" data-gender="${student.gender}">${student.gender}</td>
             <td class="datereg">${student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : ''}</td>
             <td>
                 <ul class="d-flex gap-2 list-unstyled mb-0">
-                    ${actionButtons.join('')}
+                    <li><a href="javascript:void(0);" class="btn btn-subtle-info btn-icon btn-sm view-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#viewStudentModal" title="View Details"><i class="ph-eye"></i></a></li>
+                    <li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" data-bs-toggle="modal" data-bs-target="#editStudentModal" title="Edit"><i class="ph-pencil"></i></a></li>
+                    <li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}" title="Delete"><i class="ph-trash"></i></a></li>
                 </ul>
             </td>
         `;
@@ -2156,91 +2242,50 @@ function renderStudents(students) {
     });
 
     console.log('Table rows after rendering:', tbody.innerHTML);
-    initializeList();
+    updatePagination();
     initializeCheckboxes();
-}
-
-// Initialize List.js for pagination and sorting
-function initializeList() {
-    if (typeof List === 'undefined') {
-        console.error('List.js is not loaded');
-        Swal.fire({
-            title: "Error!",
-            text: "List.js library is missing",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
-        return;
-    }
-
-    // Find the main container
-    const listContainer = document.querySelector('.card-body');
-    if (!listContainer) {
-        console.error('List container not found');
-        return;
-    }
-
-    const options = {
-        valueNames: ['name', 'admissionNo', 'class', 'status', 'gender', 'datereg'],
-        page: itemsPerPage,
-        pagination: true,
-        item: `
-            <tr>
-                <td class="id">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="chk_child">
-                    </div>
-                </td>
-                <td class="name"></td>
-                <td class="admissionNo"></td>
-                <td class="class"></td>
-                <td class="status"></td>
-                <td class="gender"></td>
-                <td class="datereg"></td>
-                <td><ul class="d-flex gap-2 list-unstyled mb-0"></ul></td>
-            </tr>
-        `
-    };
-
-    try {
-        studentList = new List(listContainer, options);
-        studentList.on('updated', function () {
-            updatePagination();
-            document.getElementById('showingCount').textContent = studentList.visibleItems.length;
-            document.getElementById('totalCount').textContent = studentList.items.length;
-            document.getElementById('totalStudents').textContent = studentList.items.length;
-        });
-    } catch (error) {
-        console.error('List.js initialization error:', error.message);
-        Swal.fire({
-            title: "Error!",
-            text: "Failed to initialize table. Check console for details.",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
-    }
 }
 
 // Update pagination controls
 function updatePagination() {
-    if (!studentList) return;
-    const totalItems = studentList.items.length;
+    const totalItems = allStudents.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const currentPage = studentList.page ? Math.ceil(studentList.i / itemsPerPage) : 1;
+    const currentPage = 1;
     const paginationLinks = document.getElementById('paginationLinks');
 
     if (!paginationLinks) return;
 
     paginationLinks.innerHTML = '';
 
-    for (let i = 1; i <= totalPages; i++) {
+    // Show only a few page links
+    const maxPagesToShow = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+    // Adjust start page if we're at the end
+    if (endPage - startPage + 1 < maxPagesToShow) {
+        startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
         const li = document.createElement('li');
         li.className = `page-item ${i === currentPage ? 'active' : ''}`;
         li.innerHTML = `<a class="page-link" href="javascript:void(0);">${i}</a>`;
         li.addEventListener('click', () => {
-            studentList.show((i - 1) * itemsPerPage + 1, itemsPerPage);
+            // Simple pagination logic
+            const startIndex = (i - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageStudents = allStudents.slice(startIndex, endIndex);
+
+            // Check which view is active
+            const tableView = document.getElementById('tableView');
+            const isTableView = !tableView.classList.contains('d-none');
+
+            if (isTableView) {
+                renderStudents(pageStudents);
+            }
+
+            document.getElementById('showingCount').textContent = pageStudents.length;
         });
         paginationLinks.appendChild(li);
     }
@@ -2250,13 +2295,54 @@ function updatePagination() {
 
     if (prevPage) {
         prevPage.classList.toggle('disabled', currentPage === 1);
-        prevPage.onclick = currentPage > 1 ? () => studentList.show((currentPage - 2) * itemsPerPage + 1, itemsPerPage) : null;
+        prevPage.onclick = currentPage > 1 ? () => {
+            // Previous page logic
+            const newPage = currentPage - 1;
+            const startIndex = (newPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageStudents = allStudents.slice(startIndex, endIndex);
+
+            const tableView = document.getElementById('tableView');
+            const isTableView = !tableView.classList.contains('d-none');
+
+            if (isTableView) {
+                renderStudents(pageStudents);
+            }
+
+            updatePaginationForPage(newPage);
+        } : null;
     }
 
     if (nextPage) {
         nextPage.classList.toggle('disabled', currentPage === totalPages);
-        nextPage.onclick = currentPage < totalPages ? () => studentList.show(currentPage * itemsPerPage + 1, itemsPerPage) : null;
+        nextPage.onclick = currentPage < totalPages ? () => {
+            // Next page logic
+            const newPage = currentPage + 1;
+            const startIndex = (newPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageStudents = allStudents.slice(startIndex, endIndex);
+
+            const tableView = document.getElementById('tableView');
+            const isTableView = !tableView.classList.contains('d-none');
+
+            if (isTableView) {
+                renderStudents(pageStudents);
+            }
+
+            updatePaginationForPage(newPage);
+        } : null;
     }
+}
+
+function updatePaginationForPage(page) {
+    const paginationLinks = document.querySelectorAll('#paginationLinks .page-item');
+    paginationLinks.forEach((li, index) => {
+        li.classList.remove('active');
+        const pageNum = parseInt(li.querySelector('.page-link').textContent);
+        if (pageNum === page) {
+            li.classList.add('active');
+        }
+    });
 }
 
 // Filter function for both views
@@ -2268,59 +2354,30 @@ function filterData() {
 
     console.log('Filtering with:', { search, classId, statusId, gender });
 
+    // Filter the allStudents array
+    const filteredStudents = allStudents.filter(student => {
+        const name = `${student.lastname} ${student.firstname} ${student.othername || ''}`.toLowerCase();
+        const admissionNo = (student.admissionNo || '').toLowerCase();
+
+        const matchesSearch = name.includes(search) || admissionNo.includes(search);
+        const matchesClass = classId === 'all' || student.schoolclassid == classId;
+        const matchesStatus = statusId === 'all' || student.statusId == statusId;
+        const matchesGender = gender === 'all' || student.gender === gender;
+
+        return matchesSearch && matchesClass && matchesStatus && matchesGender;
+    });
+
     // Check which view is active
     const tableView = document.getElementById('tableView');
     const isTableView = !tableView.classList.contains('d-none');
 
     if (isTableView) {
-        // Table view filtering (using List.js)
-        if (studentList) {
-            studentList.filter(item => {
-                const name = item.values().name?.toLowerCase() || '';
-                const admissionNo = item.values().admissionNo?.toLowerCase() || '';
-                const classValue = item.elm.querySelector('.class')?.dataset.class || '';
-                const statusValue = item.elm.querySelector('.status')?.dataset.status || '';
-                const genderValue = item.elm.querySelector('.gender')?.dataset.gender || '';
-
-                const matchesSearch = name.includes(search) || admissionNo.includes(search);
-                const matchesClass = classId === 'all' || classValue === classId;
-                const matchesStatus = statusId === 'all' || statusValue === statusId;
-                const matchesGender = gender === 'all' || genderValue === gender;
-
-                return matchesSearch && matchesClass && matchesStatus && matchesGender;
-            });
-        }
+        renderStudents(filteredStudents);
     } else {
-        // Card view filtering
-        const cards = document.querySelectorAll('.student-card');
-        let visibleCount = 0;
-
-        cards.forEach(card => {
-            const name = card.getAttribute('data-name')?.toLowerCase() || '';
-            const admission = card.getAttribute('data-admission')?.toLowerCase() || '';
-            const classValue = card.getAttribute('data-class') || '';
-            const statusValue = card.getAttribute('data-status') || '';
-            const genderValue = card.getAttribute('data-gender') || '';
-
-            const matchesSearch = name.includes(search) || admission.includes(search);
-            const matchesClass = classId === 'all' || classValue === classId;
-            const matchesStatus = statusId === 'all' || statusValue === statusId;
-            const matchesGender = gender === 'all' || genderValue === gender;
-
-            const isVisible = matchesSearch && matchesClass && matchesStatus && matchesGender;
-            const column = card.closest('.col-xl-3');
-
-            if (column) {
-                column.style.display = isVisible ? 'block' : 'none';
-            }
-
-            if (isVisible) {
-                visibleCount++;
-            }
-        });
-
-        document.getElementById('showingCount').textContent = visibleCount;
+        renderStudentsCards(filteredStudents);
     }
+
+    document.getElementById('showingCount').textContent = filteredStudents.length;
 }
 
 // Delete multiple students (works for both views)
@@ -2334,11 +2391,16 @@ function deleteMultiple() {
     if (isTableView) {
         // Table view selection
         ids = Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
-            .map(checkbox => checkbox.closest('tr').querySelector('.id').dataset.id);
+            .map(checkbox => {
+                const row = checkbox.closest('tr');
+                return row ? row.getAttribute('data-id') : null;
+            })
+            .filter(id => id !== null);
     } else {
         // Card view selection
         ids = Array.from(document.querySelectorAll('.student-checkbox:checked'))
-            .map(checkbox => checkbox.value);
+            .map(checkbox => checkbox.value)
+            .filter(id => id !== null);
     }
 
     if (ids.length === 0) {
@@ -2366,35 +2428,23 @@ function deleteMultiple() {
         buttonsStyling: false
     }).then((result) => {
         if (result.isConfirmed && ensureAxios()) {
-            axios.post('/students/destroy-multiple', { ids })
-                .then((response) => {
-                    if (response.data.success) {
-                        // Remove the items based on view type
-                        ids.forEach(id => {
-                            if (isTableView) {
-                                const row = document.querySelector(`tr[data-id="${id}"]`);
-                                if (row) row.remove();
-                            } else {
-                                const card = document.querySelector(`.student-card[data-id="${id}"]`);
-                                if (card) {
-                                    card.closest('.col-xl-3').remove();
-                                }
-                            }
-                        });
+            // Delete each student individually
+            const deletePromises = ids.map(id =>
+                axios.delete(`/student/${id}`)
+            );
 
-                        // Refresh counts
-                        fetchStudents();
+            Promise.all(deletePromises)
+                .then(() => {
+                    // Refresh the list
+                    fetchStudents();
 
-                        Swal.fire({
-                            title: "Deleted!",
-                            text: response.data.message || `Successfully deleted ${ids.length} student(s)`,
-                            icon: "success",
-                            customClass: { confirmButton: "btn btn-primary" },
-                            buttonsStyling: false
-                        });
-                    } else {
-                        throw new Error(response.data.message || 'Failed to delete students');
-                    }
+                    Swal.fire({
+                        title: "Deleted!",
+                        text: `Successfully deleted ${ids.length} student(s)`,
+                        icon: "success",
+                        customClass: { confirmButton: "btn btn-primary" },
+                        buttonsStyling: false
+                    });
                 })
                 .catch((error) => {
                     console.error('Error deleting students:', error);
@@ -2433,76 +2483,6 @@ function initializeCheckboxes() {
     });
 }
 
-// Populate states and LGAs
-function populateStates(stateSelectId, lgaSelectId) {
-    const stateSelect = document.getElementById(stateSelectId);
-    const lgaSelect = document.getElementById(lgaSelectId);
-    if (!stateSelect || !lgaSelect) return;
-
-    fetch('/states_lgas.json')
-        .then(response => response.json())
-        .then(data => {
-            stateSelect.innerHTML = '<option value="">Select State</option>';
-            data.forEach(state => {
-                const option = document.createElement('option');
-                option.value = state.state;
-                option.textContent = state.state;
-                stateSelect.appendChild(option);
-            });
-
-            if (ensureChoices()) {
-                const choicesState = new Choices(stateSelect, { searchEnabled: true });
-                const choicesLga = new Choices(lgaSelect, { searchEnabled: true });
-            }
-
-            stateSelect.addEventListener('change', function () {
-                lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
-                const selectedState = data.find(state => state.state === this.value);
-                if (selectedState) {
-                    selectedState.lgas.forEach(lga => {
-                        const option = document.createElement('option');
-                        option.value = lga;
-                        option.textContent = lga;
-                        lgaSelect.appendChild(option);
-                    });
-                    if (ensureChoices()) {
-                        new Choices(lgaSelect, { searchEnabled: true });
-                    }
-                }
-            });
-        })
-        .catch(error => {
-            console.error('Error loading states and LGAs:', error);
-        });
-}
-
-// Populate LGAs based on selected state
-function populateLGAs(state, lgaSelectId) {
-    const lgaSelect = document.getElementById(lgaSelectId);
-    if (!lgaSelect) return;
-
-    fetch('/states_lgas.json')
-        .then(response => response.json())
-        .then(data => {
-            lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
-            const selectedState = data.find(s => s.state === state);
-            if (selectedState) {
-                selectedState.lgas.forEach(lga => {
-                    const option = document.createElement('option');
-                    option.value = lga;
-                    option.textContent = lga;
-                    lgaSelect.appendChild(option);
-                });
-                if (ensureChoices()) {
-                    new Choices(lgaSelect, { searchEnabled: true });
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error loading LGAs:', error);
-        });
-}
-
 // Age calculation function
 window.showage = function (date, displayId = 'addAge') {
     if (date) {
@@ -2534,16 +2514,41 @@ window.showage = function (date, displayId = 'addAge') {
 
 // Populate edit form with student data
 function populateEditForm(student) {
-    // Updated fields array with the missing fields
+    console.log('Populating edit form with student:', student);
+
+    // Clear any numbers at the top
+    const editModalContent = document.querySelector('#editStudentModal .modal-content');
+    if (editModalContent) {
+        const textNodes = [];
+        const walker = document.createTreeWalker(
+            editModalContent,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+
+        let node;
+        while (node = walker.nextNode()) {
+            if (node.textContent.trim() && /^\d+$/.test(node.textContent.trim())) {
+                textNodes.push(node);
+            }
+        }
+
+        textNodes.forEach(node => {
+            node.parentNode.removeChild(node);
+        });
+    }
+
+    // Updated fields array
     const fields = [
         { id: 'editStudentId', value: student.id },
-        { id: 'editAdmissionNo', value: student.admissionNo },
-        { id: 'editAdmissionYear', value: student.admissionYear },
+        { id: 'editAdmissionNo', value: student.admissionNo || student.admission_no || '' },
+        { id: 'editAdmissionYear', value: student.admissionYear || '' },
         { id: 'editAdmissionDate', value: student.admissionDate ? student.admissionDate.split('T')[0] : '' },
         { id: 'editTitle', value: student.title || '' },
-        { id: 'editFirstname', value: student.firstname },
-        { id: 'editLastname', value: student.lastname },
-        { id: 'editOthername', value: student.othername || '' },
+        { id: 'editFirstname', value: student.firstname || student.first_name || '' },
+        { id: 'editLastname', value: student.lastname || student.last_name || '' },
+        { id: 'editOthername', value: student.othername || student.other_name || student.middle_name || '' },
         { id: 'editPresentAddress', value: student.present_address || '' },
         { id: 'editPermanentAddress', value: student.permanent_address || '' },
         { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
@@ -2552,16 +2557,16 @@ function populateEditForm(student) {
         { id: 'editReligion', value: student.religion || '' },
         { id: 'editLastSchool', value: student.last_school || '' },
         { id: 'editLastClass', value: student.last_class || '' },
-        { id: 'editSchoolclassid', value: student.schoolclassid || '' },
-        { id: 'editTermid', value: student.termid || '' },
-        { id: 'editSessionid', value: student.sessionid || '' },
-        { id: 'editPhoneNumber', value: student.phone_number || '' },
+        { id: 'editSchoolclassid', value: student.schoolclassid || student.class_id || '' },
+        { id: 'editTermid', value: student.termid || student.term_id || '' },
+        { id: 'editSessionid', value: student.sessionid || student.session_id || '' },
+        { id: 'editPhoneNumber', value: student.phone_number || student.phone || '' },
         { id: 'editEmail', value: student.email || '' },
         { id: 'editFutureAmbition', value: student.future_ambition || '' },
         { id: 'editCity', value: student.city || '' },
         { id: 'editState', value: student.state || '' },
         { id: 'editLocal', value: student.local || '' },
-        { id: 'editNinNumber', value: student.nin_number || '' },
+        { id: 'editNinNumber', value: student.nin_number || student.nin || '' },
         { id: 'editBloodGroup', value: student.blood_group || '' },
         { id: 'editMotherTongue', value: student.mother_tongue || '' },
         { id: 'editFatherName', value: student.father_name || '' },
@@ -2583,177 +2588,69 @@ function populateEditForm(student) {
         const element = document.getElementById(id);
         if (element) {
             element.value = value || '';
+            console.log(`Set ${id} to:`, value);
         } else {
             console.warn(`Element with ID '${id}' not found`);
         }
     });
 
+    // Set gender
     const genderRadios = document.querySelectorAll('input[name="gender"]');
-    genderRadios.forEach(radio => {
-        radio.checked = (radio.value === student.gender);
-    });
+    if (genderRadios.length > 0) {
+        const studentGender = student.gender || '';
+        genderRadios.forEach(radio => {
+            radio.checked = (radio.value === studentGender);
+        });
+        console.log('Set gender to:', studentGender);
+    }
 
+    // Set status
     const statusRadios = document.querySelectorAll('input[name="statusId"]');
-    statusRadios.forEach(radio => {
-        radio.checked = (parseInt(radio.value) === parseInt(student.statusId));
-    });
+    if (statusRadios.length > 0) {
+        const studentStatusId = student.statusId || student.status_id || '';
+        statusRadios.forEach(radio => {
+            radio.checked = (parseInt(radio.value) === parseInt(studentStatusId));
+        });
+        console.log('Set statusId to:', studentStatusId);
+    }
 
+    // Set student activity status
     const studentStatusRadios = document.querySelectorAll('input[name="student_status"]');
-    studentStatusRadios.forEach(radio => {
-        radio.checked = (radio.value === student.student_status);
-    });
+    if (studentStatusRadios.length > 0) {
+        const studentActivityStatus = student.student_status || student.status || '';
+        studentStatusRadios.forEach(radio => {
+            radio.checked = (radio.value === studentActivityStatus);
+        });
+        console.log('Set student_status to:', studentActivityStatus);
+    }
 
+    // Set avatar
     const avatarElement = document.getElementById('editStudentAvatar');
     if (avatarElement) {
-        avatarElement.src = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
-        avatarElement.setAttribute('data-original-src', student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar);
+        const avatarUrl = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+        avatarElement.src = avatarUrl;
+        avatarElement.setAttribute('data-original-src', avatarUrl);
+        console.log('Set avatar to:', avatarUrl);
     } else {
         console.warn('Avatar element with ID "editStudentAvatar" not found');
     }
 
-    // State and LGA handling
-    const stateSelect = document.getElementById('editState');
-    const lgaSelect = document.getElementById('editLocal');
-
-    if (stateSelect && lgaSelect) {
-        // First, load the states/LGA data
-        fetch('/states_lgas.json')
-            .then(response => response.json())
-            .then(data => {
-                // Clear and populate states
-                stateSelect.innerHTML = '<option value="">Select State</option>';
-                data.forEach(state => {
-                    const option = document.createElement('option');
-                    option.value = state.state;
-                    option.textContent = state.state;
-                    stateSelect.appendChild(option);
-                });
-
-                // Set the student's state if available
-                if (student.state) {
-                    stateSelect.value = student.state;
-
-                    // Find the selected state's LGAs
-                    const selectedStateData = data.find(state => state.state === student.state);
-                    if (selectedStateData) {
-                        // Clear and populate LGAs for the selected state
-                        lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
-                        selectedStateData.lgas.forEach(lga => {
-                            const option = document.createElement('option');
-                            option.value = lga;
-                            option.textContent = lga;
-                            lgaSelect.appendChild(option);
-                        });
-
-                        // Set the student's LGA if available
-                        if (student.local) {
-                            lgaSelect.value = student.local;
-                        }
-                    }
-                } else {
-                    // If no state is selected, clear LGAs
-                    lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
-                }
-
-                // Add event listener for state changes
-                stateSelect.addEventListener('change', function() {
-                    lgaSelect.innerHTML = '<option value="">Select Local Government</option>';
-                    const selectedState = data.find(state => state.state === this.value);
-                    if (selectedState) {
-                        selectedState.lgas.forEach(lga => {
-                            const option = document.createElement('option');
-                            option.value = lga;
-                            option.textContent = lga;
-                            lgaSelect.appendChild(option);
-                        });
-                    }
-                });
-            })
-            .catch(error => {
-                console.error('Error loading states and LGAs for edit modal:', error);
-                Swal.fire({
-                    title: 'Warning!',
-                    text: 'Could not load states and LGAs data',
-                    icon: 'warning',
-                    customClass: { confirmButton: 'btn btn-primary' },
-                    buttonsStyling: false
-                });
-            });
-    } else {
-        console.warn('State or LGA select elements not found in edit modal');
-    }
-
+    // Calculate age if date of birth exists
     if (student.dateofbirth) {
         showage(student.dateofbirth, 'editAge');
     }
 
+    // Update form action
     const form = document.getElementById('editStudentForm');
-    if (form) {
+    if (form && student.id) {
         form.action = `/student/${student.id}`;
+        console.log('Updated form action to:', form.action);
     }
-}
-
-// Populate view modal with student data
-function populateViewModal(student) {
-    // Student Photo
-    const photoElement = document.getElementById('viewStudentPhoto');
-    if (photoElement) {
-        photoElement.src = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
-    }
-
-    // Section A: Academic Details
-    document.getElementById('viewAcademicYear').textContent = student.admissionYear || '';
-    document.getElementById('viewRegistrationNo').textContent = student.admissionNo || '';
-    document.getElementById('viewAdmissionDate').textContent = student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : '';
-    document.getElementById('viewClass').textContent = (student.schoolclass && student.arm) ? `${student.schoolclass} - ${student.arm}` : '';
-    document.getElementById('viewTerm').textContent = student.term_name || '';
-
-    // Category checkboxes
-    const categoryDay = document.getElementById('viewCategoryDay');
-    const categoryBorder = document.getElementById('viewCategoryBorder');
-    if (categoryDay && categoryBorder) {
-        categoryDay.checked = student.student_category === 'Day';
-        categoryBorder.checked = student.student_category === 'Boarding';
-    }
-
-    // Section B: Student Details
-    document.getElementById('viewSurname').textContent = student.lastname || '';
-    document.getElementById('viewFirstName').textContent = student.firstname || '';
-    document.getElementById('viewMiddleName').textContent = student.othername || '';
-    document.getElementById('viewGender').textContent = student.gender || '';
-    document.getElementById('viewBloodGroup').textContent = student.blood_group || '';
-    document.getElementById('viewDateOfBirth').textContent = student.dateofbirth ? new Date(student.dateofbirth).toLocaleDateString() : '';
-    document.getElementById('viewMotherTongue').textContent = student.mother_tongue || '';
-    document.getElementById('viewReligion').textContent = student.religion || '';
-    document.getElementById('viewSportHouse').textContent = student.schoolhouse || student.sport_house || '';
-    document.getElementById('viewMobileNumber').textContent = student.phone_number || '';
-    document.getElementById('viewEmail').textContent = student.email || '';
-    document.getElementById('viewNIN').textContent = student.nin_number || '';
-    document.getElementById('viewCity').textContent = student.city || '';
-    document.getElementById('viewState').textContent = student.state || '';
-    document.getElementById('viewPermanentAddress').textContent = student.permanent_address || '';
-    document.getElementById('viewFutureAmbition').textContent = student.future_ambition || '';
-
-    // Section C: Guardian Details
-    document.getElementById('viewFatherName').textContent = student.father_name || '';
-    document.getElementById('viewMotherName').textContent = student.mother_name || '';
-    document.getElementById('viewOccupation').textContent = student.father_occupation || '';
-    document.getElementById('viewParentCity').textContent = student.father_city || '';
-    document.getElementById('viewParentMobile').textContent = student.father_phone || student.mother_phone || '';
-    document.getElementById('viewParentEmail').textContent = student.parent_email || '';
-    document.getElementById('viewParentAddress').textContent = student.parent_address || '';
-
-    // Section D: Previous School Details
-    document.getElementById('viewSchoolName').textContent = student.last_school || '';
-    document.getElementById('viewPreviousClass').textContent = student.last_class || '';
-    document.getElementById('viewReasonLeaving').textContent = student.reason_for_leaving || '';
 }
 
 // Initialize the student list
 function initializeStudentList() {
-    // Populate states and LGAs
-    populateStates('addState', 'addLocal');
-    populateStates('editState', 'editLocal');
+    console.log('Initializing student list...');
 
     // Initial fetch of students
     fetchStudents();
@@ -2792,230 +2689,32 @@ function initializeStudentList() {
         genderFilter.addEventListener('change', filterData);
     }
 
-    // Avatar upload for Add Student modal
-    const avatarInput = document.getElementById('avatar');
-    if (avatarInput) {
-        avatarInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            const preview = document.getElementById('addStudentAvatar');
-            if (file) {
-                if (file.size > 2 * 1024 * 1024) {
-                    Swal.fire({
-                        title: "Error!",
-                        text: "File size exceeds 2MB limit.",
-                        icon: "error",
-                        customClass: { confirmButton: "btn btn-info" },
-                        buttonsStyling: false
-                    });
-                    event.target.value = '';
-                    preview.src = defaultAvatar;
-                    return;
-                }
-                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-                if (!allowedTypes.includes(file.type)) {
-                    Swal.fire({
-                        title: "Error!",
-                        text: "Only PNG, JPG, and JPEG files are allowed.",
-                        icon: "error",
-                        customClass: { confirmButton: "btn btn-info" },
-                        buttonsStyling: false
-                    });
-                    event.target.value = '';
-                    preview.src = defaultAvatar;
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.src = defaultAvatar;
-                preview.style.display = 'block';
-            }
-        });
-    }
-
-    // Avatar upload for Edit Student modal
-    const editAvatarInput = document.getElementById('editAvatar');
-    if (editAvatarInput) {
-        editAvatarInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            const preview = document.getElementById('editStudentAvatar');
-            if (file) {
-                if (file.size > 2 * 1024 * 1024) {
-                    Swal.fire({
-                        title: "Error!",
-                        text: "File size exceeds 2MB limit.",
-                        icon: "error",
-                        customClass: { confirmButton: "btn btn-info" },
-                        buttonsStyling: false
-                    });
-                    event.target.value = '';
-                    preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
-                    return;
-                }
-                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-                if (!allowedTypes.includes(file.type)) {
-                    Swal.fire({
-                        title: "Error!",
-                        text: "Only PNG, JPG, and JPEG files are allowed.",
-                        icon: "error",
-                        customClass: { confirmButton: "btn btn-info" },
-                        buttonsStyling: false
-                    });
-                    event.target.value = '';
-                    preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.src = preview.getAttribute('data-original-src') || defaultAvatar;
-            }
-        });
-    }
-
-    // Table row click events (Edit/Delete)
+    // Add event listeners for table actions
     const tableBody = document.getElementById('studentTableBody');
     if (tableBody) {
         tableBody.addEventListener('click', function(e) {
+            // View button
             if (e.target.closest('.view-item-btn')) {
                 const button = e.target.closest('.view-item-btn');
                 const id = button.getAttribute('data-id');
                 console.log('View button clicked for student ID:', id);
-                if (!ensureAxios()) return;
-
-                // Try to get more detailed student data with relationships
-                axios.get(`/student/${id}/view`).then((response) => {
-                    console.log('Student data received for view:', response.data);
-                    const student = response.data.student || response.data;
-                    if (!student) {
-                        throw new Error('Student data is empty');
-                    }
-
-                    // Populate the view modal with student data
-                    populateViewModal(student);
-
-                }).catch((error) => {
-                    console.error('View endpoint failed, trying edit endpoint:', error);
-                    // Fallback to edit endpoint if view endpoint doesn't exist
-                    axios.get(`/student/${id}/edit`).then((response) => {
-                        console.log('Student data received for view (fallback):', response.data);
-                        const student = response.data.student;
-                        if (!student) {
-                            throw new Error('Student data is empty');
-                        }
-
-                        // Enhanced data merging from multiple sources
-                        const currentStudent = allStudents.find(s => s.id == id);
-                        if (currentStudent) {
-                            student.schoolclass = student.schoolclass || currentStudent.schoolclass;
-                            student.arm = student.arm || currentStudent.arm;
-                        }
-
-                        // Try to get term name from the terms dropdown data
-                        const termSelect = document.getElementById('termid') || document.getElementById('editTermid');
-                        if (termSelect && student.termid) {
-                            const termOption = termSelect.querySelector(`option[value="${student.termid}"]`);
-                            if (termOption) {
-                                student.term_name = termOption.textContent;
-                                console.log('Found term name from dropdown:', student.term_name);
-                            }
-                        }
-
-                        // Try to get school house name from the houses dropdown data
-                        const houseSelects = [
-                            document.getElementById('school_house'),
-                            document.getElementById('sport_house'),
-                            document.querySelector('select[name="school_house"]'),
-                            document.querySelector('select[name="sport_house"]')
-                        ];
-
-                        for (const houseSelect of houseSelects) {
-                            if (houseSelect && (student.school_house_id || student.sport_house_id)) {
-                                const houseId = student.school_house_id || student.sport_house_id;
-                                const houseOption = houseSelect.querySelector(`option[value="${houseId}"]`);
-                                if (houseOption) {
-                                    student.school_house = houseOption.textContent;
-                                    console.log('Found house name from dropdown:', student.school_house);
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Log all available student data for debugging
-                        console.log('Complete student data for debugging:', student);
-
-                        // Populate the view modal with student data
-                        populateViewModal(student);
-
-                    }).catch((fallbackError) => {
-                        console.error('Error fetching student for view:', {
-                            message: fallbackError.message,
-                            status: fallbackError.response?.status,
-                            data: fallbackError.response?.data
-                        });
-                        Swal.fire({
-                            title: 'Error!',
-                            text: fallbackError.response?.data?.message || 'Failed to load student data. Check console for details.',
-                            icon: 'error',
-                            customClass: { confirmButton: 'btn btn-primary' },
-                            buttonsStyling: false
-                        });
-                    });
-                });
+                viewStudent(id);
             }
 
+            // Edit button
             if (e.target.closest('.edit-item-btn')) {
                 const button = e.target.closest('.edit-item-btn');
                 const id = button.getAttribute('data-id');
                 console.log('Edit button clicked for student ID:', id);
-                if (!ensureAxios()) return;
-
-                axios.get(`/student/${id}/edit`).then((response) => {
-                    console.log('Student data received:', response.data);
-                    const student = response.data.student;
-                    if (!student) {
-                        throw new Error('Student data is empty');
-                    }
-
-                    populateEditForm(student);
-                }).catch((error) => {
-                    console.error('Error fetching student:', {
-                        message: error.message,
-                        status: error.response?.status,
-                        data: error.response?.data
-                    });
-                    Swal.fire({
-                        title: 'Error!',
-                        text: error.response?.data?.message || 'Failed to load student data. Check console for details.',
-                        icon: 'error',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                });
+                editStudent(id);
             }
 
+            // Delete button
             if (e.target.closest('.remove-item-btn')) {
                 const button = e.target.closest('.remove-item-btn');
                 const id = button.getAttribute('data-id');
-                const row = document.querySelector(`tr[data-id="${id}"]`);
-                if (!row) {
-                    console.error(`Row with data-id="${id}" not found`);
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Table row not found for deletion',
-                        icon: 'error',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                    return;
-                }
+                console.log('Delete button clicked for student ID:', id);
+
                 Swal.fire({
                     title: 'Are you sure?',
                     text: "You won't be able to revert this!",
@@ -3025,173 +2724,45 @@ function initializeStudentList() {
                     buttonsStyling: false
                 }).then((result) => {
                     if (result.isConfirmed && ensureAxios()) {
-                        axios.delete(`/student/${id}/destroy`).then(() => {
-                            row.remove();
-                            if (studentList) {
-                                studentList.reIndex();
-                            }
-                            Swal.fire({
-                                title: 'Deleted!',
-                                text: 'Student has been deleted',
-                                icon: 'success',
-                                customClass: { confirmButton: 'btn btn-primary' },
-                                buttonsStyling: false
+                        axios.delete(`/student/${id}`)
+                            .then(() => {
+                                // Remove the row
+                                const row = document.querySelector(`tr[data-id="${id}"]`);
+                                if (row) {
+                                    row.remove();
+                                    // Update counts
+                                    allStudents = allStudents.filter(s => s.id != id);
+                                    updateCounts(allStudents.length);
+                                }
+                                Swal.fire({
+                                    title: 'Deleted!',
+                                    text: 'Student has been deleted',
+                                    icon: 'success',
+                                    customClass: { confirmButton: 'btn btn-primary' },
+                                    buttonsStyling: false
+                                });
+                            })
+                            .catch((error) => {
+                                console.error('Error deleting student:', error);
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: error.response?.data?.message || 'Failed to delete student',
+                                    icon: 'error',
+                                    customClass: { confirmButton: 'btn btn-primary' },
+                                    buttonsStyling: false
+                                });
                             });
-                        }).catch((error) => {
-                            console.error('Error deleting student:', error);
-                            Swal.fire({
-                                title: 'Error!',
-                                text: error.response?.data?.message || 'Failed to delete student',
-                                icon: 'error',
-                                customClass: { confirmButton: 'btn btn-primary' },
-                                buttonsStyling: false
-                            });
-                        });
                     }
                 });
             }
         });
     }
-
-    // Add Student form submission
-    const addStudentForm = document.getElementById('addStudentForm');
-    if (addStudentForm) {
-        addStudentForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-            if (!ensureAxios()) return;
-
-            const formData = new FormData(this);
-            console.log('Submitting addStudentForm with data:');
-            for (let pair of formData.entries()) {
-                console.log(`${pair[0]}: ${pair[1]}`);
-            }
-
-            axios.post('/student', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            }).then((response) => {
-                console.log('Add student response:', response.data);
-                if (!response.data.success) {
-                    throw new Error(response.data.message || 'Failed to add student');
-                }
-                Swal.fire({
-                    title: 'Success!',
-                    text: response.data.message || 'Student added successfully',
-                    icon: 'success',
-                    customClass: { confirmButton: 'btn btn-primary' },
-                    buttonsStyling: false
-                }).then(() => {
-                    fetchStudents();
-                    addStudentForm.reset();
-                    document.getElementById('addStudentAvatar').src = defaultAvatar;
-                    document.getElementById('addStudentModal').querySelector('.btn-close').click();
-                });
-            }).catch((error) => {
-                console.error('Error adding student:', {
-                    message: error.message,
-                    status: error.response?.status,
-                    data: error.response?.data
-                });
-                let errorMessage = error.response?.data?.message || 'Failed to add student. Check console for details.';
-                if (error.response?.status === 422 && error.response?.data?.errors) {
-                    errorMessage = Object.values(error.response.data.errors).flat().join('\n');
-                }
-                Swal.fire({
-                    title: 'Error!',
-                    text: errorMessage,
-                    icon: 'error',
-                    customClass: { confirmButton: 'btn btn-primary' },
-                    buttonsStyling: false
-                });
-            });
-        });
-    }
-
-    // Edit Student form submission
-    const editStudentForm = document.getElementById('editStudentForm');
-    if (editStudentForm) {
-        editStudentForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-            if (!ensureAxios()) return;
-
-            const id = document.getElementById('editStudentId').value;
-            const formData = new FormData(this);
-            console.log('Submitting editStudentForm with data:');
-            for (let pair of formData.entries()) {
-                console.log(`${pair[0]}: ${pair[1]}`);
-            }
-
-            axios.post(`/student/${id}`, formData, {
-                headers: { 'X-HTTP-Method-Override': 'PATCH', 'Content-Type': 'multipart/form-data' }
-            }).then((response) => {
-                console.log('Edit student response:', response.data);
-                if (!response.data.success) {
-                    throw new Error(response.data.message || 'Failed to update student');
-                }
-                Swal.fire({
-                    title: 'Success!',
-                    text: response.data.message || 'Student updated successfully',
-                    icon: 'success',
-                    customClass: { confirmButton: 'btn btn-primary' },
-                    buttonsStyling: false
-                }).then(() => {
-                    fetchStudents();
-                    document.getElementById('editStudentModal').querySelector('.btn-close').click();
-                });
-            }).catch((error) => {
-                console.error('Error updating student:', {
-                    message: error.message,
-                    status: error.response?.status,
-                    data: error.response?.data
-                });
-                let errorMessage = error.response?.data?.message || 'Failed to update student. Check console for details.';
-                if (error.response?.status === 422 && error.response?.data?.errors) {
-                    errorMessage = Object.values(error.response.data.errors).flat().join('\n');
-                }
-                Swal.fire({
-                    title: 'Error!',
-                    text: errorMessage,
-                    icon: 'error',
-                    customClass: { confirmButton: 'btn btn-primary' },
-                    buttonsStyling: false
-                });
-            });
-        });
-    }
-
-    // Image view modal
-    const imageViewModal = document.getElementById('imageViewModal');
-    if (imageViewModal) {
-        imageViewModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const imageSrc = button.getAttribute('data-image');
-            const modalImage = this.querySelector('#enlargedImage');
-            if (modalImage && imageSrc) {
-                modalImage.src = imageSrc;
-            }
-        });
-    }
-
-    // Debug permissions
-    console.log('Permissions:', window.appPermissions || 'Not defined');
 }
 
 // Call initializeStudentList on page load
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing student list...');
     initializeStudentList();
-});
-
-// Add event listeners for view toggle buttons
-document.addEventListener('DOMContentLoaded', function() {
-    const tableViewBtn = document.getElementById('tableViewBtn');
-    const cardViewBtn = document.getElementById('cardViewBtn');
-
-    if (tableViewBtn) {
-        tableViewBtn.addEventListener('click', () => toggleView('table'));
-    }
-
-    if (cardViewBtn) {
-        cardViewBtn.addEventListener('click', () => toggleView('card'));
-    }
 });
 </script>
 @endsection
