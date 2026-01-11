@@ -2243,16 +2243,22 @@ function renderStudentsCards(students) {
     students.forEach(student => {
         console.log('Processing student for card:', student);
 
-        // Get initials for avatar - FIXED to prevent "JA"
+        // Get initials for avatar - FIXED to prevent "OM '"
         const firstName = student.firstname || '';
         const lastName = student.lastname || '';
 
-        // Calculate initials properly
+        // Calculate initials properly - only use first and last name
         let displayInitials = '??';
         if (firstName || lastName) {
-            const firstInitial = firstName ? firstName.charAt(0) : '';
-            const lastInitial = lastName ? lastName.charAt(0) : '';
-            displayInitials = (firstInitial + lastInitial).toUpperCase() || '??';
+            const firstInitial = firstName.trim().charAt(0).toUpperCase() || '';
+            const lastInitial = lastName.trim().charAt(0).toUpperCase() || '';
+            displayInitials = (firstInitial + lastInitial) || '??';
+        } else {
+            // Fallback: use admission number or ID
+            const admission = student.admissionNo || '';
+            if (admission) {
+                displayInitials = admission.slice(-2) || '??';
+            }
         }
 
         // Get avatar URL - handle different possible field names
@@ -2277,6 +2283,17 @@ function renderStudentsCards(students) {
             month: 'short',
             day: 'numeric'
         }) : 'N/A';
+
+        // Get class name for display
+        let className = 'N/A';
+        if (student.schoolclass) {
+            className = student.schoolclass;
+            if (student.arm) {
+                className += ` ${student.arm}`;
+            }
+        } else if (student.class_name) {
+            className = student.class_name;
+        }
 
         // Create card HTML
         const cardHtml = `
@@ -2329,7 +2346,7 @@ function renderStudentsCards(students) {
 
                     <!-- Student details -->
                     <div class="student-details">
-                        <div><strong>Class:</strong> ${student.schoolclass || 'N/A'} ${student.arm || ''}</div>
+                        <div><strong>Class:</strong> ${className}</div>
                         <div><strong>Type:</strong> ${studentType}</div>
                         <div><strong>Gender:</strong> ${student.gender || 'N/A'}</div>
                         <div><strong>Registered:</strong> ${regDate}</div>
@@ -2476,29 +2493,47 @@ function viewStudent(id) {
         });
 }
 
-// Function to populate view modal - FIXED VERSION
+// Function to populate view modal - COMPLETELY FIXED VERSION
 function populateViewModal(student) {
     console.log('=== DEBUG: Populating View Modal ===');
     console.log('Student object:', student);
 
-    // Student Photo
+    // Student Photo - FIXED to avoid external URLs
     const photoElement = document.getElementById('viewStudentPhoto');
     if (photoElement) {
+        // Create initials for avatar
+        const firstName = student.firstname || '';
+        const lastName = student.lastname || '';
+        const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || '??';
+
         if (student.picture) {
             photoElement.src = `/storage/images/student_avatars/${student.picture}`;
             photoElement.onerror = function() {
-                this.src = 'https://via.placeholder.com/150x150/6366f1/ffffff?text=PHOTO';
+                // Use SVG avatar with initials on error
+                this.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%236366f1"/><text x="50%" y="50%" font-family="Arial" font-size="60" fill="white" text-anchor="middle" dy=".3em">${initials}</text></svg>`;
             };
         } else if (student.avatar) {
             photoElement.src = `/storage/images/student_avatars/${student.avatar}`;
             photoElement.onerror = function() {
-                this.src = 'https://via.placeholder.com/150x150/6366f1/ffffff?text=PHOTO';
+                this.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%236366f1"/><text x="50%" y="50%" font-family="Arial" font-size="60" fill="white" text-anchor="middle" dy=".3em">${initials}</text></svg>`;
             };
+        } else {
+            // Use SVG avatar with initials
+            photoElement.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%236366f1"/><text x="50%" y="50%" font-family="Arial" font-size="60" fill="white" text-anchor="middle" dy=".3em">${initials}</text></svg>`;
         }
     }
 
-    // Academic Details
-    setElementText('viewAcademicYear', student.admissionYear || student.admission_year || '-');
+    // Academic Details - FIXED to handle different field names
+    let academicYear = '-';
+    if (student.academic_year) {
+        academicYear = student.academic_year;
+    } else if (student.session_name && student.session_name.match(/\d{4}/)) {
+        academicYear = student.session_name.match(/\d{4}/)[0];
+    } else if (student.admissionYear) {
+        academicYear = student.admissionYear;
+    }
+    setElementText('viewAcademicYear', academicYear);
+
     setElementText('viewRegistrationNo', student.admissionNo || student.admission_no || '-');
 
     if (student.admissionDate) {
@@ -2508,12 +2543,31 @@ function populateViewModal(student) {
         setElementText('viewAdmissionDate', '-');
     }
 
-    // Class information
-    setElementText('viewClass', student.schoolclass ?
-        `${student.schoolclass} ${student.arm ? '- ' + student.arm : ''}` :
-        student.class_name || '-');
+    // Class information - handle different field names
+    let className = '-';
+    if (student.schoolclass) {
+        className = `${student.schoolclass} ${student.arm ? '- ' + student.arm : ''}`;
+    } else if (student.class_name) {
+        className = student.class_name;
+    } else if (student.school_class) {
+        className = student.school_class;
+    } else if (student.class && student.class.schoolclass) {
+        className = `${student.class.schoolclass} ${student.class.arm ? '- ' + student.class.arm : ''}`;
+    }
+    setElementText('viewClass', className);
 
-    setElementText('viewTerm', student.term_name || student.term || '-');
+    // Term information
+    let termName = '-';
+    if (student.term_name) {
+        termName = student.term_name;
+    } else if (student.term) {
+        termName = student.term;
+    } else if (student.term_name) {
+        termName = student.term_name;
+    } else if (student.term && student.term.name) {
+        termName = student.term.name;
+    }
+    setElementText('viewTerm', termName);
 
     // Category badges
     const dayBadge = document.getElementById('dayBadge');
@@ -2755,7 +2809,37 @@ function fetchStudents() {
                 picture: student.picture || student.avatar || student.profile_picture || '',
                 schoolclass: student.schoolclass || student.class || student.class_name || '',
                 arm: student.arm || student.section || '',
-                schoolclassid: student.schoolclassid || student.class_id || ''
+                schoolclassid: student.schoolclassid || student.class_id || '',
+                // Add these for better view modal display
+                term_name: student.term_name || (student.term && student.term.name) || '',
+                session_name: student.session_name || (student.session && student.session.name) || '',
+                admissionYear: student.admissionYear || '',
+                academic_year: student.academic_year || '',
+                student_category: student.student_category || '',
+                // Guardian info
+                father_name: student.father_name || '',
+                mother_name: student.mother_name || '',
+                father_phone: student.father_phone || '',
+                mother_phone: student.mother_phone || '',
+                father_occupation: student.father_occupation || '',
+                father_city: student.father_city || '',
+                parent_email: student.parent_email || '',
+                parent_address: student.parent_address || '',
+                // Additional info
+                blood_group: student.blood_group || '',
+                mother_tongue: student.mother_tongue || '',
+                religion: student.religion || '',
+                school_house: student.school_house || student.sport_house || '',
+                nin_number: student.nin_number || '',
+                city: student.city || '',
+                state: student.state || '',
+                local: student.local || '',
+                permanent_address: student.permanent_address || '',
+                future_ambition: student.future_ambition || '',
+                // Previous school
+                last_school: student.last_school || '',
+                last_class: student.last_class || '',
+                reason_for_leaving: student.reason_for_leaving || ''
             }));
 
             console.log('Processed students:', allStudents);
