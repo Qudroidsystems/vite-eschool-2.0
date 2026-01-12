@@ -266,6 +266,306 @@ use Spatie\Permission\Models\Role;
                 .view-container {
                     transition: all 0.3s ease;
                 }
+
+                /* Progress Steps */
+                .progress-steps {
+                    display: flex;
+                    justify-content: space-between;
+                    position: relative;
+                    margin-bottom: 30px;
+                    counter-reset: step;
+                }
+
+                .progress-steps::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 0;
+                    right: 0;
+                    height: 2px;
+                    background: #e9ecef;
+                    transform: translateY(-50%);
+                    z-index: 1;
+                }
+
+                .progress-steps .step {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background: #e9ecef;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    color: #6c757d;
+                    position: relative;
+                    z-index: 2;
+                    border: 2px solid #e9ecef;
+                }
+
+                .progress-steps .step.active {
+                    background: #405189;
+                    color: white;
+                    border-color: #405189;
+                }
+
+                /* Modern Modal Styles */
+                .modern-modal {
+                    border-radius: 12px;
+                    overflow: hidden;
+                }
+
+                .modern-header {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 20px 30px;
+                    border: none;
+                }
+
+                .modern-close {
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 50%;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    border: none;
+                    opacity: 1;
+                }
+
+                .modern-close:hover {
+                    background: rgba(255,255,255,0.2);
+                }
+
+                .modern-body {
+                    padding: 0;
+                }
+
+                /* Student header with photo */
+                .student-header {
+                    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+                    padding: 30px;
+                    text-align: center;
+                    border-bottom: 1px solid #e9ecef;
+                }
+
+                .photo-container {
+                    display: inline-block;
+                    position: relative;
+                }
+
+                .photo-frame {
+                    width: 150px;
+                    height: 150px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    border: 5px solid white;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                    position: relative;
+                }
+
+                .student-photo {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                /* Form sections */
+                .form-section {
+                    padding: 20px 30px;
+                    border-bottom: 1px solid #e9ecef;
+                }
+
+                .section-header {
+                    margin-bottom: 20px;
+                    padding-bottom: 10px;
+                    border-bottom: 2px solid #f0f0f0;
+                }
+
+                .section-header h5 {
+                    color: #495057;
+                    font-weight: 600;
+                }
+
+                /* Form grid for better layout */
+                .form-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                    gap: 20px;
+                }
+
+                .form-group {
+                    margin-bottom: 15px;
+                }
+
+                .form-label {
+                    font-size: 12px;
+                    color: #6c757d;
+                    text-transform: uppercase;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 5px;
+                    display: block;
+                }
+
+                .form-value {
+                    padding: 8px 12px;
+                    background: #f8f9fa;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    color: #495057;
+                    min-height: 38px;
+                    display: flex;
+                    align-items: center;
+                    border: 1px solid #e9ecef;
+                }
+
+                /* Special value styles */
+                .highlight {
+                    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+                    border: 1px solid #667eea30;
+                    color: #405189;
+                    font-weight: 600;
+                }
+
+                .class-badge {
+                    display: inline-block;
+                    padding: 4px 12px;
+                    background: #e7f4ff;
+                    color: #0066cc;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
+
+                /* Modern tabs */
+                .modern-tabs {
+                    background: #f8f9fa;
+                    padding: 10px;
+                    border-radius: 10px;
+                    margin: 0 30px;
+                    position: relative;
+                    top: -15px;
+                    border: 1px solid #e9ecef;
+                }
+
+                .modern-tabs .nav-link {
+                    color: #6c757d;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    transition: all 0.3s ease;
+                    border: none;
+                    position: relative;
+                }
+
+                .modern-tabs .nav-link.active {
+                    background: white;
+                    color: #405189;
+                    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+                }
+
+                .modern-tabs .nav-link i {
+                    margin-right: 8px;
+                    font-size: 16px;
+                }
+
+                /* Modern footer */
+                .modern-footer {
+                    background: #f8f9fa;
+                    border-top: 1px solid #e9ecef;
+                    padding: 15px 30px;
+                }
+
+                /* Full-width form groups */
+                .full-width {
+                    grid-column: 1 / -1;
+                }
+
+                .address-field {
+                    min-height: 60px;
+                    white-space: pre-wrap;
+                }
+
+                /* Status badges */
+                .gender-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .blood-group {
+                    background: #fff5f5;
+                    color: #e53e3e;
+                    border: 1px solid #fed7d7;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-weight: 600;
+                    font-size: 12px;
+                }
+
+                .occupation-badge {
+                    background: #f0fff4;
+                    color: #38a169;
+                    border: 1px solid #c6f6d5;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                }
+
+                /* Contact info styling */
+                .contact {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .school-name {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .category-badges {
+                    display: flex;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+
+                .category-badge {
+                    padding: 6px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    opacity: 0.5;
+                    transition: all 0.3s ease;
+                }
+
+                .category-badge.active {
+                    opacity: 1;
+                }
+
+                .category-badge.day {
+                    background: #fff3cd;
+                    color: #856404;
+                    border: 1px solid #ffeaa7;
+                }
+
+                .category-badge.boarding {
+                    background: #d4edda;
+                    color: #155724;
+                    border: 1px solid #c3e6cb;
+                }
+
+                .name-container {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 15px;
+                }
             </style>
             <div class="container">
                 <h2 class="mb-4 text-center">School Dashboard Statistics</h2>
@@ -1016,9 +1316,9 @@ use Spatie\Permission\Models\Role;
                         <div class="modal-body p-4">
                             <input type="hidden" id="editStudentId" name="id">
 
-                            <!-- Progress Steps -->
+                            <!-- Progress Steps - Fixed: No active steps by default -->
                             <div class="progress-steps mb-4">
-                                <div class="step active">1</div>
+                                <div class="step">1</div>
                                 <div class="step">2</div>
                                 <div class="step">3</div>
                                 <div class="step">4</div>
@@ -1594,7 +1894,7 @@ use Spatie\Permission\Models\Role;
                                             </div>
                                             <div class="form-group">
                                                 <label class="form-label">Sport House</label>
-                                                <div class="form-value " id="viewSportHouse">-</div>
+                                                <div class="form-value" id="viewSportHouse">-</div>
                                             </div>
                                             <div class="form-group">
                                                 <label class="form-label">Mobile Number</label>
@@ -1908,7 +2208,7 @@ function toggleView(viewType) {
     }
 }
 
-// Render students as cards - SIMPLIFIED VERSION
+// Render students as cards - FIXED VERSION
 function renderStudentsCards(students) {
     console.log('Rendering students as cards:', students);
     const container = document.getElementById('studentsCardsContainer');
@@ -1943,10 +2243,17 @@ function renderStudentsCards(students) {
     students.forEach(student => {
         console.log('Processing student for card:', student);
 
-        // Get initials for avatar
+        // Get initials for avatar - FIXED to prevent "JA"
         const firstName = student.firstname || '';
         const lastName = student.lastname || '';
-        const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || '??';
+
+        // Calculate initials properly
+        let displayInitials = '??';
+        if (firstName || lastName) {
+            const firstInitial = firstName ? firstName.charAt(0) : '';
+            const lastInitial = lastName ? lastName.charAt(0) : '';
+            displayInitials = (firstInitial + lastInitial).toUpperCase() || '??';
+        }
 
         // Get avatar URL - handle different possible field names
         let avatarUrl = defaultAvatar;
@@ -2005,11 +2312,13 @@ function renderStudentsCards(students) {
                         </button>
                     </div>
 
-                    <!-- Avatar -->
+                    <!-- Avatar with fallback to initials -->
                     <div class="avatar-container">
                         <img src="${avatarUrl}" alt="${student.firstname} ${student.lastname}"
-                             class="avatar" onerror="this.style.display='none';
-                             this.parentElement.innerHTML='<div class=\"avatar-initials\">${initials}</div>'">
+                             class="avatar" onerror="this.onerror=null; this.style.display='none';
+                             this.nextElementSibling ? this.nextElementSibling.style.display='flex' :
+                             this.parentElement.innerHTML='<div class=\"avatar-initials\">${displayInitials}</div>'">
+                        <div class="avatar-initials" style="display: none;">${displayInitials}</div>
                     </div>
 
                     <!-- Student name -->
@@ -2087,14 +2396,25 @@ function initializeStudentCheckboxes() {
     });
 }
 
-// View student details - SIMPLIFIED
+// View student details - FIXED VERSION
 function viewStudent(id) {
     console.log('View student:', id);
     if (!ensureAxios()) return;
 
+    // Show loading state
+    Swal.fire({
+        title: 'Loading...',
+        text: 'Fetching student details',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     // Try your working endpoint first
     axios.get(`/student/${id}/edit`)
         .then((response) => {
+            Swal.close();
             console.log('Student data received for view:', response.data);
             let student = response.data.student || response.data;
 
@@ -2112,6 +2432,12 @@ function viewStudent(id) {
                 viewModal.show();
             } else {
                 console.error('View modal element not found');
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'View modal not found',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
             }
         })
         .catch((error) => {
@@ -2120,6 +2446,7 @@ function viewStudent(id) {
             // Fallback: try the show endpoint
             axios.get(`/student/${id}`)
                 .then((response) => {
+                    Swal.close();
                     console.log('Student data received (fallback):', response.data);
                     let student = response.data.student || response.data.data || response.data;
 
@@ -2136,6 +2463,7 @@ function viewStudent(id) {
                     }
                 })
                 .catch((fallbackError) => {
+                    Swal.close();
                     console.error('Fallback also failed:', fallbackError);
                     Swal.fire({
                         title: 'Error!',
@@ -2148,137 +2476,155 @@ function viewStudent(id) {
         });
 }
 
-// Function to populate view modal
+// Function to populate view modal - FIXED VERSION
 function populateViewModal(student) {
-    console.log('Populating view modal with student:', student);
+    console.log('=== DEBUG: Populating View Modal ===');
+    console.log('Student object:', student);
 
     // Student Photo
     const photoElement = document.getElementById('viewStudentPhoto');
     if (photoElement) {
         if (student.picture) {
             photoElement.src = `/storage/images/student_avatars/${student.picture}`;
+            photoElement.onerror = function() {
+                this.src = 'https://via.placeholder.com/150x150/6366f1/ffffff?text=PHOTO';
+            };
         } else if (student.avatar) {
             photoElement.src = `/storage/images/student_avatars/${student.avatar}`;
+            photoElement.onerror = function() {
+                this.src = 'https://via.placeholder.com/150x150/6366f1/ffffff?text=PHOTO';
+            };
         }
     }
 
     // Academic Details
-    document.getElementById('viewAcademicYear').textContent = student.admissionYear || student.admission_year || '-';
-    document.getElementById('viewRegistrationNo').textContent = student.admissionNo || student.admission_no || '-';
+    setElementText('viewAcademicYear', student.admissionYear || student.admission_year || '-');
+    setElementText('viewRegistrationNo', student.admissionNo || student.admission_no || '-');
 
     if (student.admissionDate) {
-        document.getElementById('viewAdmissionDate').textContent = new Date(student.admissionDate).toLocaleDateString();
+        const date = new Date(student.admissionDate);
+        setElementText('viewAdmissionDate', date.toLocaleDateString());
     } else {
-        document.getElementById('viewAdmissionDate').textContent = '-';
+        setElementText('viewAdmissionDate', '-');
     }
 
     // Class information
-    const classElement = document.getElementById('viewClass');
-    if (classElement) {
-        if (student.schoolclass && student.arm) {
-            classElement.textContent = `${student.schoolclass} - ${student.arm}`;
-        } else if (student.class_name) {
-            classElement.textContent = student.class_name;
-        } else {
-            classElement.textContent = '-';
-        }
-    }
+    setElementText('viewClass', student.schoolclass ?
+        `${student.schoolclass} ${student.arm ? '- ' + student.arm : ''}` :
+        student.class_name || '-');
 
-    document.getElementById('viewTerm').textContent = student.term_name || student.term || '-';
+    setElementText('viewTerm', student.term_name || student.term || '-');
 
     // Category badges
     const dayBadge = document.getElementById('dayBadge');
     const boardingBadge = document.getElementById('boardingBadge');
     if (dayBadge && boardingBadge) {
+        dayBadge.classList.remove('active');
+        boardingBadge.classList.remove('active');
+
         if (student.student_category === 'Day') {
             dayBadge.classList.add('active');
-            boardingBadge.classList.remove('active');
         } else if (student.student_category === 'Boarding') {
             boardingBadge.classList.add('active');
-            dayBadge.classList.remove('active');
-        } else {
-            dayBadge.classList.remove('active');
-            boardingBadge.classList.remove('active');
         }
     }
 
     // Personal Details
-    document.getElementById('viewSurname').textContent = student.lastname || student.last_name || '-';
-    document.getElementById('viewFirstName').textContent = student.firstname || student.first_name || '-';
-    document.getElementById('viewMiddleName').textContent = student.othername || student.other_name || student.middle_name || '-';
+    setElementText('viewSurname', student.lastname || student.last_name || '-');
+    setElementText('viewFirstName', student.firstname || student.first_name || '-');
+    setElementText('viewMiddleName', student.othername || student.other_name || student.middle_name || '-');
 
     const genderElement = document.getElementById('viewGender');
     if (genderElement) {
         const gender = student.gender || '-';
-        genderElement.innerHTML = gender === 'Male' ?
-            '<i class="fas fa-male"></i> Male' :
-            gender === 'Female' ? '<i class="fas fa-female"></i> Female' :
-            '<i class="fas fa-user"></i> -';
+        if (gender === 'Male') {
+            genderElement.innerHTML = '<i class="fas fa-male"></i> Male';
+        } else if (gender === 'Female') {
+            genderElement.innerHTML = '<i class="fas fa-female"></i> Female';
+        } else {
+            genderElement.innerHTML = '<i class="fas fa-user"></i> -';
+        }
     }
 
     if (student.dateofbirth) {
-        document.getElementById('viewDateOfBirth').textContent = new Date(student.dateofbirth).toLocaleDateString();
+        const dob = new Date(student.dateofbirth);
+        setElementText('viewDateOfBirth', dob.toLocaleDateString());
     } else {
-        document.getElementById('viewDateOfBirth').textContent = '-';
+        setElementText('viewDateOfBirth', '-');
     }
 
-    document.getElementById('viewBloodGroup').textContent = student.blood_group || '-';
-    document.getElementById('viewMotherTongue').textContent = student.mother_tongue || '-';
-    document.getElementById('viewReligion').textContent = student.religion || '-';
-    document.getElementById('viewSportHouse').textContent = student.school_house || student.sport_house || '-';
+    setElementText('viewBloodGroup', student.blood_group || '-');
+    setElementText('viewMotherTongue', student.mother_tongue || '-');
+    setElementText('viewReligion', student.religion || '-');
+    setElementText('viewSportHouse', student.school_house || student.sport_house || '-');
 
     const mobileElement = document.getElementById('viewMobileNumber');
     if (mobileElement) {
         const phone = student.phone_number || '-';
         mobileElement.innerHTML = phone !== '-' ?
-            `<i class="fas fa-phone"></i> ${phone}` : '-';
+            `<i class="fas fa-phone"></i> ${phone}` :
+            '<i class="fas fa-phone"></i> -';
     }
 
     const emailElement = document.getElementById('viewEmail');
     if (emailElement) {
         const email = student.email || '-';
         emailElement.innerHTML = email !== '-' ?
-            `<i class="fas fa-envelope"></i> ${email}` : '-';
+            `<i class="fas fa-envelope"></i> ${email}` :
+            '<i class="fas fa-envelope"></i> -';
     }
 
-    document.getElementById('viewNIN').textContent = student.nin_number || '-';
-    document.getElementById('viewCity').textContent = student.city || '-';
-    document.getElementById('viewState').textContent = student.state || '-';
-    document.getElementById('viewPermanentAddress').textContent = student.permanent_address || '-';
-    document.getElementById('viewFutureAmbition').textContent = student.future_ambition || '-';
+    setElementText('viewNIN', student.nin_number || '-');
+    setElementText('viewCity', student.city || '-');
+    setElementText('viewState', student.state || '-');
+    setElementText('viewPermanentAddress', student.permanent_address || '-');
+    setElementText('viewFutureAmbition', student.future_ambition || '-');
 
     // Guardian Details
-    document.getElementById('viewFatherName').textContent = student.father_name || '-';
-    document.getElementById('viewMotherName').textContent = student.mother_name || '-';
-    document.getElementById('viewOccupation').textContent = student.father_occupation || '-';
-    document.getElementById('viewParentCity').textContent = student.father_city || '-';
+    setElementText('viewFatherName', student.father_name || '-');
+    setElementText('viewMotherName', student.mother_name || '-');
+    setElementText('viewOccupation', student.father_occupation || '-');
+    setElementText('viewParentCity', student.father_city || '-');
 
     const parentMobileElement = document.getElementById('viewParentMobile');
     if (parentMobileElement) {
         const parentPhone = student.father_phone || student.mother_phone || '-';
         parentMobileElement.innerHTML = parentPhone !== '-' ?
-            `<i class="fas fa-phone"></i> ${parentPhone}` : '-';
+            `<i class="fas fa-phone"></i> ${parentPhone}` :
+            '<i class="fas fa-phone"></i> -';
     }
 
     const parentEmailElement = document.getElementById('viewParentEmail');
     if (parentEmailElement) {
         const parentEmail = student.parent_email || '-';
         parentEmailElement.innerHTML = parentEmail !== '-' ?
-            `<i class="fas fa-envelope"></i> ${parentEmail}` : '-';
+            `<i class="fas fa-envelope"></i> ${parentEmail}` :
+            '<i class="fas fa-envelope"></i> -';
     }
 
-    document.getElementById('viewParentAddress').textContent = student.parent_address || '-';
+    setElementText('viewParentAddress', student.parent_address || '-');
 
     // Previous School Details
     const schoolElement = document.getElementById('viewSchoolName');
     if (schoolElement) {
         const schoolName = student.last_school || '-';
         schoolElement.innerHTML = schoolName !== '-' ?
-            `<i class="fas fa-school"></i> ${schoolName}` : '-';
+            `<i class="fas fa-school"></i> ${schoolName}` :
+            '<i class="fas fa-school"></i> -';
     }
 
-    document.getElementById('viewPreviousClass').textContent = student.last_class || '-';
-    document.getElementById('viewReasonLeaving').textContent = student.reason_for_leaving || '-';
+    setElementText('viewPreviousClass', student.last_class || '-');
+    setElementText('viewReasonLeaving', student.reason_for_leaving || '-');
+}
+
+// Helper function to set element text
+function setElementText(id, text) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = text;
+    } else {
+        console.warn(`Element with ID '${id}' not found`);
+    }
 }
 
 function editStudent(id) {
@@ -2362,7 +2708,7 @@ function deleteStudent(id) {
     });
 }
 
-// Fetch students from the server - SIMPLIFIED
+// Fetch students from the server
 function fetchStudents() {
     if (!ensureAxios()) return;
     console.log('Fetching students from /students/data');
