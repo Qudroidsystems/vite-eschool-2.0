@@ -2430,6 +2430,7 @@ function initializeStudentCheckboxes() {
 }
 
 // View student details - COMPLETELY FIXED
+// Replace the viewStudent function with this:
 function viewStudent(id) {
     console.log('View student:', id);
     if (!ensureAxios()) return;
@@ -2444,12 +2445,17 @@ function viewStudent(id) {
         }
     });
 
-    // Try with relationships first
-    axios.get(`/student/${id}?with=class,term,session`)
+    // Use the edit endpoint which now returns JSON
+    axios.get(`/student/${id}/edit`)
         .then((response) => {
             Swal.close();
-            console.log('Student data received for view (with relationships):', response.data);
-            let student = response.data.student || response.data.data || response.data;
+            console.log('Student data received for view:', response.data);
+
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to load student data');
+            }
+
+            const student = response.data.student;
 
             if (!student) {
                 throw new Error('Student data is empty');
@@ -2474,74 +2480,31 @@ function viewStudent(id) {
             }
         })
         .catch((error) => {
-            console.error('Error fetching student with relationships:', error);
+            Swal.close();
+            console.error('Error fetching student for view:', error);
 
-            // Fallback: try the edit endpoint
-            axios.get(`/student/${id}/edit`)
-                .then((response) => {
-                    Swal.close();
-                    console.log('Student data received (edit endpoint):', response.data);
-                    let student = response.data.student || response.data;
-
-                    if (!student) {
-                        throw new Error('Student data is empty');
-                    }
-
-                    populateViewModal(student);
-
-                    const viewModalElement = document.getElementById('viewStudentModal');
-                    if (viewModalElement) {
-                        const viewModal = new bootstrap.Modal(viewModalElement);
-                        viewModal.show();
-                    }
-                })
-                .catch((fallbackError) => {
-                    Swal.close();
-                    console.error('Edit endpoint also failed:', fallbackError);
-
-                    // Last fallback: try the show endpoint
-                    axios.get(`/student/${id}`)
-                        .then((showResponse) => {
-                            console.log('Student data received (show endpoint):', showResponse.data);
-                            let student = showResponse.data.student || showResponse.data.data || showResponse.data;
-
-                            if (!student) {
-                                throw new Error('Student data is empty');
-                            }
-
-                            populateViewModal(student);
-
-                            const viewModalElement = document.getElementById('viewStudentModal');
-                            if (viewModalElement) {
-                                const viewModal = new bootstrap.Modal(viewModalElement);
-                                viewModal.show();
-                            }
-                        })
-                        .catch((showError) => {
-                            console.error('All endpoints failed:', showError);
-                            Swal.fire({
-                                title: 'Error!',
-                                text: 'Failed to load student data. Please try again.',
-                                icon: 'error',
-                                customClass: { confirmButton: 'btn btn-primary' },
-                                buttonsStyling: false
-                            });
-                        });
-                });
+            Swal.fire({
+                title: 'Error!',
+                text: error.response?.data?.message || error.message || 'Failed to load student data.',
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
         });
 }
 
 // Function to populate view modal - COMPLETELY FIXED
+// Update the populateViewModal function to handle the new data structure:
 function populateViewModal(student) {
     console.log('=== DEBUG: Populating View Modal ===');
-    console.log('Full student object:', JSON.stringify(student, null, 2));
+    console.log('Student object:', student);
 
     // Debug class, term, session
-    console.log('Class data:', student.schoolclass, student.arm, student.class_name, student.class);
+    console.log('Class data:', student.schoolclass, student.arm, student.class_name);
     console.log('Term data:', student.term_name, student.term);
     console.log('Session data:', student.session_name, student.session);
 
-    // Student Photo - FIXED to avoid external URLs
+    // Student Photo
     const photoElement = document.getElementById('viewStudentPhoto');
     if (photoElement) {
         // Create initials for avatar
@@ -2550,14 +2513,14 @@ function populateViewModal(student) {
         const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || '??';
 
         if (student.picture) {
-            photoElement.src = `/storage/images/student_avatars/${student.picture}`;
+            // Handle picture path - it might be a full URL or just a filename
+            let pictureUrl = student.picture;
+            if (!pictureUrl.startsWith('http') && !pictureUrl.startsWith('/')) {
+                pictureUrl = `/storage/images/student_avatars/${student.picture}`;
+            }
+            photoElement.src = pictureUrl;
             photoElement.onerror = function() {
                 // Use SVG avatar with initials on error
-                this.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%236366f1"/><text x="50%" y="50%" font-family="Arial" font-size="60" fill="white" text-anchor="middle" dy=".3em">${initials}</text></svg>`;
-            };
-        } else if (student.avatar) {
-            photoElement.src = `/storage/images/student_avatars/${student.avatar}`;
-            photoElement.onerror = function() {
                 this.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%236366f1"/><text x="50%" y="50%" font-family="Arial" font-size="60" fill="white" text-anchor="middle" dy=".3em">${initials}</text></svg>`;
             };
         } else {
@@ -2568,11 +2531,7 @@ function populateViewModal(student) {
 
     // Academic Details
     let academicYear = '-';
-    if (student.academic_year) {
-        academicYear = student.academic_year;
-    } else if (student.session_name && student.session_name.match(/\d{4}/)) {
-        academicYear = student.session_name.match(/\d{4}/)[0];
-    } else if (student.admissionYear) {
+    if (student.admissionYear) {
         academicYear = student.admissionYear;
     } else if (student.admissionNo) {
         // Extract year from admission number
@@ -2583,7 +2542,7 @@ function populateViewModal(student) {
     }
     setElementText('viewAcademicYear', academicYear);
 
-    setElementText('viewRegistrationNo', student.admissionNo || student.admission_no || '-');
+    setElementText('viewRegistrationNo', student.admissionNo || '-');
 
     if (student.admissionDate) {
         const date = new Date(student.admissionDate);
@@ -2592,30 +2551,16 @@ function populateViewModal(student) {
         setElementText('viewAdmissionDate', '-');
     }
 
-    // Class information - handle ALL possible field names
+    // Class information
     let className = '-';
     if (student.schoolclass) {
         className = `${student.schoolclass} ${student.arm ? '- ' + student.arm : ''}`;
-    } else if (student.class_name) {
-        className = student.class_name;
-    } else if (student.school_class) {
-        className = student.school_class;
-    } else if (student.class && student.class.schoolclass) {
-        className = `${student.class.schoolclass} ${student.class.arm ? '- ' + student.class.arm : ''}`;
-    } else if (student.class_name) {
-        className = student.class_name;
     }
     setElementText('viewClass', className);
 
     // Term information
     let termName = '-';
     if (student.term_name) {
-        termName = student.term_name;
-    } else if (student.term) {
-        termName = student.term;
-    } else if (student.term && student.term.name) {
-        termName = student.term.name;
-    } else if (student.term_name) {
         termName = student.term_name;
     }
     setElementText('viewTerm', termName);
@@ -2634,10 +2579,10 @@ function populateViewModal(student) {
         }
     }
 
-    // Personal Details - ALL ESCAPED
-    setElementText('viewSurname', escapeHtml(student.lastname || student.last_name || '-'));
-    setElementText('viewFirstName', escapeHtml(student.firstname || student.first_name || '-'));
-    setElementText('viewMiddleName', escapeHtml(student.othername || student.other_name || student.middle_name || '-'));
+    // Personal Details
+    setElementText('viewSurname', escapeHtml(student.lastname || '-'));
+    setElementText('viewFirstName', escapeHtml(student.firstname || '-'));
+    setElementText('viewMiddleName', escapeHtml(student.othername || '-'));
 
     const genderElement = document.getElementById('viewGender');
     if (genderElement) {
@@ -2720,97 +2665,6 @@ function populateViewModal(student) {
 
     setElementText('viewPreviousClass', escapeHtml(student.last_class || '-'));
     setElementText('viewReasonLeaving', escapeHtml(student.reason_for_leaving || '-'));
-}
-
-// Helper function to set element text
-function setElementText(id, text) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.textContent = text;
-    } else {
-        console.warn(`Element with ID '${id}' not found`);
-    }
-}
-
-function editStudent(id) {
-    console.log('Edit student:', id);
-    if (!ensureAxios()) return;
-
-    axios.get(`/student/${id}/edit`)
-        .then((response) => {
-            console.log('Student data received for edit:', response.data);
-            let student = response.data.student || response.data;
-
-            if (!student) {
-                throw new Error('Student data is empty');
-            }
-
-            // Populate the edit form
-            populateEditForm(student);
-
-            // Show the edit modal
-            const editModalElement = document.getElementById('editStudentModal');
-            if (editModalElement) {
-                const editModal = new bootstrap.Modal(editModalElement);
-                editModal.show();
-            }
-        })
-        .catch((error) => {
-            console.error('Error editing student:', error);
-            Swal.fire({
-                title: 'Error!',
-                text: error.response?.data?.message || 'Failed to load student data',
-                icon: 'error',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
-            });
-        });
-}
-
-function deleteStudent(id) {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' },
-        buttonsStyling: false
-    }).then((result) => {
-        if (result.isConfirmed && ensureAxios()) {
-            axios.delete(`/student/${id}/destroy`)
-                .then(() => {
-                    // Remove the card
-                    const card = document.querySelector(`.student-card[data-id="${id}"]`);
-                    if (card) {
-                        card.closest('.col-xl-3').remove();
-                    }
-                    // Remove the table row
-                    const row = document.querySelector(`tr[data-id="${id}"]`);
-                    if (row) {
-                        row.remove();
-                    }
-                    // Refresh the list
-                    fetchStudents();
-                    Swal.fire({
-                        title: 'Deleted!',
-                        text: 'Student has been deleted',
-                        icon: 'success',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                })
-                .catch((error) => {
-                    console.error('Error deleting student:', error);
-                    Swal.fire({
-                        title: 'Error!',
-                        text: error.response?.data?.message || 'Failed to delete student',
-                        icon: 'error',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                });
-        }
-    });
 }
 
 // Fetch students from the server - COMPLETELY REWRITTEN
