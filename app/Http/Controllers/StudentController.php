@@ -403,66 +403,46 @@ class StudentController extends Controller
         }
     }
 
-   public function data(Request $request): JsonResponse
-{
-    try {
-        Log::debug('Fetching students data');
-        $students = Student::leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
-            ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
-            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
-            ->leftJoin('studenthouses', 'studenthouses.studentId', '=', 'studentRegistration.id')
-            ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
-            ->select([
-                'studentRegistration.id',
-                'studentRegistration.admissionNo',
-                'studentRegistration.firstname',
-                'studentRegistration.lastname',
-                'studentRegistration.othername',
-                'studentRegistration.gender',
-                'studentRegistration.statusId',
-                'studentRegistration.student_status',
-                'studentRegistration.created_at',
-                'studentRegistration.dateofbirth',
-                'studentRegistration.email',
-                'studentRegistration.phone_number',
-                'studentRegistration.religion',
-                'studentRegistration.student_category',
-                'studentRegistration.future_ambition',
-                'studentRegistration.home_address2 as permanent_address',
-                'studentRegistration.nin_number',
-                'studentRegistration.blood_group',
-                'studentRegistration.mother_tongue',
-                'studentRegistration.state',
-                'studentRegistration.local',
-                'studentRegistration.city',
-                'studentpicture.picture',
-                'schoolclass.schoolclass',
-                'schoolarm.arm',
-                'studentclass.schoolclassid',
-                'schoolterm.term as term_name',
-                'schoolsession.session as session_name',
-                'schoolhouses.house as school_house'
-            ])
-            ->latest()
-            ->get();
+    public function data(Request $request): JsonResponse
+    {
+        try {
+            Log::debug('Fetching students data');
+            $students = Student::leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
+                ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
+                ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+                ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+                ->select([
+                    'studentRegistration.id',
+                    'studentRegistration.admissionNo',
+                    'studentRegistration.firstname',
+                    'studentRegistration.lastname',
+                    'studentRegistration.othername',
+                    'studentRegistration.gender',
+                    'studentRegistration.statusId',
+                    'studentRegistration.student_status',
+                    'studentRegistration.created_at',
+                    'studentpicture.picture',
+                    'schoolclass.schoolclass',
+                    'schoolarm.arm',
+                    'studentclass.schoolclassid',
+                ])
+                ->latest()
+                ->get();
 
-        Log::debug('Students fetched', ['count' => $students->count()]);
+            Log::debug('Students fetched', ['count' => $students->count()]);
 
-        return response()->json([
-            'success' => true,
-            'students' => $students,
-        ], 200);
-    } catch (\Exception $e) {
-        Log::error("Error fetching students: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to fetch students: ' . $e->getMessage(),
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'students' => $students,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Error fetching students: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch students: ' . $e->getMessage(),
+            ], 500);
+        }
     }
-}
 
 
 
@@ -556,113 +536,91 @@ class StudentController extends Controller
         return view('student.create', compact('schoolclasses', 'schoolterms', 'schoolsessions', 'currentSession', 'pagetitle'));
     }
 
-   public function edit($student)
-{
-    try {
-        $studentData = Student::where('studentRegistration.id', $student)
-            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-            ->leftJoin('studentclass', 'studentRegistration.id', '=', 'studentclass.studentId')
-            ->leftJoin('parentRegistration', 'studentRegistration.id', '=', 'parentRegistration.studentId')
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
-            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
-            ->leftJoin('studenthouses', 'studenthouses.studentId', '=', 'studentRegistration.id')
-            ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
-            ->leftJoin('studentpersonalityprofiles', 'studentpersonalityprofiles.studentId', '=', 'studentRegistration.id')
-            ->select([
-                'studentRegistration.id',
-                'studentRegistration.admissionNo',
-                'studentRegistration.admissionYear',
-                'studentRegistration.admission_date as admissionDate',
-                'studentRegistration.title',
-                'studentRegistration.firstname',
-                'studentRegistration.lastname',
-                'studentRegistration.othername',
-                'studentRegistration.gender',
-                'studentRegistration.dateofbirth',
-                'studentRegistration.age',
-                'studentRegistration.blood_group',
-                'studentRegistration.mother_tongue',
-                'studentRegistration.religion',
-                'studentRegistration.sport_house',
-                'studentRegistration.phone_number',
-                'studentRegistration.email',
-                'studentRegistration.nin_number',
-                'studentRegistration.city',
-                'studentRegistration.state',
-                'studentRegistration.local',
-                'studentRegistration.nationality',
-                'studentRegistration.placeofbirth',
-                'studentRegistration.future_ambition',
-                'studentRegistration.home_address2 as permanent_address',
-                'studentRegistration.student_category',
-                'studentRegistration.statusId',
-                'studentRegistration.student_status',
-                'studentRegistration.last_school',
-                'studentRegistration.last_class',
-                'studentRegistration.reason_for_leaving',
-                'studentclass.schoolclassid',
-                'studentclass.termid',
-                'studentclass.sessionid',
-                'parentRegistration.father_title',
-                'parentRegistration.mother_title',
-                'parentRegistration.father as father_name',
-                'parentRegistration.mother as mother_name',
-                'parentRegistration.father_occupation',
-                'parentRegistration.father_city',
-                'parentRegistration.office_address',
-                'parentRegistration.father_phone',
-                'parentRegistration.mother_phone',
-                'parentRegistration.parent_email',
-                'parentRegistration.parent_address',
-                'studentpicture.picture',
-                'studenthouses.schoolhouse',
-                // Add these fields for view modal
-                'schoolclass.schoolclass',
-                'schoolarm.arm',
-                'schoolterm.term as term_name',
-                'schoolsession.session as session_name',
-                'schoolhouses.house as school_house'
-            ])
-            ->first();
+    public function edit($student)
+    {
+        try {
+            $studentData = Student::where('studentRegistration.id', $student)
+                ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+                ->leftJoin('studentclass', 'studentRegistration.id', '=', 'studentclass.studentId')
+                ->leftJoin('parentRegistration', 'studentRegistration.id', '=', 'parentRegistration.studentId')
+                ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+                ->leftJoin('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
+                ->leftJoin('studenthouses', 'studenthouses.studentId', '=', 'studentRegistration.id')
+                ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
+                ->leftJoin('studentpersonalityprofiles', 'studentpersonalityprofiles.studentId', '=', 'studentRegistration.id')
+                ->select([
+                    'studentRegistration.id',
+                    'studentRegistration.admissionNo',
+                    'studentRegistration.admissionYear',
+                    'studentRegistration.admission_date as admissionDate',
+                    'studentRegistration.title',
+                    'studentRegistration.firstname',
+                    'studentRegistration.lastname',
+                    'studentRegistration.othername',
+                    'studentRegistration.gender',
+                    'studentRegistration.dateofbirth',
+                    'studentRegistration.age',
+                    'studentRegistration.blood_group',
+                    'studentRegistration.mother_tongue',
+                    'studentRegistration.religion',
+                    'studentRegistration.sport_house',
+                    'studentRegistration.phone_number',
+                    'studentRegistration.email',
+                    'studentRegistration.nin_number',
+                    'studentRegistration.city',
+                    'studentRegistration.state',
+                    'studentRegistration.local',
+                    'studentRegistration.nationality',
+                    'studentRegistration.placeofbirth',
+                    'studentRegistration.future_ambition', // Changed from home_address as present_address
+                    'studentRegistration.home_address2 as permanent_address',
+                    'studentRegistration.student_category',
+                    'studentRegistration.statusId',
+                    'studentRegistration.student_status',
+                    'studentRegistration.last_school',
+                    'studentRegistration.last_class',
+                    'studentRegistration.reason_for_leaving',
+                    'studentclass.schoolclassid',
+                    'studentclass.termid',
+                    'studentclass.sessionid',
+                    'parentRegistration.father_title',
+                    'parentRegistration.mother_title',
+                    'parentRegistration.father as father_name',
+                    'parentRegistration.mother as mother_name',
+                    'parentRegistration.father_occupation',
+                    'parentRegistration.father_city',
+                    'parentRegistration.office_address',
+                    'parentRegistration.father_phone',
+                    'parentRegistration.mother_phone',
+                    'parentRegistration.parent_email',
+                    'parentRegistration.parent_address',
+                    'studentpicture.picture',
+                    'studenthouses.schoolhouse',
 
-        if (!$studentData) {
-            Log::warning("Student ID {$student} not found");
-            return response()->json(['success' => false, 'message' => 'Student not found'], 404);
-        }
+                ])
+                ->first();
 
-        // Check if it's an AJAX request
-        if (request()->ajax() || request()->wantsJson()) {
+            if (!$studentData) {
+                Log::warning("Student ID {$student} not found");
+                return response()->json(['success' => false, 'message' => 'Student not found'], 404);
+            }
+
+            // Convert picture path to URL if exists
+            $studentData->picture = $studentData->picture ? asset('storage/' . $studentData->picture) : null;
+
             return response()->json([
                 'success' => true,
                 'student' => $studentData
             ], 200);
-        }
-
-        // For regular web requests, return the view
-        $schoolclasses = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->selectRaw("schoolclass.id, CONCAT(schoolclass.schoolclass, ' - ', schoolarm.arm) as class_display, schoolclass.schoolclass, schoolarm.arm")
-            ->orderBy('schoolclass.schoolclass')
-            ->get();
-        $schoolterms = Schoolterm::select('id', 'term as name')->get();
-        $schoolsessions = Schoolsession::select('id', 'session as name')->get();
-        $schoolhouses = Schoolhouse::all();
-
-        return view('student.edit', compact('studentData', 'schoolclasses', 'schoolterms', 'schoolsessions', 'schoolhouses'));
-    } catch (\Exception $e) {
-        Log::error("Error fetching student ID {$student}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-
-        if (request()->ajax() || request()->wantsJson()) {
+        } catch (\Exception $e) {
+            Log::error("Error fetching student ID {$student}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
             return response()->json([
                 'success' => false,
                 'message' => 'Server error: ' . $e->getMessage()
             ], 500);
         }
-
-        return redirect()->route('student.index')->with('error', 'Error loading student data');
     }
-}
 
 
     public function update(Request $request, $id): JsonResponse
