@@ -2018,6 +2018,19 @@ use Spatie\Permission\Models\Role;
 </div>
 
 <script>
+// Helper function to escape HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
 // Initialize admission number on page load
 updateAdmissionNumber();
 updateAdmissionNumber('edit');
@@ -2208,7 +2221,7 @@ function toggleView(viewType) {
     }
 }
 
-// Render students as cards - FIXED VERSION
+// Render students as cards - COMPLETELY FIXED VERSION
 function renderStudentsCards(students) {
     console.log('Rendering students as cards:', students);
     const container = document.getElementById('studentsCardsContainer');
@@ -2243,9 +2256,10 @@ function renderStudentsCards(students) {
     students.forEach(student => {
         console.log('Processing student for card:', student);
 
-        // Get initials for avatar - FIXED to prevent "OM '"
-        const firstName = student.firstname || '';
-        const lastName = student.lastname || '';
+        // Get safe names - ESCAPED to prevent HTML injection
+        const firstName = escapeHtml(student.firstname || '');
+        const lastName = escapeHtml(student.lastname || '');
+        const otherName = escapeHtml(student.othername || '');
 
         // Calculate initials properly - only use first and last name
         let displayInitials = '??';
@@ -2287,19 +2301,21 @@ function renderStudentsCards(students) {
         // Get class name for display
         let className = 'N/A';
         if (student.schoolclass) {
-            className = student.schoolclass;
+            className = escapeHtml(student.schoolclass);
             if (student.arm) {
-                className += ` ${student.arm}`;
+                className += ` ${escapeHtml(student.arm)}`;
             }
         } else if (student.class_name) {
-            className = student.class_name;
+            className = escapeHtml(student.class_name);
         }
 
-        // Create card HTML
+        // Get gender for display
+        const gender = escapeHtml(student.gender || 'N/A');
+
+        // Create card HTML with ALL ESCAPED VALUES
         const cardHtml = `
             <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
                 <div class="student-card" data-id="${student.id}"
-                     data-name="${student.lastname} ${student.firstname} ${student.othername || ''}"
                      data-admission="${student.admissionNo || ''}"
                      data-class="${student.schoolclassid || ''}"
                      data-status="${student.statusId || ''}"
@@ -2331,7 +2347,7 @@ function renderStudentsCards(students) {
 
                     <!-- Avatar with fallback to initials -->
                     <div class="avatar-container">
-                        <img src="${avatarUrl}" alt="${student.firstname} ${student.lastname}"
+                        <img src="${avatarUrl}" alt="${firstName} ${lastName}"
                              class="avatar" onerror="this.onerror=null; this.style.display='none';
                              this.nextElementSibling ? this.nextElementSibling.style.display='flex' :
                              this.parentElement.innerHTML='<div class=\"avatar-initials\">${displayInitials}</div>'">
@@ -2339,7 +2355,7 @@ function renderStudentsCards(students) {
                     </div>
 
                     <!-- Student name -->
-                    <h6 class="student-name">${student.lastname} ${student.firstname}</h6>
+                    <h6 class="student-name">${lastName} ${firstName}</h6>
 
                     <!-- Admission number -->
                     <p class="student-admission">${student.admissionNo || 'No Admission No'}</p>
@@ -2348,7 +2364,7 @@ function renderStudentsCards(students) {
                     <div class="student-details">
                         <div><strong>Class:</strong> ${className}</div>
                         <div><strong>Type:</strong> ${studentType}</div>
-                        <div><strong>Gender:</strong> ${student.gender || 'N/A'}</div>
+                        <div><strong>Gender:</strong> ${gender}</div>
                         <div><strong>Registered:</strong> ${regDate}</div>
                     </div>
                 </div>
@@ -2413,7 +2429,7 @@ function initializeStudentCheckboxes() {
     });
 }
 
-// View student details - FIXED VERSION
+// View student details - COMPLETELY FIXED
 function viewStudent(id) {
     console.log('View student:', id);
     if (!ensureAxios()) return;
@@ -2428,12 +2444,12 @@ function viewStudent(id) {
         }
     });
 
-    // Try your working endpoint first
-    axios.get(`/student/${id}/edit`)
+    // Try with relationships first
+    axios.get(`/student/${id}?with=class,term,session`)
         .then((response) => {
             Swal.close();
-            console.log('Student data received for view:', response.data);
-            let student = response.data.student || response.data;
+            console.log('Student data received for view (with relationships):', response.data);
+            let student = response.data.student || response.data.data || response.data;
 
             if (!student) {
                 throw new Error('Student data is empty');
@@ -2458,14 +2474,14 @@ function viewStudent(id) {
             }
         })
         .catch((error) => {
-            console.error('Error fetching student for view:', error);
+            console.error('Error fetching student with relationships:', error);
 
-            // Fallback: try the show endpoint
-            axios.get(`/student/${id}`)
+            // Fallback: try the edit endpoint
+            axios.get(`/student/${id}/edit`)
                 .then((response) => {
                     Swal.close();
-                    console.log('Student data received (fallback):', response.data);
-                    let student = response.data.student || response.data.data || response.data;
+                    console.log('Student data received (edit endpoint):', response.data);
+                    let student = response.data.student || response.data;
 
                     if (!student) {
                         throw new Error('Student data is empty');
@@ -2481,22 +2497,49 @@ function viewStudent(id) {
                 })
                 .catch((fallbackError) => {
                     Swal.close();
-                    console.error('Fallback also failed:', fallbackError);
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Failed to load student data. Please try again.',
-                        icon: 'error',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
+                    console.error('Edit endpoint also failed:', fallbackError);
+
+                    // Last fallback: try the show endpoint
+                    axios.get(`/student/${id}`)
+                        .then((showResponse) => {
+                            console.log('Student data received (show endpoint):', showResponse.data);
+                            let student = showResponse.data.student || showResponse.data.data || showResponse.data;
+
+                            if (!student) {
+                                throw new Error('Student data is empty');
+                            }
+
+                            populateViewModal(student);
+
+                            const viewModalElement = document.getElementById('viewStudentModal');
+                            if (viewModalElement) {
+                                const viewModal = new bootstrap.Modal(viewModalElement);
+                                viewModal.show();
+                            }
+                        })
+                        .catch((showError) => {
+                            console.error('All endpoints failed:', showError);
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Failed to load student data. Please try again.',
+                                icon: 'error',
+                                customClass: { confirmButton: 'btn btn-primary' },
+                                buttonsStyling: false
+                            });
+                        });
                 });
         });
 }
 
-// Function to populate view modal - COMPLETELY FIXED VERSION
+// Function to populate view modal - COMPLETELY FIXED
 function populateViewModal(student) {
     console.log('=== DEBUG: Populating View Modal ===');
-    console.log('Student object:', student);
+    console.log('Full student object:', JSON.stringify(student, null, 2));
+
+    // Debug class, term, session
+    console.log('Class data:', student.schoolclass, student.arm, student.class_name, student.class);
+    console.log('Term data:', student.term_name, student.term);
+    console.log('Session data:', student.session_name, student.session);
 
     // Student Photo - FIXED to avoid external URLs
     const photoElement = document.getElementById('viewStudentPhoto');
@@ -2523,7 +2566,7 @@ function populateViewModal(student) {
         }
     }
 
-    // Academic Details - FIXED to handle different field names
+    // Academic Details
     let academicYear = '-';
     if (student.academic_year) {
         academicYear = student.academic_year;
@@ -2531,6 +2574,12 @@ function populateViewModal(student) {
         academicYear = student.session_name.match(/\d{4}/)[0];
     } else if (student.admissionYear) {
         academicYear = student.admissionYear;
+    } else if (student.admissionNo) {
+        // Extract year from admission number
+        const yearMatch = student.admissionNo.match(/\d{4}/);
+        if (yearMatch) {
+            academicYear = yearMatch[0];
+        }
     }
     setElementText('viewAcademicYear', academicYear);
 
@@ -2543,7 +2592,7 @@ function populateViewModal(student) {
         setElementText('viewAdmissionDate', '-');
     }
 
-    // Class information - handle different field names
+    // Class information - handle ALL possible field names
     let className = '-';
     if (student.schoolclass) {
         className = `${student.schoolclass} ${student.arm ? '- ' + student.arm : ''}`;
@@ -2553,6 +2602,8 @@ function populateViewModal(student) {
         className = student.school_class;
     } else if (student.class && student.class.schoolclass) {
         className = `${student.class.schoolclass} ${student.class.arm ? '- ' + student.class.arm : ''}`;
+    } else if (student.class_name) {
+        className = student.class_name;
     }
     setElementText('viewClass', className);
 
@@ -2562,10 +2613,10 @@ function populateViewModal(student) {
         termName = student.term_name;
     } else if (student.term) {
         termName = student.term;
-    } else if (student.term_name) {
-        termName = student.term_name;
     } else if (student.term && student.term.name) {
         termName = student.term.name;
+    } else if (student.term_name) {
+        termName = student.term_name;
     }
     setElementText('viewTerm', termName);
 
@@ -2583,10 +2634,10 @@ function populateViewModal(student) {
         }
     }
 
-    // Personal Details
-    setElementText('viewSurname', student.lastname || student.last_name || '-');
-    setElementText('viewFirstName', student.firstname || student.first_name || '-');
-    setElementText('viewMiddleName', student.othername || student.other_name || student.middle_name || '-');
+    // Personal Details - ALL ESCAPED
+    setElementText('viewSurname', escapeHtml(student.lastname || student.last_name || '-'));
+    setElementText('viewFirstName', escapeHtml(student.firstname || student.first_name || '-'));
+    setElementText('viewMiddleName', escapeHtml(student.othername || student.other_name || student.middle_name || '-'));
 
     const genderElement = document.getElementById('viewGender');
     if (genderElement) {
@@ -2607,16 +2658,16 @@ function populateViewModal(student) {
         setElementText('viewDateOfBirth', '-');
     }
 
-    setElementText('viewBloodGroup', student.blood_group || '-');
-    setElementText('viewMotherTongue', student.mother_tongue || '-');
-    setElementText('viewReligion', student.religion || '-');
-    setElementText('viewSportHouse', student.school_house || student.sport_house || '-');
+    setElementText('viewBloodGroup', escapeHtml(student.blood_group || '-'));
+    setElementText('viewMotherTongue', escapeHtml(student.mother_tongue || '-'));
+    setElementText('viewReligion', escapeHtml(student.religion || '-'));
+    setElementText('viewSportHouse', escapeHtml(student.school_house || student.sport_house || '-'));
 
     const mobileElement = document.getElementById('viewMobileNumber');
     if (mobileElement) {
         const phone = student.phone_number || '-';
         mobileElement.innerHTML = phone !== '-' ?
-            `<i class="fas fa-phone"></i> ${phone}` :
+            `<i class="fas fa-phone"></i> ${escapeHtml(phone)}` :
             '<i class="fas fa-phone"></i> -';
     }
 
@@ -2624,27 +2675,27 @@ function populateViewModal(student) {
     if (emailElement) {
         const email = student.email || '-';
         emailElement.innerHTML = email !== '-' ?
-            `<i class="fas fa-envelope"></i> ${email}` :
+            `<i class="fas fa-envelope"></i> ${escapeHtml(email)}` :
             '<i class="fas fa-envelope"></i> -';
     }
 
-    setElementText('viewNIN', student.nin_number || '-');
-    setElementText('viewCity', student.city || '-');
-    setElementText('viewState', student.state || '-');
-    setElementText('viewPermanentAddress', student.permanent_address || '-');
-    setElementText('viewFutureAmbition', student.future_ambition || '-');
+    setElementText('viewNIN', escapeHtml(student.nin_number || '-'));
+    setElementText('viewCity', escapeHtml(student.city || '-'));
+    setElementText('viewState', escapeHtml(student.state || '-'));
+    setElementText('viewPermanentAddress', escapeHtml(student.permanent_address || '-'));
+    setElementText('viewFutureAmbition', escapeHtml(student.future_ambition || '-'));
 
     // Guardian Details
-    setElementText('viewFatherName', student.father_name || '-');
-    setElementText('viewMotherName', student.mother_name || '-');
-    setElementText('viewOccupation', student.father_occupation || '-');
-    setElementText('viewParentCity', student.father_city || '-');
+    setElementText('viewFatherName', escapeHtml(student.father_name || '-'));
+    setElementText('viewMotherName', escapeHtml(student.mother_name || '-'));
+    setElementText('viewOccupation', escapeHtml(student.father_occupation || '-'));
+    setElementText('viewParentCity', escapeHtml(student.father_city || '-'));
 
     const parentMobileElement = document.getElementById('viewParentMobile');
     if (parentMobileElement) {
         const parentPhone = student.father_phone || student.mother_phone || '-';
         parentMobileElement.innerHTML = parentPhone !== '-' ?
-            `<i class="fas fa-phone"></i> ${parentPhone}` :
+            `<i class="fas fa-phone"></i> ${escapeHtml(parentPhone)}` :
             '<i class="fas fa-phone"></i> -';
     }
 
@@ -2652,23 +2703,23 @@ function populateViewModal(student) {
     if (parentEmailElement) {
         const parentEmail = student.parent_email || '-';
         parentEmailElement.innerHTML = parentEmail !== '-' ?
-            `<i class="fas fa-envelope"></i> ${parentEmail}` :
+            `<i class="fas fa-envelope"></i> ${escapeHtml(parentEmail)}` :
             '<i class="fas fa-envelope"></i> -';
     }
 
-    setElementText('viewParentAddress', student.parent_address || '-');
+    setElementText('viewParentAddress', escapeHtml(student.parent_address || '-'));
 
     // Previous School Details
     const schoolElement = document.getElementById('viewSchoolName');
     if (schoolElement) {
         const schoolName = student.last_school || '-';
         schoolElement.innerHTML = schoolName !== '-' ?
-            `<i class="fas fa-school"></i> ${schoolName}` :
+            `<i class="fas fa-school"></i> ${escapeHtml(schoolName)}` :
             '<i class="fas fa-school"></i> -';
     }
 
-    setElementText('viewPreviousClass', student.last_class || '-');
-    setElementText('viewReasonLeaving', student.reason_for_leaving || '-');
+    setElementText('viewPreviousClass', escapeHtml(student.last_class || '-'));
+    setElementText('viewReasonLeaving', escapeHtml(student.reason_for_leaving || '-'));
 }
 
 // Helper function to set element text
@@ -2762,114 +2813,183 @@ function deleteStudent(id) {
     });
 }
 
-// Fetch students from the server
+// Fetch students from the server - COMPLETELY REWRITTEN
 function fetchStudents() {
     if (!ensureAxios()) return;
     console.log('Fetching students from /students/data');
 
-    axios.get('/students/data')
+    // Try with relationships first
+    axios.get('/students/data?with=class,term,session')
         .then((response) => {
-            console.log('Full API response:', response.data);
-
-            let studentsArray = [];
-
-            // Handle different response formats
-            if (Array.isArray(response.data)) {
-                studentsArray = response.data;
-            } else if (response.data.students && Array.isArray(response.data.students)) {
-                studentsArray = response.data.students;
-            } else if (response.data.data && Array.isArray(response.data.data)) {
-                studentsArray = response.data.data;
-            } else if (response.data.success && Array.isArray(response.data.data)) {
-                studentsArray = response.data.data;
-            } else {
-                console.log('Unexpected response format, trying to extract students:', response.data);
-                // Try to extract students from the response
-                studentsArray = Object.values(response.data).filter(item =>
-                    item && (item.id || item.student_id)
-                );
-            }
-
-            console.log('Students array:', studentsArray);
-
-            if (studentsArray.length > 0) {
-                console.log('First student data:', studentsArray[0]);
-            }
-
-            allStudents = studentsArray.map(student => ({
-                id: student.id || student.student_id || '',
-                admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
-                firstname: student.firstname || student.first_name || '',
-                lastname: student.lastname || student.last_name || '',
-                othername: student.othername || student.other_name || student.middle_name || '',
-                gender: student.gender || '',
-                statusId: student.statusId || student.status_id || student.student_status_id || '',
-                student_status: student.student_status || student.status || '',
-                created_at: student.created_at || student.created_date || student.registration_date || '',
-                picture: student.picture || student.avatar || student.profile_picture || '',
-                schoolclass: student.schoolclass || student.class || student.class_name || '',
-                arm: student.arm || student.section || '',
-                schoolclassid: student.schoolclassid || student.class_id || '',
-                // Add these for better view modal display
-                term_name: student.term_name || (student.term && student.term.name) || '',
-                session_name: student.session_name || (student.session && student.session.name) || '',
-                admissionYear: student.admissionYear || '',
-                academic_year: student.academic_year || '',
-                student_category: student.student_category || '',
-                // Guardian info
-                father_name: student.father_name || '',
-                mother_name: student.mother_name || '',
-                father_phone: student.father_phone || '',
-                mother_phone: student.mother_phone || '',
-                father_occupation: student.father_occupation || '',
-                father_city: student.father_city || '',
-                parent_email: student.parent_email || '',
-                parent_address: student.parent_address || '',
-                // Additional info
-                blood_group: student.blood_group || '',
-                mother_tongue: student.mother_tongue || '',
-                religion: student.religion || '',
-                school_house: student.school_house || student.sport_house || '',
-                nin_number: student.nin_number || '',
-                city: student.city || '',
-                state: student.state || '',
-                local: student.local || '',
-                permanent_address: student.permanent_address || '',
-                future_ambition: student.future_ambition || '',
-                // Previous school
-                last_school: student.last_school || '',
-                last_class: student.last_class || '',
-                reason_for_leaving: student.reason_for_leaving || ''
-            }));
-
-            console.log('Processed students:', allStudents);
-            console.log('Processed students count:', allStudents.length);
-
-            // Update counts
-            updateCounts(allStudents.length);
-
-            // Check which view is active and render accordingly
-            const tableView = document.getElementById('tableView');
-            const isTableView = !tableView.classList.contains('d-none');
-
-            if (isTableView) {
-                renderStudents(allStudents);
-            } else {
-                renderStudentsCards(allStudents);
-            }
+            console.log('Full API response with relationships:', response.data);
+            processStudentData(response.data);
         })
         .catch((error) => {
-            console.error('Error fetching students:', error);
-            Swal.fire({
-                title: "Error!",
-                text: "Failed to load students. Please try again.",
-                icon: "error",
-                customClass: { confirmButton: "btn btn-primary" },
-                buttonsStyling: false
-            });
-            renderStudents([]);
-            renderStudentsCards([]);
+            console.error('Error fetching students with relationships:', error);
+            // Fallback to regular endpoint
+            axios.get('/students/data')
+                .then((response) => {
+                    console.log('Full API response (fallback):', response.data);
+                    processStudentData(response.data);
+                })
+                .catch((fallbackError) => {
+                    console.error('Error fetching students:', fallbackError);
+                    Swal.fire({
+                        title: "Error!",
+                        text: "Failed to load students. Please try again.",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-primary" },
+                        buttonsStyling: false
+                    });
+                    allStudents = [];
+                    renderStudents([]);
+                    renderStudentsCards([]);
+                    updateCounts(0);
+                });
         });
+}
+
+// Process student data from API
+function processStudentData(responseData) {
+    let studentsArray = [];
+
+    // Handle different response formats
+    if (Array.isArray(responseData)) {
+        studentsArray = responseData;
+    } else if (responseData.students && Array.isArray(responseData.students)) {
+        studentsArray = responseData.students;
+    } else if (responseData.data && Array.isArray(responseData.data)) {
+        studentsArray = responseData.data;
+    } else if (responseData.success && Array.isArray(responseData.data)) {
+        studentsArray = responseData.data;
+    } else {
+        console.log('Unexpected response format, trying to extract students:', responseData);
+        // Try to extract students from the response
+        studentsArray = Object.values(responseData).filter(item =>
+            item && (item.id || item.student_id)
+        );
+    }
+
+    console.log('Students array:', studentsArray);
+
+    if (studentsArray.length > 0) {
+        console.log('First student object:', studentsArray[0]);
+    }
+
+    allStudents = studentsArray.map(student => {
+        // Extract class information from various possible locations
+        let className = '';
+        let classArm = '';
+
+        if (student.schoolclass) {
+            className = student.schoolclass;
+            classArm = student.arm || '';
+        } else if (student.class_name) {
+            className = student.class_name;
+        } else if (student.class && student.class.schoolclass) {
+            className = student.class.schoolclass;
+            classArm = student.class.arm || '';
+        } else if (student.school_class) {
+            className = student.school_class;
+        } else if (student.class) {
+            // If class is a string
+            className = student.class;
+        }
+
+        // Extract term information
+        let termName = '';
+        if (student.term_name) {
+            termName = student.term_name;
+        } else if (student.term && student.term.name) {
+            termName = student.term.name;
+        } else if (student.term) {
+            termName = student.term;
+        }
+
+        // Extract session information
+        let sessionName = '';
+        if (student.session_name) {
+            sessionName = student.session_name;
+        } else if (student.session && student.session.name) {
+            sessionName = student.session.name;
+        } else if (student.session) {
+            sessionName = student.session;
+        }
+
+        // Create the student object with ALL fields
+        return {
+            id: student.id || student.student_id || '',
+            admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
+            firstname: student.firstname || student.first_name || '',
+            lastname: student.lastname || student.last_name || '',
+            othername: student.othername || student.other_name || student.middle_name || '',
+            gender: student.gender || '',
+            statusId: student.statusId || student.status_id || student.student_status_id || '',
+            student_status: student.student_status || student.status || '',
+            created_at: student.created_at || student.created_date || student.registration_date || '',
+            picture: student.picture || student.avatar || student.profile_picture || '',
+            schoolclass: className,
+            arm: classArm,
+            schoolclassid: student.schoolclassid || student.class_id || '',
+            term_name: termName,
+            session_name: sessionName,
+            admissionYear: student.admissionYear || '',
+            academic_year: student.academic_year || '',
+            student_category: student.student_category || '',
+            // Guardian info
+            father_name: student.father_name || '',
+            mother_name: student.mother_name || '',
+            father_phone: student.father_phone || '',
+            mother_phone: student.mother_phone || '',
+            father_occupation: student.father_occupation || '',
+            father_city: student.father_city || '',
+            parent_email: student.parent_email || '',
+            parent_address: student.parent_address || '',
+            // Additional info
+            blood_group: student.blood_group || '',
+            mother_tongue: student.mother_tongue || '',
+            religion: student.religion || '',
+            school_house: student.school_house || student.sport_house || '',
+            nin_number: student.nin_number || '',
+            city: student.city || '',
+            state: student.state || '',
+            local: student.local || '',
+            permanent_address: student.permanent_address || '',
+            future_ambition: student.future_ambition || '',
+            // Previous school
+            last_school: student.last_school || '',
+            last_class: student.last_class || '',
+            reason_for_leaving: student.reason_for_leaving || '',
+            // Dates
+            admissionDate: student.admissionDate || student.admission_date || '',
+            dateofbirth: student.dateofbirth || student.date_of_birth || '',
+            placeofbirth: student.placeofbirth || student.place_of_birth || '',
+            phone_number: student.phone_number || student.phone || '',
+            email: student.email || '',
+            nationality: student.nationality || '',
+            title: student.title || '',
+            // Direct relationships (in case they're nested)
+            class: student.class || null,
+            term: student.term || null,
+            session: student.session || null
+        };
+    });
+
+    console.log('Processed students:', allStudents);
+    console.log('Processed students count:', allStudents.length);
+
+    // Update counts
+    updateCounts(allStudents.length);
+
+    // Check which view is active and render accordingly
+    const tableView = document.getElementById('tableView');
+    const isTableView = !tableView.classList.contains('d-none');
+
+    if (isTableView) {
+        renderStudents(allStudents);
+    } else {
+        renderStudentsCards(allStudents);
+    }
 }
 
 // Render students in the table
@@ -2894,6 +3014,17 @@ function renderStudents(students) {
     students.forEach(student => {
         const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
 
+        // Escape all text values
+        const lastName = escapeHtml(student.lastname || '');
+        const firstName = escapeHtml(student.firstname || '');
+        const otherName = escapeHtml(student.othername || '');
+        const admissionNo = escapeHtml(student.admissionNo || '');
+        const className = escapeHtml(student.schoolclass || '');
+        const arm = escapeHtml(student.arm || '');
+        const gender = escapeHtml(student.gender || '');
+        const statusText = student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : '';
+        const regDate = student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : '';
+
         const row = document.createElement('tr');
         row.setAttribute('data-id', student.id);
         row.innerHTML = `
@@ -2902,23 +3033,23 @@ function renderStudents(students) {
                     <input class="form-check-input" type="checkbox" name="chk_child">
                 </div>
             </td>
-            <td class="name" data-name="${student.lastname} ${student.firstname} ${student.othername || ''}">
+            <td class="name" data-name="${lastName} ${firstName} ${otherName}">
                 <div class="d-flex align-items-center">
                     <div class="symbol symbol-50px me-3">
                         <img src="${studentImage}" alt="" class="rounded-circle avatar-sm student-image" style="object-fit:cover; width: 50px; height: 50px;"/>
                     </div>
                     <div>
                         <h6 class="mb-0">
-                            <b>${student.lastname}</b> ${student.firstname} ${student.othername || ''}
+                            <b>${lastName}</b> ${firstName} ${otherName}
                         </h6>
                     </div>
                 </div>
             </td>
-            <td class="admissionNo" data-admissionno="${student.admissionNo}">${student.admissionNo}</td>
-            <td class="class" data-class="${student.schoolclassid}">${student.schoolclass || ''} ${student.arm ? ' - ' + student.arm : ''}</td>
-            <td class="status" data-status="${student.statusId}">${student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : ''}</td>
-            <td class="gender" data-gender="${student.gender}">${student.gender}</td>
-            <td class="datereg">${student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : ''}</td>
+            <td class="admissionNo" data-admissionno="${admissionNo}">${admissionNo}</td>
+            <td class="class" data-class="${student.schoolclassid}">${className}${arm ? ' - ' + arm : ''}</td>
+            <td class="status" data-status="${student.statusId}">${statusText}</td>
+            <td class="gender" data-gender="${gender}">${gender}</td>
+            <td class="datereg">${regDate}</td>
             <td>
                 <ul class="d-flex gap-2 list-unstyled mb-0">
                     <li><a href="javascript:void(0);" class="btn btn-subtle-info btn-icon btn-sm view-item-btn" data-id="${student.id}" onclick="viewStudent(${student.id})" title="View Details"><i class="ph-eye"></i></a></li>
