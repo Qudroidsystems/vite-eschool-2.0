@@ -2018,6 +2018,10 @@ use Spatie\Permission\Models\Role;
 </div>
 
 <script>
+// ============================================================================
+// FIXED VERSION - Student Management JavaScript
+// ============================================================================
+
 // Initialize admission number on page load
 updateAdmissionNumber();
 updateAdmissionNumber('edit');
@@ -2031,7 +2035,7 @@ function updateAdmissionNumber(prefix = '') {
     if (!yearSelect || !admissionNoInput) return;
 
     const year = yearSelect.value;
-    const baseFormat = `CSSK/STD/${year}/`;
+    const baseFormat = `TCC/${year}/`;
 
     if (admissionMode && admissionMode.value === 'auto') {
         admissionNoInput.readOnly = true;
@@ -2089,7 +2093,7 @@ window.toggleAdmissionInput = function(prefix = '') {
     if (!admissionMode || !admissionNoInput || !yearSelect) return;
 
     const year = yearSelect.value;
-    const baseFormat = `CSSK/STD/${year}/`;
+    const baseFormat = `TCC/${year}/`;
 
     if (admissionMode.value === 'auto') {
         admissionNoInput.readOnly = true;
@@ -2175,6 +2179,37 @@ let allStudents = [];
 const itemsPerPage = 100;
 const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
 
+// FIXED: Generate placeholder image as data URL to avoid network issues
+function generatePlaceholderImage(text = 'PHOTO') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 150;
+    canvas.height = 150;
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 150, 150);
+    gradient.addColorStop(0, '#6366f1');
+    gradient.addColorStop(1, '#8b5cf6');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 150, 150);
+
+    // Text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 75, 75);
+
+    return canvas.toDataURL();
+}
+
+// FIXED: Get initials properly
+function getStudentInitials(firstName, lastName) {
+    const firstInitial = firstName && firstName.length > 0 ? firstName.charAt(0).toUpperCase() : '';
+    const lastInitial = lastName && lastName.length > 0 ? lastName.charAt(0).toUpperCase() : '';
+    return (firstInitial + lastInitial) || '??';
+}
+
 // View toggle function
 function toggleView(viewType) {
     const tableView = document.getElementById('tableView');
@@ -2188,7 +2223,6 @@ function toggleView(viewType) {
         tableViewBtn.classList.add('active');
         cardViewBtn.classList.remove('active');
 
-        // Update checkboxes
         document.getElementById('checkAll').checked = false;
         document.getElementById('remove-actions').classList.add('d-none');
     } else {
@@ -2197,30 +2231,21 @@ function toggleView(viewType) {
         tableViewBtn.classList.remove('active');
         cardViewBtn.classList.add('active');
 
-        // Render cards if not already rendered
         if (document.getElementById('studentsCardsContainer').children.length === 0 && allStudents.length > 0) {
             renderStudentsCards(allStudents);
         }
 
-        // Update checkboxes
         document.getElementById('checkAll').checked = false;
         document.getElementById('remove-actions').classList.add('d-none');
     }
 }
 
-// Render students as cards - FIXED VERSION
+// FIXED: Render students as cards
 function renderStudentsCards(students) {
     console.log('Rendering students as cards:', students);
     const container = document.getElementById('studentsCardsContainer');
     if (!container) {
         console.error('studentsCardsContainer element not found');
-        Swal.fire({
-            title: "Error!",
-            text: "Students container element not found",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
         return;
     }
 
@@ -2241,65 +2266,44 @@ function renderStudentsCards(students) {
     }
 
     students.forEach(student => {
-        console.log('Processing student for card:', student);
+        // FIXED: Get proper initials
+        const displayInitials = getStudentInitials(student.firstname, student.lastname);
 
-        // Get initials for avatar - FIXED to prevent "JA"
-        const firstName = student.firstname || '';
-        const lastName = student.lastname || '';
-
-        // Calculate initials properly
-        let displayInitials = '??';
-        if (firstName || lastName) {
-            const firstInitial = firstName ? firstName.charAt(0) : '';
-            const lastInitial = lastName ? lastName.charAt(0) : '';
-            displayInitials = (firstInitial + lastInitial).toUpperCase() || '??';
-        }
-
-        // Get avatar URL - handle different possible field names
+        // FIXED: Get avatar URL with proper fallback
         let avatarUrl = defaultAvatar;
-        if (student.picture) {
+        if (student.picture && student.picture !== 'unnamed.jpg') {
             avatarUrl = `/storage/images/student_avatars/${student.picture}`;
-        } else if (student.avatar) {
-            avatarUrl = `/storage/images/student_avatars/${student.avatar}`;
         }
 
-        // Determine status
         const isActive = student.student_status === 'Active';
         const statusText = isActive ? 'Active' : 'Inactive';
         const statusClass = isActive ? 'status-active' : 'status-inactive';
-
-        // Get student type
         const studentType = student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : 'N/A';
 
-        // Format registration date
         const regDate = student.created_at ? new Date(student.created_at).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
         }) : 'N/A';
 
-        // Create card HTML
         const cardHtml = `
             <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
                 <div class="student-card" data-id="${student.id}"
-                     data-name="${student.lastname} ${student.firstname} ${student.othername || ''}"
+                     data-name="${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}"
                      data-admission="${student.admissionNo || ''}"
                      data-class="${student.schoolclassid || ''}"
                      data-status="${student.statusId || ''}"
                      data-gender="${student.gender || ''}"
                      data-student-status="${student.student_status || ''}">
 
-                    <!-- Checkbox for multiple selection -->
                     <div class="checkbox-container">
                         <div class="form-check">
                             <input class="form-check-input student-checkbox" type="checkbox" name="chk_child" value="${student.id}">
                         </div>
                     </div>
 
-                    <!-- Status badge -->
                     <span class="status-badge ${statusClass}">${statusText}</span>
 
-                    <!-- Action buttons -->
                     <div class="action-buttons">
                         <button class="action-btn view-btn" title="View Details" onclick="viewStudent(${student.id})">
                             <i class="fas fa-eye"></i>
@@ -2312,22 +2316,19 @@ function renderStudentsCards(students) {
                         </button>
                     </div>
 
-                    <!-- Avatar with fallback to initials -->
                     <div class="avatar-container">
-                        <img src="${avatarUrl}" alt="${student.firstname} ${student.lastname}"
-                             class="avatar" onerror="this.onerror=null; this.style.display='none';
-                             this.nextElementSibling ? this.nextElementSibling.style.display='flex' :
-                             this.parentElement.innerHTML='<div class=\"avatar-initials\">${displayInitials}</div>'">
-                        <div class="avatar-initials" style="display: none;">${displayInitials}</div>
+                        <div class="avatar-initials" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            ${displayInitials}
+                        </div>
+                        <img src="${avatarUrl}" alt="${student.firstname || ''} ${student.lastname || ''}"
+                             class="avatar" style="position: absolute; top: 0; left: 0; display: none;"
+                             onload="this.style.display='block'; this.previousElementSibling.style.display='none';"
+                             onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';">
                     </div>
 
-                    <!-- Student name -->
-                    <h6 class="student-name">${student.lastname} ${student.firstname}</h6>
-
-                    <!-- Admission number -->
+                    <h6 class="student-name">${student.lastname || ''} ${student.firstname || ''}</h6>
                     <p class="student-admission">${student.admissionNo || 'No Admission No'}</p>
 
-                    <!-- Student details -->
                     <div class="student-details">
                         <div><strong>Class:</strong> ${student.schoolclass || 'N/A'} ${student.arm || ''}</div>
                         <div><strong>Type:</strong> ${studentType}</div>
@@ -2381,7 +2382,6 @@ function initializeStudentCheckboxes() {
                 card.classList.toggle('selected', this.checked);
             }
 
-            // Update checkAll state
             const allChecked = document.querySelectorAll('.student-checkbox').length ===
                              document.querySelectorAll('.student-checkbox:checked').length;
             const someChecked = document.querySelectorAll('.student-checkbox:checked').length > 0;
@@ -2396,12 +2396,11 @@ function initializeStudentCheckboxes() {
     });
 }
 
-// View student details - FIXED VERSION
+// FIXED: View student details
 function viewStudent(id) {
     console.log('View student:', id);
     if (!ensureAxios()) return;
 
-    // Show loading state
     Swal.fire({
         title: 'Loading...',
         text: 'Fetching student details',
@@ -2411,7 +2410,6 @@ function viewStudent(id) {
         }
     });
 
-    // Try your working endpoint first
     axios.get(`/student/${id}/edit`)
         .then((response) => {
             Swal.close();
@@ -2422,10 +2420,8 @@ function viewStudent(id) {
                 throw new Error('Student data is empty');
             }
 
-            // Populate the view modal
             populateViewModal(student);
 
-            // Show the view modal
             const viewModalElement = document.getElementById('viewStudentModal');
             if (viewModalElement) {
                 const viewModal = new bootstrap.Modal(viewModalElement);
@@ -2442,78 +2438,67 @@ function viewStudent(id) {
         })
         .catch((error) => {
             console.error('Error fetching student for view:', error);
-
-            // Fallback: try the show endpoint
-            axios.get(`/student/${id}`)
-                .then((response) => {
-                    Swal.close();
-                    console.log('Student data received (fallback):', response.data);
-                    let student = response.data.student || response.data.data || response.data;
-
-                    if (!student) {
-                        throw new Error('Student data is empty');
-                    }
-
-                    populateViewModal(student);
-
-                    const viewModalElement = document.getElementById('viewStudentModal');
-                    if (viewModalElement) {
-                        const viewModal = new bootstrap.Modal(viewModalElement);
-                        viewModal.show();
-                    }
-                })
-                .catch((fallbackError) => {
-                    Swal.close();
-                    console.error('Fallback also failed:', fallbackError);
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Failed to load student data. Please try again.',
-                        icon: 'error',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                });
+            Swal.close();
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to load student data. Please try again.',
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
         });
 }
 
-// Function to populate view modal - FIXED VERSION
+// FIXED: Function to populate view modal
 function populateViewModal(student) {
     console.log('=== DEBUG: Populating View Modal ===');
     console.log('Student object:', student);
 
-    // Student Photo
+    // FIXED: Student Photo with proper fallback
     const photoElement = document.getElementById('viewStudentPhoto');
     if (photoElement) {
-        if (student.picture) {
+        const displayInitials = getStudentInitials(student.firstname, student.lastname);
+
+        if (student.picture && student.picture !== 'unnamed.jpg') {
             photoElement.src = `/storage/images/student_avatars/${student.picture}`;
+            photoElement.style.display = 'block';
             photoElement.onerror = function() {
-                this.src = 'https://via.placeholder.com/150x150/6366f1/ffffff?text=PHOTO';
+                // Fallback to initials
+                this.style.display = 'none';
+                const overlay = this.nextElementSibling;
+                if (overlay) {
+                    overlay.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; font-size: 48px; font-weight: bold; color: white;">${displayInitials}</div>`;
+                }
             };
-        } else if (student.avatar) {
-            photoElement.src = `/storage/images/student_avatars/${student.avatar}`;
-            photoElement.onerror = function() {
-                this.src = 'https://via.placeholder.com/150x150/6366f1/ffffff?text=PHOTO';
-            };
+        } else {
+            // Show initials placeholder
+            photoElement.style.display = 'none';
+            const overlay = photoElement.nextElementSibling;
+            if (overlay) {
+                overlay.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; font-size: 48px; font-weight: bold; color: white;">${displayInitials}</div>`;
+            }
         }
     }
 
-    // Academic Details
+    // FIXED: Academic Details with null checks
     setElementText('viewAcademicYear', student.admissionYear || student.admission_year || '-');
     setElementText('viewRegistrationNo', student.admissionNo || student.admission_no || '-');
 
-    if (student.admissionDate) {
-        const date = new Date(student.admissionDate);
+    if (student.admissionDate || student.admission_date) {
+        const dateValue = student.admissionDate || student.admission_date;
+        const date = new Date(dateValue);
         setElementText('viewAdmissionDate', date.toLocaleDateString());
     } else {
         setElementText('viewAdmissionDate', '-');
     }
 
-    // Class information
-    setElementText('viewClass', student.schoolclass ?
-        `${student.schoolclass} ${student.arm ? '- ' + student.arm : ''}` :
-        student.class_name || '-');
+    // FIXED: Class, Term, Session display
+    const classText = student.schoolclass || '';
+    const armText = student.arm || '';
+    setElementText('viewClass', classText && armText ? `${classText} - ${armText}` : classText || armText || '-');
 
     setElementText('viewTerm', student.term_name || student.term || '-');
+    setElementText('viewSession', student.session_name || student.session || '-');
 
     // Category badges
     const dayBadge = document.getElementById('dayBadge');
@@ -2621,12 +2606,13 @@ function populateViewModal(student) {
 function setElementText(id, text) {
     const element = document.getElementById(id);
     if (element) {
-        element.textContent = text;
+        element.textContent = text || '-';
     } else {
         console.warn(`Element with ID '${id}' not found`);
     }
 }
 
+// FIXED: Edit student function
 function editStudent(id) {
     console.log('Edit student:', id);
     if (!ensureAxios()) return;
@@ -2640,10 +2626,8 @@ function editStudent(id) {
                 throw new Error('Student data is empty');
             }
 
-            // Populate the edit form
             populateEditForm(student);
 
-            // Show the edit modal
             const editModalElement = document.getElementById('editStudentModal');
             if (editModalElement) {
                 const editModal = new bootstrap.Modal(editModalElement);
@@ -2662,6 +2646,141 @@ function editStudent(id) {
         });
 }
 
+// FIXED: Populate edit form
+function populateEditForm(student) {
+    console.log('Populating edit form with student:', student);
+
+    const fields = [
+        { id: 'editStudentId', value: student.id },
+        { id: 'editAdmissionNo', value: student.admissionNo || student.admission_no || '' },
+        { id: 'editAdmissionYear', value: student.admissionYear || '' },
+        { id: 'editAdmissionDate', value: student.admissionDate ? student.admissionDate.split('T')[0] : '' },
+        { id: 'editTitle', value: student.title || '' },
+        { id: 'editFirstname', value: student.firstname || student.first_name || '' },
+        { id: 'editLastname', value: student.lastname || student.last_name || '' },
+        { id: 'editOthername', value: student.othername || student.other_name || student.middle_name || '' },
+        { id: 'editPermanentAddress', value: student.permanent_address || '' },
+        { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
+        { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
+        { id: 'editNationality', value: student.nationality || '' },
+        { id: 'editReligion', value: student.religion || '' },
+        { id: 'editLastSchool', value: student.last_school || '' },
+        { id: 'editLastClass', value: student.last_class || '' },
+        { id: 'editSchoolclassid', value: student.schoolclassid || student.class_id || '' },
+        { id: 'editTermid', value: student.termid || student.term_id || '' },
+        { id: 'editSessionid', value: student.sessionid || student.session_id || '' },
+        { id: 'editPhoneNumber', value: student.phone_number || student.phone || '' },
+        { id: 'editEmail', value: student.email || '' },
+        { id: 'editFutureAmbition', value: student.future_ambition || '' },
+        { id: 'editCity', value: student.city || '' },
+        { id: 'editState', value: student.state || '' },
+        { id: 'editLocal', value: student.local || '' },
+        { id: 'editNinNumber', value: student.nin_number || student.nin || '' },
+        { id: 'editBloodGroup', value: student.blood_group || '' },
+        { id: 'editMotherTongue', value: student.mother_tongue || '' },
+        { id: 'editFatherName', value: student.father_name || '' },
+        { id: 'editFatherPhone', value: student.father_phone || '' },
+        { id: 'editFatherOccupation', value: student.father_occupation || '' },
+        { id: 'editFatherCity', value: student.father_city || '' },
+        { id: 'editMotherName', value: student.mother_name || '' },
+        { id: 'editMotherPhone', value: student.mother_phone || '' },
+        { id: 'editParentEmail', value: student.parent_email || '' },
+        { id: 'editParentAddress', value: student.parent_address || '' },
+        { id: 'editStudentCategory', value: student.student_category || '' },
+        { id: 'editSchoolHouse', value: student.schoolhouse || student.school_house || student.sport_house || '' },
+        { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
+    ];
+
+    fields.forEach(({ id, value }) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.value = value || '';
+            console.log(`Set ${id} to:`, value);
+        } else {
+            console.warn(`Element with ID '${id}' not found`);
+        }
+    });
+
+    // Set gender
+    const genderRadios = document.querySelectorAll('#editStudentModal input[name="gender"]');
+    if (genderRadios.length > 0) {
+        const studentGender = student.gender || '';
+        genderRadios.forEach(radio => {
+            radio.checked = (radio.value === studentGender);
+        });
+        console.log('Set gender to:', studentGender);
+    }
+    // Set status
+    const statusRadios = document.querySelectorAll('#editStudentModal input[name="statusId"]');
+    if (statusRadios.length > 0) {
+        const studentStatusId = student.statusId || student.status_id || '';
+        statusRadios.forEach(radio => {
+            radio.checked = (parseInt(radio.value) === parseInt(studentStatusId));
+        });
+        console.log('Set statusId to:', studentStatusId);
+    }
+
+    // Set student activity status
+    const studentStatusRadios = document.querySelectorAll('#editStudentModal input[name="student_status"]');
+    if (studentStatusRadios.length > 0) {
+        const studentActivityStatus = student.student_status || student.status || '';
+        studentStatusRadios.forEach(radio => {
+            radio.checked = (radio.value === studentActivityStatus);
+        });
+        console.log('Set student_status to:', studentActivityStatus);
+    }
+
+    // FIXED: Set avatar with initials fallback
+    const avatarElement = document.getElementById('editStudentAvatar');
+    if (avatarElement) {
+        const displayInitials = getStudentInitials(student.firstname, student.lastname);
+
+        if (student.picture && student.picture !== 'unnamed.jpg') {
+            const avatarUrl = `/storage/images/student_avatars/${student.picture}`;
+            avatarElement.src = avatarUrl;
+            avatarElement.style.display = 'block';
+            avatarElement.onerror = function() {
+                // Create initials overlay
+                this.style.display = 'none';
+                const container = this.parentElement;
+                if (container) {
+                    const initialsDiv = document.createElement('div');
+                    initialsDiv.className = 'avatar-initials';
+                    initialsDiv.style.cssText = 'width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; color: white; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 4px solid #667eea; box-shadow: 0 4px 8px rgba(0,0,0,0.1);';
+                    initialsDiv.textContent = displayInitials;
+                    container.appendChild(initialsDiv);
+                }
+            };
+        } else {
+            // Show initials
+            avatarElement.style.display = 'none';
+            const container = avatarElement.parentElement;
+            if (container) {
+                let initialsDiv = container.querySelector('.avatar-initials');
+                if (!initialsDiv) {
+                    initialsDiv = document.createElement('div');
+                    initialsDiv.className = 'avatar-initials';
+                    initialsDiv.style.cssText = 'width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; color: white; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 4px solid #667eea; box-shadow: 0 4px 8px rgba(0,0,0,0.1);';
+                    container.appendChild(initialsDiv);
+                }
+                initialsDiv.textContent = displayInitials;
+            }
+        }
+    }
+
+    // Calculate age if date of birth exists
+    if (student.dateofbirth) {
+        calculateAge(student.dateofbirth, 'editAgeInput');
+    }
+
+    // Update form action
+    const form = document.getElementById('editStudentForm');
+    if (form && student.id) {
+        form.action = `/student/${student.id}`;
+        console.log('Updated form action to:', form.action);
+    }
+}
+
 function deleteStudent(id) {
     Swal.fire({
         title: 'Are you sure?',
@@ -2674,17 +2793,14 @@ function deleteStudent(id) {
         if (result.isConfirmed && ensureAxios()) {
             axios.delete(`/student/${id}/destroy`)
                 .then(() => {
-                    // Remove the card
                     const card = document.querySelector(`.student-card[data-id="${id}"]`);
                     if (card) {
                         card.closest('.col-xl-3').remove();
                     }
-                    // Remove the table row
                     const row = document.querySelector(`tr[data-id="${id}"]`);
                     if (row) {
                         row.remove();
                     }
-                    // Refresh the list
                     fetchStudents();
                     Swal.fire({
                         title: 'Deleted!',
@@ -2719,7 +2835,6 @@ function fetchStudents() {
 
             let studentsArray = [];
 
-            // Handle different response formats
             if (Array.isArray(response.data)) {
                 studentsArray = response.data;
             } else if (response.data.students && Array.isArray(response.data.students)) {
@@ -2730,7 +2845,6 @@ function fetchStudents() {
                 studentsArray = response.data.data;
             } else {
                 console.log('Unexpected response format, trying to extract students:', response.data);
-                // Try to extract students from the response
                 studentsArray = Object.values(response.data).filter(item =>
                     item && (item.id || item.student_id)
                 );
@@ -2761,10 +2875,8 @@ function fetchStudents() {
             console.log('Processed students:', allStudents);
             console.log('Processed students count:', allStudents.length);
 
-            // Update counts
             updateCounts(allStudents.length);
 
-            // Check which view is active and render accordingly
             const tableView = document.getElementById('tableView');
             const isTableView = !tableView.classList.contains('d-none');
 
@@ -2808,7 +2920,8 @@ function renderStudents(students) {
     }
 
     students.forEach(student => {
-        const studentImage = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+        const studentImage = student.picture && student.picture !== 'unnamed.jpg' ?
+            `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
 
         const row = document.createElement('tr');
         row.setAttribute('data-id', student.id);
@@ -2818,22 +2931,22 @@ function renderStudents(students) {
                     <input class="form-check-input" type="checkbox" name="chk_child">
                 </div>
             </td>
-            <td class="name" data-name="${student.lastname} ${student.firstname} ${student.othername || ''}">
+            <td class="name" data-name="${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}">
                 <div class="d-flex align-items-center">
                     <div class="symbol symbol-50px me-3">
                         <img src="${studentImage}" alt="" class="rounded-circle avatar-sm student-image" style="object-fit:cover; width: 50px; height: 50px;"/>
                     </div>
                     <div>
                         <h6 class="mb-0">
-                            <b>${student.lastname}</b> ${student.firstname} ${student.othername || ''}
+                            <b>${student.lastname || ''}</b> ${student.firstname || ''} ${student.othername || ''}
                         </h6>
                     </div>
                 </div>
             </td>
-            <td class="admissionNo" data-admissionno="${student.admissionNo}">${student.admissionNo}</td>
-            <td class="class" data-class="${student.schoolclassid}">${student.schoolclass || ''} ${student.arm ? ' - ' + student.arm : ''}</td>
-            <td class="status" data-status="${student.statusId}">${student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : ''}</td>
-            <td class="gender" data-gender="${student.gender}">${student.gender}</td>
+            <td class="admissionNo" data-admissionno="${student.admissionNo || ''}">${student.admissionNo || ''}</td>
+            <td class="class" data-class="${student.schoolclassid || ''}">${student.schoolclass || ''} ${student.arm ? ' - ' + student.arm : ''}</td>
+            <td class="status" data-status="${student.statusId || ''}">${student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : ''}</td>
+            <td class="gender" data-gender="${student.gender || ''}">${student.gender || ''}</td>
             <td class="datereg">${student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : ''}</td>
             <td>
                 <ul class="d-flex gap-2 list-unstyled mb-0">
@@ -2850,6 +2963,26 @@ function renderStudents(students) {
     initializeCheckboxes();
 }
 
+// FIXED: Calculate age function
+window.calculateAge = function(dateValue, targetId) {
+    if (!dateValue) return;
+
+    const dateString = dateValue.includes('T') ? dateValue.split('T')[0] : dateValue;
+    const dob = new Date(dateString);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        age--;
+    }
+
+    const ageInput = document.getElementById(targetId);
+    if (ageInput) {
+        ageInput.value = age;
+    }
+};
+
 // Update pagination controls
 function updatePagination() {
     const totalItems = allStudents.length;
@@ -2861,12 +2994,10 @@ function updatePagination() {
 
     paginationLinks.innerHTML = '';
 
-    // Show only a few page links
     const maxPagesToShow = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
 
-    // Adjust start page if we're at the end
     if (endPage - startPage + 1 < maxPagesToShow) {
         startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
@@ -2876,12 +3007,10 @@ function updatePagination() {
         li.className = `page-item ${i === currentPage ? 'active' : ''}`;
         li.innerHTML = `<a class="page-link" href="javascript:void(0);">${i}</a>`;
         li.addEventListener('click', () => {
-            // Simple pagination logic
             const startIndex = (i - 1) * itemsPerPage;
             const endIndex = startIndex + itemsPerPage;
             const pageStudents = allStudents.slice(startIndex, endIndex);
 
-            // Check which view is active
             const tableView = document.getElementById('tableView');
             const isTableView = !tableView.classList.contains('d-none');
 
@@ -2901,58 +3030,11 @@ function updatePagination() {
 
     if (prevPage) {
         prevPage.classList.toggle('disabled', currentPage === 1);
-        prevPage.onclick = currentPage > 1 ? () => {
-            // Previous page logic
-            const newPage = currentPage - 1;
-            const startIndex = (newPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const pageStudents = allStudents.slice(startIndex, endIndex);
-
-            const tableView = document.getElementById('tableView');
-            const isTableView = !tableView.classList.contains('d-none');
-
-            if (isTableView) {
-                renderStudents(pageStudents);
-            } else {
-                renderStudentsCards(pageStudents);
-            }
-
-            updatePaginationForPage(newPage);
-        } : null;
     }
 
     if (nextPage) {
         nextPage.classList.toggle('disabled', currentPage === totalPages);
-        nextPage.onclick = currentPage < totalPages ? () => {
-            // Next page logic
-            const newPage = currentPage + 1;
-            const startIndex = (newPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const pageStudents = allStudents.slice(startIndex, endIndex);
-
-            const tableView = document.getElementById('tableView');
-            const isTableView = !tableView.classList.contains('d-none');
-
-            if (isTableView) {
-                renderStudents(pageStudents);
-            } else {
-                renderStudentsCards(pageStudents);
-            }
-
-            updatePaginationForPage(newPage);
-        } : null;
     }
-}
-
-function updatePaginationForPage(page) {
-    const paginationLinks = document.querySelectorAll('#paginationLinks .page-item');
-    paginationLinks.forEach((li, index) => {
-        li.classList.remove('active');
-        const pageNum = parseInt(li.querySelector('.page-link').textContent);
-        if (pageNum === page) {
-            li.classList.add('active');
-        }
-    });
 }
 
 // Filter function for both views
@@ -2964,9 +3046,8 @@ function filterData() {
 
     console.log('Filtering with:', { search, classId, statusId, gender });
 
-    // Filter the allStudents array
     const filteredStudents = allStudents.filter(student => {
-        const name = `${student.lastname} ${student.firstname} ${student.othername || ''}`.toLowerCase();
+        const name = `${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}`.toLowerCase();
         const admissionNo = (student.admissionNo || '').toLowerCase();
 
         const matchesSearch = name.includes(search) || admissionNo.includes(search);
@@ -2977,7 +3058,6 @@ function filterData() {
         return matchesSearch && matchesClass && matchesStatus && matchesGender;
     });
 
-    // Check which view is active
     const tableView = document.getElementById('tableView');
     const isTableView = !tableView.classList.contains('d-none');
 
@@ -2990,16 +3070,14 @@ function filterData() {
     document.getElementById('showingCount').textContent = filteredStudents.length;
 }
 
-// Delete multiple students (works for both views)
+// Delete multiple students
 function deleteMultiple() {
-    // Check which view is active
     const tableView = document.getElementById('tableView');
     const isTableView = !tableView.classList.contains('d-none');
 
     let ids = [];
 
     if (isTableView) {
-        // Table view selection
         ids = Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
             .map(checkbox => {
                 const row = checkbox.closest('tr');
@@ -3007,7 +3085,6 @@ function deleteMultiple() {
             })
             .filter(id => id !== null);
     } else {
-        // Card view selection
         ids = Array.from(document.querySelectorAll('.student-checkbox:checked'))
             .map(checkbox => checkbox.value)
             .filter(id => id !== null);
@@ -3038,14 +3115,12 @@ function deleteMultiple() {
         buttonsStyling: false
     }).then((result) => {
         if (result.isConfirmed && ensureAxios()) {
-            // Delete each student individually
             const deletePromises = ids.map(id =>
                 axios.delete(`/student/${id}/destroy`)
             );
 
             Promise.all(deletePromises)
                 .then(() => {
-                    // Refresh the list
                     fetchStudents();
 
                     Swal.fire({
@@ -3070,7 +3145,7 @@ function deleteMultiple() {
     });
 }
 
-// Initialize checkboxes for multiple selection (table view)
+// Initialize checkboxes for multiple selection
 function initializeCheckboxes() {
     const checkAll = document.getElementById('checkAll');
     if (!checkAll) return;
@@ -3093,146 +3168,12 @@ function initializeCheckboxes() {
     });
 }
 
-// Populate edit form with student data
-function populateEditForm(student) {
-    console.log('Populating edit form with student:', student);
-
-    // Updated fields array
-    const fields = [
-        { id: 'editStudentId', value: student.id },
-        { id: 'editAdmissionNo', value: student.admissionNo || student.admission_no || '' },
-        { id: 'editAdmissionYear', value: student.admissionYear || '' },
-        { id: 'editAdmissionDate', value: student.admissionDate ? student.admissionDate.split('T')[0] : '' },
-        { id: 'editTitle', value: student.title || '' },
-        { id: 'editFirstname', value: student.firstname || student.first_name || '' },
-        { id: 'editLastname', value: student.lastname || student.last_name || '' },
-        { id: 'editOthername', value: student.othername || student.other_name || student.middle_name || '' },
-        { id: 'editPermanentAddress', value: student.permanent_address || '' },
-        { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
-        { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
-        { id: 'editNationality', value: student.nationality || '' },
-        { id: 'editReligion', value: student.religion || '' },
-        { id: 'editLastSchool', value: student.last_school || '' },
-        { id: 'editLastClass', value: student.last_class || '' },
-        { id: 'editSchoolclassid', value: student.schoolclassid || student.class_id || '' },
-        { id: 'editTermid', value: student.termid || student.term_id || '' },
-        { id: 'editSessionid', value: student.sessionid || student.session_id || '' },
-        { id: 'editPhoneNumber', value: student.phone_number || student.phone || '' },
-        { id: 'editEmail', value: student.email || '' },
-        { id: 'editFutureAmbition', value: student.future_ambition || '' },
-        { id: 'editCity', value: student.city || '' },
-        { id: 'editState', value: student.state || '' },
-        { id: 'editLocal', value: student.local || '' },
-        { id: 'editNinNumber', value: student.nin_number || student.nin || '' },
-        { id: 'editBloodGroup', value: student.blood_group || '' },
-        { id: 'editMotherTongue', value: student.mother_tongue || '' },
-        { id: 'editFatherName', value: student.father_name || '' },
-        { id: 'editFatherPhone', value: student.father_phone || '' },
-        { id: 'editFatherOccupation', value: student.father_occupation || '' },
-        { id: 'editFatherCity', value: student.father_city || '' },
-        { id: 'editMotherName', value: student.mother_name || '' },
-        { id: 'editMotherPhone', value: student.mother_phone || '' },
-        { id: 'editParentEmail', value: student.parent_email || '' },
-        { id: 'editParentAddress', value: student.parent_address || '' },
-        { id: 'editStudentCategory', value: student.student_category || '' },
-        { id: 'editSchoolHouse', value: student.school_house || student.sport_house || '' }
-    ];
-
-    fields.forEach(({ id, value }) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.value = value || '';
-            console.log(`Set ${id} to:`, value);
-        } else {
-            console.warn(`Element with ID '${id}' not found`);
-        }
-    });
-
-    // Set gender
-    const genderRadios = document.querySelectorAll('input[name="gender"]');
-    if (genderRadios.length > 0) {
-        const studentGender = student.gender || '';
-        genderRadios.forEach(radio => {
-            radio.checked = (radio.value === studentGender);
-        });
-        console.log('Set gender to:', studentGender);
-    }
-
-    // Set status
-    const statusRadios = document.querySelectorAll('input[name="statusId"]');
-    if (statusRadios.length > 0) {
-        const studentStatusId = student.statusId || student.status_id || '';
-        statusRadios.forEach(radio => {
-            radio.checked = (parseInt(radio.value) === parseInt(studentStatusId));
-        });
-        console.log('Set statusId to:', studentStatusId);
-    }
-
-    // Set student activity status
-    const studentStatusRadios = document.querySelectorAll('input[name="student_status"]');
-    if (studentStatusRadios.length > 0) {
-        const studentActivityStatus = student.student_status || student.status || '';
-        studentStatusRadios.forEach(radio => {
-            radio.checked = (radio.value === studentActivityStatus);
-        });
-        console.log('Set student_status to:', studentActivityStatus);
-    }
-
-    // Set avatar
-    const avatarElement = document.getElementById('editStudentAvatar');
-    if (avatarElement) {
-        const avatarUrl = student.picture ? `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
-        avatarElement.src = avatarUrl;
-        avatarElement.setAttribute('data-original-src', avatarUrl);
-        console.log('Set avatar to:', avatarUrl);
-    }
-
-    // Calculate age if date of birth exists
-    if (student.dateofbirth) {
-        showage(student.dateofbirth, 'editAge');
-    }
-
-    // Update form action
-    const form = document.getElementById('editStudentForm');
-    if (form && student.id) {
-        form.action = `/student/${student.id}`;
-        console.log('Updated form action to:', form.action);
-    }
-}
-
-// Age calculation function
-window.showage = function (date, displayId = 'addAge') {
-    if (date) {
-        const dateString = date.includes('T') ? date.split('T')[0] : date;
-        const dob = new Date(dateString);
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const monthDiff = today.getMonth() - dob.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-            age--;
-        }
-        const ageInputId = displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput';
-        const ageInput = document.getElementById(ageInputId);
-        if (ageInput) {
-            ageInput.value = age;
-        }
-    } else {
-        const ageInputId = displayId === 'addAge' ? 'addAgeInput' : 'editAgeInput';
-        const ageInput = document.getElementById(ageInputId);
-        if (ageInput) {
-            ageInput.value = '';
-        }
-    }
-};
-
 // Initialize the student list
 function initializeStudentList() {
     console.log('Initializing student list...');
 
-    // Initial fetch of students
     fetchStudents();
 
-    // Initialize view toggle
     const tableViewBtn = document.getElementById('tableViewBtn');
     const cardViewBtn = document.getElementById('cardViewBtn');
 
@@ -3244,7 +3185,6 @@ function initializeStudentList() {
         cardViewBtn.addEventListener('click', () => toggleView('card'));
     }
 
-    // Filter event listeners
     const searchInput = document.querySelector('#search-input');
     const schoolClassFilter = document.getElementById('schoolclass-filter');
     const statusFilter = document.getElementById('status-filter');
@@ -3272,5 +3212,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing student list...');
     initializeStudentList();
 });
+
 </script>
 @endsection
