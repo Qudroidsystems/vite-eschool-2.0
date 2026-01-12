@@ -803,58 +803,60 @@ class StudentController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Student updated successfully',
-                'student' => [
-                    'id' => $student->id,
-                    'admissionNo' => $student->admissionNo,
-                    'admissionYear' => $student->admissionYear,
-                    'title' => $student->title,
-                    'firstname' => $student->firstname,
-                    'lastname' => $student->lastname,
-                    'othername' => $student->othername,
-                    'gender' => $student->gender,
-                    'dateofbirth' => $student->dateofbirth,
-                    'placeofbirth' => $student->placeofbirth,
-                    'nationality' => $student->nationality,
-                    'religion' => $student->religion,
-                    'last_school' => $student->last_school,
-                    'last_class' => $student->last_class,
-                    'schoolclassid' => $student->schoolclassid,
-                    'termid' => $student->termid,
-                    'sessionid' => $student->sessionid,
-                    'phone_number' => $student->phone_number,
-                    'nin_number' => $student->nin_number,
-                    'blood_group' => $student->blood_group,
-                    'mother_tongue' => $student->mother_tongue,
-                    'father_name' => $parent->father ?? '',
-                    'father_phone' => $parent->father_phone ?? '',
-                    'father_occupation' => $parent->father_occupation ?? '',
-                    'mother_name' => $parent->mother ?? '',
-                    'mother_phone' => $parent->mother_phone ?? '',
-                    'parent_address' => $parent->parent_address ?? '',
-                    'student_category' => $student->student_category,
-                    'reason_for_leaving' => $student->reason_for_leaving,
-                    'picture' => $picture->picture ?? 'unnamed.jpg',
-                    'state' => $student->state,
-                    'local' => $student->local,
-                    'statusId' => $student->statusId,
-                    'student_status' => $student->student_status,
-                    'future_ambition' => $student->future_ambition, // Changed from present_address
-                    'permanent_address' => $student->home_address2,
-                    'schoolclass' => $studentClass->schoolclass->name ?? '',
-                    'arm' => $studentClass->schoolclass->arm ?? ''
-                ]
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Error updating student ID {$id}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update student: ' . $e->getMessage(),
-            ], 500);
-        }
+            // Always return JSON response for AJAX requests
+        return response()->json([
+            'success' => true,
+            'message' => 'Student updated successfully',
+            'redirect' => route('student.index'), // ADD THIS LINE
+            'student' => [
+                'id' => $student->id,
+                'admissionNo' => $student->admissionNo,
+                'admissionYear' => $student->admissionYear,
+                'title' => $student->title,
+                'firstname' => $student->firstname,
+                'lastname' => $student->lastname,
+                'othername' => $student->othername,
+                'gender' => $student->gender,
+                'dateofbirth' => $student->dateofbirth,
+                'placeofbirth' => $student->placeofbirth,
+                'nationality' => $student->nationality,
+                'religion' => $student->religion,
+                'last_school' => $student->last_school,
+                'last_class' => $student->last_class,
+                'schoolclassid' => $student->schoolclassid,
+                'termid' => $student->termid,
+                'sessionid' => $student->sessionid,
+                'phone_number' => $student->phone_number,
+                'nin_number' => $student->nin_number,
+                'blood_group' => $student->blood_group,
+                'mother_tongue' => $student->mother_tongue,
+                'father_name' => $parent->father ?? '',
+                'father_phone' => $parent->father_phone ?? '',
+                'father_occupation' => $parent->father_occupation ?? '',
+                'mother_name' => $parent->mother ?? '',
+                'mother_phone' => $parent->mother_phone ?? '',
+                'parent_address' => $parent->parent_address ?? '',
+                'student_category' => $student->student_category,
+                'reason_for_leaving' => $student->reason_for_leaving,
+                'picture' => $picture->picture ?? 'unnamed.jpg',
+                'state' => $student->state,
+                'local' => $student->local,
+                'statusId' => $student->statusId,
+                'student_status' => $student->student_status,
+                'future_ambition' => $student->future_ambition,
+                'permanent_address' => $student->home_address2,
+                'schoolclass' => $studentClass->schoolclass->name ?? '',
+                'arm' => $studentClass->schoolclass->arm ?? ''
+            ]
+        ], 200);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("Error updating student ID {$id}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update student: ' . $e->getMessage(),
+        ], 500);
+    }
     }
 
 
