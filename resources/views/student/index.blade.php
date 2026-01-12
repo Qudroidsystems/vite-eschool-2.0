@@ -916,7 +916,8 @@ use Spatie\Permission\Models\Role;
                                                             <option value="{{ $year }}" {{ $year == date('Y') ? 'selected' : '' }}>{{ $year }}</option>
                                                         @endfor
                                                     </select>
-                                                    <input type="text" id="admissionNo" name="admissionNo" class="form-control" placeholder="CSSK/STD/YYYY/001" required>
+                                                    <input type="text" id="admissionNo" name="admissionNo" class="form-control" placeholder="TCC/YYYY/0001" required>
+                                                    <small class="form-text text-muted w-100 mt-1">Format: TCC/YYYY/0001 (e.g., TCC/2024/0871)</small>
                                                 </div>
                                             </div>
                                             <div class="mb-3">
@@ -1040,7 +1041,7 @@ use Spatie\Permission\Models\Role;
                                                 </div>
                                             </div>
                                             <div class="mb-3">
-                                                <label for="othername" class="form-label">Other Names</label>
+                                                <label for="othername" class="form-label">Other Names<span class="text-danger">*</span></label>
                                                 <input type="text" id="othername" name="othername" class="form-control" placeholder="Middle name(s)">
                                             </div>
                                             <div class="mb-3">
@@ -1064,14 +1065,23 @@ use Spatie\Permission\Models\Role;
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
                                                         <label for="dateofbirth" class="form-label">Date of Birth <span class="text-danger">*</span></label>
-                                                        <input type="date" id="addDOB" name="dateofbirth" class="form-control" required onchange="calculateAge(this.value)">
+                                                        <input type="date" id="addDOB" name="dateofbirth" class="form-control" required onchange="calculateAge(this.value, 'addAgeInput')">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
-                                                        <label class="form-label">Age <span class="text-danger">*</span></label>
+                                                        <label for="addAgeInput" class="form-label">Age <span class="text-danger">*</span></label>
                                                         <input type="number" id="addAgeInput" name="age" class="form-control" readonly required>
                                                     </div>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="placeofbirth" class="form-label">Place of Birth <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text bg-primary text-white">
+                                                        <i class="fas fa-map-marker-alt"></i>
+                                                    </span>
+                                                    <input type="text" id="placeofbirth" name="placeofbirth" class="form-control" placeholder="e.g., Lagos, Nigeria" required>
                                                 </div>
                                             </div>
                                             <div class="mb-3">
@@ -1081,15 +1091,6 @@ use Spatie\Permission\Models\Role;
                                                         <i class="fas fa-phone"></i>
                                                     </span>
                                                     <input type="text" id="phone_number" name="phone_number" class="form-control" placeholder="+234 xxx xxx xxxx">
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="placeofbirth" class="form-label">Place of Birth</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text bg-primary text-white">
-                                                        <i class="fas fa-envelope"></i>
-                                                    </span>
-                                                    <input type="input" id="placeofbirth" name="placeofbirth" class="form-control" placeholder="Place of birth">
                                                 </div>
                                             </div>
                                             <div class="mb-3">
@@ -1125,8 +1126,8 @@ use Spatie\Permission\Models\Role;
                                             <div class="row">
                                                 <div class="col-md-10">
                                                     <div class="mb-3">
-                                                        <label for="nationality" class="form-label">Nationality</label>
-                                                        <input type="text" id="nationality" name="nationality" class="form-control" placeholder="Nationality" required>
+                                                        <label for="nationality" class="form-label">Nationality <span class="text-danger">*</span></label>
+                                                        <input type="text" id="nationality" name="nationality" class="form-control" placeholder="e.g., Nigerian" required>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1200,8 +1201,8 @@ use Spatie\Permission\Models\Role;
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
-                                                        <label for="sport_house" class="form-label">School House</label>
-                                                        <select id="schoolclassid" name="schoolclassid" class="form-control" required>
+                                                        <label for="school_house" class="form-label">School House <span class="text-danger">*</span></label>
+                                                        <select id="school_house" name="schoolhouseid" class="form-control" required>
                                                             <option value="">Select School House</option>
                                                             @foreach ($schoolhouses as $schoolhouse)
                                                                 <option value="{{ $schoolhouse->id }}">{{ $schoolhouse->house }}</option>
@@ -1356,7 +1357,8 @@ use Spatie\Permission\Models\Role;
                                                             <option value="{{ $year }}" {{ $year == date('Y') ? 'selected' : '' }}>{{ $year }}</option>
                                                         @endfor
                                                     </select>
-                                                    <input type="text" id="editAdmissionNo" name="admissionNo" class="form-control" placeholder="CSSK/STD/YYYY/001" required>
+                                                    <input type="text" id="editAdmissionNo" name="admissionNo" class="form-control" placeholder="TCC/YYYY/0001" required>
+                                                    <small class="form-text text-muted w-100 mt-1">Format: TCC/YYYY/0001 (e.g., TCC/2024/0871)</small>
                                                 </div>
                                             </div>
                                             <div class="mb-3">
@@ -1488,7 +1490,7 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                         <div class="mb-3">
                                             <label for="editOthername" class="form-label">Other Names</label>
-                                            <input type="text" id="editOthername" name="othername" class="form-control" placeholder="Middle name(s)">
+                                            <input type="text" id="editOthername" name="othername" class="form-control" placeholder="Middle name(s)" required>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Gender <span class="text-danger">*</span></label>
@@ -1516,9 +1518,18 @@ use Spatie\Permission\Models\Role;
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="mb-3">
-                                                    <label class="form-label">Age <span class="text-danger">*</span></label>
+                                                    <label for="editAgeInput" class="form-label">Age <span class="text-danger">*</span></label>
                                                     <input type="number" id="editAgeInput" name="age" class="form-control" readonly required>
                                                 </div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="editPlaceofbirth" class="form-label">Place of Birth <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-primary text-white">
+                                                    <i class="fas fa-map-marker-alt"></i>
+                                                </span>
+                                                <input type="text" id="editPlaceofbirth" name="placeofbirth" class="form-control" placeholder="e.g., Lagos, Nigeria" required>
                                             </div>
                                         </div>
                                         <div class="mb-3">
@@ -1528,15 +1539,6 @@ use Spatie\Permission\Models\Role;
                                                     <i class="fas fa-phone"></i>
                                                 </span>
                                                 <input type="text" id="editPhoneNumber" name="phone_number" class="form-control" placeholder="+234 xxx xxx xxxx">
-                                            </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="editPlaceofbirth" class="form-label">Place of Birth</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-primary text-white">
-                                                    <i class="fas fa-map-marker-alt"></i>
-                                                </span>
-                                                <input type="text" id="editPlaceofbirth" name="placeofbirth" class="form-control" placeholder="Place of birth">
                                             </div>
                                         </div>
                                         <div class="mb-3">
@@ -1569,8 +1571,8 @@ use Spatie\Permission\Models\Role;
                                         <div class="row">
                                             <div class="col-md-10">
                                                 <div class="mb-3">
-                                                    <label for="editNationality" class="form-label">Nationality</label>
-                                                    <input type="text" id="editNationality" name="nationality" class="form-control" placeholder="Nationality" required>
+                                                    <label for="editNationality" class="form-label">Nationality <span class="text-danger">*</span></label>
+                                                    <input type="text" id="editNationality" name="nationality" class="form-control" placeholder="e.g., Nigerian" required>
                                                 </div>
                                             </div>
                                         </div>
@@ -1585,7 +1587,7 @@ use Spatie\Permission\Models\Role;
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="mb-3">
-                                                    <label for="editLocal" class="form-label">Local Government of Origin<span class="text-danger">*</span></label>
+                                                    <label for="editLocal" class="form-label">Local Government <span class="text-danger">*</span></label>
                                                     <select id="editLocal" name="local" class="form-control" required>
                                                         <option value="">Select LGA</option>
                                                     </select>
@@ -1644,8 +1646,8 @@ use Spatie\Permission\Models\Role;
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="mb-3">
-                                                    <label for="editSchoolHouse" class="form-label">School House</label>
-                                                    <select id="editSchoolHouse" name="school_house" class="form-control">
+                                                    <label for="editSchoolHouse" class="form-label">School House <span class="text-danger">*</span></label>
+                                                    <select id="editSchoolHouse" name="schoolhouseid" class="form-control" required>
                                                         <option value="">Select School House</option>
                                                         @foreach ($schoolhouses as $schoolhouse)
                                                             <option value="{{ $schoolhouse->id }}">{{ $schoolhouse->house }}</option>
@@ -1833,6 +1835,14 @@ use Spatie\Permission\Models\Role;
                                                 <div class="form-value" id="viewTerm">-</div>
                                             </div>
                                             <div class="form-group">
+                                                <label class="form-label">State of Origin</label>
+                                                <div class="form-value" id="viewState">-</div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">Local Government</label>
+                                                <div class="form-value" id="viewLocal">-</div>
+                                            </div>
+                                            <div class="form-group">
                                                 <label class="form-label">Category</label>
                                                 <div class="category-badges">
                                                     <span class="category-badge day" id="dayBadge">
@@ -1915,10 +1925,6 @@ use Spatie\Permission\Models\Role;
                                             <div class="form-group">
                                                 <label class="form-label">City</label>
                                                 <div class="form-value" id="viewCity">-</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">State</label>
-                                                <div class="form-value" id="viewState">-</div>
                                             </div>
                                             <div class="form-group full-width">
                                                 <label class="form-label">Permanent Address</label>
@@ -2018,6 +2024,8 @@ use Spatie\Permission\Models\Role;
 </div>
 
 <script>
+
+
 // ============================================================================
 // FIXED VERSION - Student Management JavaScript
 // ============================================================================
@@ -2209,6 +2217,148 @@ function getStudentInitials(firstName, lastName) {
     const lastInitial = lastName && lastName.length > 0 ? lastName.charAt(0).toUpperCase() : '';
     return (firstInitial + lastInitial) || '??';
 }
+
+// ============================================================================
+// STATE AND LGA MANAGEMENT FUNCTIONS
+// ============================================================================
+
+// Nigerian states data
+const nigerianStates = [
+    { name: "Abia", lgAs: ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
+    { name: "Adamawa", lgAs: ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
+    { name: "Akwa Ibom", lgAs: ["Abak", "Eastern Obolo", "Eket", "Esit Eket", "Essien Udim", "Etim Ekpo", "Etinan", "Ibeno", "Ibesikpo Asutan", "Ibiono-Ibom", "Ika", "Ikono", "Ikot Abasi", "Ikot Ekpene", "Ini", "Itu", "Mbo", "Mkpat-Enin", "Nsit-Atai", "Nsit-Ibom", "Nsit-Ubium", "Obot Akara", "Okobo", "Onna", "Oron", "Oruk Anam", "Udung-Uko", "Ukanafun", "Uruan", "Urue-Offong/Oruko", "Uyo"] },
+    { name: "Anambra", lgAs: ["Aguata", "Anambra East", "Anambra West", "Anaocha", "Awka North", "Awka South", "Ayamelum", "Dunukofia", "Ekwusigo", "Idemili North", "Idemili South", "Ihiala", "Njikoka", "Nnewi North", "Nnewi South", "Ogbaru", "Onitsha North", "Onitsha South", "Orumba North", "Orumba South", "Oyi"] },
+    { name: "Bauchi", lgAs: ["Alkaleri", "Bauchi", "Bogoro", "Damban", "Darazo", "Dass", "Gamawa", "Ganjuwa", "Giade", "Itas/Gadau", "Jama'are", "Katagum", "Kirfi", "Misau", "Ningi", "Shira", "Tafawa Balewa", "Toro", "Warji", "Zaki"] },
+    { name: "Bayelsa", lgAs: ["Brass", "Ekeremor", "Kolokuma/Opokuma", "Nembe", "Ogbia", "Sagbama", "Southern Ijaw", "Yenagoa"] },
+    { name: "Benue", lgAs: ["Ado", "Agatu", "Apa", "Buruku", "Gboko", "Guma", "Gwer East", "Gwer West", "Katsina-Ala", "Konshisha", "Kwande", "Logo", "Makurdi", "Obi", "Ogbadibo", "Ohimini", "Oju", "Okpokwu", "Oturkpo", "Tarka", "Ukum", "Ushongo", "Vandeikya"] },
+    { name: "Borno", lgAs: ["Abadam", "Askira/Uba", "Bama", "Bayo", "Biu", "Chibok", "Damboa", "Dikwa", "Gubio", "Guzamala", "Gwoza", "Hawul", "Jere", "Kaga", "Kala/Balge", "Konduga", "Kukawa", "Kwaya Kusar", "Mafa", "Magumeri", "Maiduguri", "Marte", "Mobbar", "Monguno", "Ngala", "Nganzai", "Shani"] },
+    { name: "Cross River", lgAs: ["Abi", "Akamkpa", "Akpabuyo", "Bakassi", "Bekwarra", "Biase", "Boki", "Calabar Municipal", "Calabar South", "Etung", "Ikom", "Obanliku", "Obubra", "Obudu", "Odukpani", "Ogoja", "Yakuur", "Yala"] },
+    { name: "Delta", lgAs: ["Aniocha North", "Aniocha South", "Bomadi", "Burutu", "Ethiope East", "Ethiope West", "Ika North East", "Ika South", "Isoko North", "Isoko South", "Ndokwa East", "Ndokwa West", "Okpe", "Oshimili North", "Oshimili South", "Patani", "Sapele", "Udu", "Ughelli North", "Ughelli South", "Ukwuani", "Uvwie", "Warri North", "Warri South", "Warri South West"] },
+    { name: "Ebonyi", lgAs: ["Abakaliki", "Afikpo North", "Afikpo South", "Ebonyi", "Ezza North", "Ezza South", "Ikwo", "Ishielu", "Ivo", "Izzi", "Ohaozara", "Ohaukwu", "Onicha"] },
+    { name: "Edo", lgAs: ["Akoko-Edo", "Egor", "Esan Central", "Esan North-East", "Esan South-East", "Esan West", "Etsako Central", "Etsako East", "Etsako West", "Igueben", "Ikpoba Okha", "Orhionmwon", "Oredo", "Ovia North-East", "Ovia South-West", "Owan East", "Owan West", "Uhunmwonde"] },
+    { name: "Ekiti", lgAs: ["Ado Ekiti", "Efon", "Ekiti East", "Ekiti South-West", "Ekiti West", "Emure", "Gbonyin", "Ido Osi", "Ijero", "Ikere", "Ilejemeje", "Irepodun/Ifelodun", "Ise/Orun", "Moba", "Oye"] },
+    { name: "Enugu", lgAs: ["Aninri", "Awgu", "Enugu East", "Enugu North", "Enugu South", "Ezeagu", "Igbo Etiti", "Igbo Eze North", "Igbo Eze South", "Isi Uzo", "Nkanu East", "Nkanu West", "Nsukka", "Oji River", "Udenu", "Udi", "Uzo Uwani"] },
+    { name: "FCT", lgAs: ["Abaji", "Bwari", "Gwagwalada", "Kuje", "Kwali", "Municipal Area Council"] },
+    { name: "Gombe", lgAs: ["Akko", "Balanga", "Billiri", "Dukku", "Funakaye", "Gombe", "Kaltungo", "Kwami", "Nafada", "Shongom", "Yamaltu/Deba"] },
+    { name: "Imo", lgAs: ["Aboh Mbaise", "Ahiazu Mbaise", "Ehime Mbano", "Ezinihitte", "Ideato North", "Ideato South", "Ihitte/Uboma", "Ikeduru", "Isiala Mbano", "Isu", "Mbaitoli", "Ngor Okpala", "Njaba", "Nkwerre", "Nwangele", "Obowo", "Oguta", "Ohaji/Egbema", "Okigwe", "Orlu", "Orsu", "Oru East", "Oru West", "Owerri Municipal", "Owerri North", "Owerri West", "Unuimo"] },
+    { name: "Jigawa", lgAs: ["Auyo", "Babura", "Biriniwa", "Birnin Kudu", "Buji", "Dutse", "Gagarawa", "Garki", "Gumel", "Guri", "Gwaram", "Gwiwa", "Hadejia", "Jahun", "Kafin Hausa", "Kazaure", "Kiri Kasama", "Kiyawa", "Kaugama", "Maigatari", "Malam Madori", "Miga", "Ringim", "Roni", "Sule Tankarkar", "Taura", "Yankwashi"] },
+    { name: "Kaduna", lgAs: ["Birnin Gwari", "Chikun", "Giwa", "Igabi", "Ikara", "Jaba", "Jema'a", "Kachia", "Kaduna North", "Kaduna South", "Kagarko", "Kajuru", "Kaura", "Kauru", "Kubau", "Kudan", "Lere", "Makarfi", "Sabon Gari", "Sanga", "Soba", "Zangon Kataf", "Zaria"] },
+    { name: "Kano", lgAs: ["Ajingi", "Albasu", "Bagwai", "Bebeji", "Bichi", "Bunkure", "Dala", "Dambatta", "Dawakin Kudu", "Dawakin Tofa", "Doguwa", "Fagge", "Gabasawa", "Garko", "Garun Mallam", "Gaya", "Gezawa", "Gwale", "Gwarzo", "Kabo", "Kano Municipal", "Karaye", "Kibiya", "Kiru", "Kumbotso", "Kunchi", "Kura", "Madobi", "Makoda", "Minjibir", "Nasarawa", "Rano", "Rimin Gado", "Rogo", "Shanono", "Sumaila", "Takai", "Tarauni", "Tofa", "Tsanyawa", "Tudun Wada", "Ungogo", "Warawa", "Wudil"] },
+    { name: "Katsina", lgAs: ["Bakori", "Batagarawa", "Batsari", "Baure", "Bindawa", "Charanchi", "Dan Musa", "Dandume", "Danja", "Daura", "Dutsi", "Dutsin Ma", "Faskari", "Funtua", "Ingawa", "Jibia", "Kafur", "Kaita", "Kankara", "Kankia", "Katsina", "Kurfi", "Kusada", "Mai'Adua", "Malumfashi", "Mani", "Mashi", "Matazu", "Musawa", "Rimi", "Sabuwa", "Safana", "Sandamu", "Zango"] },
+    { name: "Kebbi", lgAs: ["Aleiro", "Arewa Dandi", "Argungu", "Augie", "Bagudo", "Birnin Kebbi", "Bunza", "Dandi", "Fakai", "Gwandu", "Jega", "Kalgo", "Koko/Besse", "Maiyama", "Ngaski", "Sakaba", "Shanga", "Suru", "Danko/Wasagu", "Yauri", "Zuru"] },
+    { name: "Kogi", lgAs: ["Adavi", "Ajaokuta", "Ankpa", "Bassa", "Dekina", "Ibaji", "Idah", "Igalamela Odolu", "Ijumu", "Kabba/Bunu", "Kogi", "Lokoja", "Mopa Muro", "Ofu", "Ogori/Magongo", "Okehi", "Okene", "Olamaboro", "Omala", "Yagba East", "Yagba West"] },
+    { name: "Kwara", lgAs: ["Asa", "Baruten", "Edu", "Ekiti", "Ifelodun", "Ilorin East", "Ilorin South", "Ilorin West", "Irepodun", "Isin", "Kaiama", "Moro", "Offa", "Oke Ero", "Oyun", "Pategi"] },
+    { name: "Lagos", lgAs: ["Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin", "Apapa", "Badagry", "Epe", "Eti Osa", "Ibeju-Lekki", "Ifako-Ijaiye", "Ikeja", "Ikorodu", "Kosofe", "Lagos Island", "Lagos Mainland", "Mushin", "Ojo", "Oshodi-Isolo", "Shomolu", "Surulere"] },
+    { name: "Nasarawa", lgAs: ["Akwanga", "Awe", "Doma", "Karu", "Keana", "Keffi", "Kokona", "Lafia", "Nasarawa", "Nasarawa Egon", "Obi", "Toto", "Wamba"] },
+    { name: "Niger", lgAs: ["Agaie", "Agwara", "Bida", "Borgu", "Bosso", "Chanchaga", "Edati", "Gbako", "Gurara", "Katcha", "Kontagora", "Lapai", "Lavun", "Magama", "Mariga", "Mashegu", "Mokwa", "Moya", "Paikoro", "Rafi", "Rijau", "Shiroro", "Suleja", "Tafa", "Wushishi"] },
+    { name: "Ogun", lgAs: ["Abeokuta North", "Abeokuta South", "Ado-Odo/Ota", "Egbado North", "Egbado South", "Ewekoro", "Ifo", "Ijebu East", "Ijebu North", "Ijebu North East", "Ijebu Ode", "Ikenne", "Imeko Afon", "Ipokia", "Obafemi Owode", "Odeda", "Odogbolu", "Ogun Waterside", "Remo North", "Shagamu"] },
+    { name: "Ondo", lgAs: ["Akoko North-East", "Akoko North-West", "Akoko South-East", "Akoko South-West", "Akure North", "Akure South", "Ese Odo", "Idanre", "Ifedore", "Ilaje", "Ile Oluji/Okeigbo", "Irele", "Odigbo", "Okitipupa", "Ondo East", "Ondo West", "Ose", "Owo"] },
+    { name: "Osun", lgAs: ["Aiyedade", "Aiyedire", "Atakunmosa East", "Atakunmosa West", "Boluwaduro", "Boripe", "Ede North", "Ede South", "Egbedore", "Ejigbo", "Ife Central", "Ife East", "Ife North", "Ife South", "Ifedayo", "Ifelodun", "Ila", "Ilesa East", "Ilesa West", "Irepodun", "Irewole", "Isokan", "Iwo", "Obokun", "Odo Otin", "Ola Oluwa", "Olorunda", "Oriade", "Orolu", "Osogbo"] },
+    { name: "Oyo", lgAs: ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo East", "Oyo West", "Saki East", "Saki West", "Surulere"] },
+    { name: "Plateau", lgAs: ["Bokkos", "Barkin Ladi", "Bassa", "Jos East", "Jos North", "Jos South", "Kanam", "Kanke", "Langtang North", "Langtang South", "Mangu", "Mikang", "Pankshin", "Qua'an Pan", "Riyom", "Shendam", "Wase"] },
+    { name: "Rivers", lgAs: ["Abua/Odual", "Ahoada East", "Ahoada West", "Akuku-Toru", "Andoni", "Asari-Toru", "Bonny", "Degema", "Eleme", "Emohua", "Etche", "Gokana", "Ikwerre", "Khana", "Obio/Akpor", "Ogba/Egbema/Ndoni", "Ogu/Bolo", "Okrika", "Omuma", "Opobo/Nkoro", "Oyigbo", "Port Harcourt", "Tai"] },
+    { name: "Sokoto", lgAs: ["Binji", "Bodinga", "Dange Shuni", "Gada", "Goronyo", "Gudu", "Gwadabawa", "Illela", "Isa", "Kebbe", "Kware", "Rabah", "Sabon Birni", "Shagari", "Silame", "Sokoto North", "Sokoto South", "Tambuwal", "Tangaza", "Tureta", "Wamako", "Wurno", "Yabo"] },
+    { name: "Taraba", lgAs: ["Ardo Kola", "Bali", "Donga", "Gashaka", "Gassol", "Ibi", "Jalingo", "Karim Lamido", "Kumi", "Lau", "Sardauna", "Takum", "Ussa", "Wukari", "Yorro", "Zing"] },
+    { name: "Yobe", lgAs: ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
+    { name: "Zamfara", lgAs: ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Chafe", "Zurmi"] }
+];
+
+// Initialize states dropdown
+function initializeStatesDropdown(stateDropdownId, lgaDropdownId) {
+    const stateSelect = document.getElementById(stateDropdownId);
+    const lgaSelect = document.getElementById(lgaDropdownId);
+
+    if (!stateSelect || !lgaSelect) return;
+
+    // Clear existing options
+    stateSelect.innerHTML = '<option value="">Select State</option>';
+    lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+
+    // Populate states
+    nigerianStates.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state.name;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+    });
+
+    // Add change event listener
+    stateSelect.addEventListener('change', function() {
+        const selectedState = this.value;
+        const state = nigerianStates.find(s => s.name === selectedState);
+
+        // Clear LGA dropdown
+        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+
+        if (state) {
+            // Populate LGAs for selected state
+            state.lgAs.forEach(lga => {
+                const option = document.createElement('option');
+                option.value = lga;
+                option.textContent = lga;
+                lgaSelect.appendChild(option);
+            });
+        }
+    });
+}
+
+// Set specific state and LGA (for edit mode)
+function setStateAndLGA(stateDropdownId, lgaDropdownId, stateName, lgaName) {
+    const stateSelect = document.getElementById(stateDropdownId);
+    const lgaSelect = document.getElementById(lgaDropdownId);
+
+    if (!stateSelect || !lgaSelect) return;
+
+    // Set state
+    if (stateName) {
+        stateSelect.value = stateName;
+
+        // Trigger change to populate LGAs
+        const event = new Event('change');
+        stateSelect.dispatchEvent(event);
+
+        // Set LGA after a short delay to ensure LGAs are populated
+        setTimeout(() => {
+            lgaSelect.value = lgaName;
+        }, 100);
+    }
+}
+
+// FIXED: Calculate age function with proper parameter
+window.calculateAge = function(dateValue, targetId) {
+    if (!dateValue) {
+        console.error('No date value provided');
+        return;
+    }
+
+    try {
+        const dateString = dateValue.includes('T') ? dateValue.split('T')[0] : dateValue;
+        const dob = new Date(dateString);
+
+        if (isNaN(dob.getTime())) {
+            console.error('Invalid date:', dateValue);
+            return;
+        }
+
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+
+        const ageInput = document.getElementById(targetId);
+        if (ageInput) {
+            ageInput.value = age;
+            console.log('Age calculated:', age, 'for target:', targetId);
+        } else {
+            console.error('Target element not found:', targetId);
+        }
+    } catch (error) {
+        console.error('Error calculating age:', error);
+    }
+};
 
 // View toggle function
 function toggleView(viewType) {
@@ -2500,6 +2650,10 @@ function populateViewModal(student) {
     setElementText('viewTerm', student.term_name || student.term || '-');
     setElementText('viewSession', student.session_name || student.session || '-');
 
+    // State and LGA
+    setElementText('viewState', student.state || '-');
+    setElementText('viewLocal', student.local || '-');
+
     // Category badges
     const dayBadge = document.getElementById('dayBadge');
     const boardingBadge = document.getElementById('boardingBadge');
@@ -2561,7 +2715,6 @@ function populateViewModal(student) {
 
     setElementText('viewNIN', student.nin_number || '-');
     setElementText('viewCity', student.city || '-');
-    setElementText('viewState', student.state || '-');
     setElementText('viewPermanentAddress', student.permanent_address || '-');
     setElementText('viewFutureAmbition', student.future_ambition || '-');
 
@@ -2773,6 +2926,11 @@ function populateEditForm(student) {
         calculateAge(student.dateofbirth, 'editAgeInput');
     }
 
+    // Set state and LGA
+    setTimeout(() => {
+        setStateAndLGA('editState', 'editLocal', student.state || '', student.local || '');
+    }, 100);
+
     // Update form action
     const form = document.getElementById('editStudentForm');
     if (form && student.id) {
@@ -2869,7 +3027,9 @@ function fetchStudents() {
                 picture: student.picture || student.avatar || student.profile_picture || '',
                 schoolclass: student.schoolclass || student.class || student.class_name || '',
                 arm: student.arm || student.section || '',
-                schoolclassid: student.schoolclassid || student.class_id || ''
+                schoolclassid: student.schoolclassid || student.class_id || '',
+                state: student.state || '',
+                local: student.local || ''
             }));
 
             console.log('Processed students:', allStudents);
@@ -2962,26 +3122,6 @@ function renderStudents(students) {
     updatePagination();
     initializeCheckboxes();
 }
-
-// FIXED: Calculate age function
-window.calculateAge = function(dateValue, targetId) {
-    if (!dateValue) return;
-
-    const dateString = dateValue.includes('T') ? dateValue.split('T')[0] : dateValue;
-    const dob = new Date(dateString);
-    const today = new Date();
-    let age = today.getFullYear() - dob.getFullYear();
-    const monthDiff = today.getMonth() - dob.getMonth();
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-        age--;
-    }
-
-    const ageInput = document.getElementById(targetId);
-    if (ageInput) {
-        ageInput.value = age;
-    }
-};
 
 // Update pagination controls
 function updatePagination() {
@@ -3207,11 +3347,256 @@ function initializeStudentList() {
     }
 }
 
-// Call initializeStudentList on page load
+// ============================================================================
+// FORM SUBMISSION HANDLERS
+// ============================================================================
+
+// Handle edit form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const editForm = document.getElementById('editStudentForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            console.log('Edit form submitted');
+
+            if (!ensureAxios()) return;
+
+            // Show loading
+            Swal.fire({
+                title: 'Updating Student...',
+                text: 'Please wait while we update student information',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const formData = new FormData(this);
+
+            // Get the student ID from the form
+            const studentId = document.getElementById('editStudentId')?.value;
+            if (!studentId) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Student ID not found',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            // Get the form action URL
+            const url = this.action;
+
+            axios.post(url, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then((response) => {
+                Swal.close();
+
+                if (response.data.success) {
+                    // Show success message
+                    Swal.fire({
+                        title: 'Success!',
+                        text: response.data.message || 'Student updated successfully',
+                        icon: 'success',
+                        showCancelButton: false,
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'btn btn-primary'
+                        },
+                        buttonsStyling: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Close the modal
+                            const editModalElement = document.getElementById('editStudentModal');
+                            if (editModalElement) {
+                                const editModal = bootstrap.Modal.getInstance(editModalElement);
+                                if (editModal) {
+                                    editModal.hide();
+                                }
+                            }
+
+                            // Refresh the student list
+                            fetchStudents();
+
+                            // Check if redirect URL is provided
+                            if (response.data.redirect) {
+                                // Redirect after a short delay
+                                setTimeout(() => {
+                                    window.location.href = response.data.redirect;
+                                }, 1000);
+                            }
+                        }
+                    });
+                } else {
+                    throw new Error(response.data.message || 'Update failed');
+                }
+            })
+            .catch((error) => {
+                Swal.close();
+                console.error('Error updating student:', error);
+
+                let errorMessage = 'Failed to update student';
+                if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+
+                // Display validation errors if they exist
+                if (error.response?.data?.errors) {
+                    const errors = error.response.data.errors;
+                    let errorList = '';
+                    for (const field in errors) {
+                        errorList += `<li>${errors[field].join(', ')}</li>`;
+                    }
+                    errorMessage = `<div class="text-start"><strong>Validation Errors:</strong><ul class="mb-0">${errorList}</ul></div>`;
+                }
+
+                Swal.fire({
+                    title: 'Error!',
+                    html: errorMessage,
+                    icon: 'error',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    },
+                    buttonsStyling: false
+                });
+            });
+        });
+    }
+});
+
+// Handle add form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const addForm = document.getElementById('addStudentForm');
+    if (addForm) {
+        addForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            console.log('Add form submitted');
+
+            if (!ensureAxios()) return;
+
+            // Show loading
+            Swal.fire({
+                title: 'Creating Student...',
+                text: 'Please wait while we create the student record',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const formData = new FormData(this);
+
+            axios.post(this.action, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then((response) => {
+                Swal.close();
+
+                if (response.data.success) {
+                    // Show success message
+                    Swal.fire({
+                        title: 'Success!',
+                        text: response.data.message || 'Student created successfully',
+                        icon: 'success',
+                        showCancelButton: false,
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'btn btn-primary'
+                        },
+                        buttonsStyling: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Close the modal
+                            const addModalElement = document.getElementById('addStudentModal');
+                            if (addModalElement) {
+                                const addModal = bootstrap.Modal.getInstance(addModalElement);
+                                if (addModal) {
+                                    addModal.hide();
+                                }
+                            }
+
+                            // Reset the form
+                            addForm.reset();
+
+                            // Refresh the student list
+                            fetchStudents();
+
+                            // Check if redirect URL is provided
+                            if (response.data.redirect) {
+                                // Redirect after a short delay
+                                setTimeout(() => {
+                                    window.location.href = response.data.redirect;
+                                }, 1000);
+                            }
+                        }
+                    });
+                } else {
+                    throw new Error(response.data.message || 'Creation failed');
+                }
+            })
+            .catch((error) => {
+                Swal.close();
+                console.error('Error creating student:', error);
+
+                let errorMessage = 'Failed to create student';
+                if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+
+                // Display validation errors if they exist
+                if (error.response?.data?.errors) {
+                    const errors = error.response.data.errors;
+                    let errorList = '';
+                    for (const field in errors) {
+                        errorList += `<li>${errors[field].join(', ')}</li>`;
+                    }
+                    errorMessage = `<div class="text-start"><strong>Validation Errors:</strong><ul class="mb-0">${errorList}</ul></div>`;
+                }
+
+                Swal.fire({
+                    title: 'Error!',
+                    html: errorMessage,
+                    icon: 'error',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    },
+                    buttonsStyling: false
+                });
+            });
+        });
+    }
+});
+
+// Initialize states dropdowns when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing student list and states dropdowns...');
+
+    // Initialize states dropdowns
+    initializeStatesDropdown('addState', 'addLocal');
+    initializeStatesDropdown('editState', 'editLocal');
+
+    // Initialize student list
+    initializeStudentList();
+});
+
+// Call initializeStudentList on page load (for backward compatibility)
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing student list...');
     initializeStudentList();
 });
-
 </script>
 @endsection
