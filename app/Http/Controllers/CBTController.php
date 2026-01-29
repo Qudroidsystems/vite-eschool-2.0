@@ -33,7 +33,7 @@ class CBTController extends Controller
 
     public function index()
     {
-        $pagetitle = 'CBT Managementhhh'; // Define the page title
+        $pagetitle = 'CBT Management'; // Define the page title
 
         $studentId = auth()->user()->student_id;
 
@@ -72,7 +72,7 @@ class CBTController extends Controller
                 ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
                 ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-                // ->where('schoolsession.status', '=', $current)
+                ->where('schoolsession.status', '=', $current)
                 ->distinct('subjectteacher.subjectid')
                 ->count('subjectteacher.subjectid');
 
