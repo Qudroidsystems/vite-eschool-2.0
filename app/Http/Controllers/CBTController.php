@@ -56,7 +56,7 @@ public function index(Request $request)
     $sessionObj = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session'   => $studentClassData->session_name] : null;
 
     $terms    = Schoolterm::orderBy('id', 'desc')->get(['id', 'term']);
-    $sessions = Schoolsession::orderBy('id', 'desc')->get(['id', 'session']);
+    $sessions = Schoolsession::orderBy('id', 'desc')->get(['id', 'session', 'status']);
 
     $selectedTermId    = $request->query('term');
     $selectedSessionId = $request->query('session');
