@@ -1,10 +1,12 @@
 @extends('layouts.master')
+
 @section('content')
 
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <!-- Start page title -->
+
+            <!-- Page Title -->
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
@@ -18,25 +20,15 @@
                     </div>
                 </div>
             </div>
-            <!-- End page title -->
 
-            @if ($errors->any())
-                <div class="alert alert-danger">
-                    <strong>Whoops!</strong> There were some problems with your input.<br><br>
-                    <ul>
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
+            <!-- Error / Success Messages -->
             @if (session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     {{ session('success') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
+
             @if (session('error'))
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     {{ session('error') }}
@@ -45,143 +37,145 @@
             @endif
 
             @can('View cbt-exam')
-            <div id="examsList">
-                <div class="row">
-                    <div class="col-lg-12">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-xxl-3">
-                                        <div class="search-box">
-                                            <input type="text" class="form-control search" placeholder="Search exams">
-                                            <i class="ri-search-line search-icon"></i>
-                                        </div>
-                                    </div>
+
+            <!-- Term & Session Selection Modal -->
+            <div class="modal fade" id="termSessionModal" tabindex="-1" aria-labelledby="termSessionModalLabel" aria-hidden="true"
+                 data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="termSessionModalLabel">Select Academic Period</h5>
+                        </div>
+                        <div class="modal-body">
+                            <form id="termSessionForm">
+                                <div class="mb-3">
+                                    <label for="sessionSelect" class="form-label fw-bold">Session</label>
+                                    <select class="form-select" id="sessionSelect" name="session" required>
+                                        <option value="">-- Choose Session --</option>
+                                        @foreach($sessions as $s)
+                                            <option value="{{ $s->id }}"
+                                                {{ $selectedSessionId == $s->id ? 'selected' : '' }}>
+                                                {{ $s->session }}
+                                                @if($s->status) ({{ $s->status }}) @endif
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
-                            </div>
+
+                                <div class="mb-3">
+                                    <label for="termSelect" class="form-label fw-bold">Term</label>
+                                    <select class="form-select" id="termSelect" name="term" required>
+                                        <option value="">-- Choose Term --</option>
+                                        @foreach($terms as $t)
+                                            <option value="{{ $t->id }}"
+                                                {{ $selectedTermId == $t->id ? 'selected' : '' }}>
+                                                {{ $t->term }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary w-100 mt-3" id="loadExamsBtn">
+                                    <i class="ri-search-line me-2"></i> Load My Exams
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Exams List (hidden until term & session are selected) -->
+            <div id="examsList" style="{{ (!$selectedTermId || !$selectedSessionId) ? 'display:none;' : '' }}">
 
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="card">
                             <div class="card-header d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h5 class="card-title mb-0">Available Exams <span class="badge bg-dark-subtle text-dark ms-1">{{ $exams->total() }}</span></h5>
-                                    <p class="text-muted mb-0 fs-6">Exams for {{ $student->firstname }} {{ $student->lastname }} <span class="fs-7">({{ $class->schoolclass ?? 'N/A' }} - {{ $term->term ?? 'N/A' }} - {{ $session->session ?? 'N/A' }})</span></p>
+                                    <h5 class="card-title mb-0">
+                                        Available Exams
+                                        <span class="badge bg-dark-subtle text-dark ms-1">{{ $exams->total() }}</span>
+                                    </h5>
+                                    <p class="text-muted mb-0 fs-6">
+                                        For: <strong>{{ $student->firstname }} {{ $student->lastname }}</strong>
+                                        <span class="fs-7">
+                                            ({{ $class->schoolclass ?? 'N/A' }} -
+                                             {{ $termObj->term ?? 'N/A' }} -
+                                             {{ $sessionObj->session ?? 'N/A' }})
+                                        </span>
+                                    </p>
                                 </div>
                             </div>
+
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0" id="kt_exams_table">
-                                        <thead>
-                                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="sn">SN</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="title">Title</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="description">Description</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="duration">Duration</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="start_time">Start Time</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="end_time">End Time</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="status">Status</th>
-                                                <th class="min-w-100px">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="fw-semibold text-gray-600 list">
-                                            @php $i = ($exams->currentPage() - 1) * $exams->perPage() @endphp
-                                            @forelse ($exams as $exam)
-                                                @php
-                                                    $now = now();
-                                                    $rawStart = $exam->start_time ?? 'NULL';
-                                                    $rawEnd = $exam->end_time ?? 'NULL';
-                                                    $start = $rawStart ? \Carbon\Carbon::parse($rawStart) : null;
-                                                    $end = $rawEnd ? \Carbon\Carbon::parse($rawEnd) : null;
-                                                    $hasAttempted = in_array($exam->id, $attempts ?? []);
-                                                    $status = 'Unknown'; // Default
-                                                    if ($start && $end) {
-                                                        if ($hasAttempted) {
-                                                            $status = 'Completed';
-                                                        } elseif ($now->lt($start)) {
-                                                            $status = 'Upcoming';
-                                                        } elseif ($now->between($start, $end)) {
-                                                            $status = 'Ongoing';
-                                                        } else {
-                                                            $status = 'Ended';
-                                                        }
-                                                    } elseif (!$start || !$end) {
-                                                        $status = 'Invalid Dates';
-                                                    }
-                                                @endphp
-                                                <tr>
-                                                    <td class="sn">{{ ++$i }}</td>
-                                                    <td class="title">{{ $exam->title }}</td>
-                                                    <td class="description">{{ \Illuminate\Support\Str::limit($exam->description ?? '', 50) }}</td>
-                                                    <td class="duration">{{ $exam->duration }} mins</td>
-                                                    <td class="start_time">{{ $rawStart }}</td>
-                                                    <td class="end_time">{{ $rawEnd }}</td>
-                                                    <td class="status">
-                                                        @if ($hasAttempted)
-                                                            <span style="color: #0dcaf0; background-color: #cff4fc; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Completed</span>
-                                                        @elseif ($status === 'Upcoming')
-                                                            <span style="color: #ffc107; background-color: #fff3cd; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Upcoming</span>
-                                                        @elseif ($status === 'Ongoing')
-                                                            <span style="color: #198754; background-color: #d1e7dd; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Ongoing</span>
-                                                        @elseif ($status === 'Ended')
-                                                            <span style="color: #dc3545; background-color: #f8d7da; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Ended</span>
-                                                        @else
-                                                            <span style="color: #6c757d; background-color: #e2e3e5; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">{{ $status }}</span>
-                                                        @endif
-                                                    </td>
-                                                    <td class="actions">
-                                                        @if ($hasAttempted)
-                                                            <span style="color: #0dcaf0; background-color: #cff4fc; padding: 0.25em 0.5em; border-radius: 0.25rem; font-size: 0.75em;">Exam Taken</span>
-                                                        @elseif ($status === 'Ongoing')
-                                                            @can('Take cbt-exam')
-                                                                <a href="{{ route('cbt.take', $exam->id) }}" class="btn btn-sm btn-primary">Take Exam</a>
-                                                            @else
-                                                                <span class="text-muted">N/A</span>
-                                                            @endcan
-                                                        @else
-                                                            <span class="text-muted">N/A</span>
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="8" class="noresult" style="display: block;">No exams available for your registered subjects at this time.</td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
+                                    @include('cbt.partials.exams-table')
                                 </div>
 
-                                <!-- NEW: Standard Laravel Pagination (replaces custom JS pagination) -->
+                                <!-- Pagination -->
                                 <div class="row mt-3 align-items-center">
                                     <div class="col-sm">
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $exams->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $exams->total() }}</span> Results
+                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to
+                                            <span class="fw-semibold">{{ $exams->lastItem() ?? 0 }}</span> of
+                                            <span class="fw-semibold">{{ $exams->total() }}</span> Results
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
-                                        {{ $exams->appends(request()->query())->links('pagination::bootstrap-5') }} <!-- Uses Bootstrap 5 style to match your theme -->
+                                        {{ $exams->appends(request()->query())->links('pagination::bootstrap-5') }}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Additional Info -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <p class="text-muted">
+                            Total Subjects Offered: <strong>{{ $totalreg }}</strong> |
+                            Subjects Registered: <strong>{{ $reg }}</strong>
+                        </p>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- Additional Info -->
-            <div class="row mt-3">
-                <div class="col-12">
-                    <p class="text-muted">Total Subjects Offered: {{ $totalreg }} | Subjects Registered: {{ $reg }}</p>
-                </div>
-            </div>
             @endcan
+
         </div>
-        <!-- End Page-content -->
     </div>
 </div>
 
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('termSessionModal');
+    const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+
+    // Show modal only if no term/session selected
+    @if(!$selectedTermId || !$selectedSessionId)
+        modal.show();
+    @endif
+
+    // Handle form submission
+    document.getElementById('termSessionForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const term    = document.getElementById('termSelect').value;
+        const session = document.getElementById('sessionSelect').value;
+
+        if (!term || !session) {
+            alert('Please select both Term and Session.');
+            return;
+        }
+
+        // Reload page with selected filters
+        window.location.href = `{{ route('cbt.index') }}?term=${term}&session=${session}`;
+    });
+});
+</script>
 @endsection

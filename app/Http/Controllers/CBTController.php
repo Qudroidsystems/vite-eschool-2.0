@@ -21,9 +21,6 @@ use App\Models\StudentSubjectRecord;
 
 class CBTController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function __construct()
     {
         $this->middleware('permission:View cbt-exam', ['only' => ['index']]);
@@ -31,11 +28,19 @@ class CBTController extends Controller
         $this->middleware('permission:Submit cbt-exam', ['only' => ['submit']]);
     }
 
-    public function index()
+    /**
+     * Display a listing of the resource (with term & session selection via query params)
+     */
+    public function index(Request $request)
     {
-        $pagetitle = 'CBT Management'; // Define the page title
+        $pagetitle = 'CBT Management';
 
         $studentId = auth()->user()->student_id;
+
+        $student = DB::table('studentRegistration')
+            ->where('id', $studentId)
+            ->select('id', 'firstname', 'lastname', 'admissionNo')
+            ->first();
 
         $studentClassData = DB::table('studentclass')
             ->where('studentId', $studentId)
@@ -52,160 +57,122 @@ class CBTController extends Controller
             )
             ->first();
 
-        $student = DB::table('studentRegistration')
-            ->where('id', $studentId)
-            ->select('id', 'firstname', 'lastname', 'admissionNo')
-            ->first();
+        $class      = $studentClassData ? (object) ['id' => $studentClassData->class_id,   'schoolclass' => $studentClassData->class_name]   : null;
+        $termObj    = $studentClassData ? (object) ['id' => $studentClassData->term_id,    'term'       => $studentClassData->term_name]     : null;
+        $sessionObj = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session'   => $studentClassData->session_name] : null;
 
-        $current = 'Current';
+        // All terms and sessions for dropdown
+        $terms    = Schoolterm::orderBy('id', 'desc')->get(['id', 'term']);
+        $sessions = Schoolsession::orderBy('id', 'desc')->get(['id', 'session', 'status']);
 
-        $totalreg = 0;
-        $reg = 0;
+        $selectedTermId    = $request->query('term');
+        $selectedSessionId = $request->query('session');
+
+        $exams              = new Collection();
+        $attempts           = [];
+        $totalreg           = 0;
+        $reg                = 0;
         $registeredSubjects = [];
-        $exams = collect(); // Default empty collection
-        $attempts = []; // Initialize empty
 
-        if ($studentClassData) {
+        if ($selectedTermId && $selectedSessionId && $studentClassData) {
             $totalreg = DB::table('subjectclass')
                 ->where('schoolclassid', $studentClassData->class_id)
-                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-                ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-                // ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
-                // ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-                // ->where('schoolsession.status', '=', $current)
+                ->whereExists(function ($q) use ($selectedSessionId, $selectedTermId) {
+                    $q->select(DB::raw(1))
+                      ->from('subjectteacher')
+                      ->whereColumn('subjectteacher.id', 'subjectclass.subjectteacherid')
+                      ->where('subjectteacher.sessionid', $selectedSessionId)
+                      ->where('subjectteacher.termid', $selectedTermId);
+                })
                 ->distinct('subjectteacher.subjectid')
                 ->count('subjectteacher.subjectid');
 
             $reg = DB::table('student_subject_register_record')
                 ->where('student_subject_register_record.studentId', $studentId)
-                ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
-                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
-                // ->where('schoolsession.status', '=', $current)
+                ->where('student_subject_register_record.session', $selectedSessionId)
                 ->count();
 
             $registeredSubjects = DB::table('student_subject_register_record')
                 ->where('student_subject_register_record.studentId', $studentId)
-                ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
-                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
-                // ->where('schoolsession.status', '=', $current)
-                ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-                ->pluck('subjectteacher.id')
+                ->where('student_subject_register_record.session', $selectedSessionId)
+                ->join('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
+                ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->pluck('subjectteacher.subjectid')
+                ->unique()
+                ->values()
                 ->toArray();
 
             $exams = DB::table('exams')
                 ->whereIn('subject_id', $registeredSubjects)
                 ->where('schoolclass_id', $studentClassData->class_id)
-                // ->where('termid', 1)
-                // ->where('session', $studentClassData->session_id)
+                ->where('termid', $selectedTermId)
+                ->where('session', $selectedSessionId)
                 ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
                 ->paginate(15);
 
-            // Fetch attempted exam IDs for this student (efficient for pagination)
             $examIds = $exams->pluck('id')->toArray();
+
             $attempts = ExamAttempt::where('student_id', $studentId)
                 ->whereIn('exam_id', $examIds)
-                ->where('status', 'completed')  // Only count completed attempts
+                ->where('status', 'completed')
                 ->pluck('exam_id')
                 ->toArray();
         }
 
-        $class = $studentClassData ? (object) ['id' => $studentClassData->class_id, 'schoolclass' => $studentClassData->class_name] : null;
-        $term = $studentClassData ? (object) ['id' => $studentClassData->term_id, 'term' => $studentClassData->term_name] : null;
-        $session = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name] : null;
+        if ($request->ajax()) {
+            return response()->view('cbt.partials.exams-table', compact(
+                'exams',
+                'attempts',
+                'student',
+                'class',
+                'termObj',
+                'sessionObj',
+                'totalreg',
+                'reg'
+            ));
+        }
 
-        // NEW: AJAX Support for Pagination
-    if (request()->ajax()) {
-        return response()->view('cbt.partials.exams-table', [
-            'exams' => $exams,
-            'attempts' => $attempts,
-            'student' => $student,
-            'class' => $class,
-            'term' => $term,
-            'session' => $session,
-            'totalreg' => $totalreg,
-            'reg' => $reg,
-        ]);
-    }
-
-
-        return view('cbt.index', [
-            'pagetitle' => $pagetitle,
-            'exams' => $exams,
-            'student' => $student,
-            'class' => $class,
-            'term' => $term,
-            'session' => $session,
-            'totalreg' => $totalreg,
-            'reg' => $reg,
-            'attempts' => $attempts,  // Added: Pass attempts to view for $hasAttempted
-        ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        return view('cbt.index', compact(
+            'pagetitle',
+            'student',
+            'class',
+            'termObj',
+            'sessionObj',
+            'terms',
+            'sessions',
+            'selectedTermId',
+            'selectedSessionId',
+            'exams',
+            'attempts',
+            'totalreg',
+            'reg'
+        ));
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Show the form for taking the CBT exam
      */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
     public function takeCBT($examid)
     {
-        $pagetitle = 'CBT Exams'; // Define the page title
+        $pagetitle = 'CBT Exams';
+
         try {
-            // Get the authenticated student
             $student = auth()->user()->student_id;
 
-            // Verify student has permission to take this exam
             $exam = Exam::where('id', $examid)
                 ->with(['questions.options' => function ($query) {
                     $query->select('id', 'question_id', 'option_text', 'is_correct');
                 }])
                 ->firstOrFail();
 
-            // Check if exam is currently available
-            $now = Carbon::now();
+            $now       = Carbon::now();
             $startTime = Carbon::parse($exam->start_time);
-            $endTime = Carbon::parse($exam->end_time);
+            $endTime   = Carbon::parse($exam->end_time);
 
             if (!$now->between($startTime, $endTime)) {
                 return redirect()->route('cbt.index')->with('error', 'This exam is not currently available.');
             }
 
-            // Check if student has already taken the exam
             $existingAttempt = ExamAttempt::where('student_id', $student)
                 ->where('exam_id', $exam->id)
                 ->first();
@@ -214,25 +181,22 @@ class CBTController extends Controller
                 return redirect()->route('cbt.index')->with('error', 'You have already taken this exam.');
             }
 
-            // Create new exam attempt
             $attempt = ExamAttempt::create([
                 'student_id' => $student,
-                'exam_id' => $exam->id,
+                'exam_id'    => $exam->id,
                 'start_time' => $now,
-                'status' => 'in_progress'
+                'status'     => 'in_progress'
             ]);
 
-            // Prepare question data for frontend
             $questions = $exam->questions->map(function ($question) {
                 return [
-                    'id' => $question->id,
-                    'text' => $question->question_text,
-                    'options' => $question->options->pluck('option_text')->toArray(),
-                    'image_url' => $question->image ? asset('storage/' . $question->image) : null // Adjust path as needed
+                    'id'        => $question->id,
+                    'text'      => $question->question_text,
+                    'options'   => $question->options->pluck('option_text')->toArray(),
+                    'image_url' => $question->image ? asset('storage/' . $question->image) : null
                 ];
             })->toArray();
 
-            // Get student registration details
             $studentReg = DB::table('studentRegistration')
                 ->where('id', $student)
                 ->select('id', 'firstname', 'lastname', 'admissionNo')
@@ -257,20 +221,20 @@ class CBTController extends Controller
                 return redirect()->route('cbt.index')->with('error', 'No registration found for this student.');
             }
 
-            $class = (object) ['id' => $studentClassData->class_id, 'schoolclass' => $studentClassData->class_name];
-            $term = (object) ['id' => $studentClassData->term_id, 'term' => $studentClassData->term_name];
-            $session = (object) ['id' => $studentClassData->session_id, 'session' => $studentClassData->session_name];
+            $class   = (object) ['id' => $studentClassData->class_id,   'schoolclass' => $studentClassData->class_name];
+            $term    = (object) ['id' => $studentClassData->term_id,    'term'       => $studentClassData->term_name];
+            $session = (object) ['id' => $studentClassData->session_id, 'session'   => $studentClassData->session_name];
 
-            return view('cbt.take', [
-                'pagetitle' => $pagetitle,
-                'exam' => $exam,
-                'questions' => $questions,
-                'student' => $studentReg,
-                'class' => $class,
-                'term' => $term,
-                'session' => $session,
-                'attempt' => $attempt
-            ]);
+            return view('cbt.take', compact(
+                'pagetitle',
+                'exam',
+                'questions',
+                'studentReg',   // ← corrected: variable name only (no =>)
+                'class',
+                'term',
+                'session',
+                'attempt'
+            ));
 
         } catch (\Exception $e) {
             return redirect()->route('cbt.index')
@@ -278,28 +242,29 @@ class CBTController extends Controller
         }
     }
 
+    /**
+     * Handle exam submission via AJAX
+     */
     public function submit(Request $request)
     {
         try {
             Log::info('Submit request received', $request->all());
 
             $data = $request->validate([
-                'attempt_id' => 'required|exists:exam_attempts,id',
-                'exam_id' => 'required|exists:exams,id',
-                'answers' => 'required|array|min:1',
+                'attempt_id'            => 'required|exists:exam_attempts,id',
+                'exam_id'               => 'required|exists:exams,id',
+                'answers'               => 'required|array|min:1',
                 'answers.*.question_id' => 'required|integer|exists:questions,id',
-                'answers.*.answer' => 'nullable|string|max:255',
-                'answers.*.notes' => 'nullable|string|max:1000',
+                'answers.*.answer'      => 'nullable|string|max:255',
+                'answers.*.notes'       => 'nullable|string|max:1000',
             ]);
 
             $student = auth()->user()->student_id;
             if (!$student) {
                 throw new \Exception('No authenticated student found');
             }
-            Log::info('Student ID', ['student_id' => $student]);
 
             $attempt = ExamAttempt::findOrFail($data['attempt_id']);
-            Log::info('Attempt found', ['attempt_id' => $attempt->id]);
 
             if ($attempt->student_id != $student || $attempt->exam_id != $data['exam_id']) {
                 return response()->json(['success' => false, 'message' => 'Invalid attempt or exam'], 403);
@@ -309,26 +274,26 @@ class CBTController extends Controller
                 return response()->json(['success' => true, 'message' => 'Exam already submitted']);
             }
 
-            // Check submission time
             $exam = Exam::with(['questions.options' => function ($query) {
                 $query->select('id', 'question_id', 'option_text', 'is_correct');
             }])->findOrFail($data['exam_id']);
-            $now = Carbon::now();
+
+            $now       = Carbon::now();
             $startTime = Carbon::parse($exam->start_time);
-            $endTime = Carbon::parse($exam->end_time);
+            $endTime   = Carbon::parse($exam->end_time);
+
             if (!$now->between($startTime, $endTime)) {
                 return response()->json(['success' => false, 'message' => 'Exam submission time has expired.'], 403);
             }
 
             $attempt->update([
                 'end_time' => $now,
-                'status' => 'completed'
+                'status'   => 'completed'
             ]);
-            Log::info('Attempt updated', ['attempt_id' => $attempt->id]);
 
             $totalMarks = $exam->questions->count();
-            $score = 0;
-            $attempted = 0;
+            $score      = 0;
+            $attempted  = 0;
 
             foreach ($data['answers'] as $submittedAnswer) {
                 $question = $exam->questions->firstWhere('id', $submittedAnswer['question_id']);
@@ -337,10 +302,10 @@ class CBTController extends Controller
                     $selectedOption = $question->options->firstWhere('option_text', $submittedAnswer['answer']);
                     if ($selectedOption) {
                         Answer::create([
-                            'user_id' => $student,
-                            'exam_id' => $data['exam_id'],
+                            'user_id'     => $student,
+                            'exam_id'     => $data['exam_id'],
                             'question_id' => $submittedAnswer['question_id'],
-                            'option_id' => $selectedOption->id,
+                            'option_id'   => $selectedOption->id,
                         ]);
                         if ($selectedOption->is_correct) {
                             $score++;
@@ -350,26 +315,37 @@ class CBTController extends Controller
             }
 
             Result::create([
-                'user_id' => $student,
-                'exam_id' => $data['exam_id'],
-                'score' => $score,
+                'user_id'     => $student,
+                'exam_id'     => $data['exam_id'],
+                'score'       => $score,
                 'total_marks' => $totalMarks,
             ]);
-            Log::info('Result saved', ['score' => $score, 'total_marks' => $totalMarks, 'attempted' => $attempted]);
+
+            Log::info('Result saved', [
+                'score'       => $score,
+                'total_marks' => $totalMarks,
+                'attempted'   => $attempted
+            ]);
 
             return response()->json(['success' => true, 'message' => 'Exam submitted successfully']);
 
         } catch (\Exception $e) {
-            Log::error('Submission failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Log::error('Submission failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
+    // -------------------------------------------------------------------------
+    //  Standard CRUD stubs (usually empty in this context)
+    // -------------------------------------------------------------------------
+
+    public function create() {}
+    public function store(Request $request) {}
+    public function show(string $id) {}
+    public function edit(string $id) {}
+    public function update(Request $request, string $id) {}
+    public function destroy(string $id) {}
 }
