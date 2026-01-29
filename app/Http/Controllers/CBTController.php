@@ -25,120 +25,141 @@ class CBTController extends Controller
         $this->middleware('permission:Take cbt-exam', ['only' => ['takeCBT']]);
         $this->middleware('permission:Submit cbt-exam', ['only' => ['submit']]);
     }
+public function index(Request $request)
+{
+    $pagetitle = 'CBT Management';
 
-    public function index(Request $request)
-    {
-        $pagetitle = 'CBT Management';
+    $studentId = auth()->user()->student_id;
 
-        $studentId = auth()->user()->student_id;
+    $student = DB::table('studentRegistration')
+        ->where('id', $studentId)
+        ->select('id', 'firstname', 'lastname', 'admissionNo')
+        ->first();
 
-        $student = DB::table('studentRegistration')
-            ->where('id', $studentId)
-            ->select('id', 'firstname', 'lastname', 'admissionNo')
-            ->first();
+    $studentClassData = DB::table('studentclass')
+        ->where('studentId', $studentId)
+        ->join('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+        ->join('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
+        ->join('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
+        ->select(
+            'schoolclass.id as class_id',
+            'schoolclass.schoolclass as class_name',
+            'schoolterm.id as term_id',
+            'schoolterm.term as term_name',
+            'schoolsession.id as session_id',
+            'schoolsession.session as session_name'
+        )
+        ->first();
 
-        $studentClassData = DB::table('studentclass')
-            ->where('studentId', $studentId)
-            ->join('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
-            ->join('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
-            ->join('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
-            ->select(
-                'schoolclass.id as class_id',
-                'schoolclass.schoolclass as class_name',
-                'schoolterm.id as term_id',
-                'schoolterm.term as term_name',
-                'schoolsession.id as session_id',
-                'schoolsession.session as session_name'
-            )
-            ->first();
+    $class      = $studentClassData ? (object) ['id' => $studentClassData->class_id,   'schoolclass' => $studentClassData->class_name]   : null;
+    $termObj    = $studentClassData ? (object) ['id' => $studentClassData->term_id,    'term'       => $studentClassData->term_name]     : null;
+    $sessionObj = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session'   => $studentClassData->session_name] : null;
 
-        $class      = $studentClassData ? (object) ['id' => $studentClassData->class_id,   'schoolclass' => $studentClassData->class_name]   : null;
-        $termObj    = $studentClassData ? (object) ['id' => $studentClassData->term_id,    'term'       => $studentClassData->term_name]     : null;
-        $sessionObj = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session'   => $studentClassData->session_name] : null;
+    $terms    = Schoolterm::orderBy('id', 'desc')->get(['id', 'term']);
+    $sessions = Schoolsession::orderBy('id', 'desc')->get(['id', 'session', 'status']);
 
-        $terms    = Schoolterm::orderBy('id', 'desc')->get(['id', 'term']);
-        $sessions = Schoolsession::orderBy('id', 'desc')->get(['id', 'session', 'status']);
+    $selectedTermId    = $request->query('term');
+    $selectedSessionId = $request->query('session');
+    $search            = trim($request->query('search', ''));
 
-        $selectedTermId    = $request->query('term');
-        $selectedSessionId = $request->query('session');
+    // Selected names for display
+    $selectedTermName    = $selectedTermId ? Schoolterm::find($selectedTermId)?->term ?? 'Unknown Term' : null;
+    $selectedSessionName = null;
+    if ($selectedSessionId) {
+        $sessionRecord = Schoolsession::select('session', 'status')->find($selectedSessionId);
+        if ($sessionRecord) {
+            $selectedSessionName = $sessionRecord->session;
+            if ($sessionRecord->status) {
+                $selectedSessionName .= " ({$sessionRecord->status})";
+            }
+        }
+    }
 
-        $exams    = new LengthAwarePaginator(collect([]), 0, 15, 1, [
-            'path'  => Paginator::resolveCurrentPath(),
-            'query' => $request->query(),
-        ]);
-        $attempts = [];
-        $totalreg = 0;
-        $reg      = 0;
+    $exams    = new LengthAwarePaginator(collect([]), 0, 15, 1, [
+        'path'  => Paginator::resolveCurrentPath(),
+        'query' => $request->query(),
+    ]);
+    $attempts = [];
+    $totalreg = 0;
+    $reg      = 0;
 
-        if ($selectedTermId && $selectedSessionId && $studentClassData) {
+    if ($selectedTermId && $selectedSessionId && $studentClassData) {
 
-            // Total unique subjects offered in this class + term + session
-            $totalreg = DB::table('subjectclass')
-                ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-                ->where('subjectclass.schoolclassid', $studentClassData->class_id)
-                ->where('subjectteacher.sessionid', $selectedSessionId)
-                ->where('subjectteacher.termid', $selectedTermId)
-                ->distinct()
-                ->count('subjectteacher.subjectid');
+        $totalreg = DB::table('subjectclass')
+            ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+            ->where('subjectclass.schoolclassid', $studentClassData->class_id)
+            ->where('subjectteacher.sessionid', $selectedSessionId)
+            ->where('subjectteacher.termid', $selectedTermId)
+            ->distinct()
+            ->count('subjectteacher.subjectid');
 
-            // Number of subjects student registered for in this session
-            $reg = DB::table('student_subject_register_record')
-                ->where('student_subject_register_record.studentId', $studentId)
-                ->where('student_subject_register_record.session', $selectedSessionId)
-                ->count();
+        $reg = DB::table('student_subject_register_record')
+            ->where('student_subject_register_record.studentId', $studentId)
+            ->where('student_subject_register_record.session', $selectedSessionId)
+            ->count();
 
-            // Subject IDs student is registered for
-            $registeredSubjects = DB::table('student_subject_register_record')
-                ->where('student_subject_register_record.studentId', $studentId)
-                ->where('student_subject_register_record.session', $selectedSessionId)
-                ->join('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
-                ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-                ->where('subjectteacher.sessionid', $selectedSessionId)
-                ->where('subjectteacher.termid', $selectedTermId)
-                ->distinct()
-                ->pluck('subjectteacher.subjectid')
-                ->toArray();
+        $registeredSubjects = DB::table('student_subject_register_record')
+            ->where('student_subject_register_record.studentId', $studentId)
+            ->where('student_subject_register_record.session', $selectedSessionId)
+            ->join('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
+            ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+            ->where('subjectteacher.sessionid', $selectedSessionId)
+            ->where('subjectteacher.termid', $selectedTermId)
+            ->distinct()
+            ->pluck('subjectteacher.subjectid')
+            ->toArray();
 
-            // Exams
-            $exams = DB::table('exams')
-                ->whereIn('subject_id', $registeredSubjects ?: [0]) // prevent empty IN clause error
-                ->where('schoolclass_id', $studentClassData->class_id)
-                ->where('termid', $selectedTermId)
-                ->where('session', $selectedSessionId)
-                ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
-                ->paginate(15);
+        $examsQuery = DB::table('exams')
+            ->whereIn('subject_id', $registeredSubjects ?: [0])
+            ->where('schoolclass_id', $studentClassData->class_id)
+            ->where('termid', $selectedTermId)
+            ->where('session', $selectedSessionId);
 
-            $examIds = $exams->pluck('id')->toArray();
-
-            $attempts = ExamAttempt::where('student_id', $studentId)
-                ->whereIn('exam_id', $examIds)
-                ->where('status', 'completed')
-                ->pluck('exam_id')
-                ->toArray();
+        if ($search !== '') {
+            $examsQuery->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
         }
 
-        if ($request->ajax()) {
-            return response()->view('cbt.partials.exams-table', compact(
-                'exams', 'attempts', 'student', 'class', 'termObj', 'sessionObj', 'totalreg', 'reg'
-            ));
-        }
+        $exams = $examsQuery
+            ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
+            ->paginate(15)
+            ->appends($request->query());
 
-        return view('cbt.index', compact(
-            'pagetitle',
-            'student',
-            'class',
-            'termObj',
-            'sessionObj',
-            'terms',
-            'sessions',
-            'selectedTermId',
-            'selectedSessionId',
-            'exams',
-            'attempts',
-            'totalreg',
-            'reg'
+        $examIds = $exams->pluck('id')->toArray();
+
+        $attempts = ExamAttempt::where('student_id', $studentId)
+            ->whereIn('exam_id', $examIds)
+            ->where('status', 'completed')
+            ->pluck('exam_id')
+            ->toArray();
+    }
+
+    if ($request->ajax()) {
+        return response()->view('cbt.partials.exams-table', compact(
+            'exams', 'attempts', 'student', 'class', 'termObj', 'sessionObj', 'totalreg', 'reg'
         ));
     }
+
+    return view('cbt.index', compact(
+        'pagetitle',
+        'student',
+        'class',
+        'termObj',
+        'sessionObj',
+        'terms',
+        'sessions',
+        'selectedTermId',
+        'selectedSessionId',
+        'selectedTermName',
+        'selectedSessionName',
+        'exams',
+        'attempts',
+        'totalreg',
+        'reg'
+    ));
+}
 
     public function takeCBT($examid)
     {
