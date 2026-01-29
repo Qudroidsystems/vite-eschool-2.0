@@ -70,9 +70,9 @@ class CBTController extends Controller
                 ->where('schoolclassid', $studentClassData->class_id)
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+                // ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
                 // ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-                ->where('schoolsession.status', '=', $current)
+                // ->where('schoolsession.status', '=', $current)
                 ->distinct('subjectteacher.subjectid')
                 ->count('subjectteacher.subjectid');
 
@@ -80,7 +80,7 @@ class CBTController extends Controller
                 ->where('student_subject_register_record.studentId', $studentId)
                 ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
-                ->where('schoolsession.status', '=', $current)
+                // ->where('schoolsession.status', '=', $current)
                 ->count();
 
             $registeredSubjects = DB::table('student_subject_register_record')
@@ -88,7 +88,7 @@ class CBTController extends Controller
                 ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
-                ->where('schoolsession.status', '=', $current)
+                // ->where('schoolsession.status', '=', $current)
                 ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
                 ->pluck('subjectteacher.id')
                 ->toArray();
@@ -96,7 +96,7 @@ class CBTController extends Controller
             $exams = DB::table('exams')
                 ->whereIn('subject_id', $registeredSubjects)
                 ->where('schoolclass_id', $studentClassData->class_id)
-                ->where('termid', 1)
+                // ->where('termid', 1)
                 // ->where('session', $studentClassData->session_id)
                 ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
                 ->paginate(15);
