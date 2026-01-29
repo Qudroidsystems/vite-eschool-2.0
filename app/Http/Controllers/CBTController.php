@@ -96,7 +96,7 @@ class CBTController extends Controller
             $exams = DB::table('exams')
                 ->whereIn('subject_id', $registeredSubjects)
                 ->where('schoolclass_id', $studentClassData->class_id)
-                ->where('termid', 2)
+                ->where('termid', 1)
                 ->where('session', $studentClassData->session_id)
                 ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
                 ->paginate(15);
