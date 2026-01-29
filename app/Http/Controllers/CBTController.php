@@ -100,6 +100,8 @@ public function index(Request $request)
                 // ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
                 // ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
                 // ->where('schoolsession.status', '=', $current)
+             ->where('subjectteacher.sessionid', $selectedSessionId)
+            ->where('subjectteacher.termid', $selectedTermId)
                 ->distinct('subjectteacher.subjectid')
                 ->count('subjectteacher.subjectid');
 
@@ -134,7 +136,7 @@ public function index(Request $request)
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
                 // ->where('schoolsession.status', '=', $current)
                 ->where('subjectteacher.sessionid', $selectedSessionId)
-                ->where('subjectteacher.termid', $selectedTermId)
+                // ->where('subjectteacher.termid', $selectedTermId)
                 ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
                 ->pluck('subjectteacher.id')
                 ->toArray();
