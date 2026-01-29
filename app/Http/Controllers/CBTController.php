@@ -136,8 +136,8 @@ public function index(Request $request)
             ->whereIn('subject_id', $registeredSubjects ?: [0])
             ->where('schoolclass_id', $studentClassData->class_id)
             ->where('is_published',1)
-            ->where('termid', $selectedTermId)
-            ->where('session', $selectedSessionId);
+            // ->where('termid', $selectedTermId)
+            // ->where('session', $selectedSessionId);
 
 
 
