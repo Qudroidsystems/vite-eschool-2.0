@@ -85,13 +85,6 @@ public function index(Request $request)
 
     if ($selectedTermId && $selectedSessionId && $studentClassData) {
 
-        // $totalreg = DB::table('subjectclass')
-        //     ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-        //     ->where('subjectclass.schoolclassid', $studentClassData->class_id)
-        //     ->where('subjectteacher.sessionid', $selectedSessionId)
-        //     ->where('subjectteacher.termid', $selectedTermId)
-        //     ->distinct()
-        //     ->count('subjectteacher.subjectid');
 
         $totalreg = DB::table('subjectclass')
                 ->where('schoolclassid', $studentClassData->class_id)
@@ -142,6 +135,7 @@ public function index(Request $request)
         $examsQuery = DB::table('exams')
             ->whereIn('subject_id', $registeredSubjects ?: [0])
             ->where('schoolclass_id', $studentClassData->class_id)
+            ->where('is_published',1)
             ->where('termid', $selectedTermId)
             ->where('session', $selectedSessionId);
 
