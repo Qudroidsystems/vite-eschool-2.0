@@ -71,7 +71,7 @@ class CBTController extends Controller
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
-                ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+                // ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
                 ->where('schoolsession.status', '=', $current)
                 ->distinct('subjectteacher.subjectid')
                 ->count('subjectteacher.subjectid');
