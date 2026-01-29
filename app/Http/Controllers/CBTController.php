@@ -33,7 +33,7 @@ class CBTController extends Controller
 
     public function index()
     {
-        $pagetitle = 'CBT Management'; // Define the page title
+        $pagetitle = 'CBT Managementhhh'; // Define the page title
 
         $studentId = auth()->user()->student_id;
 
