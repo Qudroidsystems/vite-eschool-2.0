@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon; 
+use Carbon\Carbon;
 use App\Models\Exam;
 use App\Models\Answer;
 use App\Models\Result;
@@ -72,7 +72,7 @@ class CBTController extends Controller
                 ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
                 ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-                ->where('schoolsession.status', '=', $current)
+                // ->where('schoolsession.status', '=', $current)
                 ->distinct('subjectteacher.subjectid')
                 ->count('subjectteacher.subjectid');
 
@@ -128,7 +128,7 @@ class CBTController extends Controller
         ]);
     }
 
-        
+
         return view('cbt.index', [
             'pagetitle' => $pagetitle,
             'exams' => $exams,
@@ -188,7 +188,7 @@ class CBTController extends Controller
         try {
             // Get the authenticated student
             $student = auth()->user()->student_id;
-          
+
             // Verify student has permission to take this exam
             $exam = Exam::where('id', $examid)
                 ->with(['questions.options' => function ($query) {
@@ -282,7 +282,7 @@ class CBTController extends Controller
     {
         try {
             Log::info('Submit request received', $request->all());
-    
+
             $data = $request->validate([
                 'attempt_id' => 'required|exists:exam_attempts,id',
                 'exam_id' => 'required|exists:exams,id',
@@ -291,20 +291,20 @@ class CBTController extends Controller
                 'answers.*.answer' => 'nullable|string|max:255',
                 'answers.*.notes' => 'nullable|string|max:1000',
             ]);
-    
+
             $student = auth()->user()->student_id;
             if (!$student) {
                 throw new \Exception('No authenticated student found');
             }
             Log::info('Student ID', ['student_id' => $student]);
-    
+
             $attempt = ExamAttempt::findOrFail($data['attempt_id']);
             Log::info('Attempt found', ['attempt_id' => $attempt->id]);
-    
+
             if ($attempt->student_id != $student || $attempt->exam_id != $data['exam_id']) {
                 return response()->json(['success' => false, 'message' => 'Invalid attempt or exam'], 403);
             }
-    
+
             if ($attempt->status === 'completed') {
                 return response()->json(['success' => true, 'message' => 'Exam already submitted']);
             }
@@ -319,17 +319,17 @@ class CBTController extends Controller
             if (!$now->between($startTime, $endTime)) {
                 return response()->json(['success' => false, 'message' => 'Exam submission time has expired.'], 403);
             }
-    
+
             $attempt->update([
                 'end_time' => $now,
                 'status' => 'completed'
             ]);
             Log::info('Attempt updated', ['attempt_id' => $attempt->id]);
-    
+
             $totalMarks = $exam->questions->count();
             $score = 0;
             $attempted = 0;
-    
+
             foreach ($data['answers'] as $submittedAnswer) {
                 $question = $exam->questions->firstWhere('id', $submittedAnswer['question_id']);
                 if ($question && !empty(trim($submittedAnswer['answer'] ?? ''))) {
@@ -348,7 +348,7 @@ class CBTController extends Controller
                     }
                 }
             }
-    
+
             Result::create([
                 'user_id' => $student,
                 'exam_id' => $data['exam_id'],
@@ -356,9 +356,9 @@ class CBTController extends Controller
                 'total_marks' => $totalMarks,
             ]);
             Log::info('Result saved', ['score' => $score, 'total_marks' => $totalMarks, 'attempted' => $attempted]);
-    
+
             return response()->json(['success' => true, 'message' => 'Exam submitted successfully']);
-    
+
         } catch (\Exception $e) {
             Log::error('Submission failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
