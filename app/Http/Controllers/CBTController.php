@@ -85,35 +85,67 @@ public function index(Request $request)
 
     if ($selectedTermId && $selectedSessionId && $studentClassData) {
 
-        $totalreg = DB::table('subjectclass')
-            ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-            ->where('subjectclass.schoolclassid', $studentClassData->class_id)
-            // ->where('subjectteacher.sessionid', $selectedSessionId)
-            // ->where('subjectteacher.termid', $selectedTermId)
-            ->distinct()
-            ->count('subjectteacher.subjectid');
+        // $totalreg = DB::table('subjectclass')
+        //     ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+        //     ->where('subjectclass.schoolclassid', $studentClassData->class_id)
+        //     ->where('subjectteacher.sessionid', $selectedSessionId)
+        //     ->where('subjectteacher.termid', $selectedTermId)
+        //     ->distinct()
+        //     ->count('subjectteacher.subjectid');
 
-        $reg = DB::table('student_subject_register_record')
-            // ->where('student_subject_register_record.studentId', $studentId)
-            // ->where('student_subject_register_record.session', $selectedSessionId)
-            ->count();
+        $totalreg = DB::table('subjectclass')
+                ->where('schoolclassid', $studentClassData->class_id)
+                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+                // ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+                // ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+                // ->where('schoolsession.status', '=', $current)
+                ->distinct('subjectteacher.subjectid')
+                ->count('subjectteacher.subjectid');
+
+        // $reg = DB::table('student_subject_register_record')
+        //     ->where('student_subject_register_record.studentId', $studentId)
+        //     ->where('student_subject_register_record.session', $selectedSessionId)
+        //     ->count();
+
+             $reg = DB::table('student_subject_register_record')
+                ->where('student_subject_register_record.studentId', $studentId)
+                ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
+                // ->where('schoolsession.status', '=', $current)
+                ->count();
+
+        // $registeredSubjects = DB::table('student_subject_register_record')
+        //     ->where('student_subject_register_record.studentId', $studentId)
+        //     ->where('student_subject_register_record.session', $selectedSessionId)
+        //     ->join('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
+        //     ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+        //     ->where('subjectteacher.sessionid', $selectedSessionId)
+        //     ->where('subjectteacher.termid', $selectedTermId)
+        //     ->distinct()
+        //     ->pluck('subjectteacher.subjectid')
+        //     ->toArray();
+
 
         $registeredSubjects = DB::table('student_subject_register_record')
-            ->where('student_subject_register_record.studentId', $studentId)
-            ->where('student_subject_register_record.session', $selectedSessionId)
-            ->join('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
-            ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-            // ->where('subjectteacher.sessionid', $selectedSessionId)
-            // ->where('subjectteacher.termid', $selectedTermId)
-            ->distinct()
-            ->pluck('subjectteacher.subjectid')
-            ->toArray();
+                ->where('student_subject_register_record.studentId', $studentId)
+                ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
+                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
+                // ->where('schoolsession.status', '=', $current)
+                ->where('subjectteacher.sessionid', $selectedSessionId)
+                // ->where('subjectteacher.termid', $selectedTermId)
+                ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+                ->pluck('subjectteacher.id')
+                ->toArray();
 
         $examsQuery = DB::table('exams')
             ->whereIn('subject_id', $registeredSubjects ?: [0])
-            ->where('schoolclass_id', $studentClassData->class_id);
+            ->where('schoolclass_id', $studentClassData->class_id)
             // ->where('termid', $selectedTermId)
-            // ->where('session', $selectedSessionId);
+            ->where('session', $selectedSessionId);
+
+
 
         if ($search !== '') {
             $examsQuery->where(function ($q) use ($search) {
