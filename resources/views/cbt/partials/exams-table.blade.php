@@ -12,7 +12,13 @@
         </tr>
     </thead>
     <tbody class="fw-semibold text-gray-600">
-        @php $i = ($exams->currentPage() - 1) * $exams->perPage() @endphp
+        @php
+            $i = 1; // fallback
+            if (method_exists($exams, 'currentPage') && method_exists($exams, 'perPage')) {
+                $i = ($exams->currentPage() - 1) * $exams->perPage() + 1;
+            }
+        @endphp
+
         @forelse ($exams as $exam)
             @php
                 $now = now();
@@ -36,10 +42,10 @@
                 }
             @endphp
             <tr>
-                <td>{{ ++$i }}</td>
-                <td>{{ $exam->title }}</td>
+                <td>{{ $i++ }}</td>
+                <td>{{ $exam->title ?? '—' }}</td>
                 <td>{{ \Illuminate\Support\Str::limit($exam->description ?? '', 50) }}</td>
-                <td>{{ $exam->duration }} mins</td>
+                <td>{{ $exam->duration ?? '—' }} mins</td>
                 <td>{{ $exam->start_time ?? 'N/A' }}</td>
                 <td>{{ $exam->end_time ?? 'N/A' }}</td>
                 <td>
