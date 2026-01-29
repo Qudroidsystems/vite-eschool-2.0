@@ -156,9 +156,7 @@
     </div>
 </div>
 
-@endsection
 
-@section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const modalEl = document.getElementById('termSessionModal');
