@@ -3,21 +3,19 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
-use App\Models\Exam;
-use App\Models\Answer;
-use App\Models\Result;
-use App\Models\Student;
-use App\Models\Schoolterm;
-use App\Models\ExamAttempt;
-use App\Models\Schoolclass;
-use App\Models\Subjectclass;
 use Illuminate\Http\Request;
-use App\Models\Schoolsession;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Http\Controllers\Controller;
-use App\Models\StudentSubjectRecord;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
+
+use App\Models\Exam;
+use App\Models\Answer;
+use App\Models\Result;
+use App\Models\ExamAttempt;
+use App\Models\Schoolterm;
+use App\Models\Schoolsession;
 
 class CBTController extends Controller
 {
@@ -28,9 +26,6 @@ class CBTController extends Controller
         $this->middleware('permission:Submit cbt-exam', ['only' => ['submit']]);
     }
 
-    /**
-     * Display a listing of the resource (with term & session selection via query params)
-     */
     public function index(Request $request)
     {
         $pagetitle = 'CBT Management';
@@ -61,49 +56,52 @@ class CBTController extends Controller
         $termObj    = $studentClassData ? (object) ['id' => $studentClassData->term_id,    'term'       => $studentClassData->term_name]     : null;
         $sessionObj = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session'   => $studentClassData->session_name] : null;
 
-        // All terms and sessions for dropdown
         $terms    = Schoolterm::orderBy('id', 'desc')->get(['id', 'term']);
         $sessions = Schoolsession::orderBy('id', 'desc')->get(['id', 'session', 'status']);
 
         $selectedTermId    = $request->query('term');
         $selectedSessionId = $request->query('session');
 
-        $exams              = new Collection();
-        $attempts           = [];
-        $totalreg           = 0;
-        $reg                = 0;
-        $registeredSubjects = [];
+        $exams    = new LengthAwarePaginator(collect([]), 0, 15, 1, [
+            'path'  => Paginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
+        $attempts = [];
+        $totalreg = 0;
+        $reg      = 0;
 
         if ($selectedTermId && $selectedSessionId && $studentClassData) {
+
+            // Total unique subjects offered in this class + term + session
             $totalreg = DB::table('subjectclass')
-                ->where('schoolclassid', $studentClassData->class_id)
-                ->whereExists(function ($q) use ($selectedSessionId, $selectedTermId) {
-                    $q->select(DB::raw(1))
-                      ->from('subjectteacher')
-                      ->whereColumn('subjectteacher.id', 'subjectclass.subjectteacherid')
-                      ->where('subjectteacher.sessionid', $selectedSessionId)
-                      ->where('subjectteacher.termid', $selectedTermId);
-                })
-                ->distinct('subjectteacher.subjectid')
+                ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->where('subjectclass.schoolclassid', $studentClassData->class_id)
+                ->where('subjectteacher.sessionid', $selectedSessionId)
+                ->where('subjectteacher.termid', $selectedTermId)
+                ->distinct()
                 ->count('subjectteacher.subjectid');
 
+            // Number of subjects student registered for in this session
             $reg = DB::table('student_subject_register_record')
                 ->where('student_subject_register_record.studentId', $studentId)
                 ->where('student_subject_register_record.session', $selectedSessionId)
                 ->count();
 
+            // Subject IDs student is registered for
             $registeredSubjects = DB::table('student_subject_register_record')
                 ->where('student_subject_register_record.studentId', $studentId)
                 ->where('student_subject_register_record.session', $selectedSessionId)
                 ->join('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
                 ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->where('subjectteacher.sessionid', $selectedSessionId)
+                ->where('subjectteacher.termid', $selectedTermId)
+                ->distinct()
                 ->pluck('subjectteacher.subjectid')
-                ->unique()
-                ->values()
                 ->toArray();
 
+            // Exams
             $exams = DB::table('exams')
-                ->whereIn('subject_id', $registeredSubjects)
+                ->whereIn('subject_id', $registeredSubjects ?: [0]) // prevent empty IN clause error
                 ->where('schoolclass_id', $studentClassData->class_id)
                 ->where('termid', $selectedTermId)
                 ->where('session', $selectedSessionId)
@@ -121,14 +119,7 @@ class CBTController extends Controller
 
         if ($request->ajax()) {
             return response()->view('cbt.partials.exams-table', compact(
-                'exams',
-                'attempts',
-                'student',
-                'class',
-                'termObj',
-                'sessionObj',
-                'totalreg',
-                'reg'
+                'exams', 'attempts', 'student', 'class', 'termObj', 'sessionObj', 'totalreg', 'reg'
             ));
         }
 
@@ -149,9 +140,6 @@ class CBTController extends Controller
         ));
     }
 
-    /**
-     * Show the form for taking the CBT exam
-     */
     public function takeCBT($examid)
     {
         $pagetitle = 'CBT Exams';
@@ -229,7 +217,7 @@ class CBTController extends Controller
                 'pagetitle',
                 'exam',
                 'questions',
-                'studentReg',   // ← corrected: variable name only (no =>)
+                'studentReg',
                 'class',
                 'term',
                 'session',
@@ -242,9 +230,6 @@ class CBTController extends Controller
         }
     }
 
-    /**
-     * Handle exam submission via AJAX
-     */
     public function submit(Request $request)
     {
         try {
@@ -338,10 +323,7 @@ class CBTController extends Controller
         }
     }
 
-    // -------------------------------------------------------------------------
-    //  Standard CRUD stubs (usually empty in this context)
-    // -------------------------------------------------------------------------
-
+    // CRUD stubs (empty)
     public function create() {}
     public function store(Request $request) {}
     public function show(string $id) {}
