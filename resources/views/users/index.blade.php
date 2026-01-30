@@ -351,13 +351,13 @@ use Spatie\Permission\Models\Role;
                                         {{ $student->firstname }} {{ $student->lastname }} ({{ $student->admissionNo }})
                                     </option>
                                 @empty
-                                    <option value="">No students available</option> --}}
-                                    @forelse ($students ?? [] as $student)
+                                    <option value="">No students available</option>
+                                @endforelse --}}
+                                @forelse ($students ?? [] as $student)
     <option value="debug-{{ $student->id }}">DEBUG: {{ $student->firstname }}</option>
 @empty
     <option value="">No students — check controller & DB</option>
 @endforelse
-                                @endforelse
                             </select>
                         </div>
                         <div class="alert alert-info">
