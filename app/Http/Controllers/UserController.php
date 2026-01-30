@@ -316,7 +316,7 @@ public function show($id): View
     {
         $roles = Role::pluck('name', 'name')->all();
         $students = Student::select('id', 'admissionNo', 'firstname', 'lastname')
-            ->where('statusId', 1)
+            // ->where('statusId', 1)
             ->orderBy('admissionNo')
             ->get();
 
