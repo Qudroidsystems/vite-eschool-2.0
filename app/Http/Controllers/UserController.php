@@ -7,11 +7,10 @@ use App\Models\BioModel;
 use App\Models\Student;
 use App\Models\Studentpicture;
 use App\Models\User;
-use DB;
-use Hash;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -41,8 +40,8 @@ class UserController extends Controller
         $role_counts['No Role'] = User::doesntHave('roles')->count();
 
         if (config('app.debug')) {
-            \Log::info('Roles for select:', $roles);
-            \Log::info('User roles example:', User::first()->getRoleNames()->toArray());
+            Log::info('Roles for select:', $roles);
+            Log::info('User roles example:', User::first()->getRoleNames()->toArray());
         }
 
         return view('users.index', compact('data', 'roles', 'role_permissions', 'pagetitle', 'role_counts'));
@@ -57,11 +56,11 @@ class UserController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        \Log::debug("Creating user", $request->all());
+        Log::debug("Creating user", $request->all());
 
         try {
             if (!auth()->user()->hasPermissionTo('Create user')) {
-                \Log::warning("User ID " . auth()->user()->id . " attempted to create user without permission");
+                Log::warning("User ID " . auth()->user()->id . " attempted to create user without permission");
                 return response()->json([
                     'success' => false,
                     'message' => 'User does not have the right permissions',
@@ -69,15 +68,15 @@ class UserController extends Controller
             }
 
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email',
-                'password' => 'required|min:8|confirmed',
-                'roles' => 'required|array',
-                'roles.*' => 'exists:roles,name',
+                'name'         => 'required|string|max:255',
+                'email'        => 'required|email|unique:users,email',
+                'password'     => 'required|min:8|confirmed',
+                'roles'        => 'required|array',
+                'roles.*'      => 'exists:roles,name',
                 'phone_number' => 'nullable|string|regex:/^\+[1-9]\d{1,14}$/',
             ]);
 
-            \Log::info("Validated data for create:", $validated);
+            Log::info("Validated data for create:", $validated);
 
             $input = $request->all();
             $plainPassword = $input['password'];
@@ -86,80 +85,86 @@ class UserController extends Controller
             $user = User::create($input);
             $user->syncRoles($request->input('roles'));
 
-            \Log::info("User ID: {$user->id} created successfully");
+            Log::info("User ID: {$user->id} created successfully");
 
             return response()->json([
                 'success' => true,
                 'message' => 'User created successfully',
                 'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'roles' => $user->roles->pluck('name')->toArray(),
+                    'id'           => $user->id,
+                    'name'         => $user->name,
+                    'email'        => $user->email,
+                    'roles'        => $user->roles->pluck('name')->toArray(),
                     'phone_number' => $user->phone_number,
-                    'password' => $plainPassword,
+                    'password'     => $plainPassword,
                 ],
             ], 201);
         } catch (ValidationException $e) {
-            \Log::error("Validation error creating user: " . json_encode($e->errors()));
+            Log::error("Validation error creating user: " . json_encode($e->errors()));
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            \Log::error("Create user error: {$e->getMessage()}");
+            Log::error("Create user error: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create user: ' . $e->getMessage(),
+                'message' => 'Failed to create user',
             ], 500);
         }
     }
 
-public function show($id): View
-{
-    $pagetitle = "User Overview";
+    public function show($id): View
+    {
+        $pagetitle = "User Overview";
 
-    $user = User::with([
-        'roles',
-        'bio',
-        'student',
-        'staffemploymentDetails',
-        'staffPicture'
-    ])->findOrFail($id);
+        $user = User::with([
+            'roles',
+            'bio',
+            'student',
+            'staffemploymentDetails',
+            'staffPicture'
+        ])->findOrFail($id);
 
-    $userbio = $user->bio;
+        $userbio = $user->bio;
 
-    $staffInfo = $user->staffemploymentDetails;
-    $staffPicture = $user->staffPicture;
-    $studentPicture = null;
+        $staffInfo    = $user->staffemploymentDetails;
+        $staffPicture = $user->staffPicture;
+        $studentPicture = null;
 
-    if ($user->isStudent() && $user->student_id) {
-        $studentPicture = Studentpicture::where('studentid', $user->student_id)->first();
+        if ($user->isStudent() && $user->student_id) {
+            $studentPicture = Studentpicture::where('studentid', $user->student_id)->first();
+        }
+
+        $isStudentUser = $user->hasRole('student');
+        $studentData   = $user->student;
+
+        // Current class
+        $currentClass = null;
+        if ($isStudentUser && $studentData) {
+            $currentClass = $studentData->currentClass;
+        }
+
+        // Parent/Guardian data
+        $parentData = null;
+        if ($isStudentUser && $studentData) {
+            $parentData = $studentData->parent;
+        }
+
+        return view('users.overview', compact(
+            'user',
+            'userbio',
+            'staffInfo',
+            'staffPicture',
+            'studentPicture',
+            'pagetitle',
+            'isStudentUser',
+            'studentData',
+            'currentClass',
+            'parentData'
+        ));
     }
-
-    $isStudentUser = $user->hasRole('student');
-    $studentData   = $user->student;
-
-    // ──── This is the missing part ─────
-    $currentClass = null;
-    if ($isStudentUser && $studentData) {
-        $currentClass = $studentData->currentClass;     // ← using your excellent relation
-    }
-    // ───────────────────────────────────
-
-    return view('users.overview', compact(
-        'user',
-        'userbio',
-        'staffInfo',
-        'staffPicture',
-        'studentPicture',
-        'pagetitle',
-        'isStudentUser',
-        'studentData',
-        'currentClass'           // ← now we pass it
-    ));
-}
 
     public function edit($id): View
     {
@@ -171,10 +176,11 @@ public function show($id): View
 
     public function update(Request $request, $id): JsonResponse
     {
-        \Log::debug("Updating user ID: {$id}", $request->all());
+        Log::debug("Updating user ID: {$id}", $request->all());
 
         try {
             if (!auth()->user()->hasPermissionTo('Update user')) {
+                Log::warning("User ID " . auth()->user()->id . " attempted to update user without permission");
                 return response()->json([
                     'success' => false,
                     'message' => 'User does not have the right permissions',
@@ -182,11 +188,11 @@ public function show($id): View
             }
 
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email,' . $id,
-                'password' => 'nullable|min:8|confirmed',
-                'roles' => 'required|array',
-                'roles.*' => 'exists:roles,name',
+                'name'         => 'required|string|max:255',
+                'email'        => 'required|email|unique:users,email,' . $id,
+                'password'     => 'nullable|min:8|confirmed',
+                'roles'        => 'required|array',
+                'roles.*'      => 'exists:roles,name',
                 'phone_number' => 'nullable|string|regex:/^\+[1-9]\d{1,14}$/',
             ]);
 
@@ -202,26 +208,29 @@ public function show($id): View
             $user->update($input);
             $user->syncRoles($request->input('roles'));
 
+            Log::info("User ID: {$id} updated successfully");
+
             return response()->json([
                 'success' => true,
                 'message' => 'User updated successfully',
                 'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'roles' => $user->roles->pluck('name')->toArray(),
+                    'id'           => $user->id,
+                    'name'         => $user->name,
+                    'email'        => $user->email,
+                    'roles'        => $user->roles->pluck('name')->toArray(),
                     'phone_number' => $user->phone_number,
-                    'password' => $plainPassword,
+                    'password'     => $plainPassword,
                 ],
             ], 200);
         } catch (ValidationException $e) {
+            Log::error("Validation error updating user: " . json_encode($e->errors()));
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            \Log::error("Update user error: {$e->getMessage()}");
+            Log::error("Update user error: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update user',
@@ -231,7 +240,7 @@ public function show($id): View
 
     public function destroy($id): JsonResponse
     {
-        \Log::debug("Attempting to delete user ID: {$id}");
+        Log::debug("Attempting to delete user ID: {$id}");
 
         try {
             $user = User::findOrFail($id);
@@ -243,6 +252,8 @@ public function show($id): View
 
             $user->delete();
 
+            Log::info("User ID: {$id} deleted successfully");
+
             return response()->json([
                 'success' => true,
                 'message' => $isStudent
@@ -250,7 +261,7 @@ public function show($id): View
                     : 'User deleted successfully',
             ], 200);
         } catch (\Exception $e) {
-            \Log::error("Delete user error: {$e->getMessage()}");
+            Log::error("Delete user error for ID {$id}: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete user: ' . $e->getMessage(),
@@ -266,10 +277,11 @@ public function show($id): View
 
     public function storeStudent(Request $request): JsonResponse
     {
-        \Log::debug("Creating student user", $request->all());
+        Log::debug("Creating student user", $request->all());
 
         try {
             if (!auth()->user()->hasPermissionTo('Create user')) {
+                Log::warning("User ID " . auth()->user()->id . " attempted to create student user without permission");
                 return response()->json([
                     'success' => false,
                     'message' => 'User does not have the right permissions',
@@ -311,6 +323,8 @@ public function show($id): View
                 ]
             );
 
+            Log::info("Student user ID: {$user->id} created successfully");
+
             return response()->json([
                 'success' => true,
                 'message' => 'Student user created successfully',
@@ -324,13 +338,14 @@ public function show($id): View
                 ],
             ], 201);
         } catch (ValidationException $e) {
+            Log::error("Validation error creating student user: " . json_encode($e->errors()));
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
                 'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            \Log::error("Create student user error: {$e->getMessage()}");
+            Log::error("Create student user error: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create student user',
@@ -358,17 +373,15 @@ public function show($id): View
 
             return response()->json([
                 'success'  => true,
-                'students' => $students->map(function ($s) {
-                    return [
-                        'id'          => $s->id,
-                        'admissionNo' => $s->admissionNo,
-                        'name'        => trim("{$s->firstname} {$s->lastname}"),
-                        'email'       => $s->email ?? '',
-                    ];
-                })->toArray(),
+                'students' => $students->map(fn($s) => [
+                    'id'          => $s->id,
+                    'admissionNo' => $s->admissionNo,
+                    'name'        => trim("{$s->firstname} {$s->lastname}"),
+                    'email'       => $s->email ?? '',
+                ])->toArray(),
             ]);
         } catch (\Exception $e) {
-            \Log::error("getStudents error: {$e->getMessage()}");
+            Log::error("getStudents error: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load students',
