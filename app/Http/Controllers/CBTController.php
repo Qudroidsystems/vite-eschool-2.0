@@ -141,9 +141,9 @@ public function index(Request $request)
 
         $examsQuery = DB::table('exams')
             ->whereIn('subject_id', $registeredSubjects ?: [0])
-            ->where('schoolclass_id', $studentClassData->class_id);
-            // ->where('termid', $selectedTermId)
-           // ->where('session', $selectedSessionId);
+            ->where('schoolclass_id', $studentClassData->class_id)
+            ->where('termid', $selectedTermId)
+           ->where('session', $selectedSessionId);
 
 
 
