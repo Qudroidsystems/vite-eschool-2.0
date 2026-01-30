@@ -90,6 +90,7 @@
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="duration">Duration</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="start_time">Start Time</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="end_time">End Time</th>
+                                                <th class="min-w-125px">Classes</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="questions">Questions</th>
                                                 <th class="min-w-100px">View Students</th>
                                                 <th class="min-w-100px">Actions</th>
@@ -111,6 +112,7 @@
                                                     <td class="duration">{{ $exam->duration }} mins</td>
                                                     <td class="start_time">{{ $exam->start_time }}</td>
                                                     <td class="end_time">{{ $exam->end_time }}</td>
+                                                    <td class="classes">{{ $exam->schoolclasses->map(fn($c) => $c->schoolclass . ' ' . $c->arm_name)->implode(', ') }}</td>
                                                     <td class="questions">
                                                         <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
                                                     </td>
@@ -129,13 +131,16 @@
                                                                     <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-url="{{ route('exams.destroy', ['exam' => $exam->id]) }}"><i class="ph-trash"></i></a>
                                                                 </li>
                                                             @endcan
+                                                            <li>
+                                                                <a href="{{ route('exams.analytics', $exam->id) }}" class="btn btn-subtle-success btn-icon btn-sm"><i class="ph-chart-bar"></i></a>
+                                                            </li>
                                                         </ul>
                                                     </td>
                                                 </tr>
                                                 @endif
                                             @empty
                                                 <tr>
-                                                    <td colspan="10" class="noresult" style="display: block;">No exams found</td>
+                                                    <td colspan="11" class="noresult" style="display: block;">No exams found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -174,7 +179,7 @@
             <!-- Add Exam Modal -->
             @can('Create exam')
             <div id="addExamModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered mw-650px">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Create New Exam</h5>
@@ -224,21 +229,16 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label required">Select Subject</label>
-                                    <select name="subject_id" class="form-control" required>
+                                    <select name="subject_id" id="add-subject_id" class="form-control" required>
                                         <option value="" selected>Select Subject</option>
                                         @foreach ($mysubjects as $subject)
-                                            <option value="{{ $subject->id }}">{{ $subject->subject }} ({{ $subject->subjectcode }}) - {{ $subject->schoolclass }} {{ $subject->arm }} {{ $subject->term }} {{ $subject->session }}</option>
+                                            <option value="{{ $subject->id }}">{{ $subject->subject }} ({{ $subject->subjectcode }}) - {{ $subject->term }} {{ $subject->session }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label required">Select Class</label>
-                                    <select name="schoolclass_id" class="form-control" required>
-                                        <option value="" selected>Select Class</option>
-                                        @foreach ($myclass as $class)
-                                            <option value="{{ $class->schoolclassID }}">{{ $class->schoolclass }} {{ $class->arm_name }}</option>
-                                        @endforeach
-                                    </select>
+                                    <label class="form-label required">Select Classes</label>
+                                    <div id="add-class-checkboxes" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;"></div>
                                 </div>
                                 <div class="mb-3">
                                     <div class="form-check form-switch">
@@ -262,7 +262,7 @@
             <!-- Edit Exam Modal -->
             @can('Update exam')
             <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered mw-650px">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Edit Exam</h5>
@@ -317,18 +317,13 @@
                                     <select name="subject_id" id="edit-subject_id" class="form-control" required>
                                         <option value="" selected>Select Subject</option>
                                         @foreach ($mysubjects as $subject)
-                                            <option value="{{ $subject->id }}">{{ $subject->subject }} ({{ $subject->subjectcode }}) - {{ $subject->schoolclass }} {{ $subject->arm }} {{ $subject->term }} {{ $subject->session }}</option>
+                                            <option value="{{ $subject->id }}">{{ $subject->subject }} ({{ $subject->subjectcode }}) - {{ $subject->term }} {{ $subject->session }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label required">Select Class</label>
-                                    <select name="schoolclass_id" id="edit-schoolclass_id" class="form-control" required>
-                                        <option value="" selected>Select Class</option>
-                                        @foreach ($myclass as $class)
-                                            <option value="{{ $class->schoolclassID }}">{{ $class->schoolclass }} {{ $class->arm_name }}</option>
-                                        @endforeach
-                                    </select>
+                                    <label class="form-label required">Select Classes</label>
+                                    <div id="edit-class-checkboxes" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;"></div>
                                 </div>
                                 <div class="mb-3">
                                     <div class="form-check form-switch">
@@ -463,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let i = (data.current_page - 1) * data.per_page + 1;
 
         if (data.data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="noresult" style="display: block;">No exams found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="noresult" style="display: block;">No exams found</td></tr>';
             return;
         }
 
@@ -472,7 +467,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const destroyUrl = `/exams/${exam.id}`;
             const questionsUrl = `/questions/${exam.id}/show`; // Adjust if needed
             const studentsUrl = `/exams/${exam.id}/students`;
+            const analyticsUrl = `/exams/${exam.id}/analytics`;
             const description = exam.description ? (exam.description.length > 50 ? exam.description.substring(0, 50) + '...' : exam.description) : '';
+            const classes = exam.schoolclasses ? exam.schoolclasses.map(c => `${c.schoolclass} ${c.arm_name}`).join(', ') : '';
             const row = `
                 <tr data-url="${destroyUrl}">
                     <td class="id" data-id="${exam.id}">
@@ -486,6 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td class="duration">${exam.duration} mins</td>
                     <td class="start_time">${exam.start_time}</td>
                     <td class="end_time">${exam.end_time}</td>
+                    <td class="classes">${classes}</td>
                     <td class="questions">
                         <a href="${questionsUrl}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
                     </td>
@@ -496,6 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <ul class="d-flex gap-2 list-unstyled mb-0">
                             <li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${exam.id}"><i class="ph-pencil"></i></a></li>
                             <li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-url="${destroyUrl}"><i class="ph-trash"></i></a></li>
+                            <li><a href="${analyticsUrl}" class="btn btn-subtle-success btn-icon btn-sm"><i class="ph-chart-bar"></i></a></li>
                         </ul>
                     </td>
                 </tr>
@@ -543,6 +542,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Load classes for modal
+    function loadClassesForModal(modal, subjectId, selected = []) {
+        if (!subjectId) return;
+        fetch(`/exams/subject-classes/${subjectId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(classes => {
+            const container = modal === 'add' ? document.getElementById('add-class-checkboxes') : document.getElementById('edit-class-checkboxes');
+            container.innerHTML = '';
+            if (classes.length === 0) {
+                container.innerHTML = '<p class="text-muted">No classes available for this subject.</p>';
+                return;
+            }
+            classes.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input class="form-check-input" type="checkbox" name="schoolclass_ids[]" value="${c.schoolclassID}" id="${modal}-class_${c.schoolclassID}" ${selected.includes(c.schoolclassID) ? 'checked' : ''}>
+                    <label class="form-check-label" for="${modal}-class_${c.schoolclassID}">${c.schoolclass} ${c.arm_name}</label>
+                `;
+                container.appendChild(div);
+            });
+        })
+        .catch(error => console.error('Error loading classes:', error));
+    }
+
     // Attach event listeners
     function attachEventListeners() {
         // Edit buttons
@@ -568,8 +597,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('edit-termid').value = data.exam.termid;
                         document.getElementById('edit-session').value = data.exam.session;
                         document.getElementById('edit-subject_id').value = data.exam.subject_id;
-                        document.getElementById('edit-schoolclass_id').value = data.exam.schoolclass_id;
                         document.getElementById('edit-publishStatus').checked = data.exam.is_published == 1;
+                        loadClassesForModal('edit', data.exam.subject_id, data.schoolclass_ids);
                         new bootstrap.Modal(document.getElementById('editModal')).show();
                     }
                 })
@@ -593,6 +622,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial attach
     attachEventListeners();
+
+    // Subject change for add modal
+    document.getElementById('add-subject_id').addEventListener('change', function() {
+        loadClassesForModal('add', this.value);
+    });
+
+    // Subject change for edit modal
+    document.getElementById('edit-subject_id').addEventListener('change', function() {
+        loadClassesForModal('edit', this.value);
+    });
 
     // Add form submission
     document.getElementById('add-exam-form').addEventListener('submit', function(e) {

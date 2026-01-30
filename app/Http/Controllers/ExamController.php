@@ -25,7 +25,7 @@ class ExamController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:View exam', ['only' => ['index', 'show', 'edit', 'showStudents', 'showStudentAnswers']]);
+        $this->middleware('permission:View exam', ['only' => ['index', 'show', 'edit', 'showStudents', 'showStudentAnswers', 'analytics']]);
         $this->middleware('permission:Create exam', ['only' => ['create', 'store']]);
         $this->middleware('permission:Update exam', ['only' => ['edit', 'update']]);
         $this->middleware('permission:Delete exam', ['only' => ['destroy', 'bulkDestroy', 'deleteStudentAttempt']]);
@@ -38,13 +38,16 @@ class ExamController extends Controller
     {
         $user = auth()->user();
         $current = "Current";
-        
+
         $pagetitle = 'Exams Management'; // Define the page title
-        
+
         $terms = Schoolterm::all();
         $session = Schoolsession::all();
 
-        $query = Exam::query();
+        $query = Exam::query()->with(['schoolclasses' => function ($q) {
+            $q->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm as arm_name')
+              ->join('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm');
+        }]);
 
         // Filter exams by the logged-in user's staff ID
         $query->where('staffId', $user->id);
@@ -87,7 +90,7 @@ class ExamController extends Controller
                 'subjectteacher.sessionid as sessionid',
                 'schoolterm.term as term',
                 'schoolsession.session as session'
-            ])->sortBy('subject');
+            ])->sortBy('subject')->unique('id'); // Added unique to avoid duplicate subjectteacher IDs
 
         $myclass = Schoolclass::leftJoin('classcategories', 'classcategories.id', '=', 'schoolclass.classcategoryid')
             ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
@@ -109,11 +112,35 @@ class ExamController extends Controller
     }
 
     /**
+     * Fetch classes for a given subject teacher ID.
+     */
+    public function getClassesForSubject($subjectTeacherId)
+    {
+        $classes = DB::table('subjectclass')
+            ->where('subjectclass.subjectteacherid', $subjectTeacherId)
+            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
+            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->select(
+                'schoolclass.id as schoolclassID',
+                'schoolclass.schoolclass',
+                'schoolarm.arm as arm_name'
+            )
+            ->get();
+
+        return response()->json($classes);
+    }
+
+    /**
      * Show students who attempted the specified exam (completed or in_progress).
      */
     public function showStudents(Request $request, $examId)
     {
-        $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
+        $exam = Exam::where('id', $examId)
+                    ->where('staffId', auth()->user()->id)
+                    ->with('schoolclasses')
+                    ->firstOrFail();
+
+        $classId = $request->query('class_id');
 
         $query = DB::table('exam_attempts')
             ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
@@ -123,21 +150,33 @@ class ExamController extends Controller
                      ->where('results.exam_id', '=', $examId);
             })
             ->where('exam_attempts.exam_id', $examId)
-            ->whereIn('exam_attempts.status', ['completed', 'in_progress'])
-            ->select(
-                'studentRegistration.id',
-                'studentRegistration.firstname',
-                'studentRegistration.lastname',
-                'studentRegistration.admissionNo',
-                'studentpicture.picture as picture',
-                'results.score',
-                'results.total_marks',
-                'exam_attempts.status as attempt_status',
-                DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions')
-            )
-            ->orderBy('studentRegistration.lastname');
+            ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
 
-        $students = $query->paginate(15);
+        // Filter by class if selected
+        if ($classId) {
+            $query->where('studentRegistration.schoolclassid', $classId);
+        }
+
+        $query->select(
+            'studentRegistration.id',
+            'studentRegistration.firstname',
+            'studentRegistration.lastname',
+            'studentRegistration.admissionNo',
+            'studentpicture.picture as picture',
+            'results.score',
+            'results.total_marks',
+            'exam_attempts.status as attempt_status',
+            DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions')
+        )
+        ->orderBy('studentRegistration.lastname');
+
+        $students = $query->paginate(15)->appends(['class_id' => $classId]);
+
+        // Get classes this exam is assigned to (for dropdown)
+        $assignedClasses = $exam->schoolclasses()
+            ->select('schoolclass.id as schoolclassID', 'schoolclass.schoolclass', 'schoolarm.arm as arm_name')
+            ->join('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->get();
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json($students);
@@ -145,7 +184,7 @@ class ExamController extends Controller
 
         $pagetitle = 'Students who Attempted: ' . $exam->title;
 
-        return view('exam.students', compact('pagetitle', 'exam', 'students'));
+        return view('exam.students', compact('pagetitle', 'exam', 'students', 'assignedClasses', 'classId'));
     }
 
     /**
@@ -173,7 +212,7 @@ class ExamController extends Controller
               ->where('student_id', $studentId)
               ->delete();
 
-            $message = $deletedAttempt > 0 
+            $message = $deletedAttempt > 0
                 ? 'Student\'s exam attempt deleted successfully. They can now retake the exam.'
                 : 'No active attempt found for this student.';
 
@@ -236,9 +275,9 @@ class ExamController extends Controller
                 'student_opt.option_text as student_answer',
                 'correct_opt.option_text as correct_answer',
                 'answers.id as answer_id',
-                DB::raw('CASE 
-                    WHEN answers.id IS NULL THEN "Not Attempted" 
-                    ELSE CASE WHEN student_opt.is_correct = 1 THEN "Yes" ELSE "No" END 
+                DB::raw('CASE
+                    WHEN answers.id IS NULL THEN "Not Attempted"
+                    ELSE CASE WHEN student_opt.is_correct = 1 THEN "Yes" ELSE "No" END
                 END as marked_correct')
             )
             ->orderBy('questions.id')
@@ -272,14 +311,16 @@ class ExamController extends Controller
             'termid' => 'required|integer',
             'session' => 'required|integer',
             'subject_id' => 'required|integer',
-            'schoolclass_id' => 'required|integer',
+            'schoolclass_ids' => 'required|array',
+            'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
             'is_published' => 'boolean|nullable',
         ]);
-        
+
         // Handle the checkbox value (will be null if not checked)
         $validated['is_published'] = $request->has('is_published') ? true : false;
-        
-        $exam = Exam::create($validated);
+
+        $exam = Exam::create(collect($validated)->except('schoolclass_ids')->toArray());
+        $exam->schoolclasses()->attach($validated['schoolclass_ids']);
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -305,12 +346,13 @@ class ExamController extends Controller
      */
     public function edit(string $id)
     {
-        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+        $exam = Exam::with('schoolclasses')->where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
         if (request()->ajax() || request()->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'exam' => $exam
+                'exam' => $exam,
+                'schoolclass_ids' => $exam->schoolclasses->pluck('id')->toArray()
             ]);
         }
 
@@ -334,14 +376,16 @@ class ExamController extends Controller
             'termid' => 'required|integer',
             'session' => 'required|integer',
             'subject_id' => 'required|integer',
-            'schoolclass_id' => 'required|integer',
+            'schoolclass_ids' => 'required|array',
+            'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
             'is_published' => 'boolean|nullable',
         ]);
-        
+
         // Handle the checkbox value
         $validated['is_published'] = $request->has('is_published') ? true : false;
 
-        $exam->update($validated);
+        $exam->update(collect($validated)->except('schoolclass_ids')->toArray());
+        $exam->schoolclasses()->sync($validated['schoolclass_ids']);
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -425,8 +469,8 @@ class ExamController extends Controller
         } else {
             // Fallback: Check if default file exists, else use a placeholder
             $defaultPath = 'student_avatars/unnamed.jpg';
-            $student->picture_path = Storage::disk('public')->exists($defaultPath) 
-                ? asset('storage/' . $defaultPath) 
+            $student->picture_path = Storage::disk('public')->exists($defaultPath)
+                ? asset('storage/' . $defaultPath)
                 : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNFNUU1RTUiLz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Qzk5QUMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4Ii8+Cjwvc3ZnPgo='; // Base64 SVG placeholder for no image
         }
 
@@ -468,12 +512,95 @@ class ExamController extends Controller
         $pdf = Pdf::loadView('exam.question-paper-pdf', $data);
         $pdf->setPaper('A4', 'portrait');
         $pdf->setOptions([
-            'isHtml5ParserEnabled' => true, 
+            'isHtml5ParserEnabled' => true,
             'isRemoteEnabled' => true,  // Allows loading external images
             'isPhpEnabled' => true     // For dynamic content
         ]);
 
         $filename = "Question-Paper-{$student->firstname}-{$student->lastname}-{$exam->title}.pdf";
         return $pdf->download($filename);
+    }
+
+    /**
+     * Exam analytics dashboard.
+     */
+    public function analytics($examId)
+    {
+        $exam = Exam::where('id', $examId)
+                    ->where('staffId', auth()->user()->id)
+                    ->with(['schoolclasses', 'questions.options'])
+                    ->firstOrFail();
+
+        // Basic stats
+        $attempts = ExamAttempt::where('exam_id', $examId)
+            ->whereIn('status', ['completed'])
+            ->get();
+
+        $totalStudents = $attempts->count();
+        $completedCount = $attempts->where('status', 'completed')->count();
+        $completionRate = $totalStudents > 0 ? round(($completedCount / $totalStudents) * 100, 1) : 0;
+
+        $results = DB::table('results')
+            ->where('exam_id', $examId)
+            ->get();
+
+        $avgScore = $results->avg('score') ?? 0;
+        $highestScore = $results->max('score') ?? 0;
+        $lowestScore = $results->min('score') ?? 0;
+
+        // Top 5 performers
+        $topPerformers = DB::table('results')
+            ->join('studentRegistration', 'results.user_id', '=', 'studentRegistration.id')
+            ->where('results.exam_id', $examId)
+            ->select('studentRegistration.firstname', 'studentRegistration.lastname', 'results.score', 'results.total_marks')
+            ->orderByDesc('results.score')
+            ->limit(5)
+            ->get();
+
+        // Question difficulty (percentage correct)
+        $questionStats = [];
+        foreach ($exam->questions as $question) {
+            $correctCount = DB::table('answers')
+                ->join('options', 'answers.option_id', '=', 'options.id')
+                ->where('answers.question_id', $question->id)
+                ->where('answers.exam_id', $examId)
+                ->where('options.is_correct', 1)
+                ->count();
+
+            $attemptedCount = DB::table('answers')
+                ->where('question_id', $question->id)
+                ->where('exam_id', $examId)
+                ->count();
+
+            $correctRate = $attemptedCount > 0 ? round(($correctCount / $attemptedCount) * 100, 1) : 0;
+
+            $questionStats[] = [
+                'text' => Str::limit($question->question_text, 60),
+                'correct_rate' => $correctRate,
+                'attempted' => $attemptedCount
+            ];
+        }
+
+        // Score distribution (histogram bins: e.g., 0-10, 11-20, ..., 91-100)
+        $scoreBins = array_fill(0, 10, 0); // 0-9, 10-19, ..., 90-99 (assuming percentage or raw score)
+        foreach ($results as $result) {
+            if ($result->total_marks > 0) {
+                $percentage = ($result->score / $result->total_marks) * 100;
+                $bin = min(9, floor($percentage / 10));
+                $scoreBins[$bin]++;
+            }
+        }
+
+        // Average score per question (already have questionStats, but let's compute avg % correct)
+        $questionAvgCorrect = collect($questionStats)->pluck('correct_rate')->toArray();
+
+        $pagetitle = 'Analytics: ' . $exam->title;
+
+        return view('exam.analytics', compact(
+            'pagetitle', 'exam', 'totalStudents', 'completedCount', 'completionRate',
+            'avgScore', 'highestScore', 'lowestScore', 'topPerformers', 'questionStats',
+            'scoreBins',           // for histogram
+            'questionAvgCorrect'   // for question difficulty bar
+        ));
     }
 }
