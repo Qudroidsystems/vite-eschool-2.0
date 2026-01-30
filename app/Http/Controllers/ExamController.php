@@ -8,16 +8,13 @@ use App\Models\Question;
 use App\Models\Schoolterm;
 use App\Models\ExamAttempt;
 use App\Models\Schoolclass;
-use App\Models\ClassTeacher;
 use Illuminate\Http\Request;
 use App\Models\Schoolsession;
 use App\Models\SubjectTeacher;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\SchoolInformation;
-use App\Models\Staffclasssetting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Str;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -31,25 +28,18 @@ class ExamController extends Controller
         $this->middleware('permission:Delete exam', ['only' => ['destroy', 'bulkDestroy', 'deleteStudentAttempt']]);
     }
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $user = auth()->user();
         $current = "Current";
 
-        $pagetitle = 'Exams Management'; // Define the page title
+        $pagetitle = 'Exams Management';
 
         $terms = Schoolterm::all();
         $session = Schoolsession::all();
 
-        $query = Exam::query()->with(['schoolclasses' => function ($q) {
-            $q->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm as arm_name')
-              ->join('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm');
-        }]);
+        $query = Exam::query()->with(['schoolclass.arm']);
 
-        // Filter exams by the logged-in user's staff ID
         $query->where('staffId', $user->id);
 
         if ($request->filled('search')) {
@@ -90,7 +80,7 @@ class ExamController extends Controller
                 'subjectteacher.sessionid as sessionid',
                 'schoolterm.term as term',
                 'schoolsession.session as session'
-            ])->sortBy('subject')->unique('id'); // Added unique to avoid duplicate subjectteacher IDs
+            ])->sortBy('subject')->unique('id');
 
         $myclass = Schoolclass::leftJoin('classcategories', 'classcategories.id', '=', 'schoolclass.classcategoryid')
             ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
@@ -111,9 +101,6 @@ class ExamController extends Controller
         return view('exam.index', compact('pagetitle', 'exams', 'terms', 'session', 'mysubjects', 'myclass'));
     }
 
-    /**
-     * Fetch classes for a given subject teacher ID.
-     */
     public function getClassesForSubject($subjectTeacherId)
     {
         $classes = DB::table('subjectclass')
@@ -130,14 +117,11 @@ class ExamController extends Controller
         return response()->json($classes);
     }
 
-    /**
-     * Show students who attempted the specified exam (completed or in_progress).
-     */
     public function showStudents(Request $request, $examId)
     {
         $exam = Exam::where('id', $examId)
                     ->where('staffId', auth()->user()->id)
-                    ->with('schoolclasses')
+                    ->with('schoolclass')
                     ->firstOrFail();
 
         $classId = $request->query('class_id');
@@ -152,7 +136,6 @@ class ExamController extends Controller
             ->where('exam_attempts.exam_id', $examId)
             ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
 
-        // Filter by class if selected
         if ($classId) {
             $query->where('studentRegistration.schoolclassid', $classId);
         }
@@ -172,11 +155,14 @@ class ExamController extends Controller
 
         $students = $query->paginate(15)->appends(['class_id' => $classId]);
 
-        // Get classes this exam is assigned to (for dropdown)
-        $assignedClasses = $exam->schoolclasses()
-            ->select('schoolclass.id as schoolclassID', 'schoolclass.schoolclass', 'schoolarm.arm as arm_name')
-            ->join('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->get();
+        $assignedClasses = Schoolclass::whereIn('id',
+            Exam::where('title', $exam->title)
+                ->where('staffId', $exam->staffId)
+                ->where('subject_id', $exam->subject_id)
+                ->where('termid', $exam->termid)
+                ->where('session', $exam->session)
+                ->pluck('schoolclass_id')
+        )->get(['id as schoolclassID', 'schoolclass', 'arm']);
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json($students);
@@ -187,26 +173,20 @@ class ExamController extends Controller
         return view('exam.students', compact('pagetitle', 'exam', 'students', 'assignedClasses', 'classId'));
     }
 
-    /**
-     * Delete a student's exam attempt so they can retake it.
-     */
     public function deleteStudentAttempt($examId, $studentId)
     {
         $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
 
         try {
-            // Delete answers
             Answer::where('exam_id', $examId)
                   ->where('user_id', $studentId)
                   ->delete();
 
-            // Delete result
             DB::table('results')
               ->where('exam_id', $examId)
               ->where('user_id', $studentId)
               ->delete();
 
-            // Delete exam attempt (for both completed and in_progress)
             $deletedAttempt = DB::table('exam_attempts')
               ->where('exam_id', $examId)
               ->where('student_id', $studentId)
@@ -238,9 +218,6 @@ class ExamController extends Controller
         }
     }
 
-    /**
-     * Show detailed answers for a student in the specified exam.
-     */
     public function showStudentAnswers($examId, $studentId)
     {
         $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
@@ -288,119 +265,120 @@ class ExamController extends Controller
         return view('exam.student-answers', compact('pagetitle', 'exam', 'student', 'questionAnswers', 'result'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'staffId' => 'required|integer',
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'duration' => 'required|integer|min:1',
-            'start_time' => 'required|date',
-            'end_time' => 'required|date|after:start_time',
-            'termid' => 'required|integer',
-            'session' => 'required|integer',
-            'subject_id' => 'required|integer',
-            'schoolclass_ids' => 'required|array',
+            'staffId'         => 'required|integer',
+            'title'           => 'required|string|max:255',
+            'description'     => 'nullable|string',
+            'duration'        => 'required|integer|min:1',
+            'start_time'      => 'required|date',
+            'end_time'        => 'required|date|after:start_time',
+            'termid'          => 'required|integer',
+            'session'         => 'required|integer',
+            'subject_id'      => 'required|integer',
+            'schoolclass_ids' => 'required|array|min:1',
             'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
-            'is_published' => 'boolean|nullable',
+            'is_published'    => 'boolean|nullable',
         ]);
 
-        // Handle the checkbox value (will be null if not checked)
         $validated['is_published'] = $request->has('is_published') ? true : false;
 
-        $exam = Exam::create(collect($validated)->except('schoolclass_ids')->toArray());
-        $exam->schoolclasses()->attach($validated['schoolclass_ids']);
+        $createdCount = 0;
+        foreach ($validated['schoolclass_ids'] as $classId) {
+            $examData = $validated;
+            $examData['schoolclass_id'] = $classId;
+            unset($examData['schoolclass_ids']);
+            Exam::create($examData);
+            $createdCount++;
+        }
+
+        $message = "Exam created successfully for {$createdCount} class" . ($createdCount > 1 ? 'es' : '.') . ".";
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Exam created successfully.',
-                'exam' => $exam
+                'message' => $message
             ]);
         }
 
-        return redirect()->route('exams.index')->with('success', 'Exam created successfully');
+        return redirect()->route('exams.index')->with('success', $message);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(string $id)
     {
-        $exam = Exam::with('schoolclasses')->where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+
+        $groupClassIds = Exam::where('staffId', $exam->staffId)
+            ->where('title', $exam->title)
+            ->where('subject_id', $exam->subject_id)
+            ->where('termid', $exam->termid)
+            ->where('session', $exam->session)
+            ->pluck('schoolclass_id')
+            ->toArray();
 
         if (request()->ajax() || request()->wantsJson()) {
             return response()->json([
-                'success' => true,
-                'exam' => $exam,
-                'schoolclass_ids' => $exam->schoolclasses->pluck('id')->toArray()
+                'success'         => true,
+                'exam'            => $exam,
+                'schoolclass_ids' => $groupClassIds
             ]);
         }
 
-        // For non-AJAX, you might want to return a view, but since it's AJAX-driven, optional
         abort(404);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
         $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'duration' => 'required|integer|min:1',
-            'start_time' => 'required|date',
-            'end_time' => 'required|date|after:start_time',
-            'termid' => 'required|integer',
-            'session' => 'required|integer',
-            'subject_id' => 'required|integer',
-            'schoolclass_ids' => 'required|array',
+            'title'           => 'required|string|max:255',
+            'description'     => 'nullable|string',
+            'duration'        => 'required|integer|min:1',
+            'start_time'      => 'required|date',
+            'end_time'        => 'required|date|after:start_time',
+            'termid'          => 'required|integer',
+            'session'         => 'required|integer',
+            'subject_id'      => 'required|integer',
+            'schoolclass_ids' => 'required|array|min:1',
             'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
-            'is_published' => 'boolean|nullable',
+            'is_published'    => 'boolean|nullable',
         ]);
 
-        // Handle the checkbox value
         $validated['is_published'] = $request->has('is_published') ? true : false;
+        $validated['staffId'] = $exam->staffId;
 
-        $exam->update(collect($validated)->except('schoolclass_ids')->toArray());
-        $exam->schoolclasses()->sync($validated['schoolclass_ids']);
+        // Delete the entire group (all exams with same identity keys)
+        Exam::where('staffId', $exam->staffId)
+            ->where('title', $exam->title)
+            ->where('subject_id', $exam->subject_id)
+            ->where('termid', $exam->termid)
+            ->where('session', $exam->session)
+            ->delete();
+
+        // Recreate with possibly updated title and new class selection
+        $createdCount = 0;
+        foreach ($validated['schoolclass_ids'] as $classId) {
+            $examData = $validated;
+            $examData['schoolclass_id'] = $classId;
+            unset($examData['schoolclass_ids']);
+            Exam::create($examData);
+            $createdCount++;
+        }
+
+        $message = "Exam updated successfully for {$createdCount} class" . ($createdCount > 1 ? 'es' : '.') . ".";
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Exam updated successfully.',
-                'exam' => $exam->fresh()
+                'message' => $message
             ]);
         }
 
-        return redirect()->route('exams.index')->with('success', 'Exam updated successfully');
+        return redirect()->route('exams.index')->with('success', $message);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
@@ -416,9 +394,6 @@ class ExamController extends Controller
         return redirect()->route('exams.index')->with('success', 'Exam deleted successfully');
     }
 
-    /**
-     * Bulk delete resources.
-     */
     public function bulkDestroy(Request $request)
     {
         $user = auth()->user();
@@ -436,21 +411,12 @@ class ExamController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $deletedCount . ' exams deleted successfully.'
+            'message' => $deletedCount . ' exam record(s) deleted successfully.'
         ]);
     }
 
-
-  /**
-     * Generate PDF question paper for a student's exam attempt.
-     */
     public function generateQuestionPaperPdf(Exam $exam, $studentId)
     {
-        // Ensure the exam belongs to the logged-in user
-        // if ($exam->staffId !== auth()->user()->id) {
-        //     abort(403, 'Unauthorized access to this exam.');
-        // }
-
         $student = DB::table('studentRegistration')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
             ->where('studentRegistration.id', $studentId)
@@ -463,15 +429,13 @@ class ExamController extends Controller
             )
             ->firstOrFail();
 
-        // NEW: Handle picture path - ensure it's a full asset path or fallback
         if ($student->picture && Storage::disk('public')->exists($student->picture)) {
             $student->picture_path = asset('storage/' . $student->picture);
         } else {
-            // Fallback: Check if default file exists, else use a placeholder
             $defaultPath = 'student_avatars/unnamed.jpg';
             $student->picture_path = Storage::disk('public')->exists($defaultPath)
                 ? asset('storage/' . $defaultPath)
-                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNFNUU1RTUiLz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Qzk5QUMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4Ii8+Cjwvc3ZnPgo='; // Base64 SVG placeholder for no image
+                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNFNUU1RTUiLz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Qzk5QUMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4Ii8+Cjwvc3ZnPgo=';
         }
 
         $result = DB::table('results')
@@ -479,27 +443,23 @@ class ExamController extends Controller
             ->where('exam_id', $exam->id)
             ->first();
 
-        // Fetch school info (active record)
         $school = SchoolInformation::where('is_active', true)->first();
 
-        // Fetch attempt for date taken
         $attempt = ExamAttempt::where('exam_id', $exam->id)
             ->where('student_id', $studentId)
             ->whereIn('status', ['completed', 'in_progress'])
             ->orderBy('created_at', 'desc')
             ->first();
 
-        // Load questions with all options
         $questions = Question::where('exam_id', $exam->id)
-            ->with('options') // All options
+            ->with('options')
             ->get();
 
-        // For each question, get student's answer
         foreach ($questions as $question) {
             $studentAnswer = Answer::where('question_id', $question->id)
                 ->where('user_id', $studentId)
                 ->where('exam_id', $exam->id)
-                ->with('option') // Student's selected option
+                ->with('option')
                 ->first();
 
             $question->student_answer = $studentAnswer ? $studentAnswer->getAnswerTextAttribute() ?? 'Not Attempted' : 'Not Attempted';
@@ -513,25 +473,21 @@ class ExamController extends Controller
         $pdf->setPaper('A4', 'portrait');
         $pdf->setOptions([
             'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,  // Allows loading external images
-            'isPhpEnabled' => true     // For dynamic content
+            'isRemoteEnabled' => true,
+            'isPhpEnabled' => true
         ]);
 
         $filename = "Question-Paper-{$student->firstname}-{$student->lastname}-{$exam->title}.pdf";
         return $pdf->download($filename);
     }
 
-    /**
-     * Exam analytics dashboard.
-     */
     public function analytics($examId)
     {
         $exam = Exam::where('id', $examId)
                     ->where('staffId', auth()->user()->id)
-                    ->with(['schoolclasses', 'questions.options'])
+                    ->with(['schoolclass', 'questions.options'])
                     ->firstOrFail();
 
-        // Basic stats
         $attempts = ExamAttempt::where('exam_id', $examId)
             ->whereIn('status', ['completed'])
             ->get();
@@ -548,7 +504,6 @@ class ExamController extends Controller
         $highestScore = $results->max('score') ?? 0;
         $lowestScore = $results->min('score') ?? 0;
 
-        // Top 5 performers
         $topPerformers = DB::table('results')
             ->join('studentRegistration', 'results.user_id', '=', 'studentRegistration.id')
             ->where('results.exam_id', $examId)
@@ -557,7 +512,6 @@ class ExamController extends Controller
             ->limit(5)
             ->get();
 
-        // Question difficulty (percentage correct)
         $questionStats = [];
         foreach ($exam->questions as $question) {
             $correctCount = DB::table('answers')
@@ -581,8 +535,7 @@ class ExamController extends Controller
             ];
         }
 
-        // Score distribution (histogram bins: e.g., 0-10, 11-20, ..., 91-100)
-        $scoreBins = array_fill(0, 10, 0); // 0-9, 10-19, ..., 90-99 (assuming percentage or raw score)
+        $scoreBins = array_fill(0, 10, 0);
         foreach ($results as $result) {
             if ($result->total_marks > 0) {
                 $percentage = ($result->score / $result->total_marks) * 100;
@@ -591,7 +544,6 @@ class ExamController extends Controller
             }
         }
 
-        // Average score per question (already have questionStats, but let's compute avg % correct)
         $questionAvgCorrect = collect($questionStats)->pluck('correct_rate')->toArray();
 
         $pagetitle = 'Analytics: ' . $exam->title;
@@ -599,8 +551,7 @@ class ExamController extends Controller
         return view('exam.analytics', compact(
             'pagetitle', 'exam', 'totalStudents', 'completedCount', 'completionRate',
             'avgScore', 'highestScore', 'lowestScore', 'topPerformers', 'questionStats',
-            'scoreBins',           // for histogram
-            'questionAvgCorrect'   // for question difficulty bar
+            'scoreBins', 'questionAvgCorrect'
         ));
     }
 }

@@ -401,16 +401,47 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('image-upload', [StaffImageUploadController::class, 'imageUpload'])->name('image.upload');
     Route::post('image-upload', [StaffImageUploadController::class, 'imageUploadPost'])->name('image.upload.post');
 
-    Route::resource('exams', ExamController::class);
-    Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])->name('exams.destroy');
-    // Add this new route for viewing students
-    Route::get('/exams/{exam}/students', [ExamController::class, 'showStudents'])->name('exams.students');
-    Route::delete('exams/{examId}/students/{studentId}/attempt/delete', [ExamController::class, 'deleteStudentAttempt'])->name('exams.student.attempt.delete');
+    // Route::resource('exams', ExamController::class);
+    // Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])->name('exams.destroy');
+    // // Add this new route for viewing students
+    // Route::get('/exams/{exam}/students', [ExamController::class, 'showStudents'])->name('exams.students');
+    // Route::delete('exams/{examId}/students/{studentId}/attempt/delete', [ExamController::class, 'deleteStudentAttempt'])->name('exams.student.attempt.delete');
 
-    // Add this new route for viewing student answers
-    Route::get('/exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])->name('exams.student.answers');
-    Route::get('/exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
-    ->name('exams.students.question-paper');
+    // // Add this new route for viewing student answers
+    // Route::get('/exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])->name('exams.student.answers');
+    // Route::get('/exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
+    // ->name('exams.students.question-paper');
+
+    // Main resource routes (index, create, store, show, edit, update, destroy)
+    Route::resource('exams', ExamController::class)->except(['show']); // 'show' not used
+
+    // Custom routes (override or add what resource doesn't cover)
+    Route::delete('exams/bulk-destroy', [ExamController::class, 'bulkDestroy'])
+        ->name('exams.bulk-destroy');
+
+    // View students who attempted this exam + class filter support
+    Route::get('exams/{exam}/students', [ExamController::class, 'showStudents'])
+        ->name('exams.students');
+
+    // Delete a student's attempt (allow retake)
+    Route::delete('exams/{exam}/students/{student}/attempt', [ExamController::class, 'deleteStudentAttempt'])
+        ->name('exams.student.attempt.delete');
+
+    // View detailed answers for one student
+    Route::get('exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])
+        ->name('exams.student.answers');
+
+    // Download question paper PDF with student's answers
+    Route::get('exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
+        ->name('exams.student.question-paper');
+
+    // Analytics dashboard for the exam
+    Route::get('exams/{exam}/analytics', [ExamController::class, 'analytics'])
+        ->name('exams.analytics');
+
+    // Helper route: get classes for a subject (used in AJAX for modals)
+    Route::get('exams/subject-classes/{subjectTeacherId}', [ExamController::class, 'getClassesForSubject'])
+        ->name('exams.subject-classes');
 
     Route::resource('questions', QuestionController::class);
     Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);
