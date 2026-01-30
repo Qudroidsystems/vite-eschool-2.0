@@ -24,6 +24,62 @@
         .pagination-wrap .active .page-link { background-color: #007bff; color: white; }
         .pagination-wrap .disabled .page-link { pointer-events: none; opacity: 0.5; }
     </style>
+    <style>
+/* Loading spinner */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Checkbox styling */
+.form-check-input:checked {
+    background-color: #405189;
+    border-color: #405189;
+}
+
+/* SweetAlert customization */
+.swal2-toast {
+    font-size: 14px !important;
+}
+
+/* Table row hover effect */
+.table tbody tr:hover {
+    background-color: rgba(67, 97, 238, 0.05);
+}
+
+/* Modal animations */
+.modal.fade .modal-dialog {
+    transform: translate(0, -50px);
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: translate(0, 0);
+}
+
+/* Scrollbar styling for class container */
+.bg-light::-webkit-scrollbar {
+    width: 6px;
+}
+
+.bg-light::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.bg-light::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.bg-light::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 

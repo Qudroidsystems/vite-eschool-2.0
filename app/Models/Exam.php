@@ -2,10 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Exam extends Model
 {
@@ -22,65 +20,38 @@ class Exam extends Model
         'session',
         'subject_id',
         'schoolclass_id',
-        'is_published',
+        'is_published'
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
-        'start_time'   => 'datetime',
-        'end_time'     => 'datetime',
         'is_published' => 'boolean',
-        // Add any other dates if needed
+        'start_time' => 'datetime',
+        'end_time' => 'datetime'
     ];
 
-    /**
-     * Get the school class that owns the exam.
-     */
-    public function schoolclass(): BelongsTo
+    public function schoolclass()
     {
         return $this->belongsTo(Schoolclass::class, 'schoolclass_id');
     }
 
-    /**
-     * Get the questions for the exam.
-     */
-    public function questions(): HasMany
+    // Accessor for formatted start time
+    public function getFormattedStartTimeAttribute()
     {
-        return $this->hasMany(Question::class);
+        return $this->start_time ? $this->start_time->format('M d, Y h:i A') : null;
     }
 
-    /**
-     * Formatted start time (safe accessor)
-     */
-    public function getFormattedStartTimeAttribute(): string
+    // Accessor for formatted end time
+    public function getFormattedEndTimeAttribute()
     {
-        return $this->start_time ? $this->start_time->format('d M Y H:i') : '—';
+        return $this->end_time ? $this->end_time->format('M d, Y h:i A') : null;
     }
 
-    /**
-     * Formatted end time (safe accessor)
-     */
-    public function getFormattedEndTimeAttribute(): string
+    // Accessor for display time range
+    public function getTimeRangeAttribute()
     {
-        return $this->end_time ? $this->end_time->format('d M Y H:i') : '—';
-    }
-
-    /**
-     * Combined class + arm display (optional helper)
-     */
-    public function getClassDisplayAttribute(): string
-    {
-        if (!$this->schoolclass) {
-            return '—';
+        if ($this->start_time && $this->end_time) {
+            return $this->start_time->format('M d, h:i A') . ' - ' . $this->end_time->format('h:i A');
         }
-
-        $className = $this->schoolclass->schoolclass;
-        $arm = $this->schoolclass->arm;
-
-        return $arm ? "$className ($arm)" : $className;
+        return null;
     }
 }

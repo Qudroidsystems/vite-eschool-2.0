@@ -5,12 +5,11 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-
-            <!-- Page Title -->
+            <!-- Start page title -->
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                        <h4 class="mb-sm-0">Exams Management</h4>
+                        <h4 class="mb-sm-0">Exams</h4>
                         <div class="page-title-right">
                             <ol class="breadcrumb m-0">
                                 <li class="breadcrumb-item"><a href="{{ route('exams.index') }}">Exams</a></li>
@@ -20,25 +19,9 @@
                     </div>
                 </div>
             </div>
+            <!-- End page title -->
 
-            @if ($errors->any())
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <strong>Whoops!</strong> There were some problems with your input.<br>
-                    <ul class="mb-0">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            @if (session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
+            <div id="alert-container"></div>
 
             <div id="examsList">
                 <div class="row">
@@ -46,9 +29,9 @@
                         <div class="card">
                             <div class="card-body">
                                 <div class="row g-3">
-                                    <div class="col-xxl-4 col-lg-6">
+                                    <div class="col-xxl-3">
                                         <div class="search-box">
-                                            <input type="text" class="form-control search" placeholder="Search exams...">
+                                            <input type="text" class="form-control search" placeholder="Search exams">
                                             <i class="ri-search-line search-icon"></i>
                                         </div>
                                     </div>
@@ -63,119 +46,111 @@
                         <div class="card">
                             <div class="card-header d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h5 class="card-title mb-0">
-                                        Exams <span class="badge bg-dark-subtle text-dark ms-1" id="totalBadge">{{ $exams->total() }}</span>
-                                    </h5>
+                                    <h5 class="card-title mb-0">Exams <span class="badge bg-dark-subtle text-dark ms-1">{{ $exams->total() }}</span></h5>
                                 </div>
                                 <div class="flex-shrink-0">
-                                    <div class="d-flex flex-wrap gap-2">
+                                    <div class="d-flex flex-wrap align-items-start gap-2">
                                         @can('Delete exam')
-                                            <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">
-                                                <i class="ri-delete-bin-2-line align-bottom me-1"></i> Delete Selected
-                                            </button>
+                                            <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
                                         @endcan
                                         @can('Create exam')
-                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addExamModal">
-                                                <i class="ri-add-circle-line align-bottom me-1"></i> Create New Exam
-                                            </button>
+                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addExamModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Create New Exam</button>
                                         @endcan
                                     </div>
                                 </div>
                             </div>
-
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <table class="table align-middle table-nowrap table-hover mb-0" id="kt_exams_table">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th style="width: 50px;">
-                                                    <div class="form-check">
+                                    <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0" id="kt_exams_table">
+                                        <thead>
+                                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                                                <th class="w-10px pe-2">
+                                                    <div class="form-check form-check-sm form-check-custom form-check-solid me-3">
                                                         <input class="form-check-input" type="checkbox" id="checkAll" />
                                                     </div>
                                                 </th>
-                                                <th>SN</th>
-                                                <th>Title</th>
-                                                <th>Description</th>
-                                                <th>Duration</th>
-                                                <th>Start Time</th>
-                                                <th>End Time</th>
-                                                <th>Class</th>
-                                                <th>Questions</th>
-                                                <th>Students</th>
-                                                <th>Actions</th>
+                                                <th class="min-w-125px sort cursor-pointer" data-sort="sn">SN</th>
+                                                <th class="min-w-125px sort cursor-pointer" data-sort="title">Title</th>
+                                                <th class="min-w-125px sort cursor-pointer" data-sort="description">Description</th>
+                                                <th class="min-w-125px sort cursor-pointer" data-sort="duration">Duration</th>
+                                                <th class="min-w-125px sort cursor-pointer" data-sort="start_time">Start Time</th>
+                                                <th class="min-w-125px sort cursor-pointer" data-sort="end_time">End Time</th>
+                                                <th class="min-w-125px sort cursor-pointer" data-sort="questions">Questions</th>
+                                                <th class="min-w-100px">View Students</th>
+                                                <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="tableBody">
+                                        <tbody class="fw-semibold text-gray-600 list form-check-all">
                                             @php $i = ($exams->currentPage() - 1) * $exams->perPage() @endphp
                                             @forelse ($exams as $exam)
-                                                <tr>
-                                                    <td>
-                                                        <div class="form-check">
-                                                            <input class="form-check-input" type="checkbox" name="chkIds[]" value="{{ $exam->id }}" />
+                                                @if($exam->id)
+                                                <tr data-url="{{ route('exams.destroy', ['exam' => $exam->id]) }}">
+                                                    <td class="id" data-id="{{ $exam->id }}">
+                                                        <div class="form-check form-check-sm form-check-custom form-check-solid">
+                                                            <input class="form-check-input" type="checkbox" name="chk_child" />
                                                         </div>
                                                     </td>
-                                                    <td>{{ ++$i }}</td>
-                                                    <td>{{ $exam->title }}</td>
-                                                    <td>{{ Str::limit($exam->description ?? '—', 50) }}</td>
-                                                    <td>{{ $exam->duration }} mins</td>
-                                                    <td>{{ $exam->formatted_start_time }}</td>
-                                                    <td>{{ $exam->formatted_end_time }}</td>
-                                                    <td>
-                                                        @if($exam->schoolclass)
-                                                            {{ $exam->schoolclass->schoolclass }}
-                                                            {{ $exam->schoolclass->arm ? '(' . $exam->schoolclass->arm . ')' : '' }}
-                                                        @else
-                                                            —
-                                                        @endif
+                                                    <td class="sn">{{ ++$i }}</td>
+                                                    <td class="title">{{ $exam->title }}</td>
+                                                    <td class="description">{{ Str::limit($exam->description ?? '', 50) }}</td>
+                                                    <td class="duration">{{ $exam->duration }} mins</td>
+                                                    <td class="start_time">{{ $exam->formatted_start_time ?? $exam->start_time }}</td>
+                                                    <td class="end_time">{{ $exam->formatted_end_time ?? $exam->end_time }}</td>
+                                                    <td class="questions">
+                                                        <a href="{{ route('questions.index', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
                                                     </td>
                                                     <td>
-                                                        <a href="{{ route('questions.index', $exam->id) }}" class="btn btn-sm btn-soft-primary">
-                                                            Questions
-                                                        </a>
+                                                        <a href="{{ route('exams.students', $exam->id) }}" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
                                                     </td>
                                                     <td>
-                                                        <a href="{{ route('exams.students', $exam->id) }}" class="btn btn-sm btn-soft-info">
-                                                            Students
-                                                        </a>
-                                                    </td>
-                                                    <td>
-                                                        <div class="d-flex gap-2">
+                                                        <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('Update exam')
-                                                                <button class="btn btn-sm btn-soft-secondary edit-btn" data-id="{{ $exam->id }}">
-                                                                    <i class="ri-pencil-line"></i>
-                                                                </button>
+                                                                <li>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="{{ $exam->id }}"><i class="ph-pencil"></i></a>
+                                                                </li>
                                                             @endcan
                                                             @can('Delete exam')
-                                                                <button class="btn btn-sm btn-soft-danger remove-btn" data-id="{{ $exam->id }}">
-                                                                    <i class="ri-delete-bin-line"></i>
-                                                                </button>
+                                                                <li>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-url="{{ route('exams.destroy', ['exam' => $exam->id]) }}"><i class="ph-trash"></i></a>
+                                                                </li>
                                                             @endcan
-                                                            <a href="{{ route('exams.analytics', $exam->id) }}" class="btn btn-sm btn-soft-success">
-                                                                <i class="ri-bar-chart-line-line"></i>
-                                                            </a>
-                                                        </div>
+                                                        </ul>
                                                     </td>
                                                 </tr>
+                                                @endif
                                             @empty
                                                 <tr>
-                                                    <td colspan="11" class="text-center py-5 text-muted">
-                                                        No exams found
-                                                    </td>
+                                                    <td colspan="10" class="noresult" style="display: block;">No exams found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
                                     </table>
                                 </div>
-
-                                <div class="d-flex justify-content-between align-items-center mt-4" id="paginationContainer">
-                                    <div class="text-muted small" id="showingInfo">
-                                        Showing {{ $exams->firstItem() }} to {{ $exams->lastItem() }} of {{ $exams->total() }} results
+                                <div class="row mt-3 align-items-center" id="pagination-element">
+                                    <div class="col-sm">
+                                        <div class="text-muted text-center text-sm-start">
+                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $exams->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $exams->total() }}</span> Results
+                                        </div>
                                     </div>
-                                    <nav aria-label="Page navigation">
-                                        <ul class="pagination mb-0" id="paginationLinks">
-                                            <!-- Filled by JS -->
-                                        </ul>
-                                    </nav>
+                                    <div class="col-sm-auto mt-3 mt-sm-0">
+                                        <div class="pagination-wrap hstack gap-2 justify-content-center">
+                                            <a class="page-item pagination-prev {{ $exams->onFirstPage() ? 'disabled' : '' }}" href="javascript:void(0);" data-url="{{ $exams->previousPageUrl() }}">
+                                                <i class="mdi mdi-chevron-left align-middle"></i>
+                                            </a>
+                                            <ul class="pagination listjs-pagination mb-0">
+                                                @if(isset($exams->links()->elements[0]))
+                                                    @foreach ($exams->links()->elements[0] as $page => $url)
+                                                        <li class="page-item {{ $exams->currentPage() == $page ? 'active' : '' }}">
+                                                            <a class="page-link" href="javascript:void(0);" data-url="{{ $url }}">{{ $page }}</a>
+                                                        </li>
+                                                    @endforeach
+                                                @endif
+                                            </ul>
+                                            <a class="page-item pagination-next {{ $exams->hasMorePages() ? '' : 'disabled' }}" href="javascript:void(0);" data-url="{{ $exams->nextPageUrl() }}">
+                                                <i class="mdi mdi-chevron-right align-middle"></i>
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -185,100 +160,94 @@
 
             <!-- Add Exam Modal -->
             @can('Create exam')
-            <div class="modal fade" id="addExamModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div id="addExamModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                <div class="modal-dialog modal-dialog-centered mw-650px">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Create New Exam</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form id="addExamForm">
+                        <form id="add-exam-form" autocomplete="off">
                             @csrf
                             <div class="modal-body">
-                                <input type="hidden" name="staffId" value="{{ Auth::id() }}">
-
+                                <input type="hidden" name="staffId" value="{{ Auth::user()->id }}" required>
                                 <div class="mb-3">
                                     <label class="form-label required">Exam Title</label>
-                                    <input type="text" name="title" class="form-control" required>
+                                    <input type="text" name="title" class="form-control" placeholder="Enter exam title..." required>
                                 </div>
-
                                 <div class="mb-3">
                                     <label class="form-label">Description</label>
-                                    <textarea name="description" class="form-control" rows="3"></textarea>
+                                    <textarea name="description" class="form-control" rows="3" placeholder="Enter exam description..."></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required">Duration (minutes)</label>
+                                    <input type="number" name="duration" class="form-control" placeholder="Enter duration in minutes..." required min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required">Start Time</label>
+                                    <input type="datetime-local" name="start_time" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required">End Time</label>
+                                    <input type="datetime-local" name="end_time" class="form-control" required>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Duration (minutes)</label>
-                                        <input type="number" name="duration" class="form-control" required min="1">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Publish?</label>
-                                        <div class="form-check form-switch mt-2">
-                                            <input class="form-check-input" type="checkbox" name="is_published" value="1" checked>
-                                            <label class="form-check-label">Publish immediately</label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Start Time</label>
-                                        <input type="datetime-local" name="start_time" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">End Time</label>
-                                        <input type="datetime-local" name="end_time" class="form-control" required>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Term</label>
-                                        <select name="termid" id="addTerm" class="form-select" required>
-                                            <option value="">Select Term</option>
-                                            @foreach($terms as $term)
+                                        <label class="form-label required">Select Term</label>
+                                        <select name="termid" id="addTerm" class="form-control" required>
+                                            <option value="" selected>Select Term</option>
+                                            @foreach ($terms as $term)
                                                 <option value="{{ $term->id }}">{{ $term->term }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Session</label>
-                                        <select name="session" id="addSession" class="form-select" required>
-                                            <option value="">Select Session</option>
-                                            @foreach($sessions as $s)
-                                                <option value="{{ $s->id }}">{{ $s->session }}</option>
+                                        <label class="form-label required">Select Session</label>
+                                        <select name="session" id="addSession" class="form-control" required>
+                                            <option value="" selected>Select Session</option>
+                                            @foreach ($sessions as $schoolsession)
+                                                <option value="{{ $schoolsession->id }}">{{ $schoolsession->session }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label required">Subject</label>
-                                    <select name="subject_id" id="addSubject" class="form-select" required>
-                                        <option value="">Select Subject</option>
-                                        @foreach($mysubjects as $sub)
-                                            <option value="{{ $sub->id }}"
-                                                data-termid="{{ $sub->termid }}"
-                                                data-sessionid="{{ $sub->sessionid }}"
-                                                data-class="{{ $sub->schoolclass }}"
-                                                data-arm="{{ $sub->arm }}">
-                                                {{ $sub->subject }} ({{ $sub->subjectcode }}) - {{ $sub->term }} {{ $sub->session }} - {{ $sub->schoolclass }} {{ $sub->arm ? '(' . $sub->arm . ')' : '' }}
+                                    <label class="form-label required">Select Subject</label>
+                                    <select name="subject_id" id="addSubject" class="form-control" required>
+                                        <option value="" selected>Select Subject</option>
+                                        @foreach ($mysubjects as $subject)
+                                            <option value="{{ $subject->id }}"
+                                                data-termid="{{ $subject->termid }}"
+                                                data-sessionid="{{ $subject->sessionid }}"
+                                                data-class="{{ $subject->schoolclass }}"
+                                                data-arm="{{ $subject->arm }}">
+                                                {{ $subject->subject }} ({{ $subject->subjectcode }}) - {{ $subject->term }} {{ $subject->session }} - {{ $subject->schoolclass }} {{ $subject->arm ? '(' . $subject->arm . ')' : '' }}
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label required">Classes</label>
+                                    <label class="form-label required">Select Classes</label>
                                     <div id="addClassContainer" class="border rounded p-3 bg-light" style="max-height: 240px; overflow-y: auto;">
                                         <p class="text-muted text-center mb-0">Select a subject first...</p>
                                     </div>
                                 </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="is_published" value="1" id="publishStatus">
+                                        <label class="form-check-label" for="publishStatus">Publish exam immediately</label>
+                                    </div>
+                                    <div class="text-muted fs-7 mt-1">If not checked, the exam will be saved as a draft.</div>
+                                </div>
+                                <div class="alert alert-danger d-none" id="alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn btn-primary">Create</button>
+                                <button type="submit" class="btn btn-primary" id="add-btn">Submit</button>
                             </div>
                         </form>
                     </div>
@@ -286,102 +255,98 @@
             </div>
             @endcan
 
-            <!-- Edit Modal -->
+            <!-- Edit Exam Modal -->
             @can('Update exam')
-            <div class="modal fade" id="editExamModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                <div class="modal-dialog modal-dialog-centered mw-650px">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Edit Exam</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form id="editExamForm">
-                            @csrf
+                        <form id="edit-exam-form" autocomplete="off">
                             @method('PUT')
-                            <input type="hidden" id="editExamId" name="id">
+                            @csrf
                             <div class="modal-body">
+                                <input type="hidden" id="edit-id-field" name="id">
+                                <input type="hidden" name="staffId" value="{{ Auth::user()->id }}">
                                 <div class="mb-3">
                                     <label class="form-label required">Exam Title</label>
-                                    <input type="text" name="title" id="editTitle" class="form-control" required>
+                                    <input type="text" name="title" id="edit-title" class="form-control" required>
                                 </div>
-
                                 <div class="mb-3">
                                     <label class="form-label">Description</label>
-                                    <textarea name="description" id="editDescription" class="form-control" rows="3"></textarea>
+                                    <textarea name="description" id="edit-description" class="form-control" rows="3"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required">Duration (minutes)</label>
+                                    <input type="number" name="duration" id="edit-duration" class="form-control" required min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required">Start Time</label>
+                                    <input type="datetime-local" name="start_time" id="edit-start_time" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required">End Time</label>
+                                    <input type="datetime-local" name="end_time" id="edit-end_time" class="form-control" required>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Duration (minutes)</label>
-                                        <input type="number" name="duration" id="editDuration" class="form-control" required min="1">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Publish?</label>
-                                        <div class="form-check form-switch mt-2">
-                                            <input class="form-check-input" type="checkbox" name="is_published" id="editPublish" value="1">
-                                            <label class="form-check-label">Publish immediately</label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Start Time</label>
-                                        <input type="datetime-local" name="start_time" id="editStartTime" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">End Time</label>
-                                        <input type="datetime-local" name="end_time" id="editEndTime" class="form-control" required>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Term</label>
-                                        <select name="termid" id="editTerm" class="form-select" required>
-                                            <option value="">Select Term</option>
-                                            @foreach($terms as $term)
+                                        <label class="form-label required">Select Term</label>
+                                        <select name="termid" id="edit-termid" class="form-control" required>
+                                            <option value="" selected>Select Term</option>
+                                            @foreach ($terms as $term)
                                                 <option value="{{ $term->id }}">{{ $term->term }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Session</label>
-                                        <select name="session" id="editSession" class="form-select" required>
-                                            <option value="">Select Session</option>
-                                            @foreach($sessions as $s)
-                                                <option value="{{ $s->id }}">{{ $s->session }}</option>
+                                        <label class="form-label required">Select Session</label>
+                                        <select name="session" id="edit-session" class="form-control" required>
+                                            <option value="" selected>Select Session</option>
+                                            @foreach ($sessions as $schoolsession)
+                                                <option value="{{ $schoolsession->id }}">{{ $schoolsession->session }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label required">Subject</label>
-                                    <select name="subject_id" id="editSubject" class="form-select" required>
-                                        <option value="">Select Subject</option>
-                                        @foreach($mysubjects as $sub)
-                                            <option value="{{ $sub->id }}"
-                                                data-termid="{{ $sub->termid }}"
-                                                data-sessionid="{{ $sub->sessionid }}"
-                                                data-class="{{ $sub->schoolclass }}"
-                                                data-arm="{{ $sub->arm }}">
-                                                {{ $sub->subject }} ({{ $sub->subjectcode }}) - {{ $sub->term }} {{ $sub->session }} - {{ $sub->schoolclass }} {{ $sub->arm ? '(' . $sub->arm . ')' : '' }}
+                                    <label class="form-label required">Select Subject</label>
+                                    <select name="subject_id" id="edit-subject_id" class="form-control" required>
+                                        <option value="" selected>Select Subject</option>
+                                        @foreach ($mysubjects as $subject)
+                                            <option value="{{ $subject->id }}"
+                                                data-termid="{{ $subject->termid }}"
+                                                data-sessionid="{{ $subject->sessionid }}"
+                                                data-class="{{ $subject->schoolclass }}"
+                                                data-arm="{{ $subject->arm }}">
+                                                {{ $subject->subject }} ({{ $subject->subjectcode }}) - {{ $subject->term }} {{ $subject->session }} - {{ $subject->schoolclass }} {{ $subject->arm ? '(' . $subject->arm . ')' : '' }}
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label required">Classes</label>
+                                    <label class="form-label required">Select Classes</label>
                                     <div id="editClassContainer" class="border rounded p-3 bg-light" style="max-height: 240px; overflow-y: auto;">
                                         <p class="text-muted text-center mb-0">Loading classes...</p>
                                     </div>
                                 </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="is_published" id="edit-publishStatus" value="1">
+                                        <label class="form-check-label" for="edit-publishStatus">Publish exam immediately</label>
+                                    </div>
+                                    <div class="text-muted fs-7 mt-1">If not checked, the exam will be saved as a draft.</div>
+                                </div>
+                                <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn btn-primary">Update</button>
+                                <button type="submit" class="btn btn-primary" id="update-btn">Update</button>
                             </div>
                         </form>
                     </div>
@@ -389,14 +354,39 @@
             </div>
             @endcan
 
+            <!-- Delete Confirmation Modal -->
+            @can('Delete exam')
+            <div id="deleteRecordModal" class="modal fade" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-body text-center">
+                            <h4>Are you sure?</h4>
+                            <p>You won't be able to revert this!</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-danger" id="delete-record">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endcan
         </div>
+        <!-- End Page-content -->
     </div>
 </div>
+
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
 /* Custom styles for dropdown filtering */
 option[data-termid][data-sessionid] {
     padding: 8px 12px;
+}
+
+option[style*="display: none"] {
+    display: none !important;
 }
 
 option:disabled {
@@ -405,178 +395,319 @@ option:disabled {
     color: #495057;
     padding: 10px 12px;
 }
-
-option:not(:disabled) {
-    border-bottom: 1px solid #f0f0f0;
-}
-
-option:last-child:not(:disabled) {
-    border-bottom: none;
-}
 </style>
 
 <script>
-// Utility function for debouncing
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Full JS for dynamic table + pagination
-document.addEventListener('DOMContentLoaded', () => {
-    const tableBody = document.getElementById('tableBody');
-    const paginationLinks = document.getElementById('paginationLinks');
-    const showingInfo = document.getElementById('showingInfo');
-    const totalBadge = document.getElementById('totalBadge');
+document.addEventListener('DOMContentLoaded', function() {
+    const tableBody = document.querySelector('#kt_exams_table tbody');
     const searchInput = document.querySelector('.search');
-
+    const checkAll = document.getElementById('checkAll');
+    const removeActions = document.getElementById('remove-actions');
+    const paginationItems = document.querySelectorAll('[data-url]');
     let currentPage = {{ $exams->currentPage() }};
     let searchTerm = '';
+    const baseUrl = '{{ route('exams.index') }}';
 
-    function loadTable(page = currentPage) {
-        currentPage = page;
-        const url = `{{ route('exams.index') }}?page=${page}&search=${encodeURIComponent(searchTerm)}`;
+    // CSRF Token setup
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
 
-        fetch(url, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    // Initialize
+    initEventListeners();
+    initModals();
+
+    // Handle checkboxes
+    checkAll.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('input[name="chk_child"]');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        toggleRemoveActions();
+    });
+
+    function toggleRemoveActions() {
+        const checkedBoxes = document.querySelectorAll('input[name="chk_child"]:checked');
+        removeActions.classList.toggle('d-none', checkedBoxes.length === 0);
+    }
+
+    // Search functionality
+    searchInput.addEventListener('input', debounce(function(e) {
+        searchTerm = e.target.value.trim();
+        loadData(1);
+    }, 500));
+
+    // Pagination
+    document.addEventListener('click', function(e) {
+        const prevBtn = e.target.closest('.pagination-prev');
+        const nextBtn = e.target.closest('.pagination-next');
+        const pageLink = e.target.closest('.page-link');
+
+        if (prevBtn && !prevBtn.classList.contains('disabled') && prevBtn.dataset.url) {
+            e.preventDefault();
+            const url = new URL(prevBtn.dataset.url, window.location.origin);
+            const page = url.searchParams.get('page') || 1;
+            loadData(page);
+        } else if (nextBtn && !nextBtn.classList.contains('disabled') && nextBtn.dataset.url) {
+            e.preventDefault();
+            const url = new URL(nextBtn.dataset.url, window.location.origin);
+            const page = url.searchParams.get('page') || 1;
+            loadData(page);
+        } else if (pageLink && pageLink.dataset.url) {
+            e.preventDefault();
+            const url = new URL(pageLink.dataset.url, window.location.origin);
+            const page = url.searchParams.get('page') || 1;
+            loadData(page);
+        }
+    });
+
+    // Load data function (AJAX)
+    function loadData(page = 1) {
+        const params = new URLSearchParams({
+            page: page,
+            search: searchTerm
+        });
+
+        fetch(`${baseUrl}?${params}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
         })
-        .then(res => res.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
-            // Update table body
-            tableBody.innerHTML = '';
-            let i = (data.current_page - 1) * data.per_page + 1;
-
-            if (!data.data.length) {
-                tableBody.innerHTML = '<tr><td colspan="11" class="text-center py-5">No exams found</td></tr>';
-            } else {
-                data.data.forEach(exam => {
-                    const classDisplay = exam.schoolclass
-                        ? `${exam.schoolclass.schoolclass}${exam.schoolclass.arm ? ' (' + exam.schoolclass.arm + ')' : ''}`
-                        : '—';
-
-                    const row = `
-                        <tr>
-                            <td><div class="form-check"><input class="form-check-input" type="checkbox" name="chkIds[]" value="${exam.id}"></div></td>
-                            <td>${i++}</td>
-                            <td>${exam.title}</td>
-                            <td>${exam.description ? exam.description.substring(0,50) + (exam.description.length > 50 ? '...' : '') : '—'}</td>
-                            <td>${exam.duration} mins</td>
-                            <td>${exam.formatted_start_time || '—'}</td>
-                            <td>${exam.formatted_end_time || '—'}</td>
-                            <td>${classDisplay}</td>
-                            <td><a href="/questions/${exam.id}" class="btn btn-sm btn-soft-primary">Questions</a></td>
-                            <td><a href="/exams/${exam.id}/students" class="btn btn-sm btn-soft-info">Students</a></td>
-                            <td>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-soft-secondary edit-btn" data-id="${exam.id}"><i class="ri-pencil-line"></i></button>
-                                    <button class="btn btn-sm btn-soft-danger remove-btn" data-id="${exam.id}"><i class="ri-delete-bin-line"></i></button>
-                                    <a href="/exams/${exam.id}/analytics" class="btn btn-sm btn-soft-success"><i class="ri-bar-chart-line-line"></i></a>
-                                </div>
-                            </td>
-                        </tr>`;
-                    tableBody.insertAdjacentHTML('beforeend', row);
-                });
-            }
-
-            // Update pagination
-            paginationLinks.innerHTML = '';
-            const prev = document.createElement('li');
-            prev.className = `page-item ${data.current_page === 1 ? 'disabled' : ''}`;
-            prev.innerHTML = `<a class="page-link" href="#" ${data.current_page === 1 ? '' : `onclick="loadTable(${data.current_page - 1}); return false;"`}>«</a>`;
-            paginationLinks.appendChild(prev);
-
-            for (let p = 1; p <= data.last_page; p++) {
-                const li = document.createElement('li');
-                li.className = `page-item ${data.current_page === p ? 'active' : ''}`;
-                li.innerHTML = `<a class="page-link" href="#" onclick="loadTable(${p}); return false;">${p}</a>`;
-                paginationLinks.appendChild(li);
-            }
-
-            const next = document.createElement('li');
-            next.className = `page-item ${data.current_page === data.last_page ? 'disabled' : ''}`;
-            next.innerHTML = `<a class="page-link" href="#" ${data.current_page === data.last_page ? '' : `onclick="loadTable(${data.current_page + 1}); return false;"`}>»</a>`;
-            paginationLinks.appendChild(next);
-
-            // Update info
-            showingInfo.textContent = `Showing ${data.from || 0} to ${data.to || 0} of ${data.total} results`;
-            totalBadge.textContent = data.total;
-
-            // Re-attach event listeners for edit and delete buttons
-            attachEventListeners();
+            updateTable(data);
+            updatePagination(data);
+            currentPage = data.current_page;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showSweetAlert('error', 'Error', 'Failed to load data. Please try again.');
         });
     }
 
-    // Search
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce(() => {
-            searchTerm = searchInput.value.trim();
-            loadTable(1);
-        }, 400));
-    }
+    function updateTable(data) {
+        const tbody = document.querySelector('tbody');
+        tbody.innerHTML = '';
 
-    // Initial load
-    loadTable(currentPage);
-});
-
-// Function to filter subjects in dropdown
-function filterSubjects(termId, sessionId, subjectSelect) {
-    const allOptions = subjectSelect.querySelectorAll('option');
-
-    allOptions.forEach(option => {
-        if (option.value === '') {
-            option.style.display = '';
+        if (data.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="noresult text-center py-4 text-muted">No exams found</td></tr>';
             return;
         }
 
-        const optionTermId = option.getAttribute('data-termid');
-        const optionSessionId = option.getAttribute('data-sessionid');
+        let i = (data.current_page - 1) * data.per_page + 1;
 
-        // Show option if it matches both selected term and session (if provided)
-        const showOption = (!termId || optionTermId == termId) &&
-                          (!sessionId || optionSessionId == sessionId);
+        data.data.forEach(exam => {
+            if (!exam.id) return;
 
-        option.style.display = showOption ? '' : 'none';
-        option.disabled = !showOption;
-    });
+            const description = exam.description ?
+                (exam.description.length > 50 ? exam.description.substring(0, 50) + '...' : exam.description) : '';
 
-    // Reset selection if current selection is hidden
-    if (subjectSelect.value && subjectSelect.selectedOptions[0].style.display === 'none') {
-        subjectSelect.value = '';
-        if (subjectSelect.id === 'addSubject') {
-            document.getElementById('addClassContainer').innerHTML =
-                '<p class="text-muted text-center mb-0">Select a subject first...</p>';
-        } else if (subjectSelect.id === 'editSubject') {
-            document.getElementById('editClassContainer').innerHTML =
+            const formattedStartTime = exam.formatted_start_time || formatDateTime(exam.start_time);
+            const formattedEndTime = exam.formatted_end_time || formatDateTime(exam.end_time);
+
+            const row = `
+                <tr data-url="/exams/${exam.id}">
+                    <td class="id" data-id="${exam.id}">
+                        <div class="form-check form-check-sm form-check-custom form-check-solid">
+                            <input class="form-check-input" type="checkbox" name="chk_child" />
+                        </div>
+                    </td>
+                    <td class="sn">${i++}</td>
+                    <td class="title">${escapeHtml(exam.title)}</td>
+                    <td class="description">${escapeHtml(description)}</td>
+                    <td class="duration">${exam.duration} mins</td>
+                    <td class="start_time">${formattedStartTime}</td>
+                    <td class="end_time">${formattedEndTime}</td>
+                    <td class="questions">
+                        <a href="/questions/${exam.id}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
+                    </td>
+                    <td>
+                        <a href="/exams/${exam.id}/students" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
+                    </td>
+                    <td>
+                        <ul class="d-flex gap-2 list-unstyled mb-0">
+                            <li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${exam.id}"><i class="ph-pencil"></i></a></li>
+                            <li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-url="/exams/${exam.id}"><i class="ph-trash"></i></a></li>
+                        </ul>
+                    </td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+
+        // Re-attach event listeners
+        attachTableEventListeners();
+    }
+
+    function formatDateTime(dateTimeString) {
+        if (!dateTimeString) return '';
+        const date = new Date(dateTimeString);
+        return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function updatePagination(data) {
+        const showingFirst = document.querySelector('#pagination-element .fw-semibold:nth-of-type(1)');
+        const showingLast = document.querySelector('#pagination-element .fw-semibold:nth-of-type(2)');
+        const totalSpan = document.querySelector('#pagination-element .fw-semibold:nth-of-type(3)');
+        const badge = document.querySelector('.badge');
+        const prev = document.querySelector('.pagination-prev');
+        const next = document.querySelector('.pagination-next');
+
+        showingFirst.textContent = data.from || 0;
+        showingLast.textContent = data.to || 0;
+        totalSpan.textContent = data.total;
+        badge.textContent = data.total;
+
+        prev.classList.toggle('disabled', data.current_page === 1);
+        prev.dataset.url = data.prev_page_url || '';
+        next.classList.toggle('disabled', !data.next_page_url);
+        next.dataset.url = data.next_page_url || '';
+
+        // Update page links
+        const paginationUl = document.querySelector('.listjs-pagination');
+        paginationUl.innerHTML = '';
+
+        // Create page links
+        let startPage = Math.max(1, data.current_page - 2);
+        let endPage = Math.min(data.last_page, startPage + 4);
+
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const params = new URLSearchParams({
+                page: i,
+                search: searchTerm
+            });
+            const fullUrl = `${baseUrl}?${params}`;
+            const li = document.createElement('li');
+            li.className = `page-item ${i === data.current_page ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="javascript:void(0);" data-url="${fullUrl}">${i}</a>`;
+            paginationUl.appendChild(li);
+        }
+    }
+
+    // Initialize modal event listeners
+    function initModals() {
+        // Add modal filtering
+        const addTerm = document.getElementById('addTerm');
+        const addSession = document.getElementById('addSession');
+        const addSubject = document.getElementById('addSubject');
+
+        if (addTerm && addSession && addSubject) {
+            addTerm.addEventListener('change', function() {
+                filterSubjects(this.value, addSession.value, addSubject);
+            });
+
+            addSession.addEventListener('change', function() {
+                filterSubjects(addTerm.value, this.value, addSubject);
+            });
+
+            // Initialize filtering
+            filterSubjects('', '', addSubject);
+        }
+
+        // Edit modal filtering
+        const editTerm = document.getElementById('edit-termid');
+        const editSession = document.getElementById('edit-session');
+        const editSubject = document.getElementById('edit-subject_id');
+
+        if (editTerm && editSession && editSubject) {
+            editTerm.addEventListener('change', function() {
+                filterSubjects(this.value, editSession.value, editSubject);
+            });
+
+            editSession.addEventListener('change', function() {
+                filterSubjects(editTerm.value, this.value, editSubject);
+            });
+        }
+
+        // Subject change listeners
+        if (addSubject) {
+            addSubject.addEventListener('change', function() {
+                if (this.value) {
+                    loadClassesForSubject(this.value, 'add');
+                } else {
+                    document.getElementById('addClassContainer').innerHTML =
+                        '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+                }
+            });
+        }
+
+        if (editSubject) {
+            editSubject.addEventListener('change', function() {
+                if (this.value) {
+                    loadClassesForSubject(this.value, 'edit');
+                } else {
+                    document.getElementById('editClassContainer').innerHTML =
+                        '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+                }
+            });
+        }
+    }
+
+    // Function to filter subjects in dropdown
+    function filterSubjects(termId, sessionId, subjectSelect) {
+        const allOptions = subjectSelect.querySelectorAll('option');
+
+        allOptions.forEach(option => {
+            if (option.value === '') {
+                option.style.display = '';
+                return;
+            }
+
+            const optionTermId = option.getAttribute('data-termid');
+            const optionSessionId = option.getAttribute('data-sessionid');
+
+            // Show option if it matches both selected term and session (if provided)
+            const showOption = (!termId || optionTermId == termId) &&
+                              (!sessionId || optionSessionId == sessionId);
+
+            option.style.display = showOption ? '' : 'none';
+            option.disabled = !showOption;
+        });
+
+        // Reset selection if current selection is hidden
+        if (subjectSelect.value && subjectSelect.selectedOptions[0].style.display === 'none') {
+            subjectSelect.value = '';
+            const containerId = subjectSelect.id === 'addSubject' ? 'addClassContainer' : 'editClassContainer';
+            document.getElementById(containerId).innerHTML =
                 '<p class="text-muted text-center mb-0">Select a subject first...</p>';
         }
     }
-}
 
-// Function to load classes for a subject
-function loadClassesForSubject(subjectTeacherId, mode = 'add') {
-    const containerId = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
-    const container = document.getElementById(containerId);
+    // Function to load classes for a subject
+    function loadClassesForSubject(subjectTeacherId, mode = 'add') {
+        const containerId = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
+        const container = document.getElementById(containerId);
 
-    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
+        container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
 
-    fetch(`/exams/subject-classes/${subjectTeacherId}`)
-        .then(res => {
-            if (!res.ok) throw new Error('Network response was not ok');
-            return res.json();
+        fetch(`/exams/subject-classes/${subjectTeacherId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
         })
         .then(data => {
             if (data.success && data.classes.length > 0) {
                 let html = '<div class="row">';
 
                 data.classes.forEach(cls => {
-                    const isChecked = mode === 'edit' && data.selectedClasses && data.selectedClasses.includes(cls.id);
+                    const isChecked = mode === 'edit' && data.selectedClasses && data.selectedClasses.includes(parseInt(cls.id));
                     html += `
                         <div class="col-md-6 mb-2">
                             <div class="form-check">
@@ -586,7 +717,7 @@ function loadClassesForSubject(subjectTeacherId, mode = 'add') {
                                        id="class_${mode}_${cls.id}"
                                        ${isChecked ? 'checked' : ''}>
                                 <label class="form-check-label" for="class_${mode}_${cls.id}">
-                                    ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
+                                    ${escapeHtml(cls.schoolclass)} ${cls.arm ? '(' + escapeHtml(cls.arm) + ')' : ''}
                                 </label>
                             </div>
                         </div>`;
@@ -602,100 +733,140 @@ function loadClassesForSubject(subjectTeacherId, mode = 'add') {
             console.error('Error loading classes:', error);
             container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
         });
-}
+    }
 
-// Attach event listeners to edit and delete buttons
-function attachEventListeners() {
-    // Edit buttons
-    document.querySelectorAll('.edit-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const examId = this.getAttribute('data-id');
+    // Initialize event listeners
+    function initEventListeners() {
+        attachTableEventListeners();
 
-            fetch(`/exams/${examId}/edit`)
-                .then(res => {
-                    if (!res.ok) throw new Error('Network response was not ok');
-                    return res.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Populate form
-                        document.getElementById('editExamId').value = examId;
-                        document.getElementById('editTitle').value = data.exam.title;
-                        document.getElementById('editDescription').value = data.exam.description || '';
-                        document.getElementById('editDuration').value = data.exam.duration;
+        // Add form submission
+        const addForm = document.getElementById('add-exam-form');
+        if (addForm) {
+            addForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                handleFormSubmit(this, '{{ route('exams.store') }}', 'POST', 'add');
+            });
+        }
 
-                        // Format datetime for input fields
-                        const startTime = new Date(data.exam.start_time);
-                        const endTime = new Date(data.exam.end_time);
+        // Edit form submission
+        const editForm = document.getElementById('edit-exam-form');
+        if (editForm) {
+            editForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const id = document.getElementById('edit-id-field').value;
+                if (!id) return;
+                handleFormSubmit(this, `/exams/${id}`, 'PUT', 'edit');
+            });
+        }
 
-                        document.getElementById('editStartTime').value = startTime.toISOString().slice(0, 16);
-                        document.getElementById('editEndTime').value = endTime.toISOString().slice(0, 16);
-
-                        document.getElementById('editTerm').value = data.exam.termid;
-                        document.getElementById('editSession').value = data.exam.session;
-                        document.getElementById('editPublish').checked = data.exam.is_published;
-
-                        // Set subject value and filter
-                        const subjectSelect = document.getElementById('editSubject');
-                        subjectSelect.value = data.subject_id;
-
-                        // Apply filtering based on selected term and session
-                        filterSubjects(data.exam.termid, data.exam.session, subjectSelect);
-
-                        // Load classes for this subject
-                        loadClassesForSubjectEdit(data.subject_id, data.schoolclass_ids);
-
-                        // Show modal
-                        const editModal = new bootstrap.Modal(document.getElementById('editExamModal'));
-                        editModal.show();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading exam data:', error);
-                    alert('Error loading exam data. Please try again.');
-                });
-        });
-    });
-
-    // Delete buttons
-    document.querySelectorAll('.remove-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const examId = this.getAttribute('data-id');
-
-            if (confirm('Are you sure you want to delete this exam?')) {
-                fetch(`/exams/${examId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        alert(data.message);
-                        window.location.reload();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error deleting exam:', error);
-                    alert('Error deleting exam. Please try again.');
-                });
+        // Single delete
+        document.getElementById('delete-record')?.addEventListener('click', function() {
+            const urlToDelete = this.dataset.url;
+            if (urlToDelete) {
+                deleteItem(urlToDelete, false);
             }
         });
-    });
-}
+    }
 
-// Special function for edit modal to load classes with selected ones
-function loadClassesForSubjectEdit(subjectTeacherId, selectedClassIds = []) {
-    const container = document.getElementById('editClassContainer');
+    // Attach table event listeners
+    function attachTableEventListeners() {
+        // Checkbox changes in table body
+        tableBody.addEventListener('change', function(e) {
+            if (e.target.name === 'chk_child') {
+                toggleRemoveActions();
+            }
+        });
 
-    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
+        // Edit buttons
+        document.querySelectorAll('.edit-item-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.dataset.id;
+                if (!id) return;
+                loadExamForEdit(id);
+            });
+        });
 
-    fetch(`/exams/subject-classes/${subjectTeacherId}`)
-        .then(res => {
-            if (!res.ok) throw new Error('Network response was not ok');
-            return res.json();
+        // Delete buttons
+        document.querySelectorAll('.remove-item-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const url = this.dataset.url;
+                if (!url) return;
+                showDeleteConfirmation(url, false);
+            });
+        });
+    }
+
+    // Load exam data for editing
+    function loadExamForEdit(id) {
+        fetch(`/exams/${id}/edit`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                populateEditForm(data);
+                const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                editModal.show();
+            } else {
+                showSweetAlert('error', 'Error', 'Failed to load exam data.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showSweetAlert('error', 'Error', 'Failed to load exam data.');
+        });
+    }
+
+    function populateEditForm(data) {
+        const exam = data.exam;
+
+        document.getElementById('edit-id-field').value = exam.id;
+        document.getElementById('edit-title').value = exam.title;
+        document.getElementById('edit-description').value = exam.description || '';
+        document.getElementById('edit-duration').value = exam.duration;
+
+        // Format datetime for input fields
+        const startTime = new Date(exam.start_time);
+        const endTime = new Date(exam.end_time);
+
+        document.getElementById('edit-start_time').value = startTime.toISOString().slice(0, 16);
+        document.getElementById('edit-end_time').value = endTime.toISOString().slice(0, 16);
+
+        document.getElementById('edit-termid').value = exam.termid;
+        document.getElementById('edit-session').value = exam.session;
+        document.getElementById('edit-publishStatus').checked = exam.is_published == 1;
+
+        // Set subject value
+        const subjectSelect = document.getElementById('edit-subject_id');
+        subjectSelect.value = exam.subject_id;
+
+        // Apply filtering based on selected term and session
+        filterSubjects(exam.termid, exam.session, subjectSelect);
+
+        // Load classes for this subject
+        loadClassesForEdit(exam.subject_id, data.schoolclass_ids || []);
+    }
+
+    function loadClassesForEdit(subjectTeacherId, selectedClassIds = []) {
+        const container = document.getElementById('editClassContainer');
+
+        container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
+
+        fetch(`/exams/subject-classes/${subjectTeacherId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
         })
         .then(data => {
             if (data.success && data.classes.length > 0) {
@@ -712,7 +883,7 @@ function loadClassesForSubjectEdit(subjectTeacherId, selectedClassIds = []) {
                                        id="class_edit_${cls.id}"
                                        ${isChecked ? 'checked' : ''}>
                                 <label class="form-check-label" for="class_edit_${cls.id}">
-                                    ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
+                                    ${escapeHtml(cls.schoolclass)} ${cls.arm ? '(' + escapeHtml(cls.arm) + ')' : ''}
                                 </label>
                             </div>
                         </div>`;
@@ -728,181 +899,210 @@ function loadClassesForSubjectEdit(subjectTeacherId, selectedClassIds = []) {
             console.error('Error loading classes:', error);
             container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
         });
-}
-
-// Initialize event listeners for modals when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Add modal filtering
-    const addTerm = document.getElementById('addTerm');
-    const addSession = document.getElementById('addSession');
-    const addSubject = document.getElementById('addSubject');
-
-    if (addTerm && addSession && addSubject) {
-        addTerm.addEventListener('change', function() {
-            filterSubjects(this.value, addSession.value, addSubject);
-        });
-
-        addSession.addEventListener('change', function() {
-            filterSubjects(addTerm.value, this.value, addSubject);
-        });
-
-        // Initialize filtering
-        filterSubjects('', '', addSubject);
     }
 
-    // Edit modal filtering
-    const editTerm = document.getElementById('editTerm');
-    const editSession = document.getElementById('editSession');
-    const editSubject = document.getElementById('editSubject');
+    // Handle form submission
+    function handleFormSubmit(form, url, method, type) {
+        const submitBtn = form.querySelector(type === 'add' ? '#add-btn' : '#update-btn');
+        const originalText = submitBtn.textContent;
+        const formData = new FormData(form);
 
-    if (editTerm && editSession && editSubject) {
-        editTerm.addEventListener('change', function() {
-            filterSubjects(this.value, editSession.value, editSubject);
-        });
+        if (method === 'PUT') {
+            formData.append('_method', 'PUT');
+        }
 
-        editSession.addEventListener('change', function() {
-            filterSubjects(editTerm.value, this.value, editSubject);
-        });
-    }
+        // Validate class selection
+        const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
+        if (classCheckboxes.length === 0) {
+            showSweetAlert('error', 'Error', 'Please select at least one class.');
+            return;
+        }
 
-    // Subject change listeners
-    if (addSubject) {
-        addSubject.addEventListener('change', function() {
-            if (this.value) {
-                loadClassesForSubject(this.value, 'add');
-            } else {
-                document.getElementById('addClassContainer').innerHTML =
-                    '<p class="text-muted text-center mb-0">Select a subject first...</p>';
-            }
-        });
-    }
+        submitBtn.textContent = 'Processing...';
+        submitBtn.disabled = true;
 
-    if (editSubject) {
-        editSubject.addEventListener('change', function() {
-            if (this.value) {
-                loadClassesForSubject(this.value, 'edit');
-            } else {
-                document.getElementById('editClassContainer').innerHTML =
-                    '<p class="text-muted text-center mb-0">Select a subject first...</p>';
-            }
-        });
-    }
-
-    // Form submissions
-    const addExamForm = document.getElementById('addExamForm');
-    if (addExamForm) {
-        addExamForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const formData = new FormData(this);
-
-            fetch('{{ route("exams.store") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    window.location.reload();
-                } else {
-                    alert('Error creating exam. Please check your inputs.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error creating exam. Please try again.');
-            });
-        });
-    }
-
-    const editExamForm = document.getElementById('editExamForm');
-    if (editExamForm) {
-        editExamForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const examId = document.getElementById('editExamId').value;
-            const formData = new FormData(this);
-
-            fetch(`/exams/${examId}`, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'X-HTTP-Method-Override': 'PUT'
-                }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    window.location.reload();
-                } else {
-                    alert('Error updating exam. Please check your inputs.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error updating exam. Please try again.');
-            });
-        });
-    }
-
-    // Check all functionality
-    const checkAll = document.getElementById('checkAll');
-    if (checkAll) {
-        checkAll.addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('input[name="chkIds[]"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
-
-            const removeActions = document.getElementById('remove-actions');
-            if (removeActions) {
-                removeActions.classList.toggle('d-none', !this.checked);
-            }
-        });
-    }
-});
-
-// Bulk delete function
-function deleteMultiple() {
-    const selectedIds = Array.from(document.querySelectorAll('input[name="chkIds[]"]:checked'))
-        .map(checkbox => checkbox.value);
-
-    if (selectedIds.length === 0) {
-        alert('Please select at least one exam to delete.');
-        return;
-    }
-
-    if (confirm(`Are you sure you want to delete ${selectedIds.length} selected exam(s)?`)) {
-        fetch('{{ route("exams.bulk-destroy") }}', {
-            method: 'DELETE',
+        fetch(url, {
+            method: 'POST',
+            body: formData,
             headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ ids: selectedIds })
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         })
-        .then(res => res.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(JSON.stringify(err));
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                alert(data.message);
-                window.location.reload();
+                const modalId = type === 'add' ? 'addExamModal' : 'editModal';
+                const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+                if (modal) modal.hide();
+
+                showSweetAlert('success', 'Success', data.message);
+                form.reset();
+
+                // Clear class container
+                if (type === 'add') {
+                    document.getElementById('addClassContainer').innerHTML =
+                        '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+                }
+
+                // Reload data after a short delay
+                setTimeout(() => loadData(currentPage), 1000);
             } else {
-                alert(data.message || 'Error deleting exams.');
+                showFormErrors(form, data.errors || {});
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error deleting exams. Please try again.');
+            try {
+                const errData = JSON.parse(error.message);
+                showFormErrors(form, errData.errors || {});
+            } catch (e) {
+                showSweetAlert('error', 'Error', 'An error occurred. Please try again.');
+            }
+        })
+        .finally(() => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
         });
     }
-}
+
+    // Show delete confirmation
+    function showDeleteConfirmation(url, isMultiple = false) {
+        const title = isMultiple ? 'Delete Selected Exams' : 'Delete Exam';
+        const text = isMultiple ?
+            'Are you sure you want to delete the selected exams?' :
+            'Are you sure you want to delete this exam? This action cannot be undone.';
+
+        Swal.fire({
+            title: title,
+            text: text,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                deleteItem(url, isMultiple);
+            }
+        });
+    }
+
+    // Delete item
+    function deleteItem(url, isMultiple = false) {
+        const ids = isMultiple ?
+            Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
+                .map(cb => cb.closest('td').dataset.id)
+                .filter(id => id) :
+            null;
+
+        const deleteUrl = isMultiple ? '/exams/bulk-destroy' : url;
+        const deleteData = isMultiple ? { ids: ids } : null;
+
+        fetch(deleteUrl, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: isMultiple ? JSON.stringify(deleteData) : null
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showSweetAlert('success', 'Success', data.message);
+
+                // Reset checkboxes
+                checkAll.checked = false;
+                document.querySelectorAll('input[name="chk_child"]').forEach(cb => cb.checked = false);
+                toggleRemoveActions();
+
+                // Reload data
+                loadData(currentPage);
+
+                // Close delete modal if open
+                const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteRecordModal'));
+                if (deleteModal) deleteModal.hide();
+            } else {
+                showSweetAlert('error', 'Error', data.message || 'Failed to delete.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showSweetAlert('error', 'Error', 'Failed to delete. Please try again.');
+        });
+    }
+
+    // Bulk delete
+    window.deleteMultiple = function() {
+        const checkedBoxes = document.querySelectorAll('input[name="chk_child"]:checked');
+        if (checkedBoxes.length === 0) {
+            showSweetAlert('warning', 'No Selection', 'Please select at least one exam to delete.');
+            return;
+        }
+
+        showDeleteConfirmation(null, true);
+    };
+
+    // Helper functions
+    function showFormErrors(form, errors) {
+        const errorContainer = form.querySelector('.alert');
+        if (errorContainer) {
+            errorContainer.classList.remove('d-none');
+            errorContainer.innerHTML = Object.values(errors).flat().join('<br>');
+        }
+    }
+
+    function showSweetAlert(icon, title, text) {
+        Swal.fire({
+            icon: icon,
+            title: title,
+            text: text,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
+        });
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
 </script>
 
 @endsection
