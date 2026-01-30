@@ -235,7 +235,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label required">Term</label>
-                                        <select name="termid" class="form-select" required>
+                                        <select name="termid" id="addTerm" class="form-select" required>
                                             <option value="">Select Term</option>
                                             @foreach($terms as $term)
                                                 <option value="{{ $term->id }}">{{ $term->term }}</option>
@@ -244,7 +244,7 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label required">Session</label>
-                                        <select name="session" class="form-select" required>
+                                        <select name="session" id="addSession" class="form-select" required>
                                             <option value="">Select Session</option>
                                             @foreach($session as $s)
                                                 <option value="{{ $s->id }}">{{ $s->session }}</option>
@@ -258,7 +258,11 @@
                                     <select name="subject_id" id="addSubject" class="form-select" required>
                                         <option value="">Select Subject</option>
                                         @foreach($mysubjects as $sub)
-                                            <option value="{{ $sub->id }}">{{ $sub->subject }} ({{ $sub->subjectcode }})</option>
+                                            <option value="{{ $sub->id }}"
+                                                    data-term="{{ $sub->term_id }}"
+                                                    data-session="{{ $sub->session_id }}">
+                                                {{ $sub->subject }} ({{ $sub->subjectcode }}) {{ $sub->term_name }}-{{ $sub->session_name }} {{ $sub->class_name }}{{ $sub->arm_name ? ' - ' . $sub->arm_name : '' }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -355,7 +359,11 @@
                                     <select name="subject_id" id="editSubject" class="form-select" required>
                                         <option value="">Select Subject</option>
                                         @foreach($mysubjects as $sub)
-                                            <option value="{{ $sub->id }}">{{ $sub->subject }} ({{ $sub->subjectcode }})</option>
+                                            <option value="{{ $sub->id }}"
+                                                    data-term="{{ $sub->term_id }}"
+                                                    data-session="{{ $sub->session_id }}">
+                                                {{ $sub->subject }} ({{ $sub->subjectcode }}) {{ $sub->term_name }}-{{ $sub->session_name }} {{ $sub->class_name }}{{ $sub->arm_name ? ' - ' . $sub->arm_name : '' }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -382,6 +390,19 @@
 </div>
 
 <script>
+// Debounce function for search
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Full JS for dynamic table + pagination
 document.addEventListener('DOMContentLoaded', () => {
     const tableBody = document.getElementById('tableBody');
@@ -424,13 +445,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td>${exam.formatted_start_time || '—'}</td>
                             <td>${exam.formatted_end_time || '—'}</td>
                             <td>${classDisplay}</td>
-                            <td><a href="/questions/${exam.id}" class="btn btn-sm btn-soft-primary">Questions</a></td>
-                            <td><a href="/exams/${exam.id}/students" class="btn btn-sm btn-soft-info">Students</a></td>
+                            <td><a href="/questions?exam=${exam.id}" class="btn btn-sm btn-soft-primary">Questions</a></td>
+                            <td><a href="{{ route('exams.students', '') }}/${exam.id}" class="btn btn-sm btn-soft-info">Students</a></td>
                             <td>
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm btn-soft-secondary edit-btn" data-id="${exam.id}"><i class="ri-pencil-line"></i></button>
                                     <button class="btn btn-sm btn-soft-danger remove-btn" data-id="${exam.id}"><i class="ri-delete-bin-line"></i></button>
-                                    <a href="/exams/${exam.id}/analytics" class="btn btn-sm btn-soft-success"><i class="ri-bar-chart-line-line"></i></a>
+                                    <a href="{{ route('exams.analytics', '') }}/${exam.id}" class="btn btn-sm btn-soft-success"><i class="ri-bar-chart-line-line"></i></a>
                                 </div>
                             </td>
                         </tr>`;
@@ -473,6 +494,404 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial load
     loadTable(currentPage);
+});
+
+// Dynamic filtering for subjects
+document.addEventListener('DOMContentLoaded', function() {
+    // CSRF token for AJAX requests
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    // Elements for Add Modal
+    const addTermSelect = document.querySelector('#addExamModal select[name="termid"]');
+    const addSessionSelect = document.querySelector('#addExamModal select[name="session"]');
+    const addSubjectSelect = document.getElementById('addSubject');
+    const addClassContainer = document.getElementById('addClassContainer');
+
+    // Elements for Edit Modal
+    const editTermSelect = document.querySelector('#editExamModal select[name="termid"]');
+    const editSessionSelect = document.querySelector('#editExamModal select[name="session"]');
+    const editSubjectSelect = document.getElementById('editSubject');
+    const editClassContainer = document.getElementById('editClassContainer');
+
+    // Function to load subjects based on filters
+    function loadSubjects(termId, sessionId, targetSelect, callback = null) {
+        const url = new URL('{{ route("exams.index") }}/get-subjects', window.location.origin);
+        if (termId) url.searchParams.append('term_id', termId);
+        if (sessionId) url.searchParams.append('session_id', sessionId);
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                // Clear existing options except the first one
+                while (targetSelect.options.length > 1) {
+                    targetSelect.remove(1);
+                }
+
+                // Add new options
+                if (Array.isArray(data)) {
+                    data.forEach(subject => {
+                        const option = new Option(subject.display_name, subject.id);
+                        option.setAttribute('data-term', subject.term_id);
+                        option.setAttribute('data-session', subject.session_id);
+                        targetSelect.add(option);
+                    });
+                }
+
+                if (callback) callback();
+            })
+            .catch(error => console.error('Error loading subjects:', error));
+    }
+
+    // Function to load classes for selected subject
+    function loadClasses(subjectId, container, selectedClasses = []) {
+        if (!subjectId) {
+            container.innerHTML = '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+            return;
+        }
+
+        fetch(`{{ route("exams.subject-classes", "") }}/${subjectId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(classes => {
+                let html = '';
+                if (Array.isArray(classes) && classes.length > 0) {
+                    classes.forEach(cls => {
+                        const isChecked = selectedClasses.includes(cls.id.toString());
+                        html += `
+                            <div class="form-check mb-2">
+                                <input class="form-check-input class-checkbox" type="checkbox"
+                                       name="schoolclass_ids[]" value="${cls.id}"
+                                       id="class_${cls.id}" ${isChecked ? 'checked' : ''}>
+                                <label class="form-check-label" for="class_${cls.id}">
+                                    ${cls.schoolclass}${cls.arm ? ' - ' + cls.arm : ''}
+                                </label>
+                            </div>`;
+                    });
+                } else {
+                    html = '<p class="text-muted text-center mb-0">No classes available for this subject</p>';
+                }
+
+                container.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error loading classes:', error);
+                container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes</p>';
+            });
+    }
+
+    // Add modal event listeners
+    if (addTermSelect && addSessionSelect && addSubjectSelect) {
+        // Filter subjects when term or session changes
+        [addTermSelect, addSessionSelect].forEach(select => {
+            select.addEventListener('change', function() {
+                const termId = addTermSelect.value;
+                const sessionId = addSessionSelect.value;
+
+                if (termId && sessionId) {
+                    loadSubjects(termId, sessionId, addSubjectSelect, function() {
+                        // Clear class container when subject list changes
+                        addClassContainer.innerHTML = '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+                        addSubjectSelect.value = '';
+                    });
+                }
+            });
+        });
+
+        // Load classes when subject changes
+        addSubjectSelect.addEventListener('change', function() {
+            const subjectId = this.value;
+            loadClasses(subjectId, addClassContainer);
+        });
+    }
+
+    // Edit modal event listeners
+    if (editTermSelect && editSessionSelect && editSubjectSelect) {
+        // Filter subjects when term or session changes
+        [editTermSelect, editSessionSelect].forEach(select => {
+            select.addEventListener('change', function() {
+                const termId = editTermSelect.value;
+                const sessionId = editSessionSelect.value;
+
+                if (termId && sessionId) {
+                    loadSubjects(termId, sessionId, editSubjectSelect, function() {
+                        // Clear class container when subject list changes
+                        editClassContainer.innerHTML = '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+                        editSubjectSelect.value = '';
+                    });
+                }
+            });
+        });
+
+        // Load classes when subject changes
+        editSubjectSelect.addEventListener('change', function() {
+            const subjectId = this.value;
+            loadClasses(subjectId, editClassContainer);
+        });
+    }
+
+    // Edit button click handler
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-btn')) {
+            const btn = e.target.closest('.edit-btn');
+            const examId = btn.dataset.id;
+
+            fetch(`{{ route("exams.index") }}/${examId}/edit`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const exam = data.exam;
+
+                        // Populate edit form
+                        document.getElementById('editExamId').value = exam.id;
+                        document.getElementById('editTitle').value = exam.title;
+                        document.getElementById('editDescription').value = exam.description || '';
+                        document.getElementById('editDuration').value = exam.duration;
+
+                        // Format dates for datetime-local input
+                        const startTime = new Date(exam.start_time);
+                        const endTime = new Date(exam.end_time);
+
+                        document.getElementById('editStartTime').value = startTime.toISOString().slice(0, 16);
+                        document.getElementById('editEndTime').value = endTime.toISOString().slice(0, 16);
+
+                        document.getElementById('editTerm').value = exam.termid;
+                        document.getElementById('editSession').value = exam.session;
+                        document.getElementById('editPublish').checked = exam.is_published;
+
+                        // Set subject first, then load its classes
+                        loadSubjects(exam.termid, exam.session, editSubjectSelect, function() {
+                            document.getElementById('editSubject').value = exam.subject_id;
+
+                            // Now load classes for this subject with pre-selected classes
+                            loadClasses(exam.subject_id, editClassContainer, data.schoolclass_ids);
+                        });
+
+                        // Show modal
+                        const editModal = new bootstrap.Modal(document.getElementById('editExamModal'));
+                        editModal.show();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading exam:', error);
+                    alert('Error loading exam data');
+                });
+        }
+    });
+
+    // Form submission handlers
+    const addExamForm = document.getElementById('addExamForm');
+    const editExamForm = document.getElementById('editExamForm');
+
+    if (addExamForm) {
+        addExamForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            // Get selected classes
+            const classCheckboxes = addClassContainer.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
+            if (classCheckboxes.length === 0) {
+                alert('Please select at least one class');
+                return;
+            }
+
+            // Add selected classes to form data
+            classCheckboxes.forEach(checkbox => {
+                formData.append('schoolclass_ids[]', checkbox.value);
+            });
+
+            fetch('{{ route("exams.store") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while creating the exam');
+            });
+        });
+    }
+
+    if (editExamForm) {
+        editExamForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const examId = document.getElementById('editExamId').value;
+            const formData = new FormData(this);
+
+            // Get selected classes
+            const classCheckboxes = editClassContainer.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
+            if (classCheckboxes.length === 0) {
+                alert('Please select at least one class');
+                return;
+            }
+
+            // Add selected classes to form data
+            classCheckboxes.forEach(checkbox => {
+                formData.append('schoolclass_ids[]', checkbox.value);
+            });
+
+            fetch(`{{ route("exams.index") }}/${examId}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'X-HTTP-Method-Override': 'PUT'
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the exam');
+            });
+        });
+    }
+
+    // Delete button handler
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-btn')) {
+            const btn = e.target.closest('.remove-btn');
+            const examId = btn.dataset.id;
+
+            if (confirm('Are you sure you want to delete this exam?')) {
+                fetch(`{{ route("exams.index") }}/${examId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the exam');
+                });
+            }
+        }
+    });
+
+    // Bulk delete
+    window.deleteMultiple = function() {
+        const checkboxes = document.querySelectorAll('input[name="chkIds[]"]:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.value);
+
+        if (ids.length === 0) {
+            alert('Please select at least one exam to delete');
+            return;
+        }
+
+        if (confirm(`Are you sure you want to delete ${ids.length} selected exam(s)?`)) {
+            fetch('{{ route("exams.bulk-destroy") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ ids: ids })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting exams');
+            });
+        }
+    };
+
+    // Check all functionality
+    const checkAll = document.getElementById('checkAll');
+    if (checkAll) {
+        checkAll.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('input[name="chkIds[]"]');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+
+            // Show/hide bulk delete button
+            const removeActionsBtn = document.getElementById('remove-actions');
+            if (removeActionsBtn) {
+                if (this.checked && checkboxes.length > 0) {
+                    removeActionsBtn.classList.remove('d-none');
+                } else {
+                    removeActionsBtn.classList.add('d-none');
+                }
+            }
+        });
+    }
+
+    // Individual checkbox change
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('input[name="chkIds[]"]')) {
+            const checkboxes = document.querySelectorAll('input[name="chkIds[]"]');
+            const checkedCount = document.querySelectorAll('input[name="chkIds[]"]:checked').length;
+            const checkAll = document.getElementById('checkAll');
+            const removeActionsBtn = document.getElementById('remove-actions');
+
+            if (checkAll) {
+                checkAll.checked = checkedCount === checkboxes.length;
+                checkAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+            }
+
+            if (removeActionsBtn) {
+                if (checkedCount > 0) {
+                    removeActionsBtn.classList.remove('d-none');
+                } else {
+                    removeActionsBtn.classList.add('d-none');
+                }
+            }
+        }
+    });
 });
 </script>
 

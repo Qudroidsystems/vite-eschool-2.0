@@ -113,6 +113,12 @@ class ExamController extends Controller
         return view('exam.index', compact('pagetitle', 'exams', 'terms', 'session', 'mysubjects', 'myclass'));
     }
 
+    public function create()
+    {
+        // This method is handled by index() which returns the view with the modal
+        return redirect()->route('exams.index');
+    }
+
     /**
      * Get filtered subjects based on term, session, and class
      */
@@ -175,16 +181,16 @@ class ExamController extends Controller
     }
 
     /**
-     * Get classes for a specific subject
+     * Get classes for a specific subject teacher (subject)
      */
-    public function getSubjectClasses($subjectId)
+    public function getClassesForSubject($subjectTeacherId)
     {
-        $subjectTeacher = SubjectTeacher::findOrFail($subjectId);
+        $subjectTeacher = SubjectTeacher::findOrFail($subjectTeacherId);
 
         $classes = DB::table('subjectclass')
             ->join('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
             ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
-            ->where('subjectclass.subjectteacherid', $subjectId)
+            ->where('subjectclass.subjectteacherid', $subjectTeacherId)
             ->select(
                 'schoolclass.id as id',
                 'schoolclass.schoolclass as schoolclass',
@@ -232,9 +238,12 @@ class ExamController extends Controller
         return redirect()->route('exams.index')->with('success', $message);
     }
 
-    public function edit(string $id)
+    public function edit(Exam $exam)
     {
-        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+        // Check if the exam belongs to the current user
+        if ($exam->staffId != auth()->user()->id) {
+            abort(403, 'Unauthorized');
+        }
 
         $groupClassIds = Exam::where('staffId', $exam->staffId)
             ->where('title', $exam->title)
@@ -255,9 +264,12 @@ class ExamController extends Controller
         abort(404);
     }
 
-    public function update(Request $request, string $id)
+    public function update(Request $request, Exam $exam)
     {
-        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+        // Check if the exam belongs to the current user
+        if ($exam->staffId != auth()->user()->id) {
+            abort(403, 'Unauthorized');
+        }
 
         $validated = $request->validate([
             'title'           => 'required|string|max:255',
@@ -301,9 +313,13 @@ class ExamController extends Controller
         return redirect()->route('exams.index')->with('success', $message);
     }
 
-    public function destroy(string $id)
+    public function destroy(Exam $exam)
     {
-        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+        // Check if the exam belongs to the current user
+        if ($exam->staffId != auth()->user()->id) {
+            abort(403, 'Unauthorized');
+        }
+
         $exam->delete();
 
         if (request()->ajax()) {
@@ -330,23 +346,23 @@ class ExamController extends Controller
         ]);
     }
 
-    public function showStudents(Request $request, $examId)
+    public function showStudents(Exam $exam, Request $request)
     {
-        $exam = Exam::where('id', $examId)
-                    ->where('staffId', auth()->user()->id)
-                    ->with('schoolclass')
-                    ->firstOrFail();
+        // Check if the exam belongs to the current user
+        if ($exam->staffId != auth()->user()->id) {
+            abort(403, 'Unauthorized');
+        }
 
         $classId = $request->query('class_id');
 
         $query = DB::table('exam_attempts')
             ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-            ->leftJoin('results', function ($join) use ($examId) {
+            ->leftJoin('results', function ($join) use ($exam) {
                 $join->on('exam_attempts.student_id', '=', 'results.user_id')
-                     ->where('results.exam_id', '=', $examId);
+                     ->where('results.exam_id', '=', $exam->id);
             })
-            ->where('exam_attempts.exam_id', $examId)
+            ->where('exam_attempts.exam_id', $exam->id)
             ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
 
         if ($classId) {
@@ -362,7 +378,7 @@ class ExamController extends Controller
             'results.score',
             'results.total_marks',
             'exam_attempts.status as attempt_status',
-            DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions')
+            DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $exam->id . ') as attempted_questions')
         )
         ->orderBy('studentRegistration.lastname');
 
@@ -386,23 +402,26 @@ class ExamController extends Controller
         return view('exam.students', compact('pagetitle', 'exam', 'students', 'assignedClasses', 'classId'));
     }
 
-    public function deleteStudentAttempt($examId, $studentId)
+    public function deleteStudentAttempt(Exam $exam, $student)
     {
-        $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
+        // Check if the exam belongs to the current user
+        if ($exam->staffId != auth()->user()->id) {
+            abort(403, 'Unauthorized');
+        }
 
         try {
-            Answer::where('exam_id', $examId)
-                  ->where('user_id', $studentId)
+            Answer::where('exam_id', $exam->id)
+                  ->where('user_id', $student)
                   ->delete();
 
             DB::table('results')
-              ->where('exam_id', $examId)
-              ->where('user_id', $studentId)
+              ->where('exam_id', $exam->id)
+              ->where('user_id', $student)
               ->delete();
 
             $deletedAttempt = DB::table('exam_attempts')
-              ->where('exam_id', $examId)
-              ->where('student_id', $studentId)
+              ->where('exam_id', $exam->id)
+              ->where('student_id', $student)
               ->delete();
 
             $message = $deletedAttempt > 0
@@ -425,32 +444,35 @@ class ExamController extends Controller
         }
     }
 
-    public function showStudentAnswers($examId, $studentId)
+    public function showStudentAnswers(Exam $exam, $student)
     {
-        $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
+        // Check if the exam belongs to the current user
+        if ($exam->staffId != auth()->user()->id) {
+            abort(403, 'Unauthorized');
+        }
 
         $student = DB::table('studentRegistration')
-            ->where('id', $studentId)
+            ->where('id', $student)
             ->select('id', 'firstname', 'lastname', 'admissionNo')
             ->firstOrFail();
 
         $result = DB::table('results')
-            ->where('user_id', $studentId)
-            ->where('exam_id', $examId)
+            ->where('user_id', $student->id)
+            ->where('exam_id', $exam->id)
             ->first();
 
         $questionAnswers = DB::table('questions')
-            ->leftJoin('answers', function($join) use ($examId, $studentId) {
+            ->leftJoin('answers', function($join) use ($exam, $student) {
                 $join->on('questions.id', '=', 'answers.question_id')
-                     ->where('answers.exam_id', '=', $examId)
-                     ->where('answers.user_id', '=', $studentId);
+                     ->where('answers.exam_id', '=', $exam->id)
+                     ->where('answers.user_id', '=', $student->id);
             })
             ->leftJoin('options as student_opt', 'answers.option_id', '=', 'student_opt.id')
             ->leftJoin('options as correct_opt', function($join) {
                 $join->on('correct_opt.question_id', '=', 'questions.id')
                      ->where('correct_opt.is_correct', '=', 1);
             })
-            ->where('questions.exam_id', $examId)
+            ->where('questions.exam_id', $exam->id)
             ->select(
                 'questions.id',
                 'questions.question_text',
@@ -472,11 +494,16 @@ class ExamController extends Controller
         return view('exam.student-answers', compact('pagetitle', 'exam', 'student', 'questionAnswers', 'result'));
     }
 
-    public function generateQuestionPaperPdf(Exam $exam, $studentId)
+    public function generateQuestionPaperPdf(Exam $exam, $student)
     {
+        // Check if the exam belongs to the current user
+        if ($exam->staffId != auth()->user()->id) {
+            abort(403, 'Unauthorized');
+        }
+
         $student = DB::table('studentRegistration')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-            ->where('studentRegistration.id', $studentId)
+            ->where('studentRegistration.id', $student)
             ->select(
                 'studentRegistration.id',
                 'studentRegistration.firstname',
@@ -496,14 +523,14 @@ class ExamController extends Controller
         }
 
         $result = DB::table('results')
-            ->where('user_id', $studentId)
+            ->where('user_id', $student->id)
             ->where('exam_id', $exam->id)
             ->first();
 
         $school = SchoolInformation::where('is_active', true)->first();
 
         $attempt = ExamAttempt::where('exam_id', $exam->id)
-            ->where('student_id', $studentId)
+            ->where('student_id', $student->id)
             ->whereIn('status', ['completed', 'in_progress'])
             ->orderBy('created_at', 'desc')
             ->first();
@@ -514,7 +541,7 @@ class ExamController extends Controller
 
         foreach ($questions as $question) {
             $studentAnswer = Answer::where('question_id', $question->id)
-                ->where('user_id', $studentId)
+                ->where('user_id', $student->id)
                 ->where('exam_id', $exam->id)
                 ->with('option')
                 ->first();
@@ -538,14 +565,16 @@ class ExamController extends Controller
         return $pdf->download($filename);
     }
 
-    public function analytics($examId)
+    public function analytics(Exam $exam)
     {
-        $exam = Exam::where('id', $examId)
-                    ->where('staffId', auth()->user()->id)
-                    ->with(['schoolclass', 'questions.options'])
-                    ->firstOrFail();
+        // Check if the exam belongs to the current user
+        if ($exam->staffId != auth()->user()->id) {
+            abort(403, 'Unauthorized');
+        }
 
-        $attempts = ExamAttempt::where('exam_id', $examId)
+        $exam->load(['schoolclass', 'questions.options']);
+
+        $attempts = ExamAttempt::where('exam_id', $exam->id)
             ->whereIn('status', ['completed'])
             ->get();
 
@@ -554,7 +583,7 @@ class ExamController extends Controller
         $completionRate = $totalStudents > 0 ? round(($completedCount / $totalStudents) * 100, 1) : 0;
 
         $results = DB::table('results')
-            ->where('exam_id', $examId)
+            ->where('exam_id', $exam->id)
             ->get();
 
         $avgScore = $results->avg('score') ?? 0;
@@ -563,7 +592,7 @@ class ExamController extends Controller
 
         $topPerformers = DB::table('results')
             ->join('studentRegistration', 'results.user_id', '=', 'studentRegistration.id')
-            ->where('results.exam_id', $examId)
+            ->where('results.exam_id', $exam->id)
             ->select('studentRegistration.firstname', 'studentRegistration.lastname', 'results.score', 'results.total_marks')
             ->orderByDesc('results.score')
             ->limit(5)
@@ -574,13 +603,13 @@ class ExamController extends Controller
             $correctCount = DB::table('answers')
                 ->join('options', 'answers.option_id', '=', 'options.id')
                 ->where('answers.question_id', $question->id)
-                ->where('answers.exam_id', $examId)
+                ->where('answers.exam_id', $exam->id)
                 ->where('options.is_correct', 1)
                 ->count();
 
             $attemptedCount = DB::table('answers')
                 ->where('question_id', $question->id)
-                ->where('exam_id', $examId)
+                ->where('exam_id', $exam->id)
                 ->count();
 
             $correctRate = $attemptedCount > 0 ? round(($correctCount / $attemptedCount) * 100, 1) : 0;
