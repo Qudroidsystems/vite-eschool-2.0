@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
+use App\Models\Studentpicture;
 
 class UserController extends Controller
 {
