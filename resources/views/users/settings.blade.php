@@ -10,7 +10,7 @@
                 <div class="alert alert-info alert-border-left border-info mb-4" role="alert">
                     <i class="ri-information-fill me-2"></i>
                     <strong>View Only Mode</strong><br>
-                    As a student, you can view your profile information but cannot edit it. Contact admin or staff for updates.
+                    As a student, you can view your profile information but cannot edit it. Contact admin or staff for any updates.
                 </div>
             @endif
 
@@ -57,7 +57,7 @@
             <div class="row">
                 <div class="col-xxl-12">
 
-                    <!-- Tabs -->
+                    <!-- Tabs Navigation -->
                     <div class="d-flex align-items-center flex-wrap gap-2 mb-4">
                         <ul class="nav nav-pills arrow-navtabs nav-secondary gap-2 flex-grow-1" role="tablist">
                             <li class="nav-item">
@@ -111,7 +111,7 @@
                         <div class="card-body">
                             <div class="tab-content">
 
-                                <!-- Personal Details -->
+                                <!-- Personal Details Tab -->
                                 <div class="tab-pane active" id="personalDetails" role="tabpanel">
                                     <div class="text-center mb-5">
                                         <div class="position-relative d-inline-block">
@@ -143,7 +143,7 @@
 
                                                     $initials = strtoupper(
                                                         substr($user->first_name ?? ($user->name ? explode(' ', $user->name)[0] : 'U'), 0, 1) .
-                                                        substr($user->last_name ?? ($user->name && isset(explode(' ', $user->name)[1]) ? explode(' ', $user->name)[1] : ''), 0, 1)
+                                                        substr($user->last_name ?? (explode(' ', $user->name)[1] ?? ''), 0, 1)
                                                     );
                                                 @endphp
 
@@ -163,7 +163,7 @@
                                                 @endif
                                             </div>
 
-                                            <!-- Avatar upload only for non-students -->
+                                            <!-- Avatar upload - only for non-students -->
                                             @if(!auth()->user()->hasRole('student'))
                                                 <label for="avatar" class="position-absolute bottom-0 end-0 btn btn-sm btn-icon btn-primary rounded-circle">
                                                     <i class="ri-camera-line fs-16"></i>
@@ -183,9 +183,8 @@
                                         </div>
                                     </div>
 
-                                    <!-- Personal Details Form / View -->
+                                    <!-- Personal Details Content -->
                                     @if(!auth()->user()->hasRole('student'))
-                                        <!-- Editable for non-students -->
                                         <form action="{{ route('profile.update-info') }}" method="POST">
                                             @csrf
                                             <input type="hidden" name="id" value="{{ $user->id }}">
@@ -248,7 +247,6 @@
                                             </div>
                                         </form>
                                     @else
-                                        <!-- Student - Readonly view -->
                                         <div class="row g-3">
                                             <div class="col-12"><h5 class="mb-3 border-bottom pb-2">Personal Information</h5></div>
                                             <div class="col-md-6">
@@ -287,7 +285,7 @@
                                     @endif
                                 </div>
 
-                                <!-- Employment Info (Staff) -->
+                                <!-- Employment Info Tab -->
                                 @if($isStaff)
                                 <div class="tab-pane" id="employmentInfo" role="tabpanel">
                                     @if(!auth()->user()->hasRole('student'))
@@ -319,7 +317,6 @@
                                             </div>
                                         </form>
                                     @else
-                                        <!-- Student sees nothing useful here -->
                                         <div class="text-center py-5 text-muted">
                                             <i class="ri-briefcase-line fs-1"></i>
                                             <h5 class="mt-3">Employment Information</h5>
@@ -329,7 +326,7 @@
                                 </div>
                                 @endif
 
-                                <!-- Qualifications (Staff) -->
+                                <!-- Qualifications Tab -->
                                 @if($isStaff)
                                 <div class="tab-pane" id="qualifications" role="tabpanel">
                                     @if(!auth()->user()->hasRole('student'))
@@ -359,7 +356,18 @@
                                             <div class="card-body">
                                                 @if($qualifications->count() > 0)
                                                     <table class="table table-hover">
-                                                        <thead><tr><th>#</th><th>Institution</th><th>Qualification</th><th>Field</th><th>Year</th><th>Certificate</th><th>Remarks</th><th>Action</th></tr></thead>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>#</th>
+                                                                <th>Institution</th>
+                                                                <th>Qualification</th>
+                                                                <th>Field</th>
+                                                                <th>Year</th>
+                                                                <th>Certificate</th>
+                                                                <th>Remarks</th>
+                                                                <th>Action</th>
+                                                            </tr>
+                                                        </thead>
                                                         <tbody>
                                                             @foreach($qualifications as $i => $q)
                                                             <tr>
@@ -395,7 +403,7 @@
                                 </div>
                                 @endif
 
-                                <!-- Student Info -->
+                                <!-- Student Info Tab -->
                                 @if($isStudent && $studentData)
                                 <div class="tab-pane" id="studentInfo" role="tabpanel">
                                     @if(!auth()->user()->hasRole('student'))
@@ -432,7 +440,7 @@
                                 </div>
                                 @endif
 
-                                <!-- Parent Info -->
+                                <!-- Parent Info Tab -->
                                 @if($isStudent && $parentData)
                                 <div class="tab-pane" id="parentInfo" role="tabpanel">
                                     @if(!auth()->user()->hasRole('student'))
@@ -468,7 +476,7 @@
                                 </div>
                                 @endif
 
-                                <!-- Academic Info -->
+                                <!-- Academic Info Tab -->
                                 @if($isStudent)
                                 <div class="tab-pane" id="academicInfo" role="tabpanel">
                                     <div class="row">
@@ -522,7 +530,7 @@
                                 </div>
                                 @endif
 
-                                <!-- Security -->
+                                <!-- Security Tab -->
                                 <div class="tab-pane" id="security" role="tabpanel">
                                     <div class="row">
                                         <div class="col-lg-6 mb-4">
@@ -583,33 +591,237 @@
 <script>
 // Session messages
 @if(session('success'))
-    Swal.fire({icon:'success', title:'Success', text:'{{ session('success') }}', toast:true, position:'top-end', timer:3000, showConfirmButton: false});
+    Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: '{{ session('success') }}',
+        toast: true,
+        position: 'top-end',
+        timer: 3000,
+        showConfirmButton: false
+    });
 @endif
 @if(session('error'))
-    Swal.fire({icon:'error', title:'Error', text:'{{ session('error') }}', toast:true, position:'top-end', timer:3000, showConfirmButton: false});
+    Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: '{{ session('error') }}',
+        toast: true,
+        position: 'top-end',
+        timer: 3000,
+        showConfirmButton: false
+    });
 @endif
 
 // Avatar upload - only for non-students
 @if(!auth()->user()->hasRole('student'))
 document.getElementById('avatar')?.addEventListener('change', function(e) {
-    // ... your original avatar upload code remains here ...
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire('Error', 'Image must be less than 5MB', 'error');
+        this.value = '';
+        return;
+    }
+
+    if (!file.type.match('image.*')) {
+        Swal.fire('Error', 'Please select an image file', 'error');
+        this.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById('profilePreview');
+        const fallback = document.getElementById('profileFallback') || null;
+
+        if (preview.tagName === 'IMG') {
+            preview.src = e.target.result;
+            preview.classList.remove('d-none');
+            if (fallback) fallback.classList.add('d-none');
+        } else {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.alt = 'Profile';
+            img.className = 'rounded-circle img-thumbnail';
+            img.id = 'profilePreview';
+            img.style.cssText = 'width: 150px; height: 150px; object-fit: cover;';
+            img.onerror = function() {
+                this.onerror = null;
+                this.src = '{{ asset("images/default-avatar.png") }}';
+            };
+            preview.parentNode.replaceChild(img, preview);
+        }
+    };
+    reader.readAsDataURL(file);
+
+    const fd = new FormData();
+    fd.append('avatar', file);
+    fd.append('id', '{{ $user->id }}');
+    fd.append('_token', '{{ csrf_token() }}');
+
+    Swal.fire({
+        title: 'Uploading...',
+        html: 'Please wait while we upload your profile picture',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    fetch('{{ route("profile.update-avatar") }}', {
+        method: 'POST',
+        body: fd,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            if (data.avatar_url) {
+                document.getElementById('profilePreview').src = data.avatar_url + '?t=' + Date.now();
+            }
+        } else {
+            Swal.fire('Error!', data.message || 'Failed to upload avatar', 'error');
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire('Error!', 'Network error occurred. Please try again.', 'error');
+    });
 });
 @endif
 
-// Email & Password forms - only active for non-students
+// Email Update Form - only for non-students
 @if(!auth()->user()->hasRole('student'))
-// Email Update Form
 document.getElementById('updateEmailForm')?.addEventListener('submit', function(e) {
-    // ... your original email AJAX code ...
-});
+    e.preventDefault();
 
-// Password Update Form
-document.getElementById('updatePasswordForm')?.addEventListener('submit', function(e) {
-    // ... your original password AJAX code ...
+    const form = this;
+    const fd = new FormData(form);
+    const btn = form.querySelector('button[type="submit"]');
+    const spinner = btn.querySelector('.spinner-border');
+    const msgDiv = document.getElementById('emailMessage');
+
+    btn.disabled = true;
+    if (spinner) spinner.classList.remove('d-none');
+
+    fetch('{{ route("profile.update-email") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: fd
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            msgDiv.innerHTML = `<div class="alert alert-success alert-dismissible fade show mt-3">
+                <i class="ri-check-line me-2"></i>${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+            form.reset();
+        } else {
+            Swal.fire('Error!', data.message || 'Failed to update email', 'error');
+            msgDiv.innerHTML = `<div class="alert alert-danger alert-dismissible fade show mt-3">
+                <i class="ri-error-warning-line me-2"></i>${data.message || 'An error occurred'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+        }
+    })
+    .catch(error => {
+        Swal.fire('Error!', 'Network error. Please try again.', 'error');
+        msgDiv.innerHTML = `<div class="alert alert-danger alert-dismissible fade show mt-3">
+            <i class="ri-error-warning-line me-2"></i>Request failed. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+    })
+    .finally(() => {
+        btn.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+    });
 });
 @endif
 
-// Tab persistence (works for everyone)
+// Password Update Form - only for non-students
+@if(!auth()->user()->hasRole('student'))
+document.getElementById('updatePasswordForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const form = this;
+    const fd = new FormData(form);
+    const btn = form.querySelector('button[type="submit"]');
+    const spinner = btn.querySelector('.spinner-border');
+    const msgDiv = document.getElementById('passwordMessage');
+
+    btn.disabled = true;
+    if (spinner) spinner.classList.remove('d-none');
+
+    fetch('{{ route("profile.update-password") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: fd
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            msgDiv.innerHTML = `<div class="alert alert-success alert-dismissible fade show mt-3">
+                <i class="ri-check-line me-2"></i>${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+            form.reset();
+        } else {
+            Swal.fire('Error!', data.message || 'Failed to update password', 'error');
+            msgDiv.innerHTML = `<div class="alert alert-danger alert-dismissible fade show mt-3">
+                <i class="ri-error-warning-line me-2"></i>${data.message || 'An error occurred'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+        }
+    })
+    .catch(error => {
+        Swal.fire('Error!', 'Network error. Please try again.', 'error');
+        msgDiv.innerHTML = `<div class="alert alert-danger alert-dismissible fade show mt-3">
+            <i class="ri-error-warning-line me-2"></i>Request failed. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+    })
+    .finally(() => {
+        btn.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+    });
+});
+@endif
+
+// Tab persistence (remember last active tab)
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {
         tab.addEventListener('shown.bs.tab', e => {
