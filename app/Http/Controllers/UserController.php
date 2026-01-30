@@ -136,13 +136,11 @@ class UserController extends Controller
         $isStudentUser = $user->hasRole('student');
         $studentData   = $user->student;
 
-        // Current class information
         $currentClass = null;
         if ($isStudentUser && $studentData) {
             $currentClass = $studentData->currentClass;
         }
 
-        // Parent/Guardian information
         $parentData = null;
         if ($isStudentUser && $studentData) {
             $parentData = $studentData->parent;
@@ -164,6 +162,11 @@ class UserController extends Controller
 
     public function edit($id): View
     {
+        // Students cannot access edit page
+        if (auth()->user()->hasRole('student')) {
+            abort(403, 'Students are not allowed to edit profiles.');
+        }
+
         $user = User::findOrFail($id);
         $roles = Role::pluck('name', 'name')->all();
         $userRole = $user->roles->pluck('name', 'name')->all();
@@ -172,6 +175,14 @@ class UserController extends Controller
 
     public function update(Request $request, $id): JsonResponse
     {
+        // Students cannot update any profile
+        if (auth()->user()->hasRole('student')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Students are not allowed to edit profiles.',
+            ], 403);
+        }
+
         Log::debug("Updating user ID: {$id}", $request->all());
 
         try {
@@ -273,6 +284,7 @@ class UserController extends Controller
 
         try {
             if (!auth()->user()->hasPermissionTo('Create user')) {
+                Log::warning("User ID " . auth()->user()->id . " attempted to create student user without permission");
                 return response()->json([
                     'success' => false,
                     'message' => 'User does not have the right permissions',
@@ -327,6 +339,7 @@ class UserController extends Controller
                 ],
             ], 201);
         } catch (ValidationException $e) {
+            Log::error("Validation error creating student user: " . json_encode($e->errors()));
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',

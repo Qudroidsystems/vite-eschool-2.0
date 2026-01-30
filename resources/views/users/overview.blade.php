@@ -5,6 +5,15 @@
     <div class="page-content">
         <div class="container-fluid">
 
+            <!-- View-Only Banner for Students -->
+            @if(auth()->user()->hasRole('student'))
+                <div class="alert alert-info alert-border-left border-info mb-4" role="alert">
+                    <i class="ri-information-fill me-2"></i>
+                    <strong>This is a view-only page.</strong><br>
+                    As a student, you cannot edit your profile or any information here. Contact admin or staff for updates.
+                </div>
+            @endif
+
             <!-- Page Title -->
             <div class="row">
                 <div class="col-12">
@@ -56,7 +65,7 @@
                                 <i class="bi bi-arrow-left me-1"></i> Back to Users
                             </a>
 
-                            <!-- Only non-students can edit their own profile -->
+                            <!-- Edit Profile button - HIDDEN for students -->
                             @if(Auth::id() == $user->id && !auth()->user()->hasRole('student'))
                                 <a href="{{ route('profile.settings', $user->id) }}" class="btn btn-primary ms-2">
                                     <i class="ri-settings-line me-1"></i> Edit Profile
@@ -69,7 +78,7 @@
                         <div class="card-body">
                             <div class="tab-content">
 
-                                <!-- Personal Details -->
+                                <!-- Personal Details Tab -->
                                 <div class="tab-pane active" id="personalDetails" role="tabpanel">
                                     <!-- Profile Header -->
                                     <div class="text-center mb-5">
@@ -111,7 +120,7 @@
                                                          alt="Profile"
                                                          class="rounded-circle img-thumbnail"
                                                          style="width: 150px; height: 150px; object-fit: cover;"
-                                                         onerror="this.onerror=null; this.src='{{ asset('images/default-avatar.png') }}';">
+                                                         onerror="this.src='{{ asset('images/default-avatar.png') }}';">
                                                 @else
                                                     <div class="avatar-title rounded-circle bg-light text-primary fs-1"
                                                          style="width: 150px; height: 150px; line-height: 150px;">
@@ -177,7 +186,7 @@
                                             <div class="col-12">
                                                 <div class="alert alert-info">
                                                     <i class="ri-information-line me-2"></i>
-                                                    No personal information available. Please update profile details.
+                                                    No personal information available.
                                                 </div>
                                             </div>
                                         @endif
@@ -201,7 +210,7 @@
                                             <input type="text" class="form-control" value="{{ $user->updated_at->format('d M Y, h:i A') }}" readonly>
                                         </div>
 
-                                        <!-- Academic Information (only for students) -->
+                                        <!-- Academic Information -->
                                         @if($user->isStudent())
                                             <div class="col-12 mt-4">
                                                 <h5 class="mb-3 border-bottom pb-2">Academic Information</h5>
@@ -292,7 +301,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Employment Info (Staff Only) -->
+                                <!-- Employment Info -->
                                 @if($user->isStaff())
                                 <div class="tab-pane" id="employmentInfo" role="tabpanel">
                                     @if($staffInfo)
@@ -339,7 +348,6 @@
                                         <div class="col-md-6"><label>Age</label><input type="text" class="form-control" value="{{ $studentData?->age ?? 'N/A' }}" readonly></div>
                                         <div class="col-12"><label>Home Address</label><textarea class="form-control" rows="3" readonly>{{ $studentData?->home_address ?? 'N/A' }}</textarea></div>
 
-                                        <!-- Parent/Guardian Information -->
                                         @if($parentData)
                                         <div class="col-12 mt-4"><h5 class="mb-3 border-bottom pb-2">Parent/Guardian Information</h5></div>
                                         <div class="col-md-6"><label>Father's Name</label><input type="text" class="form-control" value="{{ $parentData?->father ?? 'N/A' }}" readonly></div>
