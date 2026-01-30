@@ -8,7 +8,8 @@ use Spatie\Permission\Models\Role;
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <!-- Start page title -->
+
+            <!-- Page title -->
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
@@ -22,7 +23,6 @@ use Spatie\Permission\Models\Role;
                     </div>
                 </div>
             </div>
-            <!-- End page title -->
 
             <!-- Users by Role Chart -->
             <div class="row">
@@ -38,37 +38,28 @@ use Spatie\Permission\Models\Role;
                 </div>
             </div>
 
+            <!-- Messages -->
             @if ($errors->any())
-                <div class="alert alert-danger">
-                    <strong>Whoops!</strong> There were some problems with your input.<br><br>
-                    <ul>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>Whoops!</strong> There were some problems with your input.<br>
+                    <ul class="mb-0">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
                     </ul>
-                </div>
-            @endif
-
-            @if (session('status'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('status') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
+
             @if (session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     {{ session('success') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
-            @if (session('student_success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('student_success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
 
             <div id="userList">
+                <!-- Filters Row -->
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="card">
@@ -76,32 +67,30 @@ use Spatie\Permission\Models\Role;
                                 <div class="row g-3">
                                     <div class="col-xxl-3">
                                         <div class="search-box">
-                                            <input type="text" class="form-control search" placeholder="Search users">
+                                            <input type="text" class="form-control search" placeholder="Search users...">
                                             <i class="ri-search-line search-icon"></i>
                                         </div>
                                     </div>
                                     <div class="col-xxl-3 col-sm-6">
-                                        <div>
-                                            <select class="form-control" id="idRole" data-choices data-choices-search-false data-choices-removeItem>
-                                                <option value="all">Select Role</option>
-                                                @foreach ($roles as $role => $name)
-                                                    <option value="{{ $role }}">{{ $name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                        <select class="form-control" id="idRole" data-choices data-choices-search-false data-choices-removeItem>
+                                            <option value="all">Select Role</option>
+                                            @foreach ($roles as $role => $name)
+                                                <option value="{{ $role }}">{{ $name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-xxl-2 col-sm-6">
-                                        <div>
-                                            <select class="form-control" id="idEmail" data-choices data-choices-search-false data-choices-removeItem>
-                                                <option value="all">Select Email</option>
-                                                @foreach ($data as $user)
-                                                    <option value="{{ $user->email }}">{{ $user->email }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                        <select class="form-control" id="idEmail" data-choices data-choices-search-false data-choices-removeItem>
+                                            <option value="all">Select Email</option>
+                                            @foreach ($data as $user)
+                                                <option value="{{ $user->email }}">{{ $user->email }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-xxl-1 col-sm-6">
-                                        <button type="button" class="btn btn-secondary w-100" onclick="filterData();"><i class="bi bi-funnel align-baseline me-1"></i> Filters</button>
+                                        <button type="button" class="btn btn-secondary w-100" onclick="filterData();">
+                                            <i class="bi bi-funnel align-baseline me-1"></i> Filters
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -109,80 +98,100 @@ use Spatie\Permission\Models\Role;
                     </div>
                 </div>
 
+                <!-- Users Table Card -->
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="card">
                             <div class="card-header d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h5 class="card-title mb-0">Users <span class="badge bg-dark-subtle text-dark ms-1">{{ $data->count() }}</span></h5>
+                                    <h5 class="card-title mb-0">
+                                        Users
+                                        <span class="badge bg-dark-subtle text-dark ms-1">{{ $data->count() }}</span>
+                                    </h5>
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
-                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
+                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">
+                                            <i class="ri-delete-bin-2-line"></i>
+                                        </button>
                                         @can('Create user')
-                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#showModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Add User</button>
-                                            <button type="button" class="btn btn-success add-btn" data-bs-toggle="modal" data-bs-target="#addStudentModal"><i class="bi bi-person-plus align-baseline me-1"></i> Add Student</button>
+                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#showModal">
+                                                <i class="bi bi-plus-circle align-baseline me-1"></i> Add User
+                                            </button>
+                                            <button type="button" class="btn btn-success add-btn" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                                                <i class="bi bi-person-plus align-baseline me-1"></i> Add Student
+                                            </button>
                                         @endcan
                                     </div>
                                 </div>
                             </div>
+
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table table-centered align-middle table-nowrap mb-0" id="userList">
                                         <thead class="table-active">
                                             <tr>
-                                                <th><div class="form-check"><input class="form-check-input" type="checkbox" value="option" id="checkAll"><label class="form-check-label" for="checkAll"></label></div></th>
-                                                <th class="sort cursor-pointer" data-sort="name">Name</th>
-                                                <th class="sort cursor-pointer" data-sort="email">Email</th>
-                                                <th class="sort cursor-pointer" data-sort="role">Role</th>
-                                                <th class="sort cursor-pointer" data-sort="datereg">Date Registered</th>
+                                                <th scope="col" style="width: 50px;">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="checkAll">
+                                                        <label class="form-check-label" for="checkAll"></label>
+                                                    </div>
+                                                </th>
+                                                <th class="sort" data-sort="name">Name</th>
+                                                <th class="sort" data-sort="email">Email</th>
+                                                <th class="sort" data-sort="role">Role</th>
+                                                <th class="sort" data-sort="datereg">Date Registered</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody class="list form-check-all">
-                                            @forelse ($data as $key => $user)
+                                            @forelse ($data as $user)
                                                 <tr>
-                                                    <td class="id" data-id="{{ $user->id }}">
+                                                    <td>
                                                         <div class="form-check">
                                                             <input class="form-check-input" type="checkbox" name="chk_child">
                                                             <label class="form-check-label"></label>
                                                         </div>
                                                     </td>
-                                                    <td class="name" data-name="{{ $user->name }}">
-                                                        <div class="d-flex align-items-center">
-                                                            <div>
-                                                                <h6 class="mb-0"><a href="{{ route('users.show', $user->id) }}" class="text-reset products">{{ $user->name }}</a></h6>
-                                                            </div>
-                                                        </div>
+                                                    <td class="name">
+                                                        <h6 class="mb-0">
+                                                            <a href="{{ route('users.show', $user->id) }}" class="text-reset">
+                                                                {{ $user->name }}
+                                                            </a>
+                                                        </h6>
                                                     </td>
-                                                    <td class="email" data-email="{{ $user->email }}">{{ $user->email }}</td>
-                                                    <td class="role" data-roles="{{ $user->getRoleNames()->implode(',') }}">
-                                                        <div>
-                                                            @if(!empty($user->getRoleNames()))
-                                                                @foreach($user->getRoleNames() as $val)
-                                                                    <label class="badge bg-primary">{{ $val }}</label>
-                                                                @endforeach
-                                                            @else
-                                                                <label class="badge bg-secondary">No roles</label>
-                                                            @endif
-                                                        </div>
+                                                    <td class="email">{{ $user->email }}</td>
+                                                    <td class="role">
+                                                        @if ($user->getRoleNames()->isNotEmpty())
+                                                            @foreach ($user->getRoleNames() as $roleName)
+                                                                <span class="badge bg-primary-subtle text-primary">{{ $roleName }}</span>
+                                                            @endforeach
+                                                        @else
+                                                            <span class="badge bg-secondary-subtle text-secondary">No Role</span>
+                                                        @endif
                                                     </td>
                                                     <td class="datereg">{{ $user->created_at->format('Y-m-d') }}</td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('View user')
                                                                 <li>
-                                                                    <a href="{{ route('users.show', $user->id) }}" class="btn btn-subtle-primary btn-icon btn-sm"><i class="ph-eye"></i></a>
+                                                                    <a href="{{ route('users.show', $user->id) }}" class="btn btn-sm btn-soft-primary btn-icon">
+                                                                        <i class="ph-eye"></i>
+                                                                    </a>
                                                                 </li>
                                                             @endcan
                                                             @can('Update user')
                                                                 <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn"><i class="ph-pencil"></i></a>
+                                                                    <button type="button" class="btn btn-sm btn-soft-secondary btn-icon edit-item-btn" data-id="{{ $user->id }}">
+                                                                        <i class="ph-pencil"></i>
+                                                                    </button>
                                                                 </li>
                                                             @endcan
                                                             @can('Delete user')
                                                                 <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn"><i class="ph-trash"></i></a>
+                                                                    <button type="button" class="btn btn-sm btn-soft-danger btn-icon remove-item-btn" data-id="{{ $user->id }}">
+                                                                        <i class="ph-trash"></i>
+                                                                    </button>
                                                                 </li>
                                                             @endcan
                                                         </ul>
@@ -190,519 +199,423 @@ use Spatie\Permission\Models\Role;
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="noresult" style="display: block;">No results found</td>
+                                                    <td colspan="6" class="text-center py-4 text-muted">
+                                                        No users found
+                                                    </td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="row mt-3 align-items-center" id="pagination-element">
-                                    <div class="col-sm">
-                                        <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold" id="pagination-showing"></span> of <span class="fw-semibold" id="pagination-total"></span> Results
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-auto mt-3 mt-sm-0">
-                                        <div class="pagination-wrap hstack gap-2 justify-content-center">
-                                            <ul class="pagination listjs-pagination mb-0"></ul>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Add User Modal -->
-        <div id="showModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 id="addModalLabel" class="modal-title">Add User</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <!-- Add User Modal -->
+            <div class="modal fade" id="showModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addModalLabel">Add New User</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form id="add-user-form">
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" name="name" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" name="email" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Roles</label>
+                                    <select name="roles[]" class="form-select" multiple required>
+                                        @foreach (Role::all() as $role)
+                                            <option value="{{ $role->name }}">{{ $role->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Password</label>
+                                    <input type="password" name="password" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Confirm Password</label>
+                                    <input type="password" name="password_confirmation" class="form-control" required>
+                                </div>
+                                <div class="alert alert-danger d-none" id="add-user-error"></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                                <button type="submit" class="btn btn-primary">Create User</button>
+                            </div>
+                        </form>
                     </div>
-                    <form class="tablelist-form" autocomplete="off" id="add-user-form">
+                </div>
+            </div>
+
+            <!-- Add Student Modal -->
+            <div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Add Student as User</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
                         <div class="modal-body">
-                            <input type="hidden" id="add-id-field" name="id">
                             <div class="mb-3">
-                                <label for="name" class="form-label">Name</label>
-                                <input type="text" id="name" name="name" class="form-control" placeholder="Enter name" required>
+                                <label for="student-search" class="form-label">Search by name or admission number</label>
+                                <input type="text" id="student-search" class="form-control" placeholder="Type to search..." autocomplete="off">
                             </div>
                             <div class="mb-3">
-                                <label for="email" class="form-label">Email</label>
-                                <input type="email" id="email" name="email" class="form-control" placeholder="Enter email" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="role" class="form-label">Role</label>
-                                <select id="role" name="roles[]" class="form-control" multiple required>
-                                    @foreach (Spatie\Permission\Models\Role::all() as $role)
-                                        <option value="{{ $role->name }}">{{ $role->name }}</option>
-                                    @endforeach
+                                <label for="student-select" class="form-label">Select Student</label>
+                                <select id="student-select" class="form-select" required>
+                                    <option value="">-- Search above to load students --</option>
                                 </select>
                             </div>
-                            <div class="mb-3">
-                                <label for="password" class="form-label">Password</label>
-                                <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" required>
+                            <div class="alert alert-info small mb-0">
+                                <i class="ri-information-fill me-1"></i>
+                                Username will be admission number (slashes replaced with underscore)
                             </div>
-                            <div class="mb-3">
-                                <label for="password_confirmation" class="form-label">Confirm Password</label>
-                                <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm password" required>
-                            </div>
-                            <div class="alert alert-danger d-none" id="alert-error-msg"></div>
+                            <div class="alert alert-danger mt-3 d-none" id="student-select-error"></div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary" id="add-btn">Add User</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Edit User Modal -->
-        <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 id="editModalLabel" class="modal-title">Edit User</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form class="tablelist-form" autocomplete="off" id="edit-user-form">
-                        <div class="modal-body">
-                            <input type="hidden" id="edit-id-field" name="id">
-                            <div class="mb-3">
-                                <label for="edit-name" class="form-label">Name</label>
-                                <input type="text" id="edit-name" name="name" class="form-control" placeholder="Enter name" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit-email" class="form-label">Email</label>
-                                <input type="email" id="edit-email" name="email" class="form-control" placeholder="Enter email" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit-role" class="form-label">Role</label>
-                                <select id="edit-role" name="roles[]" class="form-control" multiple required>
-                                    @foreach (Spatie\Permission\Models\Role::all() as $role)
-                                        <option value="{{ $role->name }}">{{ $role->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit-password" class="form-label">Password (optional)</label>
-                                <input type="password" id="edit-password" name="password" class="form-control" placeholder="Enter new password">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit-password_confirmation" class="form-label">Confirm Password</label>
-                                <input type="password" id="edit-password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm new password">
-                            </div>
-                            <div class="alert alert-danger d-none" id="alert-error-msg"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary" id="update-btn">Update</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Delete User Modal -->
-        <div id="deleteRecordModal" class="modal fade zoomIn" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="btn-close" id="deleteRecord-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-md-5">
-                        <div class="text-center">
-                            <div class="text-danger">
-                                <i class="bi bi-trash display-4"></i>
-                            </div>
-                            <div class="mt-4">
-                                <h3 class="mb-2">Are you sure?</h3>
-                                <p class="text-muted fs-lg mx-3 mb-0">Are you sure you want to remove this record?</p>
-                            </div>
-                        </div>
-                        <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
-                            <button type="button" class="btn w-sm btn-light btn-hover" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn w-sm btn-danger btn-hover" id="delete-record">Yes, Delete selenium!</button>
+                            <button type="button" class="btn btn-primary" id="proceed-to-credentials" disabled>Next: Set Credentials</button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Add Student Modal -->
-        <div id="addStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Add Student as User</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="student-select" class="form-label">Select Student</label>
-                            <select id="student-select" class="form-control" required>
-                                <option value="">Choose a student...</option>
-                                {{-- @forelse ($students ?? [] as $student)
-                                    <option value="{{ $student->id }}" data-admission="{{ $student->admissionNo }}" data-name="{{ $student->firstname }} {{ $student->lastname }}" data-email="{{ $student->email ?? '' }}">
-                                        {{ $student->firstname }} {{ $student->lastname }} ({{ $student->admissionNo }})
-                                    </option>
-                                @empty
-                                    <option value="">No students available</option>
-                                @endforelse --}}
-                                @forelse ($students ?? [] as $student)
-    <option value="debug-{{ $student->id }}">DEBUG: {{ $student->firstname }}</option>
-@empty
-    <option value="">No students — check controller & DB</option>
-@endforelse
-                            </select>
+            <!-- Student Credentials Modal -->
+            <div class="modal fade" id="setStudentCredentialsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Set Login Credentials</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="alert alert-info">
-                            <small>Select a student to proceed to set credentials. Username will be the admission number.</small>
-                        </div>
-                        <div class="alert alert-danger d-none" id="student-select-error"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" id="proceed-to-credentials">Proceed to Credentials</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+                        <form id="add-student-credentials-form">
+                            <div class="modal-body">
+                                <input type="hidden" name="student_id" id="student-id-field">
+                                <input type="hidden" name="name" id="student-name-field">
 
-        <!-- Set Student Credentials Modal -->
-        <div id="setStudentCredentialsModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Set Credentials for Student</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form class="tablelist-form" autocomplete="off" id="add-student-credentials-form">
-                        <div class="modal-body">
-                            <input type="hidden" id="student-id-field" name="student_id">
-                            <input type="hidden" id="student-name-field" name="name">
-                            <div class="mb-3">
-                                <label for="student-user-email" class="form-label">Email</label>
-                                <input type="email" id="student-user-email" name="email" class="form-control" placeholder="Enter email (required)" required>
-                                <div class="form-text">Prefilled from student record if available; edit if needed.</div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="student-username" class="form-label">Username (Admission Number)</label>
-                                <input type="text" id="student-username" name="username" class="form-control" readonly required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="student-password" class="form-label">Temporary Password</label>
-                                <div class="input-group">
-                                    <input type="password" id="student-password" name="password" class="form-control" placeholder="Temporary password will be generated" required>
-                                    <button type="button" class="btn btn-outline-secondary" id="generate-temp-password" type="button">Generate</button>
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" name="email" id="student-user-email" class="form-control" required>
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Username (Admission No)</label>
+                                    <input type="text" name="username" id="student-username" class="form-control" readonly required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Password</label>
+                                    <div class="input-group">
+                                        <input type="password" name="password" id="student-password" class="form-control" required>
+                                        <button type="button" class="btn btn-outline-secondary" id="generate-temp-password">Generate</button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Confirm Password</label>
+                                    <input type="password" name="password_confirmation" id="student-password_confirmation" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Roles <span class="text-danger">*</span></label>
+                                    <select name="roles[]" id="student-role" class="form-select" multiple required>
+                                        @foreach (Role::all() as $role)
+                                            <option value="{{ $role->name }}">{{ $role->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="alert alert-danger d-none" id="student-credentials-error"></div>
                             </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Back</button>
+                                <button type="submit" class="btn btn-primary">Create Student Account</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WhatsApp Modal -->
+            <div class="modal fade" id="whatsappModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Send Credentials via WhatsApp</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
                             <div class="mb-3">
-                                <label for="student-password_confirmation" class="form-label">Confirm Password</label>
-                                <input type="password" id="student-password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm password" required>
+                                <label class="form-label">Phone Number (international format)</label>
+                                <input type="tel" class="form-control" id="whatsapp-phone" placeholder="+1234567890" required>
                             </div>
-                            <div class="mb-3">
-                                <label for="student-role" class="form-label">Role <span class="text-danger">*</span> (Select at least one)</label>
-                                <select id="student-role" name="roles[]" class="form-control" multiple required>
-                                    @foreach (Spatie\Permission\Models\Role::all() as $role)
-                                        <option value="{{ $role->name }}">{{ $role->name }}</option>
-                                    @endforeach
-                                </select>
-                                <div class="form-text">Hold Ctrl/Cmd to select multiple roles.</div>
+                            <div id="whatsapp-preview" class="d-none mb-3">
+                                <p><strong>Message preview:</strong></p>
+                                <div class="border p-3 bg-light rounded" id="whatsapp-message-preview"></div>
                             </div>
-                            <div class="alert alert-danger d-none" id="student-credentials-error"></div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-light" data-bs-dismiss="modal" onclick="resetStudentCredentialsModal()">Close</button>
-                            <button type="submit" class="btn btn-primary" id="create-student-user">Create User</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-success" id="send-whatsapp-btn">Send via WhatsApp</button>
                         </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- WhatsApp Modal -->
-        <div class="modal fade" id="whatsappModal" tabindex="-1" aria-labelledby="whatsappModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="whatsappModalLabel">Send Credentials via WhatsApp</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Enter the phone number to send the username and password via WhatsApp.</p>
-                        <div class="mb-3">
-                            <label for="whatsapp-phone" class="form-label">Phone Number (e.g., +1234567890)</label>
-                            <input type="tel" class="form-control" id="whatsapp-phone" placeholder="Enter phone number" required>
-                            <input type="hidden" id="whatsapp-user-id" value="">
-                            <input type="hidden" id="whatsapp-email" value="">
-                            <input type="hidden" id="whatsapp-password" value="">
-                        </div>
-                        <div id="whatsapp-link-container" class="mb-3 d-none">
-                            <p>Click the link below to open WhatsApp with the pre-filled message:</p>
-                            <a href="#" id="whatsapp-link" target="_blank" class="btn btn-success">Open WhatsApp</a>
-                            <p class="mt-2"><strong>Preview:</strong> <span id="whatsapp-message-preview"></span></p>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="generate-whatsapp-link">Generate Link</button>
                     </div>
                 </div>
             </div>
-        </div>
 
+        </div>
     </div>
-    <!-- End Page-content -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Scripts -->
-    <script src="{{ asset('theme/layouts/assets/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ asset('theme/layouts/assets/js/list.min.js') }}"></script>
-    <script src="{{ asset('theme/layouts/assets/js/choices.min.js') }}" defer></script>
-    <script src="{{ asset('theme/layouts/assets/js/sweetalert2.min.js') }}"></script>
-    <script src="{{ asset('js/user-list.init.js') }}"></script>
-    <!-- Chart Initialization and Student Modal JS -->
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Chart.js Initialization
-            var ctx = document.getElementById("usersByRoleChart").getContext("2d");
-            new Chart(ctx, {
-                type: "bar",
-                data: {
-                    labels: @json(array_keys($role_counts)),
-                    datasets: [{
-                        label: "Users by Role",
-                        data: @json(array_values($role_counts)),
-                        backgroundColor: ["#4e73df", "#1cc88a", "#36b9cc", "#f6c23e", "#e74a3b"],
-                        borderColor: ["#4e73df", "#1cc88a", "#36b9cc", "#f6c23e", "#e74a3b"],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: "Number of Users"
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: "Roles"
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: "top"
-                        }
-                    }
-                }
-            });
+</div>
 
-            // Student Modal JavaScript with Debugging
-            console.log('Initializing student modals...'); // Debug: Confirms script runs
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ asset('assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ asset('assets/libs/list.js/list.min.js') }}"></script>
+<script src="{{ asset('assets/libs/choices.js/public/assets/scripts/choices.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-            const addStudentModalEl = document.getElementById('addStudentModal');
-            const setCredentialsModalEl = document.getElementById('setStudentCredentialsModal');
-            if (!addStudentModalEl || !setCredentialsModalEl) {
-                console.error('Modal elements not found!'); // Debug: Missing HTML?
-                return;
-            }
+<script>
+// ────────────────────────────────────────────────────────────────
+// Global variables & Chart
+// ────────────────────────────────────────────────────────────────
 
-            const addStudentModal = new bootstrap.Modal(addStudentModalEl);
-            const setCredentialsModal = new bootstrap.Modal(setCredentialsModalEl);
+document.addEventListener('DOMContentLoaded', () => {
 
-            // Choices.js initialization for selects (with error handling)
-            const studentSelect = document.getElementById('student-select');
-            if (studentSelect) {
-                try {
-                    new Choices(studentSelect, {
-                        searchEnabled: true,
-                        removeItemButton: false,
-                        placeholder: true
-                    });
-                    console.log('Choices.js initialized for student select.'); // Debug
-                } catch (err) {
-                    console.error('Choices.js error:', err); // Debug
-                }
-            } else {
-                console.error('Student select element not found!'); // Debug
-            }
-
-            const studentRoleSelect = document.getElementById('student-role');
-            let roleChoices = null;
-            if (studentRoleSelect) {
-                try {
-                    roleChoices = new Choices(studentRoleSelect, {
-                        searchEnabled: true,
-                        removeItemButton: false,
-                        placeholder: true
-                    });
-                    console.log('Choices.js initialized for role select.'); // Debug
-                    // Pre-select 'student' role if it exists
-                    @if (Spatie\Permission\Models\Role::where('name', 'student')->exists())
-                    roleChoices.setChoiceByValue('student');
-                    @endif
-                } catch (err) {
-                    console.error('Choices.js role error:', err); // Debug
-                }
-            } else {
-                console.error('Student role select element not found!'); // Debug
-            }
-
-            // Proceed to credentials button with debugging
-            const proceedBtn = document.getElementById('proceed-to-credentials');
-            if (!proceedBtn) {
-                console.error('Proceed button not found!'); // Debug
-                return;
-            }
-
-          proceedBtn.addEventListener('click', function(e) {
-    console.log('Proceed button clicked!'); // Debug: Confirms click fires
-
-    // Get selected option (handle Choices.js selection only if Choices is defined)
-    let selectedOption;
-    if (studentSelect && typeof Choices !== 'undefined' && Choices.getInstance(studentSelect)) {
-        const choicesInstance = Choices.getInstance(studentSelect);
-        const selectedValue = choicesInstance.getValue(true); // true for single select
-        if (selectedValue) {
-            selectedOption = { value: selectedValue, dataset: {
-                name: document.querySelector(`#student-select option[value="${selectedValue}"]`)?.dataset.name || '',
-                email: document.querySelector(`#student-select option[value="${selectedValue}"]`)?.dataset.email || '',
-                admission: document.querySelector(`#student-select option[value="${selectedValue}"]`)?.dataset.admission || ''
-            } };
-        }
-    } else {
-        // Fallback for native select (used when Choices.js fails to load)
-        selectedOption = studentSelect?.options[studentSelect.selectedIndex];
-        if (selectedOption) {
-            selectedOption.dataset = {
-                name: selectedOption.dataset.name || '',
-                email: selectedOption.dataset.email || '',
-                admission: selectedOption.dataset.admission || ''
-            };
-        }
-    }
-
-    if (!selectedOption || !selectedOption.value) {
-        console.warn('No student selected.'); // Debug
-        const errorEl = document.getElementById('student-select-error');
-        if (errorEl) {
-            errorEl.classList.remove('d-none');
-            errorEl.textContent = 'Please select a student.';
-        }
-        return;
-    }
-
-    console.log('Selected student:', selectedOption); // Debug: Log selection
-
-    const errorEl = document.getElementById('student-select-error');
-    if (errorEl) errorEl.classList.add('d-none');
-
-    // Populate fields
-    document.getElementById('student-id-field').value = selectedOption.value;
-    document.getElementById('student-name-field').value = selectedOption.dataset.name;
-    document.getElementById('student-user-email').value = selectedOption.dataset.email || '';
-    document.getElementById('student-username').value = (selectedOption.dataset.admission || '').replace(/\//g, '_'); // Sanitize
-
-    console.log('Fields populated, switching modals...'); // Debug
-
-    // Close first modal and open second (with timeout for smooth transition)
-    addStudentModal.hide();
-    setTimeout(() => {
-        setCredentialsModal.show();
-    }, 300); // Small delay to avoid Bootstrap glitches
-});
-
-            // Generate temporary password
-            const generateBtn = document.getElementById('generate-temp-password');
-            if (generateBtn) {
-                generateBtn.addEventListener('click', function() {
-                    console.log('Generating temp password...'); // Debug
-                    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
-                    document.getElementById('student-password').value = tempPassword;
-                    document.getElementById('student-password_confirmation').value = tempPassword;
-                });
-            }
-
-            // Reset credentials modal on close
-            function resetStudentCredentialsModal() {
-                console.log('Resetting credentials modal...'); // Debug
-                document.getElementById('student-id-field').value = '';
-                document.getElementById('student-name-field').value = '';
-                document.getElementById('student-user-email').value = '';
-                document.getElementById('student-username').value = '';
-                document.getElementById('student-password').value = '';
-                document.getElementById('student-password_confirmation').value = '';
-                if (roleChoices) {
-                    roleChoices.clearChoices();
-                    roleChoices.setChoiceByValue(''); // Clear selections
-                }
-                const errorEl = document.getElementById('student-credentials-error');
-                if (errorEl) errorEl.classList.add('d-none');
-            }
-
-            // Listen for hidden event to reset
-            setCredentialsModalEl.addEventListener('hidden.bs.modal', resetStudentCredentialsModal);
-
-            // Form submission for student user creation (unchanged, but with better error display)
-            const form = document.getElementById('add-student-credentials-form');
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    console.log('Submitting student form...'); // Debug
-                    const formData = new FormData(this);
-                    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-
-                    fetch('{{ route("users.store-student") }}', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Form response:', data); // Debug
-                        if (data.success) {
-                            Swal.fire('Success!', data.message, 'success');
-                            setCredentialsModal.hide();
-                            setTimeout(() => location.reload(), 1500); // Delay reload for UX
-                        } else {
-                            const errorEl = document.getElementById('student-credentials-error');
-                            if (errorEl) {
-                                errorEl.classList.remove('d-none');
-                                let errorHtml = '<strong>Validation Error:</strong><ul>';
-                                if (data.errors) {
-                                    Object.values(data.errors).flat().forEach(err => {
-                                        errorHtml += `<li>${err}</li>`;
-                                    });
-                                } else {
-                                    errorHtml += `<li>${data.message || 'Unknown error'}</li>`;
-                                }
-                                errorHtml += '</ul>';
-                                errorEl.innerHTML = errorHtml;
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Form submit error:', error); // Debug
-                        const errorEl = document.getElementById('student-credentials-error');
-                        if (errorEl) {
-                            errorEl.classList.remove('d-none');
-                            errorEl.textContent = 'An error occurred. Please try again.';
-                        }
-                    });
-                });
-            } else {
-                console.error('Student form not found!'); // Debug
+    // Users by Role Chart
+    const roleChartCanvas = document.getElementById('usersByRoleChart');
+    if (roleChartCanvas) {
+        new Chart(roleChartCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: @json(array_keys($role_counts ?? [])),
+                datasets: [{
+                    label: 'Number of Users',
+                    data: @json(array_values($role_counts ?? [])),
+                    backgroundColor: [
+                        '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#6f42c1', '#858796'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
             }
         });
-    </script>
-</div>
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // Add Student Modal – AJAX loading
+    // ────────────────────────────────────────────────────────────────
+
+    const addStudentModalEl   = document.getElementById('addStudentModal');
+    const credentialsModalEl  = document.getElementById('setStudentCredentialsModal');
+
+    if (!addStudentModalEl || !credentialsModalEl) return;
+
+    const addStudentModal     = new bootstrap.Modal(addStudentModalEl);
+    const credentialsModal    = new bootstrap.Modal(credentialsModalEl);
+
+    const studentSearch       = document.getElementById('student-search');
+    const studentSelect       = document.getElementById('student-select');
+    const proceedBtn          = document.getElementById('proceed-to-credentials');
+    const studentError        = document.getElementById('student-select-error');
+
+    let currentStudent = null;
+
+    let choicesInstance = null;
+    if (typeof Choices !== 'undefined') {
+        choicesInstance = new Choices(studentSelect, {
+            searchEnabled: true,
+            removeItemButton: false,
+            placeholderValue: '-- Select a student --',
+            noResultsText: 'No students found',
+            noChoicesText: 'Start typing to search...'
+        });
+    }
+
+    // Load students when modal is shown
+    addStudentModalEl.addEventListener('show.bs.modal', function () {
+        loadStudents('');
+    });
+
+    function loadStudents(searchTerm = '') {
+        if (choicesInstance) {
+            choicesInstance.clearChoices();
+            choicesInstance.setChoices([{ value: '', label: 'Loading...', disabled: true }], 'value', 'label', true);
+        } else {
+            studentSelect.innerHTML = '<option value="">Loading...</option>';
+        }
+
+        proceedBtn.disabled = true;
+
+        let url = '{{ route("get.students") }}';
+        if (searchTerm.trim()) {
+            url += `?search=${encodeURIComponent(searchTerm.trim())}`;
+        }
+
+        fetch(url, {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                studentError.textContent = data.message || 'Could not load students';
+                studentError.classList.remove('d-none');
+                return;
+            }
+
+            studentError.classList.add('d-none');
+
+            const students = data.students || [];
+
+            if (choicesInstance) {
+                const options = students.map(s => ({
+                    value: s.id,
+                    label: `${s.name} (${s.admissionNo})`,
+                    customProperties: {
+                        'data-name': s.name,
+                        'data-email': s.email || '',
+                        'data-admission': s.admissionNo || ''
+                    }
+                }));
+                choicesInstance.setChoices(options, 'value', 'label', true);
+            } else {
+                studentSelect.innerHTML = '<option value="">-- Select student --</option>';
+                students.forEach(s => {
+                    const opt = new Option(`${s.name} (${s.admissionNo})`, s.id);
+                    opt.dataset.name = s.name;
+                    opt.dataset.email = s.email || '';
+                    opt.dataset.admission = s.admissionNo || '';
+                    studentSelect.add(opt);
+                });
+            }
+
+            proceedBtn.disabled = students.length === 0;
+        })
+        .catch(() => {
+            studentError.textContent = 'Network error – please try again';
+            studentError.classList.remove('d-none');
+        });
+    }
+
+    // Live search
+    studentSearch?.addEventListener('input', debounce(() => {
+        loadStudents(studentSearch.value);
+    }, 350));
+
+    // Selection change
+    studentSelect?.addEventListener('change', function () {
+        const selectedOption = this.options[this.selectedIndex];
+        if (!selectedOption.value) {
+            proceedBtn.disabled = true;
+            currentStudent = null;
+            return;
+        }
+
+        currentStudent = {
+            id: selectedOption.value,
+            name: selectedOption.dataset.name || '',
+            email: selectedOption.dataset.email || '',
+            admissionNo: selectedOption.dataset.admission || ''
+        };
+
+        proceedBtn.disabled = false;
+    });
+
+    // Proceed button
+    proceedBtn?.addEventListener('click', function () {
+        if (!currentStudent) return;
+
+        document.getElementById('student-id-field').value = currentStudent.id;
+        document.getElementById('student-name-field').value = currentStudent.name;
+        document.getElementById('student-user-email').value = currentStudent.email;
+        document.getElementById('student-username').value = (currentStudent.admissionNo || '').replace(/[\/\\]/g, '_');
+
+        addStudentModal.hide();
+        setTimeout(() => credentialsModal.show(), 300);
+    });
+
+    // Generate password
+    document.getElementById('generate-temp-password')?.addEventListener('click', function () {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        let password = '';
+        for (let i = 0; i < 12; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        document.getElementById('student-password').value = password;
+        document.getElementById('student-password_confirmation').value = password;
+    });
+
+    // Create student user form submit
+    document.getElementById('add-student-credentials-form')?.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        formData.append('_token', '{{ csrf_token() }}');
+
+        fetch('{{ route("users.store-student") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: result.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                credentialsModal.hide();
+                setTimeout(() => location.reload(), 2200);
+            } else {
+                const errorContainer = document.getElementById('student-credentials-error');
+                errorContainer.innerHTML = '';
+                if (result.errors) {
+                    Object.values(result.errors).forEach(errArr => {
+                        errArr.forEach(msg => {
+                            errorContainer.innerHTML += `<div>${msg}</div>`;
+                        });
+                    });
+                } else {
+                    errorContainer.innerHTML = result.message || 'An error occurred';
+                }
+                errorContainer.classList.remove('d-none');
+            }
+        })
+        .catch(() => {
+            Swal.fire('Error', 'Failed to connect to server', 'error');
+        });
+    });
+
+    // Simple debounce utility
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // You can add your existing List.js / filterData() / edit / delete logic here
+    // Example placeholder:
+    // window.filterData = function() { ... }
+
+});
+
+</script>
+
 @endsection

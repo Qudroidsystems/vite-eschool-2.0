@@ -48,96 +48,6 @@ class UserController extends Controller
         return view('users.index', compact('data', 'roles', 'role_permissions', 'pagetitle', 'role_counts'));
     }
 
-
-
-
-    public function storeStudent(Request $request): JsonResponse
-    {
-        \Log::debug("Creating student user", $request->all());
-
-        try {
-            if (!auth()->user()->hasPermissionTo('Create user')) {
-                \Log::warning("User ID " . auth()->user()->id . " attempted to create student user without permission");
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User does not have the right permissions',
-                ], 403);
-            }
-
-            $validated = $request->validate([
-                'student_id' => 'required|exists:studentRegistration,id',
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email',
-                'username' => 'required|string|unique:users,username|max:255',
-                'password' => 'required|min:8|confirmed',
-                'roles' => 'required|array|min:1',
-                'roles.*' => 'exists:roles,name',
-            ]);
-
-            \Log::info("Validated data for student create:", $validated);
-
-            $input = $request->all();
-            // Sanitize username (replace / with _ for safety)
-            $input['username'] = str_replace('/', '_', $input['username']);
-            $plainPassword = $input['password']; // Store plain password if needed
-            $input['password'] = Hash::make($input['password']);
-
-            $user = User::create($input);
-            $user->syncRoles($request->input('roles'));
-
-            $student = Student::findOrFail($validated['student_id']);
-
-            BioModel::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'firstname' => $student->firstname,
-                    'lastname' => $student->lastname,
-                    'othernames' => $student->othername ?? '',
-                    'phone' => $student->phone_number ?? '',
-                    'address' => $student->home_address2 ?? '',
-                    'gender' => $student->gender ?? '',
-                    'maritalstatus' => '',
-                    'nationality' => $student->nationality ?? '',
-                    'dob' => $student->dateofbirth ?? '',
-                ]
-            );
-
-            \Log::info("Student user ID: {$user->id} created successfully, roles:", $request->input('roles'));
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Student user created successfully',
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'username' => $user->username,
-                    'roles' => $user->roles->pluck('name')->toArray(),
-                    'password' => $plainPassword,
-                ],
-            ], 201);
-        } catch (ValidationException $e) {
-            \Log::error("Validation error creating student user: " . json_encode($e->errors()));
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors(),
-            ], 422);
-        } catch (\Exception $e) {
-            \Log::error("Create student user error: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create student user: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function roles(): JsonResponse
-    {
-        $roles = Role::pluck('name')->all();
-        return response()->json(['roles' => $roles]);
-    }
-
     public function create(): View
     {
         $title = "Create User";
@@ -145,7 +55,7 @@ class UserController extends Controller
         return view('users.create', compact('roles', 'title'));
     }
 
-     public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
         \Log::debug("Creating user", $request->all());
 
@@ -204,6 +114,43 @@ class UserController extends Controller
                 'message' => 'Failed to create user: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function show($id): View
+    {
+        $pagetitle = "User Overview";
+
+        // Eager load necessary relations
+        $user = User::with(['roles', 'bio', 'student', 'staffemploymentDetails', 'staffPicture'])->findOrFail($id);
+
+        $userbio = $user->bio;
+
+        // Initialize variables to prevent undefined errors
+        $staffInfo = $user->staffemploymentDetails;
+        $staffPicture = $user->staffPicture;
+        $studentPicture = null;
+
+        // Load student picture if student
+        if ($user->isStudent() && $user->student_id) {
+            $studentPicture = Studentpicture::where('studentid', $user->student_id)->first();
+        }
+
+        return view('users.overview', compact(
+            'user',
+            'userbio',
+            'staffInfo',
+            'staffPicture',
+            'studentPicture',
+            'pagetitle'
+        ));
+    }
+
+    public function edit($id): View
+    {
+        $user = User::find($id);
+        $roles = Role::pluck('name', 'name')->all();
+        $userRole = $user->roles->pluck('name', 'name')->all();
+        return view('users.edit', compact('user', 'roles', 'userRole'));
     }
 
     public function update(Request $request, $id): JsonResponse
@@ -272,96 +219,6 @@ class UserController extends Controller
         }
     }
 
-
-public function show($id): View
-    {
-        $pagetitle = "User Overview";
-
-        // Eager load necessary relations
-        $user = User::with(['roles', 'bio', 'student', 'staffemploymentDetails', 'staffPicture'])->findOrFail($id);
-
-        $userbio = $user->bio;
-
-        // Initialize variables to prevent undefined errors
-        $staffInfo = $user->staffemploymentDetails;
-        $staffPicture = $user->staffPicture;
-        $studentPicture = null;
-
-        // Load student picture if student
-        if ($user->isStudent() && $user->student_id) {
-            $studentPicture = Studentpicture::where('studentid', $user->student_id)->first();
-        }
-
-        return view('users.overview', compact(
-            'user',
-            'userbio',
-            'staffInfo',
-            'staffPicture',
-            'studentPicture',
-            'pagetitle'
-        ));
-    }
-
-    public function edit($id): View
-    {
-        $user = User::find($id);
-        $roles = Role::pluck('name', 'name')->all();
-        $userRole = $user->roles->pluck('name', 'name')->all();
-        return view('users.edit', compact('user', 'roles', 'userRole'));
-    }
-
-
-
-    public function createFromStudentForm(): View
-    {
-        $roles = Role::pluck('name', 'name')->all();
-        $students = Student::select('id', 'admissionNo', 'firstname', 'lastname')
-            // ->where('statusId', 1)
-            ->orderBy('admissionNo')
-            ->get();
-
-        return view('users.add-student-user', compact('roles', 'students'));
-    }
-
-    public function createFromStudent(Request $request): RedirectResponse
-    {
-        $this->validate($request, [
-            'student_id' => 'required|exists:studentregistration,id',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|same:confirm-password',
-            'roles' => 'required',
-        ]);
-
-        $student = Student::findOrFail($request->student_id);
-
-        $user = new User();
-        $user->name = $student->firstname . ' ' . $student->lastname;
-        $user->email = $request->email;
-        $user->password = Hash::make($request->password);
-        $user->student_id = $student->id;
-        $user->save();
-
-        $user->assignRole($request->input('roles'));
-
-        BioModel::updateOrCreate(
-            ['user_id' => $user->id],
-            [
-                'firstname' => $student->firstname,
-                'lastname' => $student->lastname,
-                'othernames' => $student->othername ?? '',
-                'phone' => '',
-                'address' => $student->home_address ?? '',
-                'gender' => $student->gender ?? '',
-                'maritalstatus' => '',
-                'nationality' => $student->nationlity ?? '',
-                'dob' => $student->dateofbirth ?? '',
-            ]
-        );
-
-        return redirect()->route('users.index')
-            ->with('success', 'Student added as user successfully');
-    }
-
     public function destroy($id): JsonResponse
     {
         \Log::debug("Attempting to delete user ID: {$id}");
@@ -391,11 +248,154 @@ public function show($id): View
         }
     }
 
+    public function roles(): JsonResponse
+    {
+        $roles = Role::pluck('name')->all();
+        return response()->json(['roles' => $roles]);
+    }
 
-    // Add this method to your User model
-public function isActive(): bool
-{
-    // You can customize this based on your actual logic
-    return true; // Default to active
-}
+    public function storeStudent(Request $request): JsonResponse
+    {
+        \Log::debug("Creating student user", $request->all());
+
+        try {
+            if (!auth()->user()->hasPermissionTo('Create user')) {
+                \Log::warning("User ID " . auth()->user()->id . " attempted to create student user without permission");
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User does not have the right permissions',
+                ], 403);
+            }
+
+            $validated = $request->validate([
+                'student_id' => 'required|exists:studentRegistration,id',
+                'name'       => 'required|string|max:255',
+                'email'      => 'required|email|unique:users,email',
+                'username'   => 'required|string|unique:users,username|max:255',
+                'password'   => 'required|min:8|confirmed',
+                'roles'      => 'required|array|min:1',
+                'roles.*'    => 'exists:roles,name',
+            ]);
+
+            \Log::info("Validated data for student create:", $validated);
+
+            $input = $request->all();
+            // Sanitize username (replace / with _ for safety)
+            $input['username'] = str_replace('/', '_', $input['username']);
+            $plainPassword = $input['password']; // Store plain password if needed
+            $input['password'] = Hash::make($input['password']);
+
+            $user = User::create($input);
+            $user->syncRoles($request->input('roles'));
+
+            $student = Student::findOrFail($validated['student_id']);
+
+            BioModel::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'firstname'     => $student->firstname,
+                    'lastname'      => $student->lastname,
+                    'othernames'    => $student->othername ?? '',
+                    'phone'         => $student->phone_number ?? '',
+                    'address'       => $student->home_address2 ?? '',
+                    'gender'        => $student->gender ?? '',
+                    'maritalstatus' => '',
+                    'nationality'   => $student->nationality ?? '',
+                    'dob'           => $student->dateofbirth ?? '',
+                ]
+            );
+
+            \Log::info("Student user ID: {$user->id} created successfully, roles:", $request->input('roles'));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Student user created successfully',
+                'user' => [
+                    'id'       => $user->id,
+                    'name'     => $user->name,
+                    'email'    => $user->email,
+                    'username' => $user->username,
+                    'roles'    => $user->roles->pluck('name')->toArray(),
+                    'password' => $plainPassword,
+                ],
+            ], 201);
+        } catch (ValidationException $e) {
+            \Log::error("Validation error creating student user: " . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors'  => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error("Create student user error: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create student user: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //                   NEW AJAX ENDPOINT FOR STUDENT LIST
+    // ────────────────────────────────────────────────────────────────
+
+    public function getStudents(Request $request): JsonResponse
+    {
+        try {
+            $query = Student::query()
+                ->select('id', 'admissionNo', 'firstname', 'lastname', 'email', 'phone_number')
+                ->whereNotNull('admissionNo');
+
+            // Uncomment if you want to filter by status again later
+            // ->where('statusId', 1)
+
+            if ($request->filled('search')) {
+                $search = trim($request->search);
+                $query->where(function ($q) use ($search) {
+                    $q->where('admissionNo', 'like', "%{$search}%")
+                      ->orWhere('firstname', 'like', "%{$search}%")
+                      ->orWhere('lastname', 'like', "%{$search}%")
+                      ->orWhereRaw("CONCAT(firstname, ' ', lastname) LIKE ?", ["%{$search}%"]);
+                });
+            }
+
+            $students = $query
+                ->orderBy('admissionNo')
+                ->limit(500)
+                ->get();
+
+            return response()->json([
+                'success'  => true,
+                'students' => $students->map(function ($student) {
+                    return [
+                        'id'          => $student->id,
+                        'admissionNo' => $student->admissionNo,
+                        'name'        => trim("{$student->firstname} {$student->lastname}"),
+                        'email'       => $student->email ?? '',
+                        'phone'       => $student->phone_number ?? '',
+                    ];
+                })->toArray(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Error fetching students: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load students',
+            ], 500);
+        }
+    }
+
+    // Optional: placeholder / stub if you still have old redirect-based method
+    // You can remove this completely if you're fully AJAX now
+    public function createFromStudent(Request $request): RedirectResponse
+    {
+        // This can be removed if you're no longer using the form submission redirect flow
+        return redirect()->route('users.index')->with('error', 'This action is deprecated. Use the modal flow.');
+    }
+
+    // Placeholder method – you mentioned isActive() in your original code
+    public function isActive(): bool
+    {
+        return true; // Default to active - customize as needed
+    }
 }
