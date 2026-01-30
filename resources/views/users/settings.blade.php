@@ -56,45 +56,45 @@
 
             <div class="row">
                 <div class="col-xxl-12">
-                    <!-- Tabs -->
+                    <!-- Tabs Navigation -->
                     <div class="d-flex align-items-center flex-wrap gap-2 mb-4">
                         <ul class="nav nav-pills arrow-navtabs nav-secondary gap-2 flex-grow-1" role="tablist">
                             <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#personalDetails">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#personalDetails" role="tab">
                                     <i class="ri-user-line me-1"></i> Personal Details
                                 </a>
                             </li>
                             @if($isStaff)
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#employmentInfo">
+                                <a class="nav-link" data-bs-toggle="tab" href="#employmentInfo" role="tab">
                                     <i class="ri-briefcase-line me-1"></i> Employment
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#qualifications">
+                                <a class="nav-link" data-bs-toggle="tab" href="#qualifications" role="tab">
                                     <i class="ri-graduation-cap-line me-1"></i> Qualifications
                                 </a>
                             </li>
                             @endif
                             @if($isStudent && $studentData)
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#studentInfo">
+                                <a class="nav-link" data-bs-toggle="tab" href="#studentInfo" role="tab">
                                     <i class="ri-user-star-line me-1"></i> Student Info
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#parentInfo">
+                                <a class="nav-link" data-bs-toggle="tab" href="#parentInfo" role="tab">
                                     <i class="ri-parent-line me-1"></i> Parent Info
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#academicInfo">
+                                <a class="nav-link" data-bs-toggle="tab" href="#academicInfo" role="tab">
                                     <i class="ri-book-line me-1"></i> Academic
                                 </a>
                             </li>
                             @endif
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#security">
+                                <a class="nav-link" data-bs-toggle="tab" href="#security" role="tab">
                                     <i class="ri-lock-line me-1"></i> Security
                                 </a>
                             </li>
@@ -108,10 +108,10 @@
 
                     <div class="card">
                         <div class="card-body">
-                            <div class="tab-content">
+                            <div class="tab-content" id="profileTabsContent">
 
-                                <!-- Personal Details -->
-                                <div class="tab-pane active" id="personalDetails" role="tabpanel">
+                                <!-- Personal Details Tab -->
+                                <div class="tab-pane fade show active" id="personalDetails" role="tabpanel">
                                     <div class="text-center mb-5">
                                         <div class="position-relative d-inline-block">
                                             <div class="avatar-xxl">
@@ -170,8 +170,9 @@
                                             </div>
                                         </div>
 
-                                        <!-- Student: View-only | Staff/Admin: Editable -->
+                                        <!-- Personal Info Content -->
                                         @if(!auth()->user()->hasRole('student'))
+                                            <!-- Editable for staff/admin -->
                                             <form action="{{ route('profile.update-info') }}" method="POST">
                                                 @csrf
                                                 <input type="hidden" name="id" value="{{ $user->id }}">
@@ -234,7 +235,7 @@
                                                 </div>
                                             </form>
                                         @else
-                                            <!-- Student View-Only Personal Info -->
+                                            <!-- Student View-Only -->
                                             <div class="row g-3">
                                                 <div class="col-12"><h5 class="mb-3 border-bottom pb-2">Personal Information</h5></div>
                                                 <div class="col-md-6">
@@ -273,146 +274,120 @@
                                         @endif
                                     </div>
 
-                                <!-- Employment Info (Staff Only - Editable) -->
-                                @if($isStaff && !auth()->user()->hasRole('student'))
-                                <div class="tab-pane" id="employmentInfo" role="tabpanel">
-                                    <form action="{{ route('profile.update-employment-info') }}" method="POST">
-                                        @csrf
+                                <!-- Employment Info Tab -->
+                                @if($isStaff)
+                                <div class="tab-pane fade" id="employmentInfo" role="tabpanel">
+                                    @if(!auth()->user()->hasRole('student'))
+                                        <!-- Editable for staff -->
+                                        <form action="{{ route('profile.update-employment-info') }}" method="POST">
+                                            @csrf
+                                            <div class="row g-3">
+                                                <div class="col-12"><h5 class="mb-3 border-bottom pb-2">Employment Information</h5></div>
+                                                <div class="col-md-6"><label>Employment ID *</label><input type="text" name="employmentid" class="form-control" value="{{ old('employmentid', $staffInfo?->employmentid ?? '') }}" required></div>
+                                                <div class="col-md-6"><label>Job Title *</label><input type="text" name="title" class="form-control" value="{{ old('title', $staffInfo?->title ?? '') }}" required></div>
+                                                <div class="col-md-6"><label>Work Phone *</label><input type="text" name="phonenumber" class="form-control" value="{{ old('phonenumber', $staffInfo?->phonenumber ?? '') }}" required></div>
+                                                <div class="col-md-6">
+                                                    <label>Marital Status *</label>
+                                                    <select name="maritalstatus" class="form-control" required>
+                                                        <option value="">Select</option>
+                                                        <option value="single" {{ old('maritalstatus', $staffInfo?->maritalstatus ?? '') == 'single' ? 'selected' : '' }}>Single</option>
+                                                        <option value="married" {{ old('maritalstatus', $staffInfo?->maritalstatus ?? '') == 'married' ? 'selected' : '' }}>Married</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6"><label>Number of Children</label><input type="number" name="numberofchildren" class="form-control" value="{{ old('numberofchildren', $staffInfo?->numberofchildren ?? 0) }}"></div>
+                                                <div class="col-md-6"><label>Spouse Phone</label><input type="text" name="spousenumber" class="form-control" value="{{ old('spousenumber', $staffInfo?->spousenumber ?? '') }}"></div>
+                                                <div class="col-12"><label>Residential Address *</label><textarea name="address" class="form-control" rows="3" required>{{ old('address', $staffInfo?->address ?? '') }}</textarea></div>
+                                                <div class="col-md-6"><label>State *</label><input type="text" name="state" class="form-control" value="{{ old('state', $staffInfo?->state ?? '') }}" required></div>
+                                                <div class="col-md-6"><label>Local Government *</label><input type="text" name="local" class="form-control" value="{{ old('local', $staffInfo?->local ?? '') }}" required></div>
+                                                <div class="col-12"><label>Religion *</label><input type="text" name="religion" class="form-control" value="{{ old('religion', $staffInfo?->religion ?? '') }}" required></div>
+                                                <div class="col-12 text-end mt-4">
+                                                    <button type="reset" class="btn btn-light me-2">Reset</button>
+                                                    <button type="submit" class="btn btn-primary"><i class="ri-save-line me-1"></i> Update Employment Info</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    @else
+                                        <!-- View-only for students (if somehow visible) -->
                                         <div class="row g-3">
                                             <div class="col-12"><h5 class="mb-3 border-bottom pb-2">Employment Information</h5></div>
-                                            <div class="col-md-6"><label>Employment ID *</label><input type="text" name="employmentid" class="form-control" value="{{ old('employmentid', $staffInfo?->employmentid ?? '') }}" required></div>
-                                            <div class="col-md-6"><label>Job Title *</label><input type="text" name="title" class="form-control" value="{{ old('title', $staffInfo?->title ?? '') }}" required></div>
-                                            <div class="col-md-6"><label>Work Phone *</label><input type="text" name="phonenumber" class="form-control" value="{{ old('phonenumber', $staffInfo?->phonenumber ?? '') }}" required></div>
-                                            <div class="col-md-6">
-                                                <label>Marital Status *</label>
-                                                <select name="maritalstatus" class="form-control" required>
-                                                    <option value="">Select</option>
-                                                    <option value="single" {{ old('maritalstatus', $staffInfo?->maritalstatus ?? '') == 'single' ? 'selected' : '' }}>Single</option>
-                                                    <option value="married" {{ old('maritalstatus', $staffInfo?->maritalstatus ?? '') == 'married' ? 'selected' : '' }}>Married</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6"><label>Number of Children</label><input type="number" name="numberofchildren" class="form-control" value="{{ old('numberofchildren', $staffInfo?->numberofchildren ?? 0) }}"></div>
-                                            <div class="col-md-6"><label>Spouse Phone</label><input type="text" name="spousenumber" class="form-control" value="{{ old('spousenumber', $staffInfo?->spousenumber ?? '') }}"></div>
-                                            <div class="col-12"><label>Residential Address *</label><textarea name="address" class="form-control" rows="3" required>{{ old('address', $staffInfo?->address ?? '') }}</textarea></div>
-                                            <div class="col-md-6"><label>State *</label><input type="text" name="state" class="form-control" value="{{ old('state', $staffInfo?->state ?? '') }}" required></div>
-                                            <div class="col-md-6"><label>Local Government *</label><input type="text" name="local" class="form-control" value="{{ old('local', $staffInfo?->local ?? '') }}" required></div>
-                                            <div class="col-12"><label>Religion *</label><input type="text" name="religion" class="form-control" value="{{ old('religion', $staffInfo?->religion ?? '') }}" required></div>
-                                            <div class="col-12 text-end mt-4">
-                                                <button type="reset" class="btn btn-light me-2">Reset</button>
-                                                <button type="submit" class="btn btn-primary"><i class="ri-save-line me-1"></i> Update Employment Info</button>
-                                            </div>
+                                            <div class="col-md-6"><label>Employment ID</label><input type="text" class="form-control" value="N/A (Student)" readonly></div>
+                                            <div class="col-md-6"><label>Job Title</label><input type="text" class="form-control" value="N/A (Student)" readonly></div>
                                         </div>
-                                    </form>
-                                </div>
-                                @elseif($isStaff)
-                                <!-- Staff View-Only Employment Info -->
-                                <div class="tab-pane" id="employmentInfo" role="tabpanel">
-                                    <div class="row g-3">
-                                        <div class="col-12"><h5 class="mb-3 border-bottom pb-2">Employment Information</h5></div>
-                                        <div class="col-md-6"><label>Employment ID</label><input type="text" class="form-control" value="{{ $staffInfo?->employmentid ?? 'N/A' }}" readonly></div>
-                                        <div class="col-md-6"><label>Job Title</label><input type="text" class="form-control" value="{{ $staffInfo?->title ?? 'N/A' }}" readonly></div>
-                                        <div class="col-md-6"><label>Work Phone</label><input type="text" class="form-control" value="{{ $staffInfo?->phonenumber ?? 'N/A' }}" readonly></div>
-                                        <div class="col-md-6"><label>Marital Status</label><input type="text" class="form-control" value="{{ ucfirst($staffInfo?->maritalstatus ?? 'N/A') }}" readonly></div>
-                                        <div class="col-md-6"><label>Number of Children</label><input type="text" class="form-control" value="{{ $staffInfo?->numberofchildren ?? '0' }}" readonly></div>
-                                        <div class="col-md-6"><label>Spouse Phone</label><input type="text" class="form-control" value="{{ $staffInfo?->spousenumber ?? 'N/A' }}" readonly></div>
-                                        <div class="col-12"><label>Residential Address</label><textarea class="form-control" rows="3" readonly>{{ $staffInfo?->address ?? 'N/A' }}</textarea></div>
-                                        <div class="col-md-6"><label>State</label><input type="text" class="form-control" value="{{ $staffInfo?->state ?? 'N/A' }}" readonly></div>
-                                        <div class="col-md-6"><label>Local Government</label><input type="text" class="form-control" value="{{ $staffInfo?->local ?? 'N/A' }}" readonly></div>
-                                        <div class="col-12"><label>Religion</label><input type="text" class="form-control" value="{{ $staffInfo?->religion ?? 'N/A' }}" readonly></div>
-                                    </div>
+                                    @endif
                                 </div>
                                 @endif
 
-                                <!-- Qualifications (Staff Only - Editable) -->
-                                @if($isStaff && !auth()->user()->hasRole('student'))
-                                <div class="tab-pane" id="qualifications" role="tabpanel">
-                                    <div class="card mb-4 border">
-                                        <div class="card-header bg-light"><h5 class="card-title mb-0"><i class="ri-add-circle-line me-2"></i>Add New Qualification</h5></div>
-                                        <div class="card-body">
-                                            <form action="{{ route('profile.add-qualification') }}" method="POST" enctype="multipart/form-data">
-                                                @csrf
-                                                <div class="row g-3">
-                                                    <div class="col-md-6"><label>Institution *</label><input type="text" name="institution" class="form-control" required></div>
-                                                    <div class="col-md-6"><label>Qualification *</label><input type="text" name="qualification" class="form-control" required></div>
-                                                    <div class="col-md-6"><label>Field of Study *</label><input type="text" name="field_of_study" class="form-control" required></div>
-                                                    <div class="col-md-6"><label>Year Obtained *</label><input type="number" name="year_obtained" class="form-control" min="1900" max="{{ date('Y')+1 }}" required></div>
-                                                    <div class="col-md-6"><label>Certificate</label><input type="file" name="certificate" class="form-control" accept=".pdf,.jpg,.jpeg,.png"></div>
-                                                    <div class="col-md-6"><label>Remarks</label><textarea name="remarks" class="form-control" rows="2"></textarea></div>
-                                                    <div class="col-12 text-end">
-                                                        <button type="reset" class="btn btn-light me-2">Clear</button>
-                                                        <button type="submit" class="btn btn-success"><i class="ri-add-line me-1"></i>Add</button>
+                                <!-- Qualifications Tab -->
+                                @if($isStaff)
+                                <div class="tab-pane fade" id="qualifications" role="tabpanel">
+                                    @if(!auth()->user()->hasRole('student'))
+                                        <!-- Editable -->
+                                        <div class="card mb-4 border">
+                                            <div class="card-header bg-light"><h5 class="card-title mb-0"><i class="ri-add-circle-line me-2"></i>Add New Qualification</h5></div>
+                                            <div class="card-body">
+                                                <form action="{{ route('profile.add-qualification') }}" method="POST" enctype="multipart/form-data">
+                                                    @csrf
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6"><label>Institution *</label><input type="text" name="institution" class="form-control" required></div>
+                                                        <div class="col-md-6"><label>Qualification *</label><input type="text" name="qualification" class="form-control" required></div>
+                                                        <div class="col-md-6"><label>Field of Study *</label><input type="text" name="field_of_study" class="form-control" required></div>
+                                                        <div class="col-md-6"><label>Year Obtained *</label><input type="number" name="year_obtained" class="form-control" min="1900" max="{{ date('Y')+1 }}" required></div>
+                                                        <div class="col-md-6"><label>Certificate</label><input type="file" name="certificate" class="form-control" accept=".pdf,.jpg,.jpeg,.png"></div>
+                                                        <div class="col-md-6"><label>Remarks</label><textarea name="remarks" class="form-control" rows="2"></textarea></div>
+                                                        <div class="col-12 text-end">
+                                                            <button type="reset" class="btn btn-light me-2">Clear</button>
+                                                            <button type="submit" class="btn btn-success"><i class="ri-add-line me-1"></i>Add</button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </form>
+                                                </form>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div class="card border">
-                                        <div class="card-header bg-light"><h5 class="card-title mb-0"><i class="ri-graduation-cap-line me-2"></i>Qualifications <span class="badge bg-primary ms-2">{{ $qualifications->count() }}</span></h5></div>
-                                        <div class="card-body">
-                                            @if($qualifications->count() > 0)
-                                                <table class="table table-hover">
-                                                    <thead><tr><th>#</th><th>Institution</th><th>Qualification</th><th>Field</th><th>Year</th><th>Certificate</th><th>Remarks</th><th>Action</th></tr></thead>
-                                                    <tbody>
-                                                        @foreach($qualifications as $i => $q)
-                                                        <tr>
-                                                            <td>{{ $i + 1 }}</td>
-                                                            <td>{{ $q->institution }}</td>
-                                                            <td>{{ $q->qualification }}</td>
-                                                            <td>{{ $q->field_of_study }}</td>
-                                                            <td>{{ $q->year_obtained }}</td>
-                                                            <td>@if($q->certificate_file)<a href="{{ asset('storage/' . $q->certificate_file) }}" target="_blank">View</a>@else - @endif</td>
-                                                            <td>{{ $q->remarks ?? '-' }}</td>
-                                                            <td>
-                                                                <form action="{{ route('profile.delete-qualification', $q->id) }}" method="POST" class="d-inline">
-                                                                    @csrf @method('DELETE')
-                                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete?')"><i class="ri-delete-bin-line"></i></button>
-                                                                </form>
-                                                            </td>
-                                                        </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            @else
-                                                <p class="text-center text-muted py-4">No qualifications added.</p>
-                                            @endif
+                                        <div class="card border">
+                                            <div class="card-header bg-light"><h5 class="card-title mb-0"><i class="ri-graduation-cap-line me-2"></i>Qualifications <span class="badge bg-primary ms-2">{{ $qualifications->count() }}</span></h5></div>
+                                            <div class="card-body">
+                                                @if($qualifications->count() > 0)
+                                                    <table class="table table-hover">
+                                                        <thead><tr><th>#</th><th>Institution</th><th>Qualification</th><th>Field</th><th>Year</th><th>Certificate</th><th>Remarks</th><th>Action</th></tr></thead>
+                                                        <tbody>
+                                                            @foreach($qualifications as $i => $q)
+                                                            <tr>
+                                                                <td>{{ $i + 1 }}</td>
+                                                                <td>{{ $q->institution }}</td>
+                                                                <td>{{ $q->qualification }}</td>
+                                                                <td>{{ $q->field_of_study }}</td>
+                                                                <td>{{ $q->year_obtained }}</td>
+                                                                <td>@if($q->certificate_file)<a href="{{ asset('storage/' . $q->certificate_file) }}" target="_blank">View</a>@else - @endif</td>
+                                                                <td>{{ $q->remarks ?? '-' }}</td>
+                                                                <td>
+                                                                    <form action="{{ route('profile.delete-qualification', $q->id) }}" method="POST" class="d-inline">
+                                                                        @csrf @method('DELETE')
+                                                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete?')"><i class="ri-delete-bin-line"></i></button>
+                                                                    </form>
+                                                                </td>
+                                                            </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                @else
+                                                    <p class="text-center text-muted py-4">No qualifications added.</p>
+                                                @endif
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                                @elseif($isStaff)
-                                <!-- Staff View-Only Qualifications -->
-                                <div class="tab-pane" id="qualifications" role="tabpanel">
-                                    <div class="card border">
-                                        <div class="card-header bg-light"><h5 class="card-title mb-0"><i class="ri-graduation-cap-line me-2"></i>Qualifications <span class="badge bg-primary ms-2">{{ $qualifications->count() }}</span></h5></div>
-                                        <div class="card-body">
-                                            @if($qualifications->count() > 0)
-                                                <table class="table table-hover">
-                                                    <thead><tr><th>#</th><th>Institution</th><th>Qualification</th><th>Field</th><th>Year</th><th>Certificate</th><th>Remarks</th></tr></thead>
-                                                    <tbody>
-                                                        @foreach($qualifications as $i => $q)
-                                                        <tr>
-                                                            <td>{{ $i + 1 }}</td>
-                                                            <td>{{ $q->institution }}</td>
-                                                            <td>{{ $q->qualification }}</td>
-                                                            <td>{{ $q->field_of_study }}</td>
-                                                            <td>{{ $q->year_obtained }}</td>
-                                                            <td>@if($q->certificate_file)<a href="{{ asset('storage/' . $q->certificate_file) }}" target="_blank">View</a>@else - @endif</td>
-                                                            <td>{{ $q->remarks ?? '-' }}</td>
-                                                        </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            @else
-                                                <p class="text-center text-muted py-4">No qualifications added.</p>
-                                            @endif
+                                    @else
+                                        <!-- View-only -->
+                                        <div class="text-center py-5">
+                                            <i class="ri-graduation-cap-line fs-1"></i>
+                                            <h5 class="mt-3">Qualifications</h5>
+                                            <p class="text-muted">This section is not applicable for students.</p>
                                         </div>
-                                    </div>
+                                    @endif
                                 </div>
                                 @endif
 
-                                <!-- Student Info (View-Only) -->
+                                <!-- Student Info Tab -->
                                 @if($isStudent && $studentData)
-                                <div class="tab-pane" id="studentInfo" role="tabpanel">
+                                <div class="tab-pane fade" id="studentInfo" role="tabpanel">
                                     <div class="row g-3">
                                         <div class="col-12"><h5 class="mb-3 border-bottom pb-2">Student Information</h5></div>
                                         <div class="col-md-6"><label>Admission Number</label><input type="text" class="form-control" value="{{ $studentData?->admissionNo ?? 'N/A' }}" readonly></div>
@@ -426,9 +401,9 @@
                                 </div>
                                 @endif
 
-                                <!-- Parent Info (View-Only) -->
+                                <!-- Parent Info Tab -->
                                 @if($isStudent && $parentData)
-                                <div class="tab-pane" id="parentInfo" role="tabpanel">
+                                <div class="tab-pane fade" id="parentInfo" role="tabpanel">
                                     <div class="row g-3">
                                         <div class="col-12"><h5 class="mb-3 border-bottom pb-2">Parent/Guardian Information</h5></div>
                                         <div class="col-md-6"><label>Father's Name</label><input type="text" class="form-control" value="{{ $parentData?->father ?? 'N/A' }}" readonly></div>
@@ -441,9 +416,9 @@
                                 </div>
                                 @endif
 
-                                <!-- Academic Info (View-Only) -->
+                                <!-- Academic Info Tab -->
                                 @if($isStudent)
-                                <div class="tab-pane" id="academicInfo" role="tabpanel">
+                                <div class="tab-pane fade" id="academicInfo" role="tabpanel">
                                     <div class="row">
                                         <div class="col-lg-6 mb-4">
                                             <div class="card border">
@@ -495,8 +470,8 @@
                                 </div>
                                 @endif
 
-                                <!-- Security (View-Only for Students) -->
-                                <div class="tab-pane" id="security" role="tabpanel">
+                                <!-- Security Tab -->
+                                <div class="tab-pane fade" id="security" role="tabpanel">
                                     <div class="row">
                                         <div class="col-lg-6 mb-4">
                                             <div class="card border">
@@ -543,8 +518,7 @@
     Swal.fire({icon:'error', title:'Error', text:'{{ session('error') }}', toast:true, position:'top-end', timer:3000, showConfirmButton: false});
 @endif
 
-// No JS for avatar/email/password forms when student - already hidden
-// Tab persistence (optional)
+// Tab persistence (remember last active tab)
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {
         tab.addEventListener('shown.bs.tab', e => {
@@ -552,11 +526,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const saved = localStorage.getItem('activeProfileTab');
-    if (saved) {
-        const tab = document.querySelector(`a[href="${saved}"]`);
-        if (tab) {
-            const bsTab = new bootstrap.Tab(tab);
+    const savedTab = localStorage.getItem('activeProfileTab');
+    if (savedTab) {
+        const tabElement = document.querySelector(`a[href="${savedTab}"]`);
+        if (tabElement) {
+            const bsTab = new bootstrap.Tab(tabElement);
             bsTab.show();
         }
     }
