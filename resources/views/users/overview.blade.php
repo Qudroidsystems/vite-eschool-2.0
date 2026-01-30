@@ -55,7 +55,9 @@
                             <a href="{{ route('users.index') }}" class="btn btn-secondary">
                                 <i class="bi bi-arrow-left me-1"></i> Back to Users
                             </a>
-                            @if(Auth::id() == $user->id)
+
+                            <!-- Only non-students can edit their own profile -->
+                            @if(Auth::id() == $user->id && !auth()->user()->hasRole('student'))
                                 <a href="{{ route('profile.settings', $user->id) }}" class="btn btn-primary ms-2">
                                     <i class="ri-settings-line me-1"></i> Edit Profile
                                 </a>
@@ -74,11 +76,9 @@
                                         <div class="position-relative d-inline-block">
                                             <div class="avatar-xxl">
                                                 @php
-                                                    // Determine avatar URL
                                                     $avatarUrl = asset('images/default-avatar.png');
                                                     $hasAvatar = false;
 
-                                                    // Priority 1: User's avatar field
                                                     if ($user->avatar) {
                                                         if ($user->isStaff()) {
                                                             $avatarUrl = asset('storage/staff_avatars/' . $user->avatar);
@@ -91,21 +91,18 @@
                                                             $hasAvatar = true;
                                                         }
                                                     }
-                                                    // Priority 2: Staff picture model
-                                                    elseif ($user->isStaff() && isset($staffPicture) && $staffPicture?->picture) {
+                                                    elseif ($user->isStaff() && $staffPicture?->picture) {
                                                         $avatarUrl = asset('storage/staff_avatars/' . $staffPicture->picture);
                                                         $hasAvatar = true;
                                                     }
-                                                    // Priority 3: Student picture model
-                                                    elseif ($user->isStudent() && isset($studentPicture) && $studentPicture?->picture) {
+                                                    elseif ($user->isStudent() && $studentPicture?->picture) {
                                                         $avatarUrl = asset('storage/student_avatars/' . $studentPicture->picture);
                                                         $hasAvatar = true;
                                                     }
 
-                                                    // Get user initials
                                                     $initials = strtoupper(
                                                         substr($user->first_name ?? ($user->name ? explode(' ', $user->name)[0] : 'U'), 0, 1) .
-                                                        substr($user->last_name ?? ($user->name && isset(explode(' ', $user->name)[1]) ? explode(' ', $user->name)[1] : ''), 0, 1)
+                                                        substr($user->last_name ?? (explode(' ', $user->name)[1] ?? ''), 0, 1)
                                                     );
                                                 @endphp
 
@@ -114,11 +111,7 @@
                                                          alt="Profile"
                                                          class="rounded-circle img-thumbnail"
                                                          style="width: 150px; height: 150px; object-fit: cover;"
-                                                         onerror="this.onerror=null; this.src='{{ asset('images/default-avatar.png') }}'; this.classList.add('d-none'); this.nextElementSibling?.classList.remove('d-none');">
-                                                    <div class="avatar-title rounded-circle bg-light text-primary fs-1 d-none"
-                                                         style="width: 150px; height: 150px; line-height: 150px;">
-                                                        {{ $initials }}
-                                                    </div>
+                                                         onerror="this.onerror=null; this.src='{{ asset('images/default-avatar.png') }}';">
                                                 @else
                                                     <div class="avatar-title rounded-circle bg-light text-primary fs-1"
                                                          style="width: 150px; height: 150px; line-height: 150px;">
@@ -143,51 +136,50 @@
                                     <div class="row g-3">
                                         <div class="col-12"><h5 class="mb-3 border-bottom pb-2">Personal Information</h5></div>
 
-                                        <!-- Bio Information -->
                                         @if($userbio)
-                                        <div class="col-md-6">
-                                            <label>First Name</label>
-                                            <input type="text" class="form-control" value="{{ $userbio->firstname ?? 'N/A' }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Last Name</label>
-                                            <input type="text" class="form-control" value="{{ $userbio->lastname ?? 'N/A' }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Other Names</label>
-                                            <input type="text" class="form-control" value="{{ $userbio->othernames ?? 'N/A' }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Phone Number</label>
-                                            <input type="text" class="form-control" value="{{ $userbio->phone ?? $user->phone_number ?? 'N/A' }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Gender</label>
-                                            <input type="text" class="form-control" value="{{ ucfirst($userbio->gender ?? 'N/A') }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Marital Status</label>
-                                            <input type="text" class="form-control" value="{{ ucfirst($userbio->maritalstatus ?? 'N/A') }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Nationality</label>
-                                            <input type="text" class="form-control" value="{{ $userbio->nationality ?? 'N/A' }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Date of Birth</label>
-                                            <input type="text" class="form-control" value="{{ $userbio->dob ? \Carbon\Carbon::parse($userbio->dob)->format('d M Y') : 'N/A' }}" readonly>
-                                        </div>
-                                        <div class="col-12">
-                                            <label>Address</label>
-                                            <textarea class="form-control" rows="3" readonly>{{ $userbio->address ?? 'N/A' }}</textarea>
-                                        </div>
-                                        @else
-                                        <div class="col-12">
-                                            <div class="alert alert-info">
-                                                <i class="ri-information-line me-2"></i>
-                                                No personal information available. Please update profile details.
+                                            <div class="col-md-6">
+                                                <label>First Name</label>
+                                                <input type="text" class="form-control" value="{{ $userbio->firstname ?? 'N/A' }}" readonly>
                                             </div>
-                                        </div>
+                                            <div class="col-md-6">
+                                                <label>Last Name</label>
+                                                <input type="text" class="form-control" value="{{ $userbio->lastname ?? 'N/A' }}" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Other Names</label>
+                                                <input type="text" class="form-control" value="{{ $userbio->othernames ?? 'N/A' }}" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Phone Number</label>
+                                                <input type="text" class="form-control" value="{{ $userbio->phone ?? $user->phone_number ?? 'N/A' }}" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Gender</label>
+                                                <input type="text" class="form-control" value="{{ ucfirst($userbio->gender ?? 'N/A') }}" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Marital Status</label>
+                                                <input type="text" class="form-control" value="{{ ucfirst($userbio->maritalstatus ?? 'N/A') }}" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Nationality</label>
+                                                <input type="text" class="form-control" value="{{ $userbio->nationality ?? 'N/A' }}" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Date of Birth</label>
+                                                <input type="text" class="form-control" value="{{ $userbio->dob ? \Carbon\Carbon::parse($userbio->dob)->format('d M Y') : 'N/A' }}" readonly>
+                                            </div>
+                                            <div class="col-12">
+                                                <label>Address</label>
+                                                <textarea class="form-control" rows="3" readonly>{{ $userbio->address ?? 'N/A' }}</textarea>
+                                            </div>
+                                        @else
+                                            <div class="col-12">
+                                                <div class="alert alert-info">
+                                                    <i class="ri-information-line me-2"></i>
+                                                    No personal information available. Please update profile details.
+                                                </div>
+                                            </div>
                                         @endif
 
                                         <!-- Account Information -->
@@ -209,25 +201,33 @@
                                             <input type="text" class="form-control" value="{{ $user->updated_at->format('d M Y, h:i A') }}" readonly>
                                         </div>
 
-                                        <!-- Current Class for Students -->
-                                        @if($user->isStudent() && $currentClass)
-                                        <div class="col-12 mt-4"><h5 class="mb-3 border-bottom pb-2">Academic Information</h5></div>
-                                        <div class="col-md-6">
-                                            <label>Current Class</label>
-                                            <input type="text" class="form-control" value="{{ $currentClass->schoolclass?->schoolclass ?? 'Not Assigned' }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Class Arm</label>
-                                            <input type="text" class="form-control" value="{{ $currentClass->schoolclass?->armRelation?->schoolarm ?? 'N/A' }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Session</label>
-                                            <input type="text" class="form-control" value="{{ $currentClass->session?->session ?? 'N/A' }}" readonly>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Term</label>
-                                            <input type="text" class="form-control" value="{{ $currentClass->term?->term ?? 'N/A' }}" readonly>
-                                        </div>
+                                        <!-- Academic Information (only for students) -->
+                                        @if($user->isStudent())
+                                            <div class="col-12 mt-4">
+                                                <h5 class="mb-3 border-bottom pb-2">Academic Information</h5>
+                                            </div>
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label>Current Class</label>
+                                                    <input type="text" class="form-control"
+                                                           value="{{ $currentClass?->schoolclass?->schoolclass ?? 'Not Assigned' }}" readonly>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label>Class Arm</label>
+                                                    <input type="text" class="form-control"
+                                                           value="{{ $currentClass?->schoolclass?->armRelation?->schoolarm ?? 'N/A' }}" readonly>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label>Session</label>
+                                                    <input type="text" class="form-control"
+                                                           value="{{ $currentClass?->session?->session ?? 'N/A' }}" readonly>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label>Term</label>
+                                                    <input type="text" class="form-control"
+                                                           value="{{ $currentClass?->term?->term ?? 'N/A' }}" readonly>
+                                                </div>
+                                            </div>
                                         @endif
                                     </div>
                                 </div>
@@ -292,7 +292,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Employment Info (Staff) -->
+                                <!-- Employment Info (Staff Only) -->
                                 @if($user->isStaff())
                                 <div class="tab-pane" id="employmentInfo" role="tabpanel">
                                     @if($staffInfo)
@@ -339,6 +339,7 @@
                                         <div class="col-md-6"><label>Age</label><input type="text" class="form-control" value="{{ $studentData?->age ?? 'N/A' }}" readonly></div>
                                         <div class="col-12"><label>Home Address</label><textarea class="form-control" rows="3" readonly>{{ $studentData?->home_address ?? 'N/A' }}</textarea></div>
 
+                                        <!-- Parent/Guardian Information -->
                                         @if($parentData)
                                         <div class="col-12 mt-4"><h5 class="mb-3 border-bottom pb-2">Parent/Guardian Information</h5></div>
                                         <div class="col-md-6"><label>Father's Name</label><input type="text" class="form-control" value="{{ $parentData?->father ?? 'N/A' }}" readonly></div>
@@ -347,6 +348,12 @@
                                         <div class="col-md-6"><label>Mother's Phone</label><input type="text" class="form-control" value="{{ $parentData?->mother_phone ?? 'N/A' }}" readonly></div>
                                         <div class="col-md-6"><label>Father's Occupation</label><input type="text" class="form-control" value="{{ $parentData?->father_occupation ?? 'N/A' }}" readonly></div>
                                         <div class="col-12"><label>Home Address</label><textarea class="form-control" rows="3" readonly>{{ $parentData?->parent_address ?? 'N/A' }}</textarea></div>
+                                        @else
+                                        <div class="col-12 mt-4">
+                                            <div class="alert alert-info">
+                                                No parent/guardian information recorded.
+                                            </div>
+                                        </div>
                                         @endif
                                     </div>
                                     @else

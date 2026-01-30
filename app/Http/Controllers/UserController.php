@@ -76,16 +76,12 @@ class UserController extends Controller
                 'phone_number' => 'nullable|string|regex:/^\+[1-9]\d{1,14}$/',
             ]);
 
-            Log::info("Validated data for create:", $validated);
-
             $input = $request->all();
             $plainPassword = $input['password'];
             $input['password'] = Hash::make($input['password']);
 
             $user = User::create($input);
             $user->syncRoles($request->input('roles'));
-
-            Log::info("User ID: {$user->id} created successfully");
 
             return response()->json([
                 'success' => true,
@@ -140,13 +136,13 @@ class UserController extends Controller
         $isStudentUser = $user->hasRole('student');
         $studentData   = $user->student;
 
-        // Current class
+        // Current class information
         $currentClass = null;
         if ($isStudentUser && $studentData) {
             $currentClass = $studentData->currentClass;
         }
 
-        // Parent/Guardian data
+        // Parent/Guardian information
         $parentData = null;
         if ($isStudentUser && $studentData) {
             $parentData = $studentData->parent;
@@ -208,8 +204,6 @@ class UserController extends Controller
             $user->update($input);
             $user->syncRoles($request->input('roles'));
 
-            Log::info("User ID: {$id} updated successfully");
-
             return response()->json([
                 'success' => true,
                 'message' => 'User updated successfully',
@@ -252,8 +246,6 @@ class UserController extends Controller
 
             $user->delete();
 
-            Log::info("User ID: {$id} deleted successfully");
-
             return response()->json([
                 'success' => true,
                 'message' => $isStudent
@@ -261,10 +253,10 @@ class UserController extends Controller
                     : 'User deleted successfully',
             ], 200);
         } catch (\Exception $e) {
-            Log::error("Delete user error for ID {$id}: {$e->getMessage()}");
+            Log::error("Delete user error: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete user: ' . $e->getMessage(),
+                'message' => 'Failed to delete user',
             ], 500);
         }
     }
@@ -281,7 +273,6 @@ class UserController extends Controller
 
         try {
             if (!auth()->user()->hasPermissionTo('Create user')) {
-                Log::warning("User ID " . auth()->user()->id . " attempted to create student user without permission");
                 return response()->json([
                     'success' => false,
                     'message' => 'User does not have the right permissions',
@@ -323,8 +314,6 @@ class UserController extends Controller
                 ]
             );
 
-            Log::info("Student user ID: {$user->id} created successfully");
-
             return response()->json([
                 'success' => true,
                 'message' => 'Student user created successfully',
@@ -338,7 +327,6 @@ class UserController extends Controller
                 ],
             ], 201);
         } catch (ValidationException $e) {
-            Log::error("Validation error creating student user: " . json_encode($e->errors()));
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -373,12 +361,14 @@ class UserController extends Controller
 
             return response()->json([
                 'success'  => true,
-                'students' => $students->map(fn($s) => [
-                    'id'          => $s->id,
-                    'admissionNo' => $s->admissionNo,
-                    'name'        => trim("{$s->firstname} {$s->lastname}"),
-                    'email'       => $s->email ?? '',
-                ])->toArray(),
+                'students' => $students->map(function ($student) {
+                    return [
+                        'id'          => $student->id,
+                        'admissionNo' => $student->admissionNo,
+                        'name'        => trim("{$student->firstname} {$student->lastname}"),
+                        'email'       => $student->email ?? '',
+                    ];
+                })->toArray(),
             ]);
         } catch (\Exception $e) {
             Log::error("getStudents error: {$e->getMessage()}");
