@@ -60,46 +60,32 @@ class ExamController extends Controller
         }
 
         $terms = Schoolterm::all();
-        $session = Schoolsession::all();
+        $sessions = Schoolsession::all();
 
-        // Get subjects with all necessary information
+        // Get all subjects for the teacher
         $mysubjects = SubjectTeacher::where('staffid', $user->id)
-            ->leftJoin('users', 'users.id', '=', 'subjectteacher.staffid')
+            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
             ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
             ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
             ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
             ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
             ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
-            ->where('schoolsession.status', '=', $current)
             ->select([
                 'subjectteacher.id as id',
                 'subject.subject as subject',
                 'subject.subject_code as subjectcode',
+                'schoolclass.schoolclass as schoolclass',
                 'schoolclass.id as class_id',
-                'schoolclass.schoolclass as class_name',
-                'schoolarm.arm as arm_name',
-                'schoolterm.id as term_id',
-                'schoolterm.term as term_name',
-                'schoolsession.id as session_id',
-                'schoolsession.session as session_name'
+                'schoolarm.arm as arm',
+                'subjectteacher.termid as termid',
+                'subjectteacher.sessionid as sessionid',
+                'schoolterm.term as term',
+                'schoolsession.session as session'
             ])
             ->get()
-            ->map(function ($item) {
-                // Create formatted display name
-                $item->display_name = sprintf(
-                    '%s (%s) %s-%s %s%s',
-                    $item->subject,
-                    $item->subjectcode,
-                    $item->term_name,
-                    $item->session_name,
-                    $item->class_name,
-                    $item->arm_name ? ' - ' . $item->arm_name : ''
-                );
-                return $item;
-            })
+            ->unique('id')
             ->sortBy('subject')
-            ->unique('id');
+            ->values();
 
         $myclass = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
             ->select(
@@ -110,40 +96,27 @@ class ExamController extends Controller
 
         $pagetitle = 'Exams Management';
 
-        return view('exam.index', compact('pagetitle', 'exams', 'terms', 'session', 'mysubjects', 'myclass'));
+        return view('exam.index', compact('pagetitle', 'exams', 'terms', 'sessions', 'mysubjects', 'myclass'));
     }
 
-    public function create()
-    {
-        // This method is handled by index() which returns the view with the modal
-        return redirect()->route('exams.index');
-    }
-
-    /**
-     * Get filtered subjects based on term, session, and class
-     */
-    public function getSubjects(Request $request)
+    public function getFilteredSubjects(Request $request)
     {
         $user = auth()->user();
-        $current = "Current";
 
         $query = SubjectTeacher::where('staffid', $user->id)
-            ->leftJoin('users', 'users.id', '=', 'subjectteacher.staffid')
+            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
             ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
             ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
             ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
             ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
-            ->where('schoolsession.status', '=', $current);
+            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid');
 
-        // Apply filters if provided
         if ($request->filled('term_id')) {
-            $query->where('schoolterm.id', $request->term_id);
+            $query->where('subjectteacher.termid', $request->term_id);
         }
 
         if ($request->filled('session_id')) {
-            $query->where('schoolsession.id', $request->session_id);
+            $query->where('subjectteacher.sessionid', $request->session_id);
         }
 
         if ($request->filled('class_id')) {
@@ -154,51 +127,72 @@ class ExamController extends Controller
                 'subjectteacher.id as id',
                 'subject.subject as subject',
                 'subject.subject_code as subjectcode',
+                'schoolclass.schoolclass as schoolclass',
                 'schoolclass.id as class_id',
-                'schoolclass.schoolclass as class_name',
-                'schoolarm.arm as arm_name',
-                'schoolterm.id as term_id',
-                'schoolterm.term as term_name',
-                'schoolsession.id as session_id',
-                'schoolsession.session as session_name'
+                'schoolarm.arm as arm',
+                'subjectteacher.termid as termid',
+                'subjectteacher.sessionid as sessionid',
+                'schoolterm.term as term',
+                'schoolsession.session as session'
             ])
-            ->distinct()
             ->get()
-            ->map(function ($item) {
-                $item->display_name = sprintf(
-                    '%s (%s) %s-%s %s%s',
+            ->unique('id')
+            ->sortBy('subject')
+            ->map(function($item) {
+                $displayText = sprintf('%s (%s) - %s %s - %s %s',
                     $item->subject,
                     $item->subjectcode,
-                    $item->term_name,
-                    $item->session_name,
-                    $item->class_name,
-                    $item->arm_name ? ' - ' . $item->arm_name : ''
+                    $item->term,
+                    $item->session,
+                    $item->schoolclass,
+                    $item->arm ? '(' . $item->arm . ')' : ''
                 );
-                return $item;
-            });
 
-        return response()->json($subjects);
+                return [
+                    'id' => $item->id,
+                    'display_text' => $displayText,
+                    'subject' => $item->subject,
+                    'subjectcode' => $item->subjectcode,
+                    'schoolclass' => $item->schoolclass,
+                    'class_id' => $item->class_id,
+                    'arm' => $item->arm,
+                    'term' => $item->term,
+                    'session' => $item->session,
+                    'termid' => $item->termid,
+                    'sessionid' => $item->sessionid
+                ];
+            })
+            ->values();
+
+        return response()->json(['subjects' => $subjects]);
     }
 
-    /**
-     * Get classes for a specific subject teacher (subject)
-     */
     public function getClassesForSubject($subjectTeacherId)
     {
-        $subjectTeacher = SubjectTeacher::findOrFail($subjectTeacherId);
+        $user = auth()->user();
 
+        // Verify the subject belongs to the teacher
+        $subjectTeacher = SubjectTeacher::where('id', $subjectTeacherId)
+            ->where('staffid', $user->id)
+            ->firstOrFail();
+
+        // Get all classes for this subject teacher
         $classes = DB::table('subjectclass')
             ->join('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
             ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
             ->where('subjectclass.subjectteacherid', $subjectTeacherId)
             ->select(
-                'schoolclass.id as id',
-                'schoolclass.schoolclass as schoolclass',
-                'schoolarm.arm as arm'
+                'schoolclass.id',
+                'schoolclass.schoolclass',
+                'schoolarm.arm'
             )
             ->get();
 
-        return response()->json($classes);
+        return response()->json([
+            'success' => true,
+            'classes' => $classes,
+            'selectedClasses' => [] // For edit, you might want to pass existing selections
+        ]);
     }
 
     public function store(Request $request)
@@ -238,12 +232,9 @@ class ExamController extends Controller
         return redirect()->route('exams.index')->with('success', $message);
     }
 
-    public function edit(Exam $exam)
+    public function edit(string $id)
     {
-        // Check if the exam belongs to the current user
-        if ($exam->staffId != auth()->user()->id) {
-            abort(403, 'Unauthorized');
-        }
+        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
         $groupClassIds = Exam::where('staffId', $exam->staffId)
             ->where('title', $exam->title)
@@ -253,23 +244,26 @@ class ExamController extends Controller
             ->pluck('schoolclass_id')
             ->toArray();
 
+        // Get the subject teacher info
+        $subjectTeacher = SubjectTeacher::find($exam->subject_id);
+
         if (request()->ajax()) {
             return response()->json([
                 'success'         => true,
                 'exam'            => $exam,
-                'schoolclass_ids' => $groupClassIds
+                'schoolclass_ids' => $groupClassIds,
+                'termid'          => $exam->termid,
+                'sessionid'       => $exam->session,
+                'subject_id'      => $exam->subject_id
             ]);
         }
 
         abort(404);
     }
 
-    public function update(Request $request, Exam $exam)
+    public function update(Request $request, string $id)
     {
-        // Check if the exam belongs to the current user
-        if ($exam->staffId != auth()->user()->id) {
-            abort(403, 'Unauthorized');
-        }
+        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
         $validated = $request->validate([
             'title'           => 'required|string|max:255',
@@ -313,13 +307,9 @@ class ExamController extends Controller
         return redirect()->route('exams.index')->with('success', $message);
     }
 
-    public function destroy(Exam $exam)
+    public function destroy(string $id)
     {
-        // Check if the exam belongs to the current user
-        if ($exam->staffId != auth()->user()->id) {
-            abort(403, 'Unauthorized');
-        }
-
+        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
         $exam->delete();
 
         if (request()->ajax()) {
@@ -346,23 +336,23 @@ class ExamController extends Controller
         ]);
     }
 
-    public function showStudents(Exam $exam, Request $request)
+    public function showStudents(Request $request, $examId)
     {
-        // Check if the exam belongs to the current user
-        if ($exam->staffId != auth()->user()->id) {
-            abort(403, 'Unauthorized');
-        }
+        $exam = Exam::where('id', $examId)
+                    ->where('staffId', auth()->user()->id)
+                    ->with('schoolclass')
+                    ->firstOrFail();
 
         $classId = $request->query('class_id');
 
         $query = DB::table('exam_attempts')
             ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-            ->leftJoin('results', function ($join) use ($exam) {
+            ->leftJoin('results', function ($join) use ($examId) {
                 $join->on('exam_attempts.student_id', '=', 'results.user_id')
-                     ->where('results.exam_id', '=', $exam->id);
+                     ->where('results.exam_id', '=', $examId);
             })
-            ->where('exam_attempts.exam_id', $exam->id)
+            ->where('exam_attempts.exam_id', $examId)
             ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
 
         if ($classId) {
@@ -378,7 +368,7 @@ class ExamController extends Controller
             'results.score',
             'results.total_marks',
             'exam_attempts.status as attempt_status',
-            DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $exam->id . ') as attempted_questions')
+            DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions')
         )
         ->orderBy('studentRegistration.lastname');
 
@@ -402,26 +392,23 @@ class ExamController extends Controller
         return view('exam.students', compact('pagetitle', 'exam', 'students', 'assignedClasses', 'classId'));
     }
 
-    public function deleteStudentAttempt(Exam $exam, $student)
+    public function deleteStudentAttempt($examId, $studentId)
     {
-        // Check if the exam belongs to the current user
-        if ($exam->staffId != auth()->user()->id) {
-            abort(403, 'Unauthorized');
-        }
+        $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
 
         try {
-            Answer::where('exam_id', $exam->id)
-                  ->where('user_id', $student)
+            Answer::where('exam_id', $examId)
+                  ->where('user_id', $studentId)
                   ->delete();
 
             DB::table('results')
-              ->where('exam_id', $exam->id)
-              ->where('user_id', $student)
+              ->where('exam_id', $examId)
+              ->where('user_id', $studentId)
               ->delete();
 
             $deletedAttempt = DB::table('exam_attempts')
-              ->where('exam_id', $exam->id)
-              ->where('student_id', $student)
+              ->where('exam_id', $examId)
+              ->where('student_id', $studentId)
               ->delete();
 
             $message = $deletedAttempt > 0
@@ -444,35 +431,32 @@ class ExamController extends Controller
         }
     }
 
-    public function showStudentAnswers(Exam $exam, $student)
+    public function showStudentAnswers($examId, $studentId)
     {
-        // Check if the exam belongs to the current user
-        if ($exam->staffId != auth()->user()->id) {
-            abort(403, 'Unauthorized');
-        }
+        $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
 
         $student = DB::table('studentRegistration')
-            ->where('id', $student)
+            ->where('id', $studentId)
             ->select('id', 'firstname', 'lastname', 'admissionNo')
             ->firstOrFail();
 
         $result = DB::table('results')
-            ->where('user_id', $student->id)
-            ->where('exam_id', $exam->id)
+            ->where('user_id', $studentId)
+            ->where('exam_id', $examId)
             ->first();
 
         $questionAnswers = DB::table('questions')
-            ->leftJoin('answers', function($join) use ($exam, $student) {
+            ->leftJoin('answers', function($join) use ($examId, $studentId) {
                 $join->on('questions.id', '=', 'answers.question_id')
-                     ->where('answers.exam_id', '=', $exam->id)
-                     ->where('answers.user_id', '=', $student->id);
+                     ->where('answers.exam_id', '=', $examId)
+                     ->where('answers.user_id', '=', $studentId);
             })
             ->leftJoin('options as student_opt', 'answers.option_id', '=', 'student_opt.id')
             ->leftJoin('options as correct_opt', function($join) {
                 $join->on('correct_opt.question_id', '=', 'questions.id')
                      ->where('correct_opt.is_correct', '=', 1);
             })
-            ->where('questions.exam_id', $exam->id)
+            ->where('questions.exam_id', $examId)
             ->select(
                 'questions.id',
                 'questions.question_text',
@@ -494,16 +478,11 @@ class ExamController extends Controller
         return view('exam.student-answers', compact('pagetitle', 'exam', 'student', 'questionAnswers', 'result'));
     }
 
-    public function generateQuestionPaperPdf(Exam $exam, $student)
+    public function generateQuestionPaperPdf(Exam $exam, $studentId)
     {
-        // Check if the exam belongs to the current user
-        if ($exam->staffId != auth()->user()->id) {
-            abort(403, 'Unauthorized');
-        }
-
         $student = DB::table('studentRegistration')
             ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-            ->where('studentRegistration.id', $student)
+            ->where('studentRegistration.id', $studentId)
             ->select(
                 'studentRegistration.id',
                 'studentRegistration.firstname',
@@ -523,14 +502,14 @@ class ExamController extends Controller
         }
 
         $result = DB::table('results')
-            ->where('user_id', $student->id)
+            ->where('user_id', $studentId)
             ->where('exam_id', $exam->id)
             ->first();
 
         $school = SchoolInformation::where('is_active', true)->first();
 
         $attempt = ExamAttempt::where('exam_id', $exam->id)
-            ->where('student_id', $student->id)
+            ->where('student_id', $studentId)
             ->whereIn('status', ['completed', 'in_progress'])
             ->orderBy('created_at', 'desc')
             ->first();
@@ -541,7 +520,7 @@ class ExamController extends Controller
 
         foreach ($questions as $question) {
             $studentAnswer = Answer::where('question_id', $question->id)
-                ->where('user_id', $student->id)
+                ->where('user_id', $studentId)
                 ->where('exam_id', $exam->id)
                 ->with('option')
                 ->first();
@@ -565,16 +544,14 @@ class ExamController extends Controller
         return $pdf->download($filename);
     }
 
-    public function analytics(Exam $exam)
+    public function analytics($examId)
     {
-        // Check if the exam belongs to the current user
-        if ($exam->staffId != auth()->user()->id) {
-            abort(403, 'Unauthorized');
-        }
+        $exam = Exam::where('id', $examId)
+                    ->where('staffId', auth()->user()->id)
+                    ->with(['schoolclass', 'questions.options'])
+                    ->firstOrFail();
 
-        $exam->load(['schoolclass', 'questions.options']);
-
-        $attempts = ExamAttempt::where('exam_id', $exam->id)
+        $attempts = ExamAttempt::where('exam_id', $examId)
             ->whereIn('status', ['completed'])
             ->get();
 
@@ -583,7 +560,7 @@ class ExamController extends Controller
         $completionRate = $totalStudents > 0 ? round(($completedCount / $totalStudents) * 100, 1) : 0;
 
         $results = DB::table('results')
-            ->where('exam_id', $exam->id)
+            ->where('exam_id', $examId)
             ->get();
 
         $avgScore = $results->avg('score') ?? 0;
@@ -592,7 +569,7 @@ class ExamController extends Controller
 
         $topPerformers = DB::table('results')
             ->join('studentRegistration', 'results.user_id', '=', 'studentRegistration.id')
-            ->where('results.exam_id', $exam->id)
+            ->where('results.exam_id', $examId)
             ->select('studentRegistration.firstname', 'studentRegistration.lastname', 'results.score', 'results.total_marks')
             ->orderByDesc('results.score')
             ->limit(5)
@@ -603,13 +580,13 @@ class ExamController extends Controller
             $correctCount = DB::table('answers')
                 ->join('options', 'answers.option_id', '=', 'options.id')
                 ->where('answers.question_id', $question->id)
-                ->where('answers.exam_id', $exam->id)
+                ->where('answers.exam_id', $examId)
                 ->where('options.is_correct', 1)
                 ->count();
 
             $attemptedCount = DB::table('answers')
                 ->where('question_id', $question->id)
-                ->where('exam_id', $exam->id)
+                ->where('exam_id', $examId)
                 ->count();
 
             $correctRate = $attemptedCount > 0 ? round(($correctCount / $attemptedCount) * 100, 1) : 0;

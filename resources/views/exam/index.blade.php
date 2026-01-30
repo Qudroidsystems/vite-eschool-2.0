@@ -246,7 +246,7 @@
                                         <label class="form-label required">Session</label>
                                         <select name="session" id="addSession" class="form-select" required>
                                             <option value="">Select Session</option>
-                                            @foreach($session as $s)
+                                            @foreach($sessions as $s)
                                                 <option value="{{ $s->id }}">{{ $s->session }}</option>
                                             @endforeach
                                         </select>
@@ -259,9 +259,11 @@
                                         <option value="">Select Subject</option>
                                         @foreach($mysubjects as $sub)
                                             <option value="{{ $sub->id }}"
-                                                    data-term="{{ $sub->term_id }}"
-                                                    data-session="{{ $sub->session_id }}">
-                                                {{ $sub->subject }} ({{ $sub->subjectcode }}) {{ $sub->term_name }}-{{ $sub->session_name }} {{ $sub->class_name }}{{ $sub->arm_name ? ' - ' . $sub->arm_name : '' }}
+                                                data-termid="{{ $sub->termid }}"
+                                                data-sessionid="{{ $sub->sessionid }}"
+                                                data-class="{{ $sub->schoolclass }}"
+                                                data-arm="{{ $sub->arm }}">
+                                                {{ $sub->subject }} ({{ $sub->subjectcode }}) - {{ $sub->term }} {{ $sub->session }} - {{ $sub->schoolclass }} {{ $sub->arm ? '(' . $sub->arm . ')' : '' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -347,7 +349,7 @@
                                         <label class="form-label required">Session</label>
                                         <select name="session" id="editSession" class="form-select" required>
                                             <option value="">Select Session</option>
-                                            @foreach($session as $s)
+                                            @foreach($sessions as $s)
                                                 <option value="{{ $s->id }}">{{ $s->session }}</option>
                                             @endforeach
                                         </select>
@@ -360,9 +362,11 @@
                                         <option value="">Select Subject</option>
                                         @foreach($mysubjects as $sub)
                                             <option value="{{ $sub->id }}"
-                                                    data-term="{{ $sub->term_id }}"
-                                                    data-session="{{ $sub->session_id }}">
-                                                {{ $sub->subject }} ({{ $sub->subjectcode }}) {{ $sub->term_name }}-{{ $sub->session_name }} {{ $sub->class_name }}{{ $sub->arm_name ? ' - ' . $sub->arm_name : '' }}
+                                                data-termid="{{ $sub->termid }}"
+                                                data-sessionid="{{ $sub->sessionid }}"
+                                                data-class="{{ $sub->schoolclass }}"
+                                                data-arm="{{ $sub->arm }}">
+                                                {{ $sub->subject }} ({{ $sub->subjectcode }}) - {{ $sub->term }} {{ $sub->session }} - {{ $sub->schoolclass }} {{ $sub->arm ? '(' . $sub->arm . ')' : '' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -389,8 +393,30 @@
     </div>
 </div>
 
+<style>
+/* Custom styles for dropdown filtering */
+option[data-termid][data-sessionid] {
+    padding: 8px 12px;
+}
+
+option:disabled {
+    font-weight: bold;
+    background-color: #f8f9fa;
+    color: #495057;
+    padding: 10px 12px;
+}
+
+option:not(:disabled) {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+option:last-child:not(:disabled) {
+    border-bottom: none;
+}
+</style>
+
 <script>
-// Debounce function for search
+// Utility function for debouncing
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -445,13 +471,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td>${exam.formatted_start_time || '—'}</td>
                             <td>${exam.formatted_end_time || '—'}</td>
                             <td>${classDisplay}</td>
-                            <td><a href="/questions?exam=${exam.id}" class="btn btn-sm btn-soft-primary">Questions</a></td>
-                            <td><a href="{{ route('exams.students', '') }}/${exam.id}" class="btn btn-sm btn-soft-info">Students</a></td>
+                            <td><a href="/questions/${exam.id}" class="btn btn-sm btn-soft-primary">Questions</a></td>
+                            <td><a href="/exams/${exam.id}/students" class="btn btn-sm btn-soft-info">Students</a></td>
                             <td>
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm btn-soft-secondary edit-btn" data-id="${exam.id}"><i class="ri-pencil-line"></i></button>
                                     <button class="btn btn-sm btn-soft-danger remove-btn" data-id="${exam.id}"><i class="ri-delete-bin-line"></i></button>
-                                    <a href="{{ route('exams.analytics', '') }}/${exam.id}" class="btn btn-sm btn-soft-success"><i class="ri-bar-chart-line-line"></i></a>
+                                    <a href="/exams/${exam.id}/analytics" class="btn btn-sm btn-soft-success"><i class="ri-bar-chart-line-line"></i></a>
                                 </div>
                             </td>
                         </tr>`;
@@ -481,6 +507,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update info
             showingInfo.textContent = `Showing ${data.from || 0} to ${data.to || 0} of ${data.total} results`;
             totalBadge.textContent = data.total;
+
+            // Re-attach event listeners for edit and delete buttons
+            attachEventListeners();
         });
     }
 
@@ -496,188 +525,125 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTable(currentPage);
 });
 
-// Dynamic filtering for subjects
-document.addEventListener('DOMContentLoaded', function() {
-    // CSRF token for AJAX requests
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+// Function to filter subjects in dropdown
+function filterSubjects(termId, sessionId, subjectSelect) {
+    const allOptions = subjectSelect.querySelectorAll('option');
 
-    // Elements for Add Modal
-    const addTermSelect = document.querySelector('#addExamModal select[name="termid"]');
-    const addSessionSelect = document.querySelector('#addExamModal select[name="session"]');
-    const addSubjectSelect = document.getElementById('addSubject');
-    const addClassContainer = document.getElementById('addClassContainer');
-
-    // Elements for Edit Modal
-    const editTermSelect = document.querySelector('#editExamModal select[name="termid"]');
-    const editSessionSelect = document.querySelector('#editExamModal select[name="session"]');
-    const editSubjectSelect = document.getElementById('editSubject');
-    const editClassContainer = document.getElementById('editClassContainer');
-
-    // Function to load subjects based on filters
-    function loadSubjects(termId, sessionId, targetSelect, callback = null) {
-        const url = new URL('{{ route("exams.index") }}/get-subjects', window.location.origin);
-        if (termId) url.searchParams.append('term_id', termId);
-        if (sessionId) url.searchParams.append('session_id', sessionId);
-
-        fetch(url)
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                // Clear existing options except the first one
-                while (targetSelect.options.length > 1) {
-                    targetSelect.remove(1);
-                }
-
-                // Add new options
-                if (Array.isArray(data)) {
-                    data.forEach(subject => {
-                        const option = new Option(subject.display_name, subject.id);
-                        option.setAttribute('data-term', subject.term_id);
-                        option.setAttribute('data-session', subject.session_id);
-                        targetSelect.add(option);
-                    });
-                }
-
-                if (callback) callback();
-            })
-            .catch(error => console.error('Error loading subjects:', error));
-    }
-
-    // Function to load classes for selected subject
-    function loadClasses(subjectId, container, selectedClasses = []) {
-        if (!subjectId) {
-            container.innerHTML = '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+    allOptions.forEach(option => {
+        if (option.value === '') {
+            option.style.display = '';
             return;
         }
 
-        fetch(`{{ route("exams.subject-classes", "") }}/${subjectId}`)
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(classes => {
-                let html = '';
-                if (Array.isArray(classes) && classes.length > 0) {
-                    classes.forEach(cls => {
-                        const isChecked = selectedClasses.includes(cls.id.toString());
-                        html += `
-                            <div class="form-check mb-2">
-                                <input class="form-check-input class-checkbox" type="checkbox"
-                                       name="schoolclass_ids[]" value="${cls.id}"
-                                       id="class_${cls.id}" ${isChecked ? 'checked' : ''}>
-                                <label class="form-check-label" for="class_${cls.id}">
-                                    ${cls.schoolclass}${cls.arm ? ' - ' + cls.arm : ''}
+        const optionTermId = option.getAttribute('data-termid');
+        const optionSessionId = option.getAttribute('data-sessionid');
+
+        // Show option if it matches both selected term and session (if provided)
+        const showOption = (!termId || optionTermId == termId) &&
+                          (!sessionId || optionSessionId == sessionId);
+
+        option.style.display = showOption ? '' : 'none';
+        option.disabled = !showOption;
+    });
+
+    // Reset selection if current selection is hidden
+    if (subjectSelect.value && subjectSelect.selectedOptions[0].style.display === 'none') {
+        subjectSelect.value = '';
+        if (subjectSelect.id === 'addSubject') {
+            document.getElementById('addClassContainer').innerHTML =
+                '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+        } else if (subjectSelect.id === 'editSubject') {
+            document.getElementById('editClassContainer').innerHTML =
+                '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+        }
+    }
+}
+
+// Function to load classes for a subject
+function loadClassesForSubject(subjectTeacherId, mode = 'add') {
+    const containerId = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
+    const container = document.getElementById(containerId);
+
+    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
+
+    fetch(`/exams/subject-classes/${subjectTeacherId}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(data => {
+            if (data.success && data.classes.length > 0) {
+                let html = '<div class="row">';
+
+                data.classes.forEach(cls => {
+                    const isChecked = mode === 'edit' && data.selectedClasses && data.selectedClasses.includes(cls.id);
+                    html += `
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="schoolclass_ids[]"
+                                       value="${cls.id}"
+                                       id="class_${mode}_${cls.id}"
+                                       ${isChecked ? 'checked' : ''}>
+                                <label class="form-check-label" for="class_${mode}_${cls.id}">
+                                    ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
                                 </label>
-                            </div>`;
-                    });
-                } else {
-                    html = '<p class="text-muted text-center mb-0">No classes available for this subject</p>';
-                }
+                            </div>
+                        </div>`;
+                });
 
+                html += '</div>';
                 container.innerHTML = html;
-            })
-            .catch(error => {
-                console.error('Error loading classes:', error);
-                container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes</p>';
-            });
-    }
-
-    // Add modal event listeners
-    if (addTermSelect && addSessionSelect && addSubjectSelect) {
-        // Filter subjects when term or session changes
-        [addTermSelect, addSessionSelect].forEach(select => {
-            select.addEventListener('change', function() {
-                const termId = addTermSelect.value;
-                const sessionId = addSessionSelect.value;
-
-                if (termId && sessionId) {
-                    loadSubjects(termId, sessionId, addSubjectSelect, function() {
-                        // Clear class container when subject list changes
-                        addClassContainer.innerHTML = '<p class="text-muted text-center mb-0">Select a subject first...</p>';
-                        addSubjectSelect.value = '';
-                    });
-                }
-            });
+            } else {
+                container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading classes:', error);
+            container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
         });
+}
 
-        // Load classes when subject changes
-        addSubjectSelect.addEventListener('change', function() {
-            const subjectId = this.value;
-            loadClasses(subjectId, addClassContainer);
-        });
-    }
+// Attach event listeners to edit and delete buttons
+function attachEventListeners() {
+    // Edit buttons
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const examId = this.getAttribute('data-id');
 
-    // Edit modal event listeners
-    if (editTermSelect && editSessionSelect && editSubjectSelect) {
-        // Filter subjects when term or session changes
-        [editTermSelect, editSessionSelect].forEach(select => {
-            select.addEventListener('change', function() {
-                const termId = editTermSelect.value;
-                const sessionId = editSessionSelect.value;
-
-                if (termId && sessionId) {
-                    loadSubjects(termId, sessionId, editSubjectSelect, function() {
-                        // Clear class container when subject list changes
-                        editClassContainer.innerHTML = '<p class="text-muted text-center mb-0">Select a subject first...</p>';
-                        editSubjectSelect.value = '';
-                    });
-                }
-            });
-        });
-
-        // Load classes when subject changes
-        editSubjectSelect.addEventListener('change', function() {
-            const subjectId = this.value;
-            loadClasses(subjectId, editClassContainer);
-        });
-    }
-
-    // Edit button click handler
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.edit-btn')) {
-            const btn = e.target.closest('.edit-btn');
-            const examId = btn.dataset.id;
-
-            fetch(`{{ route("exams.index") }}/${examId}/edit`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                }
-            })
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.json();
+            fetch(`/exams/${examId}/edit`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Network response was not ok');
+                    return res.json();
                 })
                 .then(data => {
                     if (data.success) {
-                        const exam = data.exam;
+                        // Populate form
+                        document.getElementById('editExamId').value = examId;
+                        document.getElementById('editTitle').value = data.exam.title;
+                        document.getElementById('editDescription').value = data.exam.description || '';
+                        document.getElementById('editDuration').value = data.exam.duration;
 
-                        // Populate edit form
-                        document.getElementById('editExamId').value = exam.id;
-                        document.getElementById('editTitle').value = exam.title;
-                        document.getElementById('editDescription').value = exam.description || '';
-                        document.getElementById('editDuration').value = exam.duration;
-
-                        // Format dates for datetime-local input
-                        const startTime = new Date(exam.start_time);
-                        const endTime = new Date(exam.end_time);
+                        // Format datetime for input fields
+                        const startTime = new Date(data.exam.start_time);
+                        const endTime = new Date(data.exam.end_time);
 
                         document.getElementById('editStartTime').value = startTime.toISOString().slice(0, 16);
                         document.getElementById('editEndTime').value = endTime.toISOString().slice(0, 16);
 
-                        document.getElementById('editTerm').value = exam.termid;
-                        document.getElementById('editSession').value = exam.session;
-                        document.getElementById('editPublish').checked = exam.is_published;
+                        document.getElementById('editTerm').value = data.exam.termid;
+                        document.getElementById('editSession').value = data.exam.session;
+                        document.getElementById('editPublish').checked = data.exam.is_published;
 
-                        // Set subject first, then load its classes
-                        loadSubjects(exam.termid, exam.session, editSubjectSelect, function() {
-                            document.getElementById('editSubject').value = exam.subject_id;
+                        // Set subject value and filter
+                        const subjectSelect = document.getElementById('editSubject');
+                        subjectSelect.value = data.subject_id;
 
-                            // Now load classes for this subject with pre-selected classes
-                            loadClasses(exam.subject_id, editClassContainer, data.schoolclass_ids);
-                        });
+                        // Apply filtering based on selected term and session
+                        filterSubjects(data.exam.termid, data.exam.session, subjectSelect);
+
+                        // Load classes for this subject
+                        loadClassesForSubjectEdit(data.subject_id, data.schoolclass_ids);
 
                         // Show modal
                         const editModal = new bootstrap.Modal(document.getElementById('editExamModal'));
@@ -685,58 +651,175 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading exam:', error);
-                    alert('Error loading exam data');
+                    console.error('Error loading exam data:', error);
+                    alert('Error loading exam data. Please try again.');
                 });
-        }
+        });
     });
 
-    // Form submission handlers
-    const addExamForm = document.getElementById('addExamForm');
-    const editExamForm = document.getElementById('editExamForm');
+    // Delete buttons
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const examId = this.getAttribute('data-id');
 
+            if (confirm('Are you sure you want to delete this exam?')) {
+                fetch(`/exams/${examId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting exam:', error);
+                    alert('Error deleting exam. Please try again.');
+                });
+            }
+        });
+    });
+}
+
+// Special function for edit modal to load classes with selected ones
+function loadClassesForSubjectEdit(subjectTeacherId, selectedClassIds = []) {
+    const container = document.getElementById('editClassContainer');
+
+    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
+
+    fetch(`/exams/subject-classes/${subjectTeacherId}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(data => {
+            if (data.success && data.classes.length > 0) {
+                let html = '<div class="row">';
+
+                data.classes.forEach(cls => {
+                    const isChecked = selectedClassIds.includes(parseInt(cls.id));
+                    html += `
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="schoolclass_ids[]"
+                                       value="${cls.id}"
+                                       id="class_edit_${cls.id}"
+                                       ${isChecked ? 'checked' : ''}>
+                                <label class="form-check-label" for="class_edit_${cls.id}">
+                                    ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
+                                </label>
+                            </div>
+                        </div>`;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading classes:', error);
+            container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
+        });
+}
+
+// Initialize event listeners for modals when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Add modal filtering
+    const addTerm = document.getElementById('addTerm');
+    const addSession = document.getElementById('addSession');
+    const addSubject = document.getElementById('addSubject');
+
+    if (addTerm && addSession && addSubject) {
+        addTerm.addEventListener('change', function() {
+            filterSubjects(this.value, addSession.value, addSubject);
+        });
+
+        addSession.addEventListener('change', function() {
+            filterSubjects(addTerm.value, this.value, addSubject);
+        });
+
+        // Initialize filtering
+        filterSubjects('', '', addSubject);
+    }
+
+    // Edit modal filtering
+    const editTerm = document.getElementById('editTerm');
+    const editSession = document.getElementById('editSession');
+    const editSubject = document.getElementById('editSubject');
+
+    if (editTerm && editSession && editSubject) {
+        editTerm.addEventListener('change', function() {
+            filterSubjects(this.value, editSession.value, editSubject);
+        });
+
+        editSession.addEventListener('change', function() {
+            filterSubjects(editTerm.value, this.value, editSubject);
+        });
+    }
+
+    // Subject change listeners
+    if (addSubject) {
+        addSubject.addEventListener('change', function() {
+            if (this.value) {
+                loadClassesForSubject(this.value, 'add');
+            } else {
+                document.getElementById('addClassContainer').innerHTML =
+                    '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+            }
+        });
+    }
+
+    if (editSubject) {
+        editSubject.addEventListener('change', function() {
+            if (this.value) {
+                loadClassesForSubject(this.value, 'edit');
+            } else {
+                document.getElementById('editClassContainer').innerHTML =
+                    '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+            }
+        });
+    }
+
+    // Form submissions
+    const addExamForm = document.getElementById('addExamForm');
     if (addExamForm) {
         addExamForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
             const formData = new FormData(this);
-            // Get selected classes
-            const classCheckboxes = addClassContainer.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
-            if (classCheckboxes.length === 0) {
-                alert('Please select at least one class');
-                return;
-            }
-
-            // Add selected classes to form data
-            classCheckboxes.forEach(checkbox => {
-                formData.append('schoolclass_ids[]', checkbox.value);
-            });
 
             fetch('{{ route("exams.store") }}', {
                 method: 'POST',
+                body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
-                },
-                body: formData
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
             })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
+            .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     alert(data.message);
-                    location.reload();
+                    window.location.reload();
+                } else {
+                    alert('Error creating exam. Please check your inputs.');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while creating the exam');
+                alert('Error creating exam. Please try again.');
             });
         });
     }
 
+    const editExamForm = document.getElementById('editExamForm');
     if (editExamForm) {
         editExamForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -744,155 +827,82 @@ document.addEventListener('DOMContentLoaded', function() {
             const examId = document.getElementById('editExamId').value;
             const formData = new FormData(this);
 
-            // Get selected classes
-            const classCheckboxes = editClassContainer.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
-            if (classCheckboxes.length === 0) {
-                alert('Please select at least one class');
-                return;
-            }
-
-            // Add selected classes to form data
-            classCheckboxes.forEach(checkbox => {
-                formData.append('schoolclass_ids[]', checkbox.value);
-            });
-
-            fetch(`{{ route("exams.index") }}/${examId}`, {
+            fetch(`/exams/${examId}`, {
                 method: 'POST',
+                body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     'X-HTTP-Method-Override': 'PUT'
-                },
-                body: formData
+                }
             })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
+            .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     alert(data.message);
-                    location.reload();
+                    window.location.reload();
+                } else {
+                    alert('Error updating exam. Please check your inputs.');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while updating the exam');
+                alert('Error updating exam. Please try again.');
             });
         });
     }
-
-    // Delete button handler
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.remove-btn')) {
-            const btn = e.target.closest('.remove-btn');
-            const examId = btn.dataset.id;
-
-            if (confirm('Are you sure you want to delete this exam?')) {
-                fetch(`{{ route("exams.index") }}/${examId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        alert(data.message);
-                        location.reload();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while deleting the exam');
-                });
-            }
-        }
-    });
-
-    // Bulk delete
-    window.deleteMultiple = function() {
-        const checkboxes = document.querySelectorAll('input[name="chkIds[]"]:checked');
-        const ids = Array.from(checkboxes).map(cb => cb.value);
-
-        if (ids.length === 0) {
-            alert('Please select at least one exam to delete');
-            return;
-        }
-
-        if (confirm(`Are you sure you want to delete ${ids.length} selected exam(s)?`)) {
-            fetch('{{ route("exams.bulk-destroy") }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ ids: ids })
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    location.reload();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while deleting exams');
-            });
-        }
-    };
 
     // Check all functionality
     const checkAll = document.getElementById('checkAll');
     if (checkAll) {
         checkAll.addEventListener('change', function() {
             const checkboxes = document.querySelectorAll('input[name="chkIds[]"]');
-            checkboxes.forEach(cb => cb.checked = this.checked);
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
 
-            // Show/hide bulk delete button
-            const removeActionsBtn = document.getElementById('remove-actions');
-            if (removeActionsBtn) {
-                if (this.checked && checkboxes.length > 0) {
-                    removeActionsBtn.classList.remove('d-none');
-                } else {
-                    removeActionsBtn.classList.add('d-none');
-                }
+            const removeActions = document.getElementById('remove-actions');
+            if (removeActions) {
+                removeActions.classList.toggle('d-none', !this.checked);
             }
         });
     }
-
-    // Individual checkbox change
-    document.addEventListener('change', function(e) {
-        if (e.target.matches('input[name="chkIds[]"]')) {
-            const checkboxes = document.querySelectorAll('input[name="chkIds[]"]');
-            const checkedCount = document.querySelectorAll('input[name="chkIds[]"]:checked').length;
-            const checkAll = document.getElementById('checkAll');
-            const removeActionsBtn = document.getElementById('remove-actions');
-
-            if (checkAll) {
-                checkAll.checked = checkedCount === checkboxes.length;
-                checkAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
-            }
-
-            if (removeActionsBtn) {
-                if (checkedCount > 0) {
-                    removeActionsBtn.classList.remove('d-none');
-                } else {
-                    removeActionsBtn.classList.add('d-none');
-                }
-            }
-        }
-    });
 });
+
+// Bulk delete function
+function deleteMultiple() {
+    const selectedIds = Array.from(document.querySelectorAll('input[name="chkIds[]"]:checked'))
+        .map(checkbox => checkbox.value);
+
+    if (selectedIds.length === 0) {
+        alert('Please select at least one exam to delete.');
+        return;
+    }
+
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} selected exam(s)?`)) {
+        fetch('{{ route("exams.bulk-destroy") }}', {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ ids: selectedIds })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert(data.message || 'Error deleting exams.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting exams. Please try again.');
+        });
+    }
+}
 </script>
 
 @endsection
