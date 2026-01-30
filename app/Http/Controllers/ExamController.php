@@ -62,6 +62,7 @@ class ExamController extends Controller
         $terms = Schoolterm::all();
         $session = Schoolsession::all();
 
+        // Get subjects with all necessary information
         $mysubjects = SubjectTeacher::where('staffid', $user->id)
             ->leftJoin('users', 'users.id', '=', 'subjectteacher.staffid')
             ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
@@ -71,17 +72,34 @@ class ExamController extends Controller
             ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
             ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
             ->where('schoolsession.status', '=', $current)
-            ->get([
+            ->select([
                 'subjectteacher.id as id',
                 'subject.subject as subject',
                 'subject.subject_code as subjectcode',
-                'schoolclass.schoolclass as schoolclass',
-                'schoolarm.arm as arm',
-                'subjectteacher.termid as termid',
-                'subjectteacher.sessionid as sessionid',
-                'schoolterm.term as term',
-                'schoolsession.session as session'
-            ])->sortBy('subject')->unique('id');
+                'schoolclass.id as class_id',
+                'schoolclass.schoolclass as class_name',
+                'schoolarm.arm as arm_name',
+                'schoolterm.id as term_id',
+                'schoolterm.term as term_name',
+                'schoolsession.id as session_id',
+                'schoolsession.session as session_name'
+            ])
+            ->get()
+            ->map(function ($item) {
+                // Create formatted display name
+                $item->display_name = sprintf(
+                    '%s (%s) %s-%s %s%s',
+                    $item->subject,
+                    $item->subjectcode,
+                    $item->term_name,
+                    $item->session_name,
+                    $item->class_name,
+                    $item->arm_name ? ' - ' . $item->arm_name : ''
+                );
+                return $item;
+            })
+            ->sortBy('subject')
+            ->unique('id');
 
         $myclass = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
             ->select(
@@ -93,6 +111,88 @@ class ExamController extends Controller
         $pagetitle = 'Exams Management';
 
         return view('exam.index', compact('pagetitle', 'exams', 'terms', 'session', 'mysubjects', 'myclass'));
+    }
+
+    /**
+     * Get filtered subjects based on term, session, and class
+     */
+    public function getSubjects(Request $request)
+    {
+        $user = auth()->user();
+        $current = "Current";
+
+        $query = SubjectTeacher::where('staffid', $user->id)
+            ->leftJoin('users', 'users.id', '=', 'subjectteacher.staffid')
+            ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
+            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
+            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+            ->where('schoolsession.status', '=', $current);
+
+        // Apply filters if provided
+        if ($request->filled('term_id')) {
+            $query->where('schoolterm.id', $request->term_id);
+        }
+
+        if ($request->filled('session_id')) {
+            $query->where('schoolsession.id', $request->session_id);
+        }
+
+        if ($request->filled('class_id')) {
+            $query->where('schoolclass.id', $request->class_id);
+        }
+
+        $subjects = $query->select([
+                'subjectteacher.id as id',
+                'subject.subject as subject',
+                'subject.subject_code as subjectcode',
+                'schoolclass.id as class_id',
+                'schoolclass.schoolclass as class_name',
+                'schoolarm.arm as arm_name',
+                'schoolterm.id as term_id',
+                'schoolterm.term as term_name',
+                'schoolsession.id as session_id',
+                'schoolsession.session as session_name'
+            ])
+            ->distinct()
+            ->get()
+            ->map(function ($item) {
+                $item->display_name = sprintf(
+                    '%s (%s) %s-%s %s%s',
+                    $item->subject,
+                    $item->subjectcode,
+                    $item->term_name,
+                    $item->session_name,
+                    $item->class_name,
+                    $item->arm_name ? ' - ' . $item->arm_name : ''
+                );
+                return $item;
+            });
+
+        return response()->json($subjects);
+    }
+
+    /**
+     * Get classes for a specific subject
+     */
+    public function getSubjectClasses($subjectId)
+    {
+        $subjectTeacher = SubjectTeacher::findOrFail($subjectId);
+
+        $classes = DB::table('subjectclass')
+            ->join('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
+            ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
+            ->where('subjectclass.subjectteacherid', $subjectId)
+            ->select(
+                'schoolclass.id as id',
+                'schoolclass.schoolclass as schoolclass',
+                'schoolarm.arm as arm'
+            )
+            ->get();
+
+        return response()->json($classes);
     }
 
     public function store(Request $request)
