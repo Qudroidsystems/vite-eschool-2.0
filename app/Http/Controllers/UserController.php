@@ -175,7 +175,7 @@ class UserController extends Controller
 
     public function update(Request $request, $id): JsonResponse
     {
-        // Students cannot update any profile
+        // Students cannot update profiles
         if (auth()->user()->hasRole('student')) {
             return response()->json([
                 'success' => false,
