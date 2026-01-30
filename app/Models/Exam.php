@@ -34,10 +34,11 @@ class Exam extends Model
         'start_time'   => 'datetime',
         'end_time'     => 'datetime',
         'is_published' => 'boolean',
+        // Add any other dates if needed
     ];
 
     /**
-     * Get the class that owns the exam.
+     * Get the school class that owns the exam.
      */
     public function schoolclass(): BelongsTo
     {
@@ -53,7 +54,7 @@ class Exam extends Model
     }
 
     /**
-     * Optional: formatted start time accessor
+     * Formatted start time (safe accessor)
      */
     public function getFormattedStartTimeAttribute(): string
     {
@@ -61,10 +62,25 @@ class Exam extends Model
     }
 
     /**
-     * Optional: formatted end time accessor
+     * Formatted end time (safe accessor)
      */
     public function getFormattedEndTimeAttribute(): string
     {
         return $this->end_time ? $this->end_time->format('d M Y H:i') : '—';
+    }
+
+    /**
+     * Combined class + arm display (optional helper)
+     */
+    public function getClassDisplayAttribute(): string
+    {
+        if (!$this->schoolclass) {
+            return '—';
+        }
+
+        $className = $this->schoolclass->schoolclass;
+        $arm = $this->schoolclass->arm;
+
+        return $arm ? "$className ($arm)" : $className;
     }
 }

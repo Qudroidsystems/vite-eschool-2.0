@@ -123,7 +123,7 @@
                                                     <td>
                                                         @if($exam->schoolclass)
                                                             {{ $exam->schoolclass->schoolclass }}
-                                                            {{ $exam->schoolclass->arm ? '(' . $exam->schoolclass->arm->arm . ')' : '' }}
+                                                            {{ $exam->schoolclass->arm ? '(' . $exam->schoolclass->arm . ')' : '' }}
                                                         @else
                                                             —
                                                         @endif
@@ -292,7 +292,6 @@
                             @method('PUT')
                             <input type="hidden" name="id" id="editExamId">
                             <div class="modal-body">
-                                <!-- Fields are identical to add modal but with different IDs -->
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold required">Exam Title</label>
                                     <input type="text" name="title" id="editTitle" class="form-control" required>
