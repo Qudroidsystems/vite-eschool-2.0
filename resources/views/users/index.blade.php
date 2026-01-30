@@ -346,12 +346,17 @@ use Spatie\Permission\Models\Role;
                             <label for="student-select" class="form-label">Select Student</label>
                             <select id="student-select" class="form-control" required>
                                 <option value="">Choose a student...</option>
-                                @forelse ($students ?? [] as $student)
+                                {{-- @forelse ($students ?? [] as $student)
                                     <option value="{{ $student->id }}" data-admission="{{ $student->admissionNo }}" data-name="{{ $student->firstname }} {{ $student->lastname }}" data-email="{{ $student->email ?? '' }}">
                                         {{ $student->firstname }} {{ $student->lastname }} ({{ $student->admissionNo }})
                                     </option>
                                 @empty
-                                    <option value="">No students available</option>
+                                    <option value="">No students available</option> --}}
+                                    @forelse ($students ?? [] as $student)
+    <option value="debug-{{ $student->id }}">DEBUG: {{ $student->firstname }}</option>
+@empty
+    <option value="">No students — check controller & DB</option>
+@endforelse
                                 @endforelse
                             </select>
                         </div>
@@ -569,7 +574,7 @@ use Spatie\Permission\Models\Role;
         const choicesInstance = Choices.getInstance(studentSelect);
         const selectedValue = choicesInstance.getValue(true); // true for single select
         if (selectedValue) {
-            selectedOption = { value: selectedValue, dataset: { 
+            selectedOption = { value: selectedValue, dataset: {
                 name: document.querySelector(`#student-select option[value="${selectedValue}"]`)?.dataset.name || '',
                 email: document.querySelector(`#student-select option[value="${selectedValue}"]`)?.dataset.email || '',
                 admission: document.querySelector(`#student-select option[value="${selectedValue}"]`)?.dataset.admission || ''
