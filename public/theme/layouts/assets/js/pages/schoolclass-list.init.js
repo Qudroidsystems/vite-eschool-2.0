@@ -1,4 +1,4 @@
-// schoolclass-list.init.js
+// schoolclass-list.init.js - FIXED VERSION
 
 console.log("schoolclass-list.init.js loaded", new Date().toISOString());
 
@@ -7,6 +7,7 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
 
 // Axios CSRF setup
 axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 // Modals
 let addModal, editModal, deleteModal;
@@ -17,9 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM ready - initializing school class management");
 
     // Initialize Bootstrap modals
-    addModal    = new bootstrap.Modal(document.getElementById('addSchoolClassModal'));
-    editModal   = new bootstrap.Modal(document.getElementById('editSchoolClassModal'));
-    deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    const addModalEl = document.getElementById('addSchoolClassModal');
+    const editModalEl = document.getElementById('editSchoolClassModal');
+    const deleteModalEl = document.getElementById('deleteConfirmModal');
+
+    if (addModalEl) addModal = new bootstrap.Modal(addModalEl);
+    if (editModalEl) editModal = new bootstrap.Modal(editModalEl);
+    if (deleteModalEl) deleteModal = new bootstrap.Modal(deleteModalEl);
 
     initCheckboxes();
     initSearch();
@@ -100,22 +105,45 @@ function initAddForm() {
         clearErrors('add');
 
         const btn = document.getElementById('add-submit-btn');
+        const originalText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
 
+        // Prepare form data - IMPORTANT: use FormData
         const formData = new FormData(form);
 
+        // For debugging
+        console.log('Form data for add:', Object.fromEntries(formData.entries()));
+        console.log('Route:', routes.store);
+
         try {
-            const response = await axios.post(routes.store, formData);
-            Swal.fire('Success', response.data.message || 'School class created', 'success');
+            const response = await axios.post(routes.store, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: response.data.message || 'School class created successfully',
+                timer: 2000
+            });
+
             addModal.hide();
             form.reset();
-            location.reload();
+
+            // Reload after a short delay
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+
         } catch (err) {
+            console.error('Add error:', err);
             handleAxiosError(err, 'add-error-msg');
         } finally {
             btn.disabled = false;
-            btn.innerHTML = 'Add Class';
+            btn.innerHTML = originalText;
         }
     });
 }
@@ -132,31 +160,58 @@ function initEditForm() {
         clearErrors('edit');
 
         const btn = document.getElementById('edit-submit-btn');
+        const originalText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
 
         const id = document.getElementById('edit-id').value;
+
+        // Prepare form data
         const formData = new FormData(form);
         formData.append('_method', 'PUT');
 
+        // Get the update route
+        const updateRoute = routes.update.replace(':id', id);
+        console.log('Update route:', updateRoute);
+        console.log('Form data for update:', Object.fromEntries(formData.entries()));
+
         try {
-            const response = await axios.post(routes.update.replace(':id', id), formData);
-            Swal.fire('Success', response.data.message || 'Updated', 'success');
+            const response = await axios.post(updateRoute, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: response.data.message || 'Updated successfully',
+                timer: 2000
+            });
+
             editModal.hide();
             form.reset();
-            location.reload();
+
+            // Reload after a short delay
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+
         } catch (err) {
+            console.error('Update error:', err);
             handleAxiosError(err, 'edit-error-msg');
         } finally {
             btn.disabled = false;
-            btn.innerHTML = 'Update';
+            btn.innerHTML = originalText;
         }
     });
 
     // Delegate edit button clicks
     document.addEventListener('click', e => {
-        if (!e.target.closest('.edit-btn')) return;
-        const row = e.target.closest('tr');
+        const editBtn = e.target.closest('.edit-btn');
+        if (!editBtn) return;
+
+        const row = editBtn.closest('tr');
         if (!row) return;
 
         const id = row.dataset.id;
@@ -170,8 +225,8 @@ function initEditForm() {
         document.getElementById('edit-schoolclass').value = row.querySelector('.schoolclass-name')?.textContent.trim() || '';
         document.getElementById('edit-description').value = row.querySelector('.description')?.textContent.trim() || '';
 
-        // Arm (assuming single arm - radio)
-        const armId = row.querySelector('.arm-name')?.dataset.armId;
+        // Arm (single selection - radio)
+        const armId = row.querySelector('.arm-name')?.dataset.armId || '';
         document.querySelectorAll('.edit-arm-radio').forEach(radio => {
             radio.checked = (radio.value === armId);
         });
@@ -191,9 +246,12 @@ function initEditForm() {
 // Delete (single)
 // ────────────────────────────────────────────────
 function initDeleteButtons() {
+    // Set up delete button click handler
     document.addEventListener('click', e => {
-        if (!e.target.closest('.delete-btn')) return;
-        const row = e.target.closest('tr');
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (!deleteBtn) return;
+
+        const row = deleteBtn.closest('tr');
         if (!row) return;
 
         currentDeleteId = row.dataset.id;
@@ -207,25 +265,45 @@ function initDeleteButtons() {
 
     const confirmBtn = document.getElementById('confirm-delete-btn');
     if (confirmBtn) {
-        confirmBtn.onclick = async () => {
+        confirmBtn.addEventListener('click', async () => {
             if (!currentDeleteId) return;
 
+            const originalText = confirmBtn.innerHTML;
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
 
+            const deleteRoute = routes.destroy.replace(':id', currentDeleteId);
+            console.log('Delete route:', deleteRoute);
+
             try {
-                const response = await axios.delete(routes.destroy.replace(':id', currentDeleteId));
-                Swal.fire('Deleted', response.data.message || 'Record removed', 'success');
+                const response = await axios.delete(deleteRoute);
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Deleted',
+                    text: response.data.message || 'Record removed successfully',
+                    timer: 2000
+                });
+
                 deleteModal.hide();
-                location.reload();
+
+                // Reload after a short delay
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+
             } catch (err) {
-                handleAxiosError(err);
-                Swal.fire('Error', err.response?.data?.message || 'Delete failed', 'error');
+                console.error('Delete error:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: err.response?.data?.message || 'Delete failed. Please try again.'
+                });
             } finally {
                 confirmBtn.disabled = false;
-                confirmBtn.innerHTML = 'Delete';
+                confirmBtn.innerHTML = originalText;
             }
-        };
+        });
     }
 }
 
@@ -239,28 +317,54 @@ function deleteMultiple() {
         return;
     }
 
-    const ids = checked.map(cb => cb.closest('tr')?.dataset.id).filter(Boolean);
+    const ids = checked.map(cb => {
+        const row = cb.closest('tr');
+        return row ? row.dataset.id : null;
+    }).filter(Boolean);
+
+    if (ids.length === 0) {
+        Swal.fire('Error', 'No valid records selected', 'error');
+        return;
+    }
 
     Swal.fire({
         title: `Delete ${ids.length} record(s)?`,
-        text: "This cannot be undone!",
+        text: "This action cannot be undone!",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete'
+        confirmButtonText: 'Yes, delete',
+        cancelButtonText: 'Cancel'
     }).then(async result => {
         if (!result.isConfirmed) return;
 
         try {
-            await Promise.all(ids.map(id =>
+            const deletePromises = ids.map(id =>
                 axios.delete(routes.destroy.replace(':id', id))
-            ));
-            Swal.fire('Deleted', `${ids.length} record(s) removed`, 'success');
-            location.reload();
+            );
+
+            await Promise.all(deletePromises);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Deleted',
+                text: `${ids.length} record(s) removed successfully`,
+                timer: 2000
+            });
+
+            // Reload after a short delay
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+
         } catch (err) {
-            Swal.fire('Error', 'Some deletions failed', 'error');
-            console.error(err);
+            console.error('Bulk delete error:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Some deletions failed. Please try again.'
+            });
         }
     });
 }
@@ -277,16 +381,24 @@ function clearErrors(prefix = '') {
 }
 
 function handleAxiosError(err, msgId = null) {
-    console.error(err);
+    console.error('Axios Error:', err);
     let message = 'An error occurred';
 
     if (err.response) {
         if (err.response.status === 422) {
             const errors = err.response.data.errors;
-            message = Object.values(errors).flat().join('<br>');
+            if (errors) {
+                message = Object.values(errors).flat().join('<br>');
+            } else {
+                message = err.response.data.message || message;
+            }
         } else {
             message = err.response.data.message || message;
         }
+    } else if (err.request) {
+        message = 'No response received from server. Please check your connection.';
+    } else {
+        message = err.message || message;
     }
 
     if (msgId) {
@@ -295,5 +407,11 @@ function handleAxiosError(err, msgId = null) {
             el.innerHTML = message;
             el.classList.remove('d-none');
         }
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message
+        });
     }
 }
