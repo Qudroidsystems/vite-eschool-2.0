@@ -26,21 +26,20 @@ class SchoolClassController extends Controller
         Log::info('Index School Class Request:', $request->all());
         $pagetitle = "School Class Management";
 
-        $query = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('classcategories', 'classcategories.id', '=', 'schoolclass.classcategoryid')
-            ->select(
-                'schoolclass.id',
-                'schoolclass.schoolclass',
-                'schoolarm.arm as arm_name',
-                'schoolclass.arm as arm_id',
-                'classcategories.category as classcategory',
-                'schoolclass.classcategoryid',
-                'schoolclass.description',
-                'schoolclass.updated_at'
-            )
-            ->orderBy('schoolclass.schoolclass')
-            ->orderBy('schoolclass.arm')
-            ->orderBy('classcategories.category');
+        $query = Schoolclass::select(
+            'schoolclass.schoolclass',
+            'schoolclass.arm',
+            'schoolarm.arm as arm_name',
+            DB::raw('GROUP_CONCAT(DISTINCT classcategories.category ORDER BY classcategories.category SEPARATOR ", ") as all_categories'),
+            DB::raw('GROUP_CONCAT(DISTINCT classcategories.id ORDER BY classcategories.id SEPARATOR ",") as category_ids'),
+            DB::raw('GROUP_CONCAT(DISTINCT schoolclass.description SEPARATOR " | ") as description'),
+            DB::raw('MIN(schoolclass.id) as first_id') // for edit/delete reference
+        )
+        ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+        ->leftJoin('classcategories', 'classcategories.id', '=', 'schoolclass.classcategoryid')
+        ->groupBy('schoolclass.schoolclass', 'schoolclass.arm', 'schoolarm.arm')
+        ->orderBy('schoolclass.schoolclass')
+        ->orderBy('schoolarm.arm');
 
         if ($request->has('search')) {
             $search = $request->query('search');
@@ -76,7 +75,6 @@ class SchoolClassController extends Controller
         Log::info('=== STORE SCHOOL CLASS START ===', [
             'all_input' => $request->all(),
             'user_id'   => auth()->id() ?? 'guest',
-            'timestamp' => now()->toDateTimeString(),
         ]);
 
         $validator = Validator::make($request->all(), [
@@ -121,7 +119,6 @@ class SchoolClassController extends Controller
 
             foreach ($armIds as $armId) {
                 foreach ($categoryIds as $catId) {
-                    // Prevent duplicate combinations (same class + arm + category)
                     $exists = Schoolclass::where('schoolclass', $className)
                         ->where('arm', $armId)
                         ->where('classcategoryid', $catId)
@@ -140,28 +137,12 @@ class SchoolClassController extends Controller
                     $record->schoolclass     = $className;
                     $record->arm             = $armId;
                     $record->classcategoryid = $catId;
-                    $record->description     = $description;  // nullable in DB
+                    $record->description     = $description;
                     $record->save();
 
-                    Log::info('Record saved successfully', [
-                        'id'              => $record->id,
-                        'schoolclass'     => $record->schoolclass,
-                        'arm'             => $record->arm,
-                        'classcategoryid' => $record->classcategoryid,
-                        'description'     => $record->description ?? '(empty)',
-                    ]);
+                    Log::info('Record saved', ['id' => $record->id]);
 
-                    $arm      = Schoolarm::find($armId);
-                    $category = Classcategory::find($catId);
-
-                    $createdRecords[] = [
-                        'id'             => $record->id,
-                        'schoolclass'    => $record->schoolclass,
-                        'arm_name'       => $arm ? $arm->arm : 'Unknown',
-                        'category_name'  => $category ? $category->category : 'Unknown',
-                        'description'    => $record->description ?? '—',
-                    ];
-
+                    $createdRecords[] = $record->id;
                     $createdIds[] = $record->id;
                 }
             }
@@ -188,13 +169,11 @@ class SchoolClassController extends Controller
             Log::error('=== STORE FAILED ===', [
                 'message'     => $e->getMessage(),
                 'trace'       => $e->getTraceAsString(),
-                'last_input'  => $request->all(),
             ]);
 
             if ($request->ajax()) {
                 return response()->json([
                     'message' => 'Failed to save: ' . $e->getMessage(),
-                    'debug'   => 'Check laravel.log for details'
                 ], 500);
             }
 
@@ -231,21 +210,12 @@ class SchoolClassController extends Controller
             $schoolclass->description     = $request->description ?? null;
             $schoolclass->saveOrFail();
 
-            Log::info('Update successful', ['id' => $id]);
-
             if ($request->ajax()) {
-                return response()->json([
-                    'message' => 'School class updated successfully!',
-                    'id'      => $id,
-                ]);
+                return response()->json(['message' => 'School class updated successfully!']);
             }
             return redirect()->route('schoolclass.index')->with('success', 'School class updated successfully.');
         } catch (\Exception $e) {
-            Log::error('Update error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
+            Log::error('Update error', ['error' => $e->getMessage()]);
             if ($request->ajax()) {
                 return response()->json(['message' => 'Error updating school class'], 500);
             }
@@ -262,8 +232,6 @@ class SchoolClassController extends Controller
             ClassTeacher::where('schoolclassid', $id)->delete();
             $schoolclass->delete();
 
-            Log::info('Delete successful', ['id' => $id]);
-
             return response()->json(['message' => 'School class deleted successfully!']);
         } catch (\Exception $e) {
             Log::error('Delete Error:', ['error' => $e->getMessage()]);
@@ -279,9 +247,6 @@ class SchoolClassController extends Controller
         if ($schoolclass) {
             DB::table('classteacher')->where('schoolclassid', $request->schoolclassid)->delete();
             $schoolclass->delete();
-
-            Log::info('AJAX delete successful', ['id' => $request->schoolclassid]);
-
             return response()->json([
                 'success' => true,
                 'message' => 'School class has been removed'
@@ -297,17 +262,10 @@ class SchoolClassController extends Controller
     public function getArms($id)
     {
         Log::info('Fetching arms for schoolclass', ['id' => $id]);
-
         try {
             $schoolClass = Schoolclass::findOrFail($id);
             $armIds = [$schoolClass->arm];
-
-            Log::info('Arms fetched', ['id' => $id, 'armIds' => $armIds]);
-
-            return response()->json([
-                'success' => true,
-                'armIds'  => $armIds
-            ], 200);
+            return response()->json(['success' => true, 'armIds' => $armIds], 200);
         } catch (\Exception $e) {
             Log::error('Get arms error', ['error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to fetch arms'], 500);

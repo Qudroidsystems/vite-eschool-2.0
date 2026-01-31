@@ -23,14 +23,13 @@
 
             <!-- Messages -->
             @if ($errors->any())
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <strong>Whoops!</strong> There were some problems with your input.<br>
-                    <ul class="mb-0">
+                <div class="alert alert-danger">
+                    <strong>Whoops!</strong> There were some problems with your input.<br><br>
+                    <ul>
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
                     </ul>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
@@ -41,9 +40,9 @@
                 </div>
             @endif
 
-            @if (session('error'))
+            @if (session('danger'))
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ session('error') }}
+                    {{ session('danger') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
@@ -56,7 +55,7 @@
                                 <div class="row g-3">
                                     <div class="col-xxl-3">
                                         <div class="search-box">
-                                            <input type="text" class="form-control search" placeholder="Search school classes..." value="{{ request()->query('search') }}">
+                                            <input type="text" class="form-control search" placeholder="Search school classes" value="{{ request()->query('search') }}">
                                             <i class="ri-search-line search-icon"></i>
                                         </div>
                                     </div>
@@ -75,13 +74,9 @@
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
-                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">
-                                            <i class="ri-delete-bin-2-line align-bottom me-1"></i> Delete Selected
-                                        </button>
+                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
                                         @can('Create school-class')
-                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addSchoolClassModal">
-                                                <i class="ri-add-circle-line align-bottom me-1"></i> Create School Class
-                                            </button>
+                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addSchoolClassModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Create School Class</button>
                                         @endcan
                                     </div>
                                 </div>
@@ -97,28 +92,28 @@
                                                         <input class="form-check-input" type="checkbox" id="checkAll" />
                                                     </div>
                                                 </th>
-                                                <th class="min-w-80px sort cursor-pointer" data-sort="schoolclassid">SN</th>
-                                                <th class="min-w-150px sort cursor-pointer" data-sort="schoolclass">School Class</th>
-                                                <th class="min-w-100px sort cursor-pointer" data-sort="arm">Arm</th>
-                                                <th class="min-w-150px sort cursor-pointer" data-sort="classcategory">Category</th>
-                                                <th class="min-w-200px sort cursor-pointer" data-sort="description">Description</th>
+                                                <th class="min-w-80px">SN</th>
+                                                <th class="min-w-150px">School Class</th>
+                                                <th class="min-w-100px">Arm</th>
+                                                <th class="min-w-350px">Category</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="fw-semibold text-gray-600 list form-check-all">
                                             @php $i = ($all_classes->currentPage() - 1) * $all_classes->perPage() @endphp
-                                            @forelse ($all_classes as $class)
+                                            @forelse ($all_classes as $group)
                                                 <tr>
-                                                    <td class="id" data-id="{{ $class->id }}">
+                                                    <td class="id" data-id="{{ $group->first_id }}">
                                                         <div class="form-check form-check-sm form-check-solid">
                                                             <input class="form-check-input" type="checkbox" name="chk_child" />
                                                         </div>
                                                     </td>
-                                                    <td class="schoolclassid">{{ ++$i }}</td>
-                                                    <td class="schoolclass" data-schoolclass="{{ $class->schoolclass }}">{{ $class->schoolclass }}</td>
-                                                    <td class="arm" data-arm-id="{{ $class->arm_id }}" data-arm="{{ $class->arm_name }}">{{ $class->arm_name ?? '—' }}</td>
-                                                    <td class="classcategory" data-category-id="{{ $class->classcategoryid }}">{{ $class->classcategory ?? '—' }}</td>
-                                                    <td class="description">{{ $class->description ?? '—' }}</td>
+                                                    <td>{{ ++$i }}</td>
+                                                    <td class="schoolclass" data-schoolclass="{{ $group->schoolclass }}">{{ $group->schoolclass }}</td>
+                                                    <td class="arm" data-arm-id="{{ $group->arm_id }}" data-arm="{{ $group->arm_name }}">{{ $group->arm_name }}</td>
+                                                    <td class="classcategory" data-category-ids="{{ $group->category_ids }}" data-classcategory="{{ $group->all_categories }}" style="white-space: normal; word-break: break-word;">
+                                                        {{ $group->all_categories ?? '—' }}
+                                                    </td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('Update school-class')
@@ -136,17 +131,16 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="noresult text-center py-4">No school classes found.</td>
+                                                    <td colspan="6" class="noresult text-center py-4">No results found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
                                     </table>
                                 </div>
-
                                 <div class="row mt-3 align-items-center" id="pagination-element">
                                     <div class="col-sm">
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $all_classes->count() }}</span> of <span class="fw-semibold">{{ $all_classes->total() }}</span> results
+                                            Showing <span class="fw-semibold">{{ $all_classes->count() }}</span> of <span class="fw-semibold">{{ $all_classes->total() }}</span> Results
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
@@ -159,31 +153,24 @@
                 </div>
             </div>
 
-            <!-- Add Modal -->
+            <!-- Add School Class Modal -->
             <div id="addSchoolClassModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Add School Class</h5>
+                            <h5 id="exampleModalLabel" class="modal-title">Add School Class</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="add-schoolclass-form">
                             @csrf
                             <div class="modal-body">
                                 <input type="hidden" id="add-id-field" name="id">
-
-                                <div class="mb-4">
-                                    <label for="add-schoolclass" class="form-label">School Class <span class="text-danger">*</span></label>
-                                    <input type="text" id="add-schoolclass" name="schoolclass" class="form-control" placeholder="e.g. JSS 1" required>
+                                <div class="mb-3">
+                                    <label for="add-schoolclass" class="form-label">School Class</label>
+                                    <input type="text" id="add-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
                                 </div>
-
-                                <div class="mb-4">
-                                    <label for="add-description" class="form-label">Description (optional)</label>
-                                    <textarea id="add-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label">Select Arm(s) <span class="text-danger">*</span></label>
+                                <div class="mb-3">
+                                    <label class="form-label">Select Arm(s)</label>
                                     <div class="d-flex flex-wrap gap-3" id="add-arm-checkboxes">
                                         @foreach ($arms as $arm)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -193,9 +180,8 @@
                                         @endforeach
                                     </div>
                                 </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label">Select Category(s) <span class="text-danger">*</span></label>
+                                <div class="mb-3">
+                                    <label class="form-label">Select Category(s)</label>
                                     <div class="d-flex flex-wrap gap-3" id="add-category-checkboxes">
                                         @foreach ($classcategories as $category)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -205,7 +191,6 @@
                                         @endforeach
                                     </div>
                                 </div>
-
                                 <div class="alert alert-danger d-none" id="add-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
@@ -217,31 +202,24 @@
                 </div>
             </div>
 
-            <!-- Edit Modal -->
+            <!-- Edit School Class Modal -->
             <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Edit School Class</h5>
+                            <h5 id="editModalLabel" class="modal-title">Edit School Class</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="edit-schoolclass-form">
                             @csrf
                             <div class="modal-body">
                                 <input type="hidden" id="edit-id-field" name="id">
-
-                                <div class="mb-4">
-                                    <label for="edit-schoolclass" class="form-label">School Class <span class="text-danger">*</span></label>
-                                    <input type="text" id="edit-schoolclass" name="schoolclass" class="form-control" placeholder="e.g. JSS 1" required>
+                                <div class="mb-3">
+                                    <label for="edit-schoolclass" class="form-label">School Class</label>
+                                    <input type="text" id="edit-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
                                 </div>
-
-                                <div class="mb-4">
-                                    <label for="edit-description" class="form-label">Description (optional)</label>
-                                    <textarea id="edit-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label">Select Arm <span class="text-danger">*</span></label>
+                                <div class="mb-3">
+                                    <label class="form-label">Select Arm</label>
                                     <div class="d-flex flex-wrap gap-3" id="edit-arm-radios">
                                         @foreach ($arms as $arm)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -251,19 +229,17 @@
                                         @endforeach
                                     </div>
                                 </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label">Select Category <span class="text-danger">*</span></label>
-                                    <div class="d-flex flex-wrap gap-3" id="edit-category-radios">
+                                <div class="mb-3">
+                                    <label class="form-label">Select Category(s)</label>
+                                    <div class="d-flex flex-wrap gap-3" id="edit-category-checkboxes">
                                         @foreach ($classcategories as $category)
                                             <div class="form-check form-check-outline form-check-primary">
-                                                <input class="form-check-input edit-category-radio" type="radio" value="{{ $category->id }}" name="classcategoryid" id="edit-category-{{ $category->id }}">
+                                                <input class="form-check-input edit-category-checkbox" type="checkbox" value="{{ $category->id }}" name="classcategoryid[]" id="edit-category-{{ $category->id }}">
                                                 <label class="form-check-label" for="edit-category-{{ $category->id }}">{{ $category->category }}</label>
                                             </div>
                                         @endforeach
                                     </div>
                                 </div>
-
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
@@ -289,45 +265,54 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn btn-danger" id="delete-record">Yes, Delete</button>
+                            <button type="button" class="btn btn-danger" id="delete-record">Delete</button>
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
 
 <style>
-    /* Larger checkboxes/radios in modals */
-    .modal .form-check-input {
+    /* Enlarge checkboxes and radios in modals */
+    #addSchoolClassModal .form-check-input,
+    #editModal .form-check-input {
         width: 1.5em;
         height: 1.5em;
-        margin-top: 0.2em;
+        margin-top: 0.15em;
     }
-    .modal .form-check-label {
-        font-size: 1.05em;
-        margin-left: 0.6em;
+    #addSchoolClassModal .form-check-label,
+    #editModal .form-check-label {
+        font-size: 1.1em;
+        line-height: 1.5em;
+        margin-left: 0.5em;
     }
+    /* Ensure delete modal is above other modals and backdrop */
     #deleteRecordModal {
-        z-index: 1060;
+        z-index: 1055;
+    }
+    #deleteRecordModal .modal-backdrop {
+        z-index: 1050;
     }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
 <script src="{{ asset('theme/layouts/assets/js/schoolclass-list.init.js') }}"></script>
 
 <script>
     window.routeUrls = {
         storeSchoolClass: '{{ route("schoolclass.store") }}',
-        updateSchoolClass: '{{ route("schoolclass.update", ":id") }}',
-        destroySchoolClass: '{{ route("schoolclass.destroy", ":id") }}',
-        getArms: '{{ route("schoolclass.getarms", ":id") }}'
+        updateSchoolClass: '{{ route("schoolclass.update", "PLACEHOLDER") }}',
+        destroySchoolClass: '{{ route("schoolclass.destroy", "PLACEHOLDER") }}',
+        getArms: '{{ route("schoolclass.getarms", "PLACEHOLDER") }}'
     };
+</script>
 
+<script>
     document.addEventListener('DOMContentLoaded', function () {
         const addForm = document.getElementById('add-schoolclass-form');
         const editForm = document.getElementById('edit-schoolclass-form');
@@ -337,178 +322,171 @@
 
         let currentEditId = null;
 
-        // Bulk delete helpers
-        document.getElementById('checkAll')?.addEventListener('change', function () {
-            document.querySelectorAll('input[name="chk_child"]').forEach(cb => cb.checked = this.checked);
-            toggleBulkButton();
-        });
+        // Handle Add Form Submission
+        if (addForm) {
+            addForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(addForm);
+                const submitBtn = document.getElementById('add-btn');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
 
-        document.querySelectorAll('input[name="chk_child"]').forEach(cb => {
-            cb.addEventListener('change', toggleBulkButton);
-        });
-
-        function toggleBulkButton() {
-            const checked = document.querySelectorAll('input[name="chk_child"]:checked').length;
-            document.getElementById('remove-actions')?.classList.toggle('d-none', checked === 0);
+                axios.post(window.routeUrls.storeSchoolClass, formData)
+                    .then(function (response) {
+                        Swal.fire('Success!', response.data.message, 'success');
+                        addModal.hide();
+                        addForm.reset();
+                        location.reload(); // Reload to show new records
+                    })
+                    .catch(function (error) {
+                        if (error.response && error.response.status === 422) {
+                            const errors = error.response.data.errors;
+                            let errorMsg = '';
+                            for (let key in errors) {
+                                errorMsg += errors[key].join('<br>');
+                            }
+                            document.getElementById('add-alert-error-msg').innerHTML = errorMsg;
+                            document.getElementById('add-alert-error-msg').classList.remove('d-none');
+                        } else {
+                            Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
+                        }
+                    })
+                    .finally(function () {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Add Class';
+                    });
+            });
         }
 
-        window.deleteMultiple = async function () {
-            const checked = document.querySelectorAll('input[name="chk_child"]:checked');
-            if (checked.length === 0) return;
-
-            const ids = Array.from(checked).map(cb => cb.closest('tr').querySelector('.id').dataset.id);
-
-            Swal.fire({
-                title: 'Delete Selected?',
-                text: `You are about to delete ${ids.length} record(s). This cannot be undone.`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete them!'
-            }).then(async (result) => {
-                if (!result.isConfirmed) return;
-
-                const btn = document.getElementById('remove-actions');
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
-
-                try {
-                    await Promise.all(ids.map(id =>
-                        axios.delete(window.routeUrls.destroySchoolClass.replace(':id', id))
-                    ));
-                    Swal.fire('Deleted!', `${ids.length} record(s) removed.`, 'success');
-                    location.reload();
-                } catch (err) {
-                    Swal.fire('Error!', err.response?.data?.message || 'Failed to delete some records', 'error');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="ri-delete-bin-2-line"></i> Delete Selected';
-                }
-            });
-        };
-
-        // Add form
-        addForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(addForm);
-            const btn = document.getElementById('add-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
-
-            try {
-                const res = await axios.post(window.routeUrls.storeSchoolClass, formData);
-                Swal.fire('Success!', res.data.message || 'Classes added!', 'success');
-                addModal.hide();
-                addForm.reset();
-                location.reload();
-            } catch (err) {
-                let msg = 'Something went wrong';
-                if (err.response?.status === 422) {
-                    msg = Object.values(err.response.data.errors).flat().join('<br>');
-                } else {
-                    msg = err.response?.data?.message || 'Server error';
-                }
-                Swal.fire('Error!', msg, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'Add Class';
-            }
-        });
-
-        // Edit button handler
-        document.querySelectorAll('.edit-item-btn').forEach(btn => {
+        // Handle Edit Button Click
+        document.querySelectorAll('.edit-item-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
                 currentEditId = row.querySelector('.id').dataset.id;
+                const schoolclass = row.querySelector('.schoolclass').dataset.schoolclass;
+                const armId = row.querySelector('.arm').dataset.armId;
+                const categoryIdsStr = row.querySelector('.classcategory').dataset.categoryIds;
 
                 document.getElementById('edit-id-field').value = currentEditId;
-                document.getElementById('edit-schoolclass').value = row.querySelector('.schoolclass').dataset.schoolclass || '';
-                document.getElementById('edit-description').value = row.querySelector('.description').textContent.trim() === '—' ? '' : row.querySelector('.description').textContent.trim();
+                document.getElementById('edit-schoolclass').value = schoolclass;
 
-                const armId = row.querySelector('.arm').dataset.armId;
-                document.querySelectorAll('#edit-arm-radios input').forEach(r => r.checked = (r.value == armId));
+                // Set arm radio
+                document.querySelectorAll('#edit-arm-radios input[type="radio"]').forEach(radio => {
+                    radio.checked = radio.value == armId;
+                });
 
-                const catId = row.querySelector('.classcategory').dataset.categoryId;
-                document.querySelectorAll('#edit-category-radios input').forEach(r => r.checked = (r.value == catId));
+                // Reset category checkboxes
+                document.querySelectorAll('#edit-category-checkboxes input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+
+                // Check the original categories
+                if (categoryIdsStr) {
+                    const categoryIds = categoryIdsStr.split(',');
+                    categoryIds.forEach(catId => {
+                        const checkbox = document.querySelector(`#edit-category-${catId.trim()}`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                }
 
                 document.getElementById('edit-alert-error-msg').classList.add('d-none');
                 editModal.show();
             });
         });
 
-        // Edit form
-        editForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!currentEditId) return;
+        // Handle Edit Form Submission
+        if (editForm) {
+            editForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (!currentEditId) return;
 
-            const formData = new FormData(editForm);
-            formData.append('_method', 'PUT');
+                const formData = new FormData(editForm);
+                formData.append('_method', 'PUT');
 
-            const btn = document.getElementById('update-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+                const submitBtn = document.getElementById('update-btn');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
 
-            try {
-                const res = await axios.post(window.routeUrls.updateSchoolClass.replace(':id', currentEditId), formData);
-                Swal.fire('Success!', res.data.message || 'Updated!', 'success');
-                editModal.hide();
-                editForm.reset();
-                currentEditId = null;
-                location.reload();
-            } catch (err) {
-                let msg = err.response?.data?.message || 'Failed to update';
-                if (err.response?.status === 422) {
-                    msg = Object.values(err.response.data.errors).flat().join('<br>');
-                }
-                Swal.fire('Error!', msg, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'Update';
-            }
-        });
+                const updateUrl = window.routeUrls.updateSchoolClass.replace('PLACEHOLDER', currentEditId);
+                axios.post(updateUrl, formData)
+                    .then(function (response) {
+                        Swal.fire('Success!', response.data.message, 'success');
+                        editModal.hide();
+                        editForm.reset();
+                        currentEditId = null;
+                        location.reload(); // Reload to show updated records
+                    })
+                    .catch(function (error) {
+                        if (error.response && error.response.status === 422) {
+                            const errors = error.response.data.errors;
+                            let errorMsg = '';
+                            for (let key in errors) {
+                                errorMsg += errors[key].join('<br>');
+                            }
+                            document.getElementById('edit-alert-error-msg').innerHTML = errorMsg;
+                            document.getElementById('edit-alert-error-msg').classList.remove('d-none');
+                        } else {
+                            Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
+                        }
+                    })
+                    .finally(function () {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Update';
+                    });
+            });
+        }
 
-        // Single delete
-        document.querySelectorAll('.remove-item-btn').forEach(btn => {
+        // Handle Delete Button Click
+        document.querySelectorAll('.remove-item-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
-                currentEditId = row.querySelector('.id').dataset.id;
+                currentEditId = row.querySelector('.id').dataset.id; // Reuse for delete id
                 deleteModal.show();
             });
         });
 
-        document.getElementById('delete-record')?.addEventListener('click', async function () {
+        // Handle Delete Confirmation
+        document.getElementById('delete-record').addEventListener('click', function () {
             if (!currentEditId) return;
 
-            const btn = this;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+            const submitBtn = this;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
 
-            try {
-                const res = await axios.delete(window.routeUrls.destroySchoolClass.replace(':id', currentEditId));
-                Swal.fire('Success!', res.data.message || 'Deleted!', 'success');
-                deleteModal.hide();
-                location.reload();
-            } catch (err) {
-                Swal.fire('Error!', err.response?.data?.message || 'Failed to delete', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'Yes, Delete';
+            const destroyUrl = window.routeUrls.destroySchoolClass.replace('PLACEHOLDER', currentEditId);
+            axios.delete(destroyUrl)
+                .then(function (response) {
+                    Swal.fire('Success!', response.data.message, 'success');
+                    deleteModal.hide();
+                    location.reload();
+                })
+                .catch(function (error) {
+                    Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
+                })
+                .finally(function () {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Delete';
+                });
+        });
+
+        // Handle Add Modal Close - Reset form
+        addModal._element.addEventListener('hidden.bs.modal', function () {
+            if (addForm) {
+                addForm.reset();
+                document.getElementById('add-alert-error-msg').classList.add('d-none');
             }
         });
 
-        // Reset modals
-        addModal._element.addEventListener('hidden.bs.modal', () => {
-            addForm?.reset();
-            document.getElementById('add-alert-error-msg')?.classList.add('d-none');
-        });
-
-        editModal._element.addEventListener('hidden.bs.modal', () => {
-            editForm?.reset();
-            document.getElementById('edit-alert-error-msg')?.classList.add('d-none');
-            currentEditId = null;
+        // Handle Edit Modal Close - Reset form
+        editModal._element.addEventListener('hidden.bs.modal', function () {
+            if (editForm) {
+                editForm.reset();
+                document.getElementById('edit-alert-error-msg').classList.add('d-none');
+                currentEditId = null;
+            }
         });
     });
 </script>
-
 @endsection
