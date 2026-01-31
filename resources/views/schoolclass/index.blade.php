@@ -96,11 +96,10 @@
                                                         <input class="form-check-input" type="checkbox" id="checkAll" />
                                                     </div>
                                                 </th>
-                                                <th class="min-w-80px">SN</th>
+                                                <th class="min-w-125px">SN</th>
                                                 <th class="min-w-150px">School Class</th>
-                                                <th class="min-w-100px">Arm</th>
+                                                <th class="min-w-125px">Arm</th>
                                                 <th class="min-w-350px">Category</th>
-                                                <th class="min-w-200px">Description</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
@@ -117,7 +116,6 @@
                                                     <td class="schoolclass" data-schoolclass="{{ $class->schoolclass }}">{{ $class->schoolclass }}</td>
                                                     <td class="arm" data-arm-id="{{ $class->arm }}" data-arm="{{ $class->arm_name ?? '—' }}">{{ $class->arm_name ?? '—' }}</td>
                                                     <td class="classcategory" data-category-ids="{{ $class->classcategoryids ?? '' }}" data-classcategory="{{ $class->classcategory ?? '—' }}">{{ $class->classcategory ?? '—' }}</td>
-                                                    <td>{{ $class->description ?? '—' }}</td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('Update school-class')
@@ -135,7 +133,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="text-center py-4">No school classes found.</td>
+                                                    <td colspan="6" class="text-center py-4">No school classes found.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -145,7 +143,7 @@
                                 <div class="row mt-3 align-items-center">
                                     <div class="col-sm">
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $all_classes->count() }}</span> of <span class="fw-semibold">{{ $all_classes->total() }}</span> results
+                                            Showing <span class="fw-semibold">{{ $all_classes->count() }}</span> of <span class="fw-semibold">{{ $all_classes->total() }}</span> Results
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
@@ -158,7 +156,7 @@
                 </div>
             </div>
 
-            <!-- Add Modal -->
+            <!-- Add School Class Modal -->
             <div id="addSchoolClassModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
@@ -173,10 +171,6 @@
                                 <div class="mb-3">
                                     <label for="add-schoolclass" class="form-label">School Class</label>
                                     <input type="text" id="add-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="add-description" class="form-label">Description (optional)</label>
-                                    <textarea id="add-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Select Arm(s)</label>
@@ -211,7 +205,7 @@
                 </div>
             </div>
 
-            <!-- Edit Modal -->
+            <!-- Edit School Class Modal -->
             <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
@@ -226,10 +220,6 @@
                                 <div class="mb-3">
                                     <label for="edit-schoolclass" class="form-label">School Class</label>
                                     <input type="text" id="edit-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="edit-description" class="form-label">Description (optional)</label>
-                                    <textarea id="edit-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Select Arm</label>
@@ -304,8 +294,8 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    // Route URLs
-    window.routeUrls = {
+    // Route URLs (with placeholder)
+    const routeUrls = {
         storeSchoolClass: '{{ route("schoolclass.store") }}',
         updateSchoolClass: '{{ route("schoolclass.update", ":id") }}',
         destroySchoolClass: '{{ route("schoolclass.destroy", ":id") }}',
@@ -332,7 +322,7 @@
 
         let currentEditId = null;
 
-        // === SEARCH (simple native filter) ===
+        // Simple native search (no List.js)
         const searchInput = document.querySelector('#searchInput');
         if (searchInput) {
             searchInput.addEventListener('input', function () {
@@ -344,7 +334,7 @@
             });
         }
 
-        // === CHECK ALL ===
+        // Check all checkbox
         document.getElementById('checkAll')?.addEventListener('change', function () {
             document.querySelectorAll('tbody input[name="chk_child"]').forEach(cb => {
                 cb.checked = this.checked;
@@ -358,7 +348,7 @@
             document.getElementById('remove-actions')?.classList.toggle('d-none', checked === 0);
         }
 
-        // === EVENT DELEGATION for checkboxes ===
+        // Checkbox change (delegation)
         document.querySelector('#schoolClassTable tbody')?.addEventListener('change', e => {
             if (e.target.matches('input[name="chk_child"]')) {
                 const row = e.target.closest('tr');
@@ -367,7 +357,7 @@
             }
         });
 
-        // === BULK DELETE ===
+        // Bulk delete
         document.getElementById('remove-actions')?.addEventListener('click', function () {
             const checked = document.querySelectorAll('tbody input[name="chk_child"]:checked');
             if (checked.length === 0) return;
@@ -390,7 +380,7 @@
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
 
                 try {
-                    await Promise.all(ids.map(id => axios.delete(`/schoolclass/${id}`)));
+                    await Promise.all(ids.map(id => axios.delete(routeUrls.destroySchoolClass.replace(':id', id))));
                     Swal.fire('Deleted!', `${ids.length} record(s) removed.`, 'success');
                     location.reload();
                 } catch (err) {
@@ -402,7 +392,7 @@
             });
         });
 
-        // === EDIT BUTTONS (delegation) ===
+        // Edit buttons (delegation)
         document.querySelector('#schoolClassTable tbody')?.addEventListener('click', e => {
             const btn = e.target.closest('.edit-item-btn');
             if (!btn) return;
@@ -412,7 +402,7 @@
             currentEditId = row?.querySelector('.id')?.dataset.id;
 
             if (!currentEditId) {
-                console.error('No ID for edit');
+                Swal.fire('Error', 'Cannot find class ID', 'error');
                 return;
             }
 
@@ -443,7 +433,7 @@
             editModal.show();
         });
 
-        // === EDIT FORM ===
+        // Edit form
         editForm?.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentEditId) return;
@@ -459,7 +449,7 @@
 
             try {
                 const res = await axios.post(
-                    `/schoolclass/${currentEditId}`,
+                    routeUrls.updateSchoolClass.replace(':id', currentEditId),
                     formData
                 );
                 Swal.fire('Success!', res.data.message || 'Updated!', 'success');
@@ -479,7 +469,7 @@
             }
         });
 
-        // === DELETE BUTTONS (delegation) ===
+        // Delete buttons (delegation)
         document.querySelector('#schoolClassTable tbody')?.addEventListener('click', e => {
             const btn = e.target.closest('.remove-item-btn');
             if (!btn) return;
@@ -499,7 +489,9 @@
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
 
             try {
-                const res = await axios.delete(`/schoolclass/${currentEditId}`);
+                const res = await axios.delete(
+                    routeUrls.destroySchoolClass.replace(':id', currentEditId)
+                );
                 Swal.fire('Success!', res.data.message || 'Deleted!', 'success');
                 deleteModal.hide();
                 location.reload();
