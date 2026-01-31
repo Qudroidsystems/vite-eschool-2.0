@@ -299,6 +299,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const addForm = document.getElementById('add-schoolclass-form');
@@ -441,12 +442,19 @@
                 const formData = new FormData(editForm);
 
                 console.log('Edit Form Data:', Object.fromEntries(formData.entries()));
+                console.log('Current Edit ID:', currentEditId);
 
                 const submitBtn = document.getElementById('update-btn');
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
 
-                axios.post('{{ route("schoolclass.update", "") }}/' + currentEditId, formData)
+                // FIX: Use the correct route with ID
+                const updateUrl = '{{ route("schoolclass.update", ":id") }}'.replace(':id', currentEditId);
+
+                console.log('Update URL:', updateUrl);
+
+                // Use axios.put for PUT request
+                axios.put(updateUrl, formData)
                     .then(function (response) {
                         console.log('Update Success:', response.data);
                         Swal.fire({
@@ -508,7 +516,12 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
 
-            axios.delete('{{ route("schoolclass.destroy", "") }}/' + currentDeleteId)
+            // FIX: Use the correct route with ID
+            const destroyUrl = '{{ route("schoolclass.destroy", ":id") }}'.replace(':id', currentDeleteId);
+
+            console.log('Delete URL:', destroyUrl);
+
+            axios.delete(destroyUrl)
                 .then(function (response) {
                     console.log('Delete Success:', response.data);
                     Swal.fire({
@@ -556,16 +569,6 @@
         deleteModal._element.addEventListener('hidden.bs.modal', function () {
             currentDeleteId = null;
         });
-
-        // Form validation
-        function validateCheckboxes(selector) {
-            const checkboxes = document.querySelectorAll(selector);
-            let isValid = false;
-            checkboxes.forEach(cb => {
-                if (cb.checked) isValid = true;
-            });
-            return isValid;
-        }
     });
 </script>
 @endsection
