@@ -96,9 +96,9 @@
                                                         <input class="form-check-input" type="checkbox" id="checkAll" />
                                                     </div>
                                                 </th>
-                                                <th class="min-w-125px">SN</th>
+                                                <th class="min-w-80px">SN</th>
                                                 <th class="min-w-150px">School Class</th>
-                                                <th class="min-w-125px">Arm</th>
+                                                <th class="min-w-100px">Arm</th>
                                                 <th class="min-w-350px">Category</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
@@ -222,6 +222,10 @@
                                     <input type="text" id="edit-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
                                 </div>
                                 <div class="mb-3">
+                                    <label for="edit-description" class="form-label">Description (optional)</label>
+                                    <textarea id="edit-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
+                                </div>
+                                <div class="mb-3">
                                     <label class="form-label">Select Arm</label>
                                     <div class="d-flex flex-wrap gap-3" id="edit-arm-radios">
                                         @foreach ($arms as $arm)
@@ -322,7 +326,7 @@
 
         let currentEditId = null;
 
-        // Simple native search (no List.js)
+        // Simple native search
         const searchInput = document.querySelector('#searchInput');
         if (searchInput) {
             searchInput.addEventListener('input', function () {

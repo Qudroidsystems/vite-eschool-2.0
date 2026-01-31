@@ -36,4 +36,9 @@ public function armRelation()
 {
     return $this->belongsTo(Schoolarm::class, 'arm', 'id'); // Adjust based on your actual relationship
 }
+
+public function armDetail()
+{
+    return $this->belongsTo(Schoolarm::class, 'arm', 'id');
+}
 }
