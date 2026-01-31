@@ -36,4 +36,23 @@ public function armRelation()
 {
     return $this->belongsTo(Schoolarm::class, 'arm', 'id'); // Adjust based on your actual relationship
 }
+
+// app/Models/Schoolclass.php
+
+public function getAllCategoriesAttribute()
+{
+    if (!$this->classcategoryid) {
+        return '—';
+    }
+
+    $ids = array_filter(explode(',', $this->classcategoryid));
+
+    if (empty($ids)) {
+        return '—';
+    }
+
+    return Classcategory::whereIn('id', $ids)
+        ->pluck('category')
+        ->join(', ');
+}
 }
