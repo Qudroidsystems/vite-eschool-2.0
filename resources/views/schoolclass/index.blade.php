@@ -334,215 +334,165 @@
     document.addEventListener('DOMContentLoaded', function () {
         const addForm = document.getElementById('add-schoolclass-form');
         const editForm = document.getElementById('edit-schoolclass-form');
-        const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-        const addModal = new bootstrap.Modal(document.getElementById('addSchoolClassModal'));
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteRecordModal'));
+        const editModalEl = document.getElementById('editModal');
+        const addModalEl = document.getElementById('addSchoolClassModal');
+        const deleteModalEl = document.getElementById('deleteRecordModal');
+
+        if (!editModalEl || !addModalEl || !deleteModalEl) {
+            console.error('Modals not found in DOM');
+            return;
+        }
+
+        const editModal = new bootstrap.Modal(editModalEl);
+        const addModal = new bootstrap.Modal(addModalEl);
+        const deleteModal = new bootstrap.Modal(deleteModalEl);
 
         let currentEditId = null;
 
-        // Bulk delete logic
-        document.getElementById('checkAll')?.addEventListener('change', function () {
-            document.querySelectorAll('input[name="chk_child"]').forEach(cb => cb.checked = this.checked);
-            toggleBulkButton();
-        });
-
-        document.querySelectorAll('input[name="chk_child"]').forEach(cb => {
-            cb.addEventListener('change', toggleBulkButton);
-        });
-
-        function toggleBulkButton() {
-            const checked = document.querySelectorAll('input[name="chk_child"]:checked').length;
-            document.getElementById('remove-actions')?.classList.toggle('d-none', checked === 0);
-        }
-
-        window.deleteMultiple = async function () {
-            const checked = document.querySelectorAll('input[name="chk_child"]:checked');
-            if (checked.length === 0) return;
-
-            const ids = Array.from(checked).map(cb => cb.closest('tr').querySelector('.id')?.dataset.id || '').filter(id => id);
-
-            if (ids.length === 0) return;
-
-            Swal.fire({
-                title: 'Delete Selected?',
-                text: `You are about to delete ${ids.length} record(s). This cannot be undone.`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete them!'
-            }).then(async (result) => {
-                if (!result.isConfirmed) return;
-
-                const btn = document.getElementById('remove-actions');
+        // Add form
+        if (addForm) {
+            addForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(addForm);
+                const btn = document.getElementById('add-btn');
                 btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
 
                 try {
-                    await Promise.all(ids.map(id => axios.delete(window.routeUrls.destroySchoolClass.replace(':id', id))));
-                    Swal.fire('Deleted!', `${ids.length} record(s) removed.`, 'success');
+                    const res = await axios.post(window.routeUrls.storeSchoolClass, formData);
+                    Swal.fire('Success!', res.data.message || 'Added!', 'success');
+                    addModal.hide();
+                    addForm.reset();
                     location.reload();
                 } catch (err) {
-                    Swal.fire('Error!', err.response?.data?.message || 'Failed to delete some records', 'error');
+                    let msg = err.response?.data?.message || 'Failed to add';
+                    if (err.response?.status === 422) {
+                        msg = Object.values(err.response.data.errors).flat().join('<br>');
+                    }
+                    Swal.fire('Error!', msg, 'error');
                 } finally {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="ri-delete-bin-2-line"></i> Delete Selected';
+                    btn.innerHTML = 'Add Class';
                 }
             });
-        };
+        }
 
-        // Add form submission
-        addForm?.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const formData = new FormData(addForm);
-            const submitBtn = document.getElementById('add-btn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
-
-            try {
-                const response = await axios.post(window.routeUrls.storeSchoolClass, formData);
-                Swal.fire('Success!', response.data.message, 'success');
-                addModal.hide();
-                addForm.reset();
-                location.reload();
-            } catch (error) {
-                let msg = 'Something went wrong';
-                if (error.response && error.response.status === 422) {
-                    const errors = error.response.data.errors;
-                    msg = Object.values(errors).flat().join('<br>');
-                } else {
-                    msg = error.response?.data?.message || 'Server error';
-                }
-                Swal.fire('Error!', msg, 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Add Class';
-            }
-        });
-
-        // Edit button click (single row edit)
+        // Edit buttons
         document.querySelectorAll('.edit-item-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
-                currentEditId = row.querySelector('.id').dataset.id;
-                const schoolclass = row.querySelector('.schoolclass').dataset.schoolclass;
-                const armId = row.querySelector('.arm').dataset.armId;
-                const categoryIdsStr = row.querySelector('.classcategory').dataset.categoryIds;
+                currentEditId = row.querySelector('.id')?.dataset.id;
+                if (!currentEditId) {
+                    console.error('No ID found on row');
+                    return;
+                }
+
+                const schoolclass = row.querySelector('.schoolclass')?.dataset.schoolclass || '';
+                const armId = row.querySelector('.arm')?.dataset.armId || '';
+                const catIdsStr = row.querySelector('.classcategory')?.dataset.categoryIds || '';
 
                 document.getElementById('edit-id-field').value = currentEditId;
                 document.getElementById('edit-schoolclass').value = schoolclass;
 
-                // Set arm radio
-                document.querySelectorAll('#edit-arm-radios input[type="radio"]').forEach(radio => {
-                    radio.checked = radio.value == armId;
+                document.querySelectorAll('#edit-arm-radios input[type="radio"]').forEach(r => {
+                    r.checked = (r.value === armId);
                 });
 
-                // Reset and check categories
-                document.querySelectorAll('#edit-category-checkboxes input[type="checkbox"]').forEach(checkbox => {
-                    checkbox.checked = false;
+                document.querySelectorAll('#edit-category-checkboxes input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
                 });
 
-                if (categoryIdsStr) {
-                    const categoryIds = categoryIdsStr.split(',');
-                    categoryIds.forEach(catId => {
-                        const checkbox = document.querySelector(`#edit-category-${catId.trim()}`);
-                        if (checkbox) checkbox.checked = true;
+                if (catIdsStr) {
+                    catIdsStr.split(',').forEach(id => {
+                        const cb = document.querySelector(`#edit-category-${id.trim()}`);
+                        if (cb) cb.checked = true;
                     });
                 }
 
-                document.getElementById('edit-alert-error-msg').classList.add('d-none');
+                document.getElementById('edit-alert-error-msg')?.classList.add('d-none');
                 editModal.show();
             });
         });
 
-        // Edit form submission
-        editForm?.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            if (!currentEditId) return;
+        // Edit form
+        if (editForm) {
+            editForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!currentEditId) return;
 
-            const formData = new FormData(editForm);
-            formData.append('_method', 'PUT');
+                const formData = new FormData(editForm);
+                formData.append('_method', 'PUT');
 
-            const submitBtn = document.getElementById('update-btn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+                const btn = document.getElementById('update-btn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
 
-            const updateUrl = window.routeUrls.updateSchoolClass.replace('PLACEHOLDER', currentEditId);
-            axios.post(updateUrl, formData)
-                .then(function (response) {
-                    Swal.fire('Success!', response.data.message, 'success');
+                try {
+                    const res = await axios.post(window.routeUrls.updateSchoolClass.replace(':id', currentEditId), formData);
+                    Swal.fire('Success!', res.data.message || 'Updated!', 'success');
                     editModal.hide();
                     editForm.reset();
                     currentEditId = null;
                     location.reload();
-                })
-                .catch(function (error) {
-                    if (error.response && error.response.status === 422) {
-                        const errors = error.response.data.errors;
-                        let errorMsg = '';
-                        for (let key in errors) {
-                            errorMsg += errors[key].join('<br>');
-                        }
-                        document.getElementById('edit-alert-error-msg').innerHTML = errorMsg;
-                        document.getElementById('edit-alert-error-msg').classList.remove('d-none');
-                    } else {
-                        Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
+                } catch (err) {
+                    let msg = err.response?.data?.message || 'Failed to update';
+                    if (err.response?.status === 422) {
+                        msg = Object.values(err.response.data.errors).flat().join('<br>');
                     }
-                })
-                .finally(function () {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Update';
-                });
-        });
+                    Swal.fire('Error!', msg, 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Update';
+                }
+            });
+        }
 
-        // Single delete
+        // Delete buttons
         document.querySelectorAll('.remove-item-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
-                currentEditId = row.querySelector('.id').dataset.id;
-                deleteModal.show();
+                currentEditId = row.querySelector('.id')?.dataset.id;
+                if (currentEditId) deleteModal.show();
             });
         });
 
-        document.getElementById('delete-record')?.addEventListener('click', function () {
+        document.getElementById('delete-record')?.addEventListener('click', async function () {
             if (!currentEditId) return;
 
-            const submitBtn = this;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
 
-            const destroyUrl = window.routeUrls.destroySchoolClass.replace('PLACEHOLDER', currentEditId);
-            axios.delete(destroyUrl)
-                .then(function (response) {
-                    Swal.fire('Success!', response.data.message, 'success');
-                    deleteModal.hide();
-                    location.reload();
-                })
-                .catch(function (error) {
-                    Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
-                })
-                .finally(function () {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Delete';
-                });
-        });
-
-        // Reset forms on modal close
-        addModal._element.addEventListener('hidden.bs.modal', function () {
-            if (addForm) {
-                addForm.reset();
-                document.getElementById('add-alert-error-msg').classList.add('d-none');
+            try {
+                const res = await axios.delete(window.routeUrls.destroySchoolClass.replace(':id', currentEditId));
+                Swal.fire('Success!', res.data.message || 'Deleted!', 'success');
+                deleteModal.hide();
+                location.reload();
+            } catch (err) {
+                Swal.fire('Error!', err.response?.data?.message || 'Failed to delete', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Delete';
             }
         });
 
-        editModal._element.addEventListener('hidden.bs.modal', function () {
-            if (editForm) {
-                editForm.reset();
-                document.getElementById('edit-alert-error-msg').classList.add('d-none');
-                currentEditId = null;
-            }
+        // Reset modals
+        [addModalEl, editModalEl, deleteModalEl].forEach(modalEl => {
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                if (modalEl.id === 'addSchoolClassModal') {
+                    addForm?.reset();
+                    document.getElementById('add-alert-error-msg')?.classList.add('d-none');
+                }
+                if (modalEl.id === 'editModal') {
+                    editForm?.reset();
+                    document.getElementById('edit-alert-error-msg')?.classList.add('d-none');
+                    currentEditId = null;
+                }
+            });
         });
     });
 </script>
+
+@endsection
 
 @endsection
