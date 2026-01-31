@@ -66,6 +66,14 @@
                             <div class="fw-bold">{{ $all_classes->currentPage() }}</div>
                         </div>
                     </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-info" onclick="testFormCapture()">
+                            <i class="bi bi-bug me-1"></i> Test Form Capture
+                        </button>
+                        <button type="button" class="btn btn-sm btn-warning" onclick="testSubmission()">
+                            <i class="bi bi-send-check me-1"></i> Test Submission
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -100,7 +108,6 @@
                                         @can('Create school-class')
                                             <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addSchoolClassModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Create School Class</button>
                                         @endcan
-                                        <button type="button" class="btn btn-info" onclick="testConnection()"><i class="bi bi-plug align-baseline me-1"></i> Test Connection</button>
                                     </div>
                                 </div>
                             </div>
@@ -158,12 +165,7 @@
                                                                         <i class="ph-trash"></i>
                                                                     </a>
                                                                 </li>
-                                                            @endcan
-                                                            <li>
-                                                                <a href="javascript:void(0);" class="btn btn-subtle-info btn-icon btn-sm debug-item-btn" title="Debug Info" onclick="console.log('Class Debug:', {{ json_encode($class) }})">
-                                                                    <i class="ph-bug"></i>
-                                                                </a>
-                                                            </li>
+                                                            @endcan>
                                                         </ul>
                                                     </td>
                                                 </tr>
@@ -216,9 +218,6 @@
 
                                 <div class="mb-3">
                                     <label class="form-label">Select Arm(s) <span class="text-danger">*</span></label>
-                                    <div id="arms-debug" class="alert alert-info p-2 mb-2 d-none">
-                                        <small>Available Arms: {{ $arms->count() }}</small>
-                                    </div>
                                     <div class="d-flex flex-wrap gap-3" id="add-arm-checkboxes">
                                         @if($arms->count() > 0)
                                             @foreach ($arms as $arm)
@@ -245,9 +244,6 @@
 
                                 <div class="mb-3">
                                     <label class="form-label">Select Category(s) <span class="text-danger">*</span></label>
-                                    <div id="categories-debug" class="alert alert-info p-2 mb-2 d-none">
-                                        <small>Available Categories: {{ $classcategories->count() }}</small>
-                                    </div>
                                     <div class="d-flex flex-wrap gap-3" id="add-category-checkboxes">
                                         @if($classcategories->count() > 0)
                                             @foreach ($classcategories as $category)
@@ -356,16 +352,9 @@
                                 </div>
 
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
-
-                                <!-- Debug Info -->
-                                <div class="alert alert-secondary d-none" id="edit-debug-info">
-                                    <h6 class="alert-heading">Debug Information:</h6>
-                                    <pre id="edit-debug-content" class="mb-0" style="font-size: 11px;"></pre>
-                                </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-warning" onclick="debugFormData('edit')">Debug Form</button>
                                 <button type="submit" class="btn btn-primary" id="update-btn">Update</button>
                             </div>
                         </form>
@@ -412,16 +401,6 @@
     }
     #deleteRecordModal {
         z-index: 1055;
-    }
-    .debug-panel {
-        background: #f8f9fa;
-        border-left: 4px solid #6c757d;
-    }
-    .debug-info {
-        font-family: 'Courier New', monospace;
-        font-size: 11px;
-        white-space: pre-wrap;
-        word-break: break-all;
     }
 </style>
 
@@ -475,65 +454,95 @@ function debugFormData(type) {
     showDebugInfo(type, data);
 }
 
-async function testConnection() {
-    try {
-        const response = await axios.get('{{ route("schoolclass.index") }}');
-        console.log('Connection Test:', response.status, response.statusText);
+// Test function to verify data capture
+function testFormCapture() {
+    console.log('=== TEST FORM CAPTURE ===');
 
-        Swal.fire({
-            title: 'Connection Test',
-            html: `
-                <div class="text-start">
-                    <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
-                    <p><strong>URL:</strong> ${response.config.url}</p>
-                    <p><strong>Headers:</strong> ${JSON.stringify(response.config.headers)}</p>
-                </div>
-            `,
-            icon: 'success'
-        });
-    } catch (error) {
-        console.error('Connection Test Failed:', error);
+    // Get all form elements
+    const form = document.getElementById('add-schoolclass-form');
+    const elements = form.elements;
 
-        Swal.fire({
-            title: 'Connection Failed!',
-            html: `
-                <div class="text-start">
-                    <p><strong>Error:</strong> ${error.message}</p>
-                    <p><strong>Status:</strong> ${error.response?.status || 'No response'}</p>
-                    <p><strong>Response:</strong> ${JSON.stringify(error.response?.data || {})}</p>
-                </div>
-            `,
-            icon: 'error'
-        });
+    console.log('Total form elements:', elements.length);
+
+    // Check each element
+    console.log('=== FORM ELEMENTS ===');
+    for (let element of elements) {
+        if (element.name) {
+            console.log(`Element: name="${element.name}", type="${element.type}", value="${element.value}", checked="${element.checked}"`);
+        }
     }
+
+    // Check checkboxes specifically
+    const armCheckboxes = document.querySelectorAll('.add-arm-checkbox');
+    const categoryCheckboxes = document.querySelectorAll('.add-category-checkbox');
+
+    console.log('Arm checkboxes found:', armCheckboxes.length);
+    console.log('Category checkboxes found:', categoryCheckboxes.length);
+
+    // Test what FormData captures
+    const testFormData = new FormData(form);
+    console.log('=== FormData Capture Test ===');
+    const capturedData = {};
+    for (let [key, value] of testFormData.entries()) {
+        console.log(`${key}: ${value}`);
+        if (capturedData[key]) {
+            if (Array.isArray(capturedData[key])) {
+                capturedData[key].push(value);
+            } else {
+                capturedData[key] = [capturedData[key], value];
+            }
+        } else {
+            capturedData[key] = value;
+        }
+    }
+    console.log('Captured Data Object:', capturedData);
+
+    // Check which checkboxes are checked
+    console.log('=== CHECKED CHECKBOXES ===');
+    armCheckboxes.forEach((cb, index) => {
+        console.log(`Arm ${index}: ID=${cb.value}, Checked=${cb.checked}, In FormData=${capturedData['arm_id[]'] ? 'YES' : 'NO'}`);
+    });
+
+    categoryCheckboxes.forEach((cb, index) => {
+        console.log(`Category ${index}: ID=${cb.value}, Checked=${cb.checked}, In FormData=${capturedData['classcategoryid[]'] ? 'YES' : 'NO'}`);
+    });
+
+    alert('Check browser console for form capture test results');
 }
 
-function testDataSubmission() {
-    console.log('=== TEST DATA SUBMISSION ===');
+// Test submission with hardcoded data
+async function testSubmission() {
+    console.log('=== TEST SUBMISSION ===');
 
-    // Test 1: Check if arms exist
-    const arms = @json($arms);
-    console.log('Available Arms:', arms);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-    // Test 2: Check if categories exist
-    const categories = @json($classcategories);
-    console.log('Available Categories:', categories);
+    // Create test data
+    const formData = new FormData();
+    formData.append('_token', csrfToken);
+    formData.append('schoolclass', 'TEST CLASS');
+    formData.append('arm_id[]', '1');
+    formData.append('arm_id[]', '2');
+    formData.append('classcategoryid[]', '1');
+    formData.append('classcategoryid[]', '2');
 
-    // Test 3: Test a simple submission
-    const testData = {
-        schoolclass: 'TEST CLASS',
-        arm_id: arms.length > 0 ? [arms[0].id] : [1],
-        classcategoryid: categories.length > 0 ? [categories[0].id] : [1],
-        _token: document.querySelector('meta[name="csrf-token"]').content
-    };
+    console.log('Test Data to Send:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+    }
 
-    console.log('Test Submission Data:', testData);
+    try {
+        const response = await axios.post('{{ route("schoolclass.store") }}', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
 
-    Swal.fire({
-        title: 'Test Data Ready',
-        text: 'Check browser console for test data',
-        icon: 'info'
-    });
+        console.log('Test Success:', response.data);
+        Swal.fire('Success!', 'Test submission successful!', 'success');
+    } catch (error) {
+        console.log('Test Error:', error.response);
+        Swal.fire('Error!', 'Test submission failed. Check console.', 'error');
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -547,6 +556,7 @@ document.addEventListener('DOMContentLoaded', function () {
     axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
     axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
+    console.log('=== PAGE LOADED ===');
     console.log('CSRF Token:', csrfToken);
     console.log('Route URLs:', {
         store: '{{ route("schoolclass.store") }}',
@@ -554,7 +564,7 @@ document.addEventListener('DOMContentLoaded', function () {
         destroy: '{{ route("schoolclass.destroy", ":id") }}'
     });
 
-    // Handle Add Form Submission
+    // Handle Add Form Submission - FIXED VERSION
     const addForm = document.getElementById('add-schoolclass-form');
     if (addForm) {
         addForm.addEventListener('submit', async function (e) {
@@ -566,6 +576,19 @@ document.addEventListener('DOMContentLoaded', function () {
             const selectedArms = document.querySelectorAll('.add-arm-checkbox:checked');
             const selectedCategories = document.querySelectorAll('.add-category-checkbox:checked');
 
+            console.log('Selected Arms Count:', selectedArms.length);
+            console.log('Selected Categories Count:', selectedCategories.length);
+
+            // Log each selected arm
+            selectedArms.forEach((arm, index) => {
+                console.log(`Arm ${index + 1}: ID=${arm.value}, Name=${arm.dataset.arm}`);
+            });
+
+            // Log each selected category
+            selectedCategories.forEach((category, index) => {
+                console.log(`Category ${index + 1}: ID=${category.value}, Name=${category.dataset.category}`);
+            });
+
             if (selectedArms.length === 0) {
                 Swal.fire('Error!', 'Please select at least one arm.', 'error');
                 return;
@@ -576,46 +599,49 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            // Create form data
-            const formData = new FormData();
+            // Create form data PROPERLY
+            const properFormData = new FormData();
 
             // Add CSRF token
-            formData.append('_token', csrfToken);
+            properFormData.append('_token', csrfToken);
 
-            // Add schoolclass (only once)
+            // Add schoolclass
             const schoolclassInput = document.getElementById('add-schoolclass');
-            formData.append('schoolclass', schoolclassInput.value);
+            properFormData.append('schoolclass', schoolclassInput.value);
+            console.log('Added schoolclass:', schoolclassInput.value);
 
-            // Add selected arms
-            selectedArms.forEach((arm) => {
-                formData.append('arm_id[]', arm.value);
+            // Add selected arms - CRITICAL: Use the correct format
+            selectedArms.forEach((arm, index) => {
+                properFormData.append('arm_id[]', arm.value);
+                console.log(`Added arm_id[${index}]:`, arm.value);
             });
 
-            // Add selected categories
-            selectedCategories.forEach((category) => {
-                formData.append('classcategoryid[]', category.value);
+            // Add selected categories - CRITICAL: Use the correct format
+            selectedCategories.forEach((category, index) => {
+                properFormData.append('classcategoryid[]', category.value);
+                console.log(`Added classcategoryid[${index}]:`, category.value);
             });
 
-            // Log form data for debugging
-            console.log('Form Data to be sent:');
-            const formDataObj = {};
-            for (let [key, value] of formData.entries()) {
+            // Log the final form data
+            console.log('=== FINAL FORM DATA TO SEND ===');
+            const finalData = {};
+            for (let [key, value] of properFormData.entries()) {
                 console.log(`${key}: ${value}`);
-                if (formDataObj[key]) {
-                    if (Array.isArray(formDataObj[key])) {
-                        formDataObj[key].push(value);
+                if (finalData[key]) {
+                    if (Array.isArray(finalData[key])) {
+                        finalData[key].push(value);
                     } else {
-                        formDataObj[key] = [formDataObj[key], value];
+                        finalData[key] = [finalData[key], value];
                     }
                 } else {
-                    formDataObj[key] = value;
+                    finalData[key] = value;
                 }
             }
-            console.log('Form Data Object:', formDataObj);
+            console.log('Final Data Object:', finalData);
 
             // Show debug info
             showDebugInfo('add', {
-                formData: formDataObj,
+                finalData: finalData,
                 selectedArms: Array.from(selectedArms).map(a => ({id: a.value, name: a.dataset.arm})),
                 selectedCategories: Array.from(selectedCategories).map(c => ({id: c.value, name: c.dataset.category}))
             });
@@ -627,8 +653,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             try {
                 console.log('Sending request to:', '{{ route("schoolclass.store") }}');
+                console.log('Request payload:', finalData);
 
-                const response = await axios.post('{{ route("schoolclass.store") }}', formData, {
+                // Add debug header
+                properFormData.append('X-Debug-JS', JSON.stringify(finalData));
+
+                const response = await axios.post('{{ route("schoolclass.store") }}', properFormData, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
                     }
@@ -652,11 +682,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
             } catch (error) {
                 console.log('=== ADD ERROR ===');
-                console.log('Error:', error);
+                console.log('Full Error:', error);
                 console.log('Error Response:', error.response);
 
                 if (error.response && error.response.status === 422) {
                     const errors = error.response.data.errors;
+                    console.log('Validation Errors:', errors);
+
                     let errorMsg = '';
                     let errorList = '';
 
@@ -676,7 +708,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         document.getElementById('add-validation-errors').classList.remove('d-none');
                     }
 
-                    // Scroll to error message
                     document.getElementById('add-alert-error-msg').scrollIntoView({ behavior: 'smooth' });
 
                 } else if (error.response && error.response.status === 500) {
@@ -688,18 +719,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         html: `
                             <div class="text-start">
                                 <p><strong>Error:</strong> ${errorDetails.message || 'Internal Server Error'}</p>
-                                ${errorDetails.error ? `<p><strong>Details:</strong> ${errorDetails.error}</p>` : ''}
-                                <p>Check Laravel logs for more information.</p>
+                                ${errorDetails.error ? `<p><strong>SQL Error:</strong> ${errorDetails.error}</p>` : ''}
+                                <p><strong>Data Sent:</strong></p>
+                                <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 12px;">${JSON.stringify(finalData, null, 2)}</pre>
                             </div>
                         `,
-                        icon: 'error'
-                    });
-
-                    // Show error in debug panel
-                    showDebugInfo('add', {
-                        error: error.response.data,
-                        status: error.response.status,
-                        statusText: error.response.statusText
+                        icon: 'error',
+                        width: 600
                     });
 
                 } else {
@@ -721,7 +747,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const armId = row.querySelector('.arm').dataset.armId;
             const categoryIdsStr = row.querySelector('.classcategory').dataset.categoryIds;
 
-            console.log('=== EDIT MODAL OPENED ===');
             console.log('Editing Class:', {
                 id: currentEditId,
                 schoolclass: schoolclass,
@@ -735,7 +760,6 @@ document.addEventListener('DOMContentLoaded', function () {
             // Set arm radio
             document.querySelectorAll('#edit-arm-radios input[type="radio"]').forEach(radio => {
                 radio.checked = radio.value == armId;
-                console.log(`Radio ${radio.value}: ${radio.checked ? 'checked' : 'unchecked'}`);
             });
 
             // Reset category checkboxes
@@ -746,16 +770,10 @@ document.addEventListener('DOMContentLoaded', function () {
             // Check the original categories
             if (categoryIdsStr) {
                 const categoryIds = categoryIdsStr.split(',');
-                console.log('Original Category IDs:', categoryIds);
-
                 categoryIds.forEach(catId => {
-                    const trimmedCatId = catId.trim();
-                    const checkbox = document.querySelector(`#edit-category-${trimmedCatId}`);
+                    const checkbox = document.querySelector(`#edit-category-${catId.trim()}`);
                     if (checkbox) {
                         checkbox.checked = true;
-                        console.log(`Checked category ${trimmedCatId}`);
-                    } else {
-                        console.warn(`Category checkbox not found for ID: ${trimmedCatId}`);
                     }
                 });
             }
@@ -763,7 +781,6 @@ document.addEventListener('DOMContentLoaded', function () {
             // Hide previous errors
             document.getElementById('edit-alert-error-msg').classList.add('d-none');
             document.getElementById('edit-validation-errors').classList.add('d-none');
-            hideDebugInfo('edit');
 
             editModal.show();
         });
@@ -899,10 +916,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const schoolClassName = row.querySelector('.schoolclass').dataset.schoolclass;
             const schoolClassText = row.querySelector('.schoolclass').textContent.split('\n')[0].trim();
 
-            console.log('=== DELETE REQUESTED ===');
-            console.log('Class ID:', currentDeleteId);
-            console.log('Class Name:', schoolClassName);
-
             // Update modal text
             document.getElementById('delete-class-name').textContent = `Delete "${schoolClassText}"?`;
             document.getElementById('delete-class-desc').textContent = `Are you sure you want to delete class "${schoolClassText}"? This action cannot be undone.`;
@@ -984,7 +997,6 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('edit-alert-error-msg').innerHTML = '';
             document.getElementById('edit-validation-errors').classList.add('d-none');
             document.getElementById('edit-error-list').innerHTML = '';
-            hideDebugInfo('edit');
             currentEditId = null;
         }
     });
@@ -993,13 +1005,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('deleteRecordModal').addEventListener('hidden.bs.modal', function () {
         currentDeleteId = null;
     });
-
-    // Initialize debug panels on page load
-    console.log('=== PAGE LOADED ===');
-    console.log('Current User Permissions:', @json(auth()->user()->getAllPermissions()->pluck('name')));
-    console.log('Available Arms:', @json($arms));
-    console.log('Available Categories:', @json($classcategories));
-    console.log('Total Classes:', {{ $all_classes->total() }});
 });
 </script>
 @endsection
