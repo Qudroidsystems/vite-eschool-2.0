@@ -5,7 +5,8 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <!-- Start page title -->
+
+            <!-- Page Title -->
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
@@ -19,16 +20,17 @@
                     </div>
                 </div>
             </div>
-            <!-- End page title -->
 
+            <!-- Messages -->
             @if ($errors->any())
-                <div class="alert alert-danger">
-                    <strong>Whoops!</strong> There were some problems with your input.<br><br>
-                    <ul>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>Whoops!</strong> There were some problems with your input.<br>
+                    <ul class="mb-0">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
                     </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
@@ -54,7 +56,7 @@
                                 <div class="row g-3">
                                     <div class="col-xxl-3">
                                         <div class="search-box">
-                                            <input type="text" class="form-control search" placeholder="Search school classes" value="{{ request()->query('search') }}">
+                                            <input type="text" class="form-control search" placeholder="Search school classes..." value="{{ request()->query('search') }}">
                                             <i class="ri-search-line search-icon"></i>
                                         </div>
                                     </div>
@@ -73,9 +75,13 @@
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
-                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
+                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">
+                                            <i class="ri-delete-bin-2-line align-bottom me-1"></i> Delete Selected
+                                        </button>
                                         @can('Create school-class')
-                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addSchoolClassModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Create School Class</button>
+                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addSchoolClassModal">
+                                                <i class="ri-add-circle-line align-bottom me-1"></i> Create School Class
+                                            </button>
                                         @endcan
                                     </div>
                                 </div>
@@ -91,11 +97,11 @@
                                                         <input class="form-check-input" type="checkbox" id="checkAll" />
                                                     </div>
                                                 </th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="schoolclassid">SN</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="schoolclass">School Class</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="arm">Arm</th>
-                                                <th class="min-w-125px sort cursor-pointer" data-sort="classcategory">Category</th>
-                                                <th class="min-w-150px sort cursor-pointer" data-sort="description">Description</th>
+                                                <th class="min-w-80px sort cursor-pointer" data-sort="schoolclassid">SN</th>
+                                                <th class="min-w-150px sort cursor-pointer" data-sort="schoolclass">School Class</th>
+                                                <th class="min-w-100px sort cursor-pointer" data-sort="arm">Arm</th>
+                                                <th class="min-w-150px sort cursor-pointer" data-sort="classcategory">Category</th>
+                                                <th class="min-w-200px sort cursor-pointer" data-sort="description">Description</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
@@ -110,7 +116,7 @@
                                                     </td>
                                                     <td class="schoolclassid">{{ ++$i }}</td>
                                                     <td class="schoolclass" data-schoolclass="{{ $class->schoolclass }}">{{ $class->schoolclass }}</td>
-                                                    <td class="arm" data-arm-id="{{ $class->arm_id }}" data-arm="{{ $class->arm_name }}">{{ $class->arm_name }}</td>
+                                                    <td class="arm" data-arm-id="{{ $class->arm_id }}" data-arm="{{ $class->arm_name }}">{{ $class->arm_name ?? '—' }}</td>
                                                     <td class="classcategory" data-category-id="{{ $class->classcategoryid }}">{{ $class->classcategory ?? '—' }}</td>
                                                     <td class="description">{{ $class->description ?? '—' }}</td>
                                                     <td>
@@ -130,7 +136,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="noresult text-center">No results found</td>
+                                                    <td colspan="7" class="noresult text-center py-4">No school classes found.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -140,7 +146,7 @@
                                 <div class="row mt-3 align-items-center" id="pagination-element">
                                     <div class="col-sm">
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $all_classes->count() }}</span> of <span class="fw-semibold">{{ $all_classes->total() }}</span> Results
+                                            Showing <span class="fw-semibold">{{ $all_classes->count() }}</span> of <span class="fw-semibold">{{ $all_classes->total() }}</span> results
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
@@ -153,7 +159,7 @@
                 </div>
             </div>
 
-            <!-- Add School Class Modal -->
+            <!-- Add Modal -->
             <div id="addSchoolClassModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
@@ -166,18 +172,18 @@
                             <div class="modal-body">
                                 <input type="hidden" id="add-id-field" name="id">
 
-                                <div class="mb-3">
-                                    <label for="add-schoolclass" class="form-label">School Class</label>
-                                    <input type="text" id="add-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
+                                <div class="mb-4">
+                                    <label for="add-schoolclass" class="form-label">School Class <span class="text-danger">*</span></label>
+                                    <input type="text" id="add-schoolclass" name="schoolclass" class="form-control" placeholder="e.g. JSS 1" required>
                                 </div>
 
-                                <div class="mb-3">
+                                <div class="mb-4">
                                     <label for="add-description" class="form-label">Description (optional)</label>
-                                    <textarea id="add-description" name="description" class="form-control" rows="3" placeholder="Enter optional description"></textarea>
+                                    <textarea id="add-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Select Arm(s)</label>
+                                <div class="mb-4">
+                                    <label class="form-label">Select Arm(s) <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3" id="add-arm-checkboxes">
                                         @foreach ($arms as $arm)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -188,8 +194,8 @@
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Select Category(s)</label>
+                                <div class="mb-4">
+                                    <label class="form-label">Select Category(s) <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3" id="add-category-checkboxes">
                                         @foreach ($classcategories as $category)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -211,7 +217,7 @@
                 </div>
             </div>
 
-            <!-- Edit School Class Modal -->
+            <!-- Edit Modal -->
             <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
@@ -224,18 +230,18 @@
                             <div class="modal-body">
                                 <input type="hidden" id="edit-id-field" name="id">
 
-                                <div class="mb-3">
-                                    <label for="edit-schoolclass" class="form-label">School Class</label>
-                                    <input type="text" id="edit-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
+                                <div class="mb-4">
+                                    <label for="edit-schoolclass" class="form-label">School Class <span class="text-danger">*</span></label>
+                                    <input type="text" id="edit-schoolclass" name="schoolclass" class="form-control" placeholder="e.g. JSS 1" required>
                                 </div>
 
-                                <div class="mb-3">
+                                <div class="mb-4">
                                     <label for="edit-description" class="form-label">Description (optional)</label>
-                                    <textarea id="edit-description" name="description" class="form-control" rows="3" placeholder="Enter optional description"></textarea>
+                                    <textarea id="edit-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Select Arm</label>
+                                <div class="mb-4">
+                                    <label class="form-label">Select Arm <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3" id="edit-arm-radios">
                                         @foreach ($arms as $arm)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -246,8 +252,8 @@
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Select Category</label>
+                                <div class="mb-4">
+                                    <label class="form-label">Select Category <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3" id="edit-category-radios">
                                         @foreach ($classcategories as $category)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -283,41 +289,35 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn btn-danger" id="delete-record">Delete</button>
+                            <button type="button" class="btn btn-danger" id="delete-record">Yes, Delete</button>
                         </div>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
 
 <style>
-    /* Enlarge checkboxes and radios in modals */
-    #addSchoolClassModal .form-check-input,
-    #editModal .form-check-input {
+    /* Larger checkboxes/radios in modals */
+    .modal .form-check-input {
         width: 1.5em;
         height: 1.5em;
-        margin-top: 0.15em;
+        margin-top: 0.2em;
     }
-    #addSchoolClassModal .form-check-label,
-    #editModal .form-check-label {
-        font-size: 1.1em;
-        line-height: 1.5em;
-        margin-left: 0.5em;
+    .modal .form-check-label {
+        font-size: 1.05em;
+        margin-left: 0.6em;
     }
     #deleteRecordModal {
-        z-index: 1055;
-    }
-    #deleteRecordModal .modal-backdrop {
-        z-index: 1050;
+        z-index: 1060;
     }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
 <script src="{{ asset('theme/layouts/assets/js/schoolclass-list.init.js') }}"></script>
 
 <script>
@@ -327,9 +327,7 @@
         destroySchoolClass: '{{ route("schoolclass.destroy", ":id") }}',
         getArms: '{{ route("schoolclass.getarms", ":id") }}'
     };
-</script>
 
-<script>
     document.addEventListener('DOMContentLoaded', function () {
         const addForm = document.getElementById('add-schoolclass-form');
         const editForm = document.getElementById('edit-schoolclass-form');
@@ -339,39 +337,86 @@
 
         let currentEditId = null;
 
-        // Add form submission
-        addForm?.addEventListener('submit', async function (e) {
+        // Bulk delete helpers
+        document.getElementById('checkAll')?.addEventListener('change', function () {
+            document.querySelectorAll('input[name="chk_child"]').forEach(cb => cb.checked = this.checked);
+            toggleBulkButton();
+        });
+
+        document.querySelectorAll('input[name="chk_child"]').forEach(cb => {
+            cb.addEventListener('change', toggleBulkButton);
+        });
+
+        function toggleBulkButton() {
+            const checked = document.querySelectorAll('input[name="chk_child"]:checked').length;
+            document.getElementById('remove-actions')?.classList.toggle('d-none', checked === 0);
+        }
+
+        window.deleteMultiple = async function () {
+            const checked = document.querySelectorAll('input[name="chk_child"]:checked');
+            if (checked.length === 0) return;
+
+            const ids = Array.from(checked).map(cb => cb.closest('tr').querySelector('.id').dataset.id);
+
+            Swal.fire({
+                title: 'Delete Selected?',
+                text: `You are about to delete ${ids.length} record(s). This cannot be undone.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete them!'
+            }).then(async (result) => {
+                if (!result.isConfirmed) return;
+
+                const btn = document.getElementById('remove-actions');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+
+                try {
+                    await Promise.all(ids.map(id =>
+                        axios.delete(window.routeUrls.destroySchoolClass.replace(':id', id))
+                    ));
+                    Swal.fire('Deleted!', `${ids.length} record(s) removed.`, 'success');
+                    location.reload();
+                } catch (err) {
+                    Swal.fire('Error!', err.response?.data?.message || 'Failed to delete some records', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ri-delete-bin-2-line"></i> Delete Selected';
+                }
+            });
+        };
+
+        // Add form
+        addForm?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(addForm);
-            const submitBtn = document.getElementById('add-btn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+            const btn = document.getElementById('add-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
 
             try {
-                const response = await axios.post(window.routeUrls.storeSchoolClass, formData);
-                Swal.fire('Success!', response.data.message || 'Classes added!', 'success');
+                const res = await axios.post(window.routeUrls.storeSchoolClass, formData);
+                Swal.fire('Success!', res.data.message || 'Classes added!', 'success');
                 addModal.hide();
                 addForm.reset();
                 location.reload();
-            } catch (error) {
+            } catch (err) {
                 let msg = 'Something went wrong';
-                if (error.response) {
-                    if (error.response.status === 422) {
-                        const errors = error.response.data.errors;
-                        msg = Object.values(errors).flat().join('<br>');
-                    } else {
-                        msg = error.response.data.message || 'Server error (' + error.response.status + ')';
-                    }
+                if (err.response?.status === 422) {
+                    msg = Object.values(err.response.data.errors).flat().join('<br>');
+                } else {
+                    msg = err.response?.data?.message || 'Server error';
                 }
                 Swal.fire('Error!', msg, 'error');
-                console.error(error);
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Add Class';
+                btn.disabled = false;
+                btn.innerHTML = 'Add Class';
             }
         });
 
-        // Edit button click
+        // Edit button handler
         document.querySelectorAll('.edit-item-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
@@ -381,60 +426,49 @@
                 document.getElementById('edit-schoolclass').value = row.querySelector('.schoolclass').dataset.schoolclass || '';
                 document.getElementById('edit-description').value = row.querySelector('.description').textContent.trim() === '—' ? '' : row.querySelector('.description').textContent.trim();
 
-                // Set arm radio
                 const armId = row.querySelector('.arm').dataset.armId;
-                document.querySelectorAll('#edit-arm-radios input').forEach(radio => {
-                    radio.checked = (radio.value == armId);
-                });
+                document.querySelectorAll('#edit-arm-radios input').forEach(r => r.checked = (r.value == armId));
 
-                // Set category radio (since now single per row)
-                const catId = row.querySelector('.classcategory')?.dataset.categoryId || '';
-                document.querySelectorAll('#edit-category-radios input').forEach(radio => {
-                    radio.checked = (radio.value == catId);
-                });
+                const catId = row.querySelector('.classcategory').dataset.categoryId;
+                document.querySelectorAll('#edit-category-radios input').forEach(r => r.checked = (r.value == catId));
 
                 document.getElementById('edit-alert-error-msg').classList.add('d-none');
                 editModal.show();
             });
         });
 
-        // Edit form submission
-        editForm?.addEventListener('submit', async function (e) {
+        // Edit form
+        editForm?.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentEditId) return;
 
             const formData = new FormData(editForm);
             formData.append('_method', 'PUT');
 
-            const submitBtn = document.getElementById('update-btn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
-
-            const url = window.routeUrls.updateSchoolClass.replace(':id', currentEditId);
+            const btn = document.getElementById('update-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
 
             try {
-                const response = await axios.post(url, formData);
-                Swal.fire('Success!', response.data.message || 'Updated!', 'success');
+                const res = await axios.post(window.routeUrls.updateSchoolClass.replace(':id', currentEditId), formData);
+                Swal.fire('Success!', res.data.message || 'Updated!', 'success');
                 editModal.hide();
                 editForm.reset();
                 currentEditId = null;
                 location.reload();
-            } catch (error) {
-                let msg = 'Something went wrong';
-                if (error.response?.status === 422) {
-                    const errors = error.response.data.errors;
-                    msg = Object.values(errors).flat().join('<br>');
-                } else {
-                    msg = error.response?.data?.message || 'Server error';
+            } catch (err) {
+                let msg = err.response?.data?.message || 'Failed to update';
+                if (err.response?.status === 422) {
+                    msg = Object.values(err.response.data.errors).flat().join('<br>');
                 }
                 Swal.fire('Error!', msg, 'error');
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Update';
+                btn.disabled = false;
+                btn.innerHTML = 'Update';
             }
         });
 
-        // Delete buttons
+        // Single delete
         document.querySelectorAll('.remove-item-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
@@ -450,22 +484,20 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
 
-            const url = window.routeUrls.destroySchoolClass.replace(':id', currentEditId);
-
             try {
-                const response = await axios.delete(url);
-                Swal.fire('Success!', response.data.message || 'Deleted!', 'success');
+                const res = await axios.delete(window.routeUrls.destroySchoolClass.replace(':id', currentEditId));
+                Swal.fire('Success!', res.data.message || 'Deleted!', 'success');
                 deleteModal.hide();
                 location.reload();
-            } catch (error) {
-                Swal.fire('Error!', error.response?.data?.message || 'Failed to delete', 'error');
+            } catch (err) {
+                Swal.fire('Error!', err.response?.data?.message || 'Failed to delete', 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = 'Delete';
+                btn.innerHTML = 'Yes, Delete';
             }
         });
 
-        // Reset forms on modal close
+        // Reset modals
         addModal._element.addEventListener('hidden.bs.modal', () => {
             addForm?.reset();
             document.getElementById('add-alert-error-msg')?.classList.add('d-none');
