@@ -125,7 +125,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="6" class="noresult" style="display: none;">No results found</td>
+                                                    <td colspan="6" class="text-center py-4">No school classes found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -160,11 +160,12 @@
                             <div class="modal-body">
                                 <input type="hidden" id="add-id-field" name="id">
                                 <div class="mb-3">
-                                    <label for="add-schoolclass" class="form-label">School Class</label>
+                                    <label for="add-schoolclass" class="form-label">School Class <span class="text-danger">*</span></label>
                                     <input type="text" id="add-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
+                                    <div class="invalid-feedback">Please enter a school class name.</div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Select Arm(s)</label>
+                                    <label class="form-label">Select Arm(s) <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3" id="add-arm-checkboxes">
                                         @foreach ($arms as $arm)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -173,9 +174,10 @@
                                             </div>
                                         @endforeach
                                     </div>
+                                    <div class="invalid-feedback">Please select at least one arm.</div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Select Category(s)</label>
+                                    <label class="form-label">Select Category(s) <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3" id="add-category-checkboxes">
                                         @foreach ($classcategories as $category)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -184,6 +186,7 @@
                                             </div>
                                         @endforeach
                                     </div>
+                                    <div class="invalid-feedback">Please select at least one category.</div>
                                 </div>
                                 <div class="alert alert-danger d-none" id="add-alert-error-msg"></div>
                             </div>
@@ -206,14 +209,16 @@
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="edit-schoolclass-form">
                             @csrf
+                            @method('PUT')
                             <div class="modal-body">
                                 <input type="hidden" id="edit-id-field" name="id">
                                 <div class="mb-3">
-                                    <label for="edit-schoolclass" class="form-label">School Class</label>
+                                    <label for="edit-schoolclass" class="form-label">School Class <span class="text-danger">*</span></label>
                                     <input type="text" id="edit-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
+                                    <div class="invalid-feedback">Please enter a school class name.</div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Select Arm</label>
+                                    <label class="form-label">Select Arm <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3" id="edit-arm-radios">
                                         @foreach ($arms as $arm)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -222,9 +227,10 @@
                                             </div>
                                         @endforeach
                                     </div>
+                                    <div class="invalid-feedback">Please select an arm.</div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Select Category(s)</label>
+                                    <label class="form-label">Select Category(s) <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3" id="edit-category-checkboxes">
                                         @foreach ($classcategories as $category)
                                             <div class="form-check form-check-outline form-check-primary">
@@ -233,6 +239,7 @@
                                             </div>
                                         @endforeach
                                     </div>
+                                    <div class="invalid-feedback">Please select at least one category.</div>
                                 </div>
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
@@ -269,7 +276,6 @@
 </div>
 
 <style>
-    /* Enlarge checkboxes and radios in modals */
     #addSchoolClassModal .form-check-input,
     #editModal .form-check-input {
         width: 1.5em;
@@ -282,7 +288,6 @@
         line-height: 1.5em;
         margin-left: 0.5em;
     }
-    /* Ensure delete modal is above other modals and backdrop */
     #deleteRecordModal {
         z-index: 1055;
     }
@@ -294,18 +299,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
-<script src="{{ asset('theme/layouts/assets/js/schoolclass-list.init.js') }}"></script>
-
-<script>
-    window.routeUrls = {
-        storeSchoolClass: '{{ route("schoolclass.store") }}',
-        updateSchoolClass: '{{ route("schoolclass.update", "PLACEHOLDER") }}',
-        destroySchoolClass: '{{ route("schoolclass.destroy", "PLACEHOLDER") }}',
-        getArms: '{{ route("schoolclass.getarms", "PLACEHOLDER") }}'
-    };
-</script>
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const addForm = document.getElementById('add-schoolclass-form');
@@ -314,25 +307,62 @@
         const addModal = new bootstrap.Modal(document.getElementById('addSchoolClassModal'));
         const deleteModal = new bootstrap.Modal(document.getElementById('deleteRecordModal'));
 
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+
         let currentEditId = null;
+        let currentDeleteId = null;
 
         // Handle Add Form Submission
         if (addForm) {
             addForm.addEventListener('submit', function (e) {
                 e.preventDefault();
+
+                // Validate checkboxes
+                const selectedArms = document.querySelectorAll('.add-arm-checkbox:checked');
+                const selectedCategories = document.querySelectorAll('.add-category-checkbox:checked');
+
+                if (selectedArms.length === 0) {
+                    Swal.fire('Error!', 'Please select at least one arm.', 'error');
+                    return;
+                }
+
+                if (selectedCategories.length === 0) {
+                    Swal.fire('Error!', 'Please select at least one category.', 'error');
+                    return;
+                }
+
                 const formData = new FormData(addForm);
+
+                // Log form data for debugging
+                console.log('Form Data being sent:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key, ':', value);
+                }
+
                 const submitBtn = document.getElementById('add-btn');
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
 
-                axios.post(window.routeUrls.storeSchoolClass, formData)
+                axios.post('{{ route("schoolclass.store") }}', formData)
                     .then(function (response) {
-                        Swal.fire('Success!', response.data.message, 'success');
-                        addModal.hide();
-                        addForm.reset();
-                        location.reload(); // Reload to show new records
+                        console.log('Success Response:', response.data);
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.data.message,
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                addModal.hide();
+                                addForm.reset();
+                                location.reload();
+                            }
+                        });
                     })
                     .catch(function (error) {
+                        console.log('Error Response:', error.response);
                         if (error.response && error.response.status === 422) {
                             const errors = error.response.data.errors;
                             let errorMsg = '';
@@ -341,6 +371,9 @@
                             }
                             document.getElementById('add-alert-error-msg').innerHTML = errorMsg;
                             document.getElementById('add-alert-error-msg').classList.remove('d-none');
+
+                            // Scroll to error message
+                            document.getElementById('add-alert-error-msg').scrollIntoView({ behavior: 'smooth' });
                         } else {
                             Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
                         }
@@ -360,6 +393,8 @@
                 const schoolclass = row.querySelector('.schoolclass').dataset.schoolclass;
                 const armId = row.querySelector('.arm').dataset.armId;
                 const categoryIdsStr = row.querySelector('.classcategory').dataset.categoryIds;
+
+                console.log('Editing:', { currentEditId, schoolclass, armId, categoryIdsStr });
 
                 document.getElementById('edit-id-field').value = currentEditId;
                 document.getElementById('edit-schoolclass').value = schoolclass;
@@ -396,23 +431,39 @@
                 e.preventDefault();
                 if (!currentEditId) return;
 
+                // Validate checkboxes
+                const selectedCategories = document.querySelectorAll('.edit-category-checkbox:checked');
+                if (selectedCategories.length === 0) {
+                    Swal.fire('Error!', 'Please select at least one category.', 'error');
+                    return;
+                }
+
                 const formData = new FormData(editForm);
-                formData.append('_method', 'PUT');
+
+                console.log('Edit Form Data:', Object.fromEntries(formData.entries()));
 
                 const submitBtn = document.getElementById('update-btn');
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
 
-                const updateUrl = window.routeUrls.updateSchoolClass.replace('PLACEHOLDER', currentEditId);
-                axios.post(updateUrl, formData)
+                axios.post('{{ route("schoolclass.update", "") }}/' + currentEditId, formData)
                     .then(function (response) {
-                        Swal.fire('Success!', response.data.message, 'success');
-                        editModal.hide();
-                        editForm.reset();
-                        currentEditId = null;
-                        location.reload(); // Reload to show updated records
+                        console.log('Update Success:', response.data);
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.data.message,
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                editModal.hide();
+                                editForm.reset();
+                                location.reload();
+                            }
+                        });
                     })
                     .catch(function (error) {
+                        console.log('Update Error:', error.response);
                         if (error.response && error.response.status === 422) {
                             const errors = error.response.data.errors;
                             let errorMsg = '';
@@ -421,6 +472,8 @@
                             }
                             document.getElementById('edit-alert-error-msg').innerHTML = errorMsg;
                             document.getElementById('edit-alert-error-msg').classList.remove('d-none');
+
+                            document.getElementById('edit-alert-error-msg').scrollIntoView({ behavior: 'smooth' });
                         } else {
                             Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
                         }
@@ -436,27 +489,42 @@
         document.querySelectorAll('.remove-item-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
-                currentEditId = row.querySelector('.id').dataset.id; // Reuse for delete id
+                currentDeleteId = row.querySelector('.id').dataset.id;
+                const schoolClassName = row.querySelector('.schoolclass').dataset.schoolclass;
+
+                // Update modal text to show which class is being deleted
+                document.querySelector('#deleteRecordModal .modal-body h4').textContent = `Delete ${schoolClassName}?`;
+                document.querySelector('#deleteRecordModal .modal-body p').textContent = `Are you sure you want to delete "${schoolClassName}"? This action cannot be undone.`;
+
                 deleteModal.show();
             });
         });
 
         // Handle Delete Confirmation
         document.getElementById('delete-record').addEventListener('click', function () {
-            if (!currentEditId) return;
+            if (!currentDeleteId) return;
 
             const submitBtn = this;
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
 
-            const destroyUrl = window.routeUrls.destroySchoolClass.replace('PLACEHOLDER', currentEditId);
-            axios.delete(destroyUrl)
+            axios.delete('{{ route("schoolclass.destroy", "") }}/' + currentDeleteId)
                 .then(function (response) {
-                    Swal.fire('Success!', response.data.message, 'success');
-                    deleteModal.hide();
-                    location.reload();
+                    console.log('Delete Success:', response.data);
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: response.data.message,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            deleteModal.hide();
+                            location.reload();
+                        }
+                    });
                 })
                 .catch(function (error) {
+                    console.log('Delete Error:', error.response);
                     Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
                 })
                 .finally(function () {
@@ -470,6 +538,7 @@
             if (addForm) {
                 addForm.reset();
                 document.getElementById('add-alert-error-msg').classList.add('d-none');
+                document.getElementById('add-alert-error-msg').innerHTML = '';
             }
         });
 
@@ -478,9 +547,25 @@
             if (editForm) {
                 editForm.reset();
                 document.getElementById('edit-alert-error-msg').classList.add('d-none');
+                document.getElementById('edit-alert-error-msg').innerHTML = '';
                 currentEditId = null;
             }
         });
+
+        // Handle Delete Modal Close
+        deleteModal._element.addEventListener('hidden.bs.modal', function () {
+            currentDeleteId = null;
+        });
+
+        // Form validation
+        function validateCheckboxes(selector) {
+            const checkboxes = document.querySelectorAll(selector);
+            let isValid = false;
+            checkboxes.forEach(cb => {
+                if (cb.checked) isValid = true;
+            });
+            return isValid;
+        }
     });
 </script>
 @endsection
