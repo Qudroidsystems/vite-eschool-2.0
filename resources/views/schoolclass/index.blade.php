@@ -295,9 +295,7 @@
     </div>
 </div>
 
-@endsection
 
-@section('scripts')
     <script>
         window.schoolClassRoutes = {
             store:   "{{ route('schoolclass.store') }}",
