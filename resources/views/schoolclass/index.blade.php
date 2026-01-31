@@ -103,16 +103,26 @@
                                             @php $i = ($all_classes->currentPage() - 1) * $all_classes->perPage() @endphp
                                             @forelse ($all_classes as $group)
                                                 <tr>
-                                                    <td class="id" data-id="{{ $group->first_id }}">
+                                                    <td class="id" data-id="{{ $group->id }}">
                                                         <div class="form-check form-check-sm form-check-solid">
                                                             <input class="form-check-input" type="checkbox" name="chk_child" />
                                                         </div>
                                                     </td>
                                                     <td>{{ ++$i }}</td>
                                                     <td class="schoolclass" data-schoolclass="{{ $group->schoolclass }}">{{ $group->schoolclass }}</td>
-                                                    <td class="arm" data-arm-id="{{ $group->arm_id }}" data-arm="{{ $group->arm_name }}">{{ $group->arm_name }}</td>
-                                                    <td class="classcategory" data-category-ids="{{ $group->category_ids }}" data-classcategory="{{ $group->all_categories }}" style="white-space: normal; word-break: break-word;">
-                                                        {{ $group->all_categories ?? '—' }}
+                                                    <td class="arm" data-arm-id="{{ $group->arm }}" data-arm="{{ $group->arm_name }}">{{ $group->arm_name }}</td>
+                                                    <td class="classcategory" style="white-space: normal; word-break: break-word;">
+                                                        <?php
+                                                            $catIds = explode(',', $group->classcategoryid ?? '');
+                                                            $catNames = [];
+                                                            foreach ($catIds as $catId) {
+                                                                if ($catId && is_numeric(trim($catId))) {
+                                                                    $cat = Classcategory::find(trim($catId));
+                                                                    if ($cat) $catNames[] = $cat->category;
+                                                                }
+                                                            }
+                                                            echo $catNames ? implode(', ', $catNames) : '—';
+                                                        ?>
                                                     </td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
@@ -131,7 +141,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="6" class="noresult text-center py-4">No results found</td>
+                                                    <td colspan="6" class="noresult text-center">No results found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -275,7 +285,6 @@
 </div>
 
 <style>
-    /* Enlarge checkboxes and radios in modals */
     #addSchoolClassModal .form-check-input,
     #editModal .form-check-input {
         width: 1.5em;
@@ -288,7 +297,6 @@
         line-height: 1.5em;
         margin-left: 0.5em;
     }
-    /* Ensure delete modal is above other modals and backdrop */
     #deleteRecordModal {
         z-index: 1055;
     }
@@ -336,7 +344,7 @@
                         Swal.fire('Success!', response.data.message, 'success');
                         addModal.hide();
                         addForm.reset();
-                        location.reload(); // Reload to show new records
+                        location.reload();
                     })
                     .catch(function (error) {
                         if (error.response && error.response.status === 422) {
@@ -416,7 +424,7 @@
                         editModal.hide();
                         editForm.reset();
                         currentEditId = null;
-                        location.reload(); // Reload to show updated records
+                        location.reload();
                     })
                     .catch(function (error) {
                         if (error.response && error.response.status === 422) {
@@ -442,7 +450,7 @@
         document.querySelectorAll('.remove-item-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
-                currentEditId = row.querySelector('.id').dataset.id; // Reuse for delete id
+                currentEditId = row.querySelector('.id').dataset.id;
                 deleteModal.show();
             });
         });
@@ -489,4 +497,5 @@
         });
     });
 </script>
+
 @endsection
