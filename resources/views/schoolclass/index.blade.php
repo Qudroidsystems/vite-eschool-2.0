@@ -23,13 +23,14 @@
 
             <!-- Messages -->
             @if ($errors->any())
-                <div class="alert alert-danger">
-                    <strong>Whoops!</strong> There were some problems with your input.<br><br>
-                    <ul>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>Whoops!</strong> There were some problems with your input.<br>
+                    <ul class="mb-0">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
                     </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
@@ -74,9 +75,13 @@
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
-                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
+                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">
+                                            <i class="ri-delete-bin-2-line align-bottom me-1"></i> Delete Selected
+                                        </button>
                                         @can('Create school-class')
-                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addSchoolClassModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Create School Class</button>
+                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addSchoolClassModal">
+                                                <i class="ri-add-circle-line align-bottom me-1"></i> Create School Class
+                                            </button>
                                         @endcan
                                     </div>
                                 </div>
@@ -96,34 +101,26 @@
                                                 <th class="min-w-150px">School Class</th>
                                                 <th class="min-w-100px">Arm</th>
                                                 <th class="min-w-350px">Category</th>
+                                                <th class="min-w-200px">Description</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody class="fw-semibold text-gray-600 list form-check-all">
+                                        <tbody class="fw-semibold text-gray-600">
                                             @php $i = ($all_classes->currentPage() - 1) * $all_classes->perPage() @endphp
                                             @forelse ($all_classes as $group)
                                                 <tr>
-                                                    <td class="id" data-id="{{ $group->id }}">
+                                                    <td>
                                                         <div class="form-check form-check-sm form-check-solid">
                                                             <input class="form-check-input" type="checkbox" name="chk_child" />
                                                         </div>
                                                     </td>
                                                     <td>{{ ++$i }}</td>
-                                                    <td class="schoolclass" data-schoolclass="{{ $group->schoolclass }}">{{ $group->schoolclass }}</td>
-                                                    <td class="arm" data-arm-id="{{ $group->arm }}" data-arm="{{ $group->arm_name }}">{{ $group->arm_name }}</td>
-                                                    <td class="classcategory" style="white-space: normal; word-break: break-word;">
-                                                        <?php
-                                                            $catIds = explode(',', $group->classcategoryid ?? '');
-                                                            $catNames = [];
-                                                            foreach ($catIds as $catId) {
-                                                                if ($catId && is_numeric(trim($catId))) {
-                                                                    $cat = Classcategory::find(trim($catId));
-                                                                    if ($cat) $catNames[] = $cat->category;
-                                                                }
-                                                            }
-                                                            echo $catNames ? implode(', ', $catNames) : '—';
-                                                        ?>
+                                                    <td>{{ $group->schoolclass }}</td>
+                                                    <td>{{ $group->arm_name ?? '—' }}</td>
+                                                    <td style="white-space: normal; word-break: break-word; max-width: 450px;">
+                                                        {{ $group->all_categories ?? '—' }}
                                                     </td>
+                                                    <td>{{ $group->description ?? '—' }}</td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('Update school-class')
@@ -141,16 +138,17 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="6" class="noresult text-center">No results found</td>
+                                                    <td colspan="7" class="text-center py-4">No school classes found.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="row mt-3 align-items-center" id="pagination-element">
+
+                                <div class="row mt-3 align-items-center">
                                     <div class="col-sm">
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $all_classes->count() }}</span> of <span class="fw-semibold">{{ $all_classes->total() }}</span> Results
+                                            Showing <span class="fw-semibold">{{ $all_classes->count() }}</span> of <span class="fw-semibold">{{ $all_classes->total() }}</span> results
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
@@ -168,7 +166,7 @@
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 id="exampleModalLabel" class="modal-title">Add School Class</h5>
+                            <h5 class="modal-title">Add School Class</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="add-schoolclass-form">
@@ -178,6 +176,10 @@
                                 <div class="mb-3">
                                     <label for="add-schoolclass" class="form-label">School Class</label>
                                     <input type="text" id="add-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="add-description" class="form-label">Description (optional)</label>
+                                    <textarea id="add-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Select Arm(s)</label>
@@ -217,7 +219,7 @@
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 id="editModalLabel" class="modal-title">Edit School Class</h5>
+                            <h5 class="modal-title">Edit School Class</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="edit-schoolclass-form">
@@ -227,6 +229,10 @@
                                 <div class="mb-3">
                                     <label for="edit-schoolclass" class="form-label">School Class</label>
                                     <input type="text" id="edit-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="edit-description" class="form-label">Description (optional)</label>
+                                    <textarea id="edit-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Select Arm</label>
@@ -285,6 +291,7 @@
 </div>
 
 <style>
+    /* Enlarge checkboxes and radios in modals */
     #addSchoolClassModal .form-check-input,
     #editModal .form-check-input {
         width: 1.5em;
@@ -297,11 +304,16 @@
         line-height: 1.5em;
         margin-left: 0.5em;
     }
+    /* Ensure delete modal is above other modals and backdrop */
     #deleteRecordModal {
         z-index: 1055;
     }
     #deleteRecordModal .modal-backdrop {
         z-index: 1050;
+    }
+    td.category-cell {
+        white-space: normal !important;
+        word-break: break-word;
     }
 </style>
 
@@ -314,13 +326,11 @@
 <script>
     window.routeUrls = {
         storeSchoolClass: '{{ route("schoolclass.store") }}',
-        updateSchoolClass: '{{ route("schoolclass.update", "PLACEHOLDER") }}',
-        destroySchoolClass: '{{ route("schoolclass.destroy", "PLACEHOLDER") }}',
-        getArms: '{{ route("schoolclass.getarms", "PLACEHOLDER") }}'
+        updateSchoolClass: '{{ route("schoolclass.update", ":id") }}',
+        destroySchoolClass: '{{ route("schoolclass.destroy", ":id") }}',
+        getArms: '{{ route("schoolclass.getarms", ":id") }}'
     };
-</script>
 
-<script>
     document.addEventListener('DOMContentLoaded', function () {
         const addForm = document.getElementById('add-schoolclass-form');
         const editForm = document.getElementById('edit-schoolclass-form');
@@ -330,44 +340,88 @@
 
         let currentEditId = null;
 
-        // Handle Add Form Submission
-        if (addForm) {
-            addForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                const formData = new FormData(addForm);
-                const submitBtn = document.getElementById('add-btn');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+        // Bulk delete logic
+        document.getElementById('checkAll')?.addEventListener('change', function () {
+            document.querySelectorAll('input[name="chk_child"]').forEach(cb => cb.checked = this.checked);
+            toggleBulkButton();
+        });
 
-                axios.post(window.routeUrls.storeSchoolClass, formData)
-                    .then(function (response) {
-                        Swal.fire('Success!', response.data.message, 'success');
-                        addModal.hide();
-                        addForm.reset();
-                        location.reload();
-                    })
-                    .catch(function (error) {
-                        if (error.response && error.response.status === 422) {
-                            const errors = error.response.data.errors;
-                            let errorMsg = '';
-                            for (let key in errors) {
-                                errorMsg += errors[key].join('<br>');
-                            }
-                            document.getElementById('add-alert-error-msg').innerHTML = errorMsg;
-                            document.getElementById('add-alert-error-msg').classList.remove('d-none');
-                        } else {
-                            Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
-                        }
-                    })
-                    .finally(function () {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = 'Add Class';
-                    });
-            });
+        document.querySelectorAll('input[name="chk_child"]').forEach(cb => {
+            cb.addEventListener('change', toggleBulkButton);
+        });
+
+        function toggleBulkButton() {
+            const checked = document.querySelectorAll('input[name="chk_child"]:checked').length;
+            document.getElementById('remove-actions')?.classList.toggle('d-none', checked === 0);
         }
 
-        // Handle Edit Button Click
-        document.querySelectorAll('.edit-item-btn').forEach(function (btn) {
+        window.deleteMultiple = async function () {
+            const checked = document.querySelectorAll('input[name="chk_child"]:checked');
+            if (checked.length === 0) return;
+
+            const ids = Array.from(checked).map(cb => cb.closest('tr').querySelector('.id')?.dataset.id || '').filter(id => id);
+
+            if (ids.length === 0) return;
+
+            Swal.fire({
+                title: 'Delete Selected?',
+                text: `You are about to delete ${ids.length} record(s). This cannot be undone.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete them!'
+            }).then(async (result) => {
+                if (!result.isConfirmed) return;
+
+                const btn = document.getElementById('remove-actions');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+
+                try {
+                    await Promise.all(ids.map(id => axios.delete(window.routeUrls.destroySchoolClass.replace(':id', id))));
+                    Swal.fire('Deleted!', `${ids.length} record(s) removed.`, 'success');
+                    location.reload();
+                } catch (err) {
+                    Swal.fire('Error!', err.response?.data?.message || 'Failed to delete some records', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ri-delete-bin-2-line"></i> Delete Selected';
+                }
+            });
+        };
+
+        // Add form submission
+        addForm?.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const formData = new FormData(addForm);
+            const submitBtn = document.getElementById('add-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+
+            try {
+                const response = await axios.post(window.routeUrls.storeSchoolClass, formData);
+                Swal.fire('Success!', response.data.message, 'success');
+                addModal.hide();
+                addForm.reset();
+                location.reload();
+            } catch (error) {
+                let msg = 'Something went wrong';
+                if (error.response && error.response.status === 422) {
+                    const errors = error.response.data.errors;
+                    msg = Object.values(errors).flat().join('<br>');
+                } else {
+                    msg = error.response?.data?.message || 'Server error';
+                }
+                Swal.fire('Error!', msg, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Add Class';
+            }
+        });
+
+        // Edit button click (single row edit)
+        document.querySelectorAll('.edit-item-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
                 currentEditId = row.querySelector('.id').dataset.id;
@@ -383,19 +437,16 @@
                     radio.checked = radio.value == armId;
                 });
 
-                // Reset category checkboxes
+                // Reset and check categories
                 document.querySelectorAll('#edit-category-checkboxes input[type="checkbox"]').forEach(checkbox => {
                     checkbox.checked = false;
                 });
 
-                // Check the original categories
                 if (categoryIdsStr) {
                     const categoryIds = categoryIdsStr.split(',');
                     categoryIds.forEach(catId => {
                         const checkbox = document.querySelector(`#edit-category-${catId.trim()}`);
-                        if (checkbox) {
-                            checkbox.checked = true;
-                        }
+                        if (checkbox) checkbox.checked = true;
                     });
                 }
 
@@ -404,50 +455,48 @@
             });
         });
 
-        // Handle Edit Form Submission
-        if (editForm) {
-            editForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                if (!currentEditId) return;
+        // Edit form submission
+        editForm?.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            if (!currentEditId) return;
 
-                const formData = new FormData(editForm);
-                formData.append('_method', 'PUT');
+            const formData = new FormData(editForm);
+            formData.append('_method', 'PUT');
 
-                const submitBtn = document.getElementById('update-btn');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+            const submitBtn = document.getElementById('update-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
 
-                const updateUrl = window.routeUrls.updateSchoolClass.replace('PLACEHOLDER', currentEditId);
-                axios.post(updateUrl, formData)
-                    .then(function (response) {
-                        Swal.fire('Success!', response.data.message, 'success');
-                        editModal.hide();
-                        editForm.reset();
-                        currentEditId = null;
-                        location.reload();
-                    })
-                    .catch(function (error) {
-                        if (error.response && error.response.status === 422) {
-                            const errors = error.response.data.errors;
-                            let errorMsg = '';
-                            for (let key in errors) {
-                                errorMsg += errors[key].join('<br>');
-                            }
-                            document.getElementById('edit-alert-error-msg').innerHTML = errorMsg;
-                            document.getElementById('edit-alert-error-msg').classList.remove('d-none');
-                        } else {
-                            Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
+            const updateUrl = window.routeUrls.updateSchoolClass.replace('PLACEHOLDER', currentEditId);
+            axios.post(updateUrl, formData)
+                .then(function (response) {
+                    Swal.fire('Success!', response.data.message, 'success');
+                    editModal.hide();
+                    editForm.reset();
+                    currentEditId = null;
+                    location.reload();
+                })
+                .catch(function (error) {
+                    if (error.response && error.response.status === 422) {
+                        const errors = error.response.data.errors;
+                        let errorMsg = '';
+                        for (let key in errors) {
+                            errorMsg += errors[key].join('<br>');
                         }
-                    })
-                    .finally(function () {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = 'Update';
-                    });
-            });
-        }
+                        document.getElementById('edit-alert-error-msg').innerHTML = errorMsg;
+                        document.getElementById('edit-alert-error-msg').classList.remove('d-none');
+                    } else {
+                        Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
+                    }
+                })
+                .finally(function () {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Update';
+                });
+        });
 
-        // Handle Delete Button Click
-        document.querySelectorAll('.remove-item-btn').forEach(function (btn) {
+        // Single delete
+        document.querySelectorAll('.remove-item-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
                 currentEditId = row.querySelector('.id').dataset.id;
@@ -455,8 +504,7 @@
             });
         });
 
-        // Handle Delete Confirmation
-        document.getElementById('delete-record').addEventListener('click', function () {
+        document.getElementById('delete-record')?.addEventListener('click', function () {
             if (!currentEditId) return;
 
             const submitBtn = this;
@@ -479,7 +527,7 @@
                 });
         });
 
-        // Handle Add Modal Close - Reset form
+        // Reset forms on modal close
         addModal._element.addEventListener('hidden.bs.modal', function () {
             if (addForm) {
                 addForm.reset();
@@ -487,7 +535,6 @@
             }
         });
 
-        // Handle Edit Modal Close - Reset form
         editModal._element.addEventListener('hidden.bs.modal', function () {
             if (editForm) {
                 editForm.reset();
