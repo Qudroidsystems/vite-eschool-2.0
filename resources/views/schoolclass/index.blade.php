@@ -5,7 +5,6 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-
             <!-- Start page title -->
             <div class="row">
                 <div class="col-12">
@@ -96,6 +95,7 @@
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="schoolclass">School Class</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="arm">Arm</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="classcategory">Category</th>
+                                                <th class="min-w-150px sort cursor-pointer" data-sort="description">Description</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
@@ -111,7 +111,8 @@
                                                     <td class="schoolclassid">{{ ++$i }}</td>
                                                     <td class="schoolclass" data-schoolclass="{{ $class->schoolclass }}">{{ $class->schoolclass }}</td>
                                                     <td class="arm" data-arm-id="{{ $class->arm_id }}" data-arm="{{ $class->arm_name }}">{{ $class->arm_name }}</td>
-                                                    <td class="classcategory" data-category-ids="{{ $class->classcategoryids }}" data-classcategory="{{ $class->classcategory }}">{{ $class->classcategory }}</td>
+                                                    <td class="classcategory" data-category-id="{{ $class->classcategoryid }}">{{ $class->classcategory ?? '—' }}</td>
+                                                    <td class="description">{{ $class->description ?? '—' }}</td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('Update school-class')
@@ -129,7 +130,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="6" class="noresult" style="display: none;">No results found</td>
+                                                    <td colspan="7" class="noresult text-center">No results found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -157,17 +158,24 @@
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 id="exampleModalLabel" class="modal-title">Add School Class</h5>
+                            <h5 class="modal-title">Add School Class</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="add-schoolclass-form">
                             @csrf
                             <div class="modal-body">
                                 <input type="hidden" id="add-id-field" name="id">
+
                                 <div class="mb-3">
                                     <label for="add-schoolclass" class="form-label">School Class</label>
                                     <input type="text" id="add-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
                                 </div>
+
+                                <div class="mb-3">
+                                    <label for="add-description" class="form-label">Description (optional)</label>
+                                    <textarea id="add-description" name="description" class="form-control" rows="3" placeholder="Enter optional description"></textarea>
+                                </div>
+
                                 <div class="mb-3">
                                     <label class="form-label">Select Arm(s)</label>
                                     <div class="d-flex flex-wrap gap-3" id="add-arm-checkboxes">
@@ -179,6 +187,7 @@
                                         @endforeach
                                     </div>
                                 </div>
+
                                 <div class="mb-3">
                                     <label class="form-label">Select Category(s)</label>
                                     <div class="d-flex flex-wrap gap-3" id="add-category-checkboxes">
@@ -190,6 +199,7 @@
                                         @endforeach
                                     </div>
                                 </div>
+
                                 <div class="alert alert-danger d-none" id="add-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
@@ -206,17 +216,24 @@
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 id="editModalLabel" class="modal-title">Edit School Class</h5>
+                            <h5 class="modal-title">Edit School Class</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="edit-schoolclass-form">
                             @csrf
                             <div class="modal-body">
                                 <input type="hidden" id="edit-id-field" name="id">
+
                                 <div class="mb-3">
                                     <label for="edit-schoolclass" class="form-label">School Class</label>
                                     <input type="text" id="edit-schoolclass" name="schoolclass" class="form-control" placeholder="Enter school class" required>
                                 </div>
+
+                                <div class="mb-3">
+                                    <label for="edit-description" class="form-label">Description (optional)</label>
+                                    <textarea id="edit-description" name="description" class="form-control" rows="3" placeholder="Enter optional description"></textarea>
+                                </div>
+
                                 <div class="mb-3">
                                     <label class="form-label">Select Arm</label>
                                     <div class="d-flex flex-wrap gap-3" id="edit-arm-radios">
@@ -228,17 +245,19 @@
                                         @endforeach
                                     </div>
                                 </div>
+
                                 <div class="mb-3">
-                                    <label class="form-label">Select Category(s)</label>
-                                    <div class="d-flex flex-wrap gap-3" id="edit-category-checkboxes">
+                                    <label class="form-label">Select Category</label>
+                                    <div class="d-flex flex-wrap gap-3" id="edit-category-radios">
                                         @foreach ($classcategories as $category)
                                             <div class="form-check form-check-outline form-check-primary">
-                                                <input class="form-check-input edit-category-checkbox" type="checkbox" value="{{ $category->id }}" name="classcategoryid[]" id="edit-category-{{ $category->id }}">
+                                                <input class="form-check-input edit-category-radio" type="radio" value="{{ $category->id }}" name="classcategoryid" id="edit-category-{{ $category->id }}">
                                                 <label class="form-check-label" for="edit-category-{{ $category->id }}">{{ $category->category }}</label>
                                             </div>
                                         @endforeach
                                     </div>
                                 </div>
+
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
@@ -269,7 +288,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -288,7 +306,6 @@
         line-height: 1.5em;
         margin-left: 0.5em;
     }
-    /* Ensure delete modal is above other modals and backdrop */
     #deleteRecordModal {
         z-index: 1055;
     }
@@ -322,7 +339,7 @@
 
         let currentEditId = null;
 
-        // Add form
+        // Add form submission
         addForm?.addEventListener('submit', async function (e) {
             e.preventDefault();
             const formData = new FormData(addForm);
@@ -332,59 +349,56 @@
 
             try {
                 const response = await axios.post(window.routeUrls.storeSchoolClass, formData);
-                Swal.fire('Success!', response.data.message, 'success');
+                Swal.fire('Success!', response.data.message || 'Classes added!', 'success');
                 addModal.hide();
                 addForm.reset();
                 location.reload();
             } catch (error) {
-                if (error.response?.status === 422) {
-                    const errors = error.response.data.errors;
-                    let msg = Object.values(errors).flat().join('<br>');
-                    document.getElementById('add-alert-error-msg').innerHTML = msg;
-                    document.getElementById('add-alert-error-msg').classList.remove('d-none');
-                } else {
-                    Swal.fire('Error!', error.response?.data?.message || 'Failed to save', 'error');
+                let msg = 'Something went wrong';
+                if (error.response) {
+                    if (error.response.status === 422) {
+                        const errors = error.response.data.errors;
+                        msg = Object.values(errors).flat().join('<br>');
+                    } else {
+                        msg = error.response.data.message || 'Server error (' + error.response.status + ')';
+                    }
                 }
+                Swal.fire('Error!', msg, 'error');
+                console.error(error);
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Add Class';
             }
         });
 
-        // Edit buttons
+        // Edit button click
         document.querySelectorAll('.edit-item-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
                 currentEditId = row.querySelector('.id').dataset.id;
 
-                const schoolclass = row.querySelector('.schoolclass').dataset.schoolclass;
-                const armId = row.querySelector('.arm').dataset.armId;
-                const categoryIdsStr = row.querySelector('.classcategory').dataset.categoryIds;
-
                 document.getElementById('edit-id-field').value = currentEditId;
-                document.getElementById('edit-schoolclass').value = schoolclass;
+                document.getElementById('edit-schoolclass').value = row.querySelector('.schoolclass').dataset.schoolclass || '';
+                document.getElementById('edit-description').value = row.querySelector('.description').textContent.trim() === '—' ? '' : row.querySelector('.description').textContent.trim();
 
-                document.querySelectorAll('#edit-arm-radios input[type="radio"]').forEach(r => {
-                    r.checked = (r.value === armId);
+                // Set arm radio
+                const armId = row.querySelector('.arm').dataset.armId;
+                document.querySelectorAll('#edit-arm-radios input').forEach(radio => {
+                    radio.checked = (radio.value == armId);
                 });
 
-                document.querySelectorAll('#edit-category-checkboxes input[type="checkbox"]').forEach(c => {
-                    c.checked = false;
+                // Set category radio (since now single per row)
+                const catId = row.querySelector('.classcategory')?.dataset.categoryId || '';
+                document.querySelectorAll('#edit-category-radios input').forEach(radio => {
+                    radio.checked = (radio.value == catId);
                 });
-
-                if (categoryIdsStr) {
-                    categoryIdsStr.split(',').forEach(id => {
-                        const cb = document.querySelector(`#edit-category-${id.trim()}`);
-                        if (cb) cb.checked = true;
-                    });
-                }
 
                 document.getElementById('edit-alert-error-msg').classList.add('d-none');
                 editModal.show();
             });
         });
 
-        // Edit form
+        // Edit form submission
         editForm?.addEventListener('submit', async function (e) {
             e.preventDefault();
             if (!currentEditId) return;
@@ -400,20 +414,20 @@
 
             try {
                 const response = await axios.post(url, formData);
-                Swal.fire('Success!', response.data.message, 'success');
+                Swal.fire('Success!', response.data.message || 'Updated!', 'success');
                 editModal.hide();
                 editForm.reset();
                 currentEditId = null;
                 location.reload();
             } catch (error) {
+                let msg = 'Something went wrong';
                 if (error.response?.status === 422) {
                     const errors = error.response.data.errors;
-                    let msg = Object.values(errors).flat().join('<br>');
-                    document.getElementById('edit-alert-error-msg').innerHTML = msg;
-                    document.getElementById('edit-alert-error-msg').classList.remove('d-none');
+                    msg = Object.values(errors).flat().join('<br>');
                 } else {
-                    Swal.fire('Error!', error.response?.data?.message || 'Failed to update', 'error');
+                    msg = error.response?.data?.message || 'Server error';
                 }
+                Swal.fire('Error!', msg, 'error');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Update';
@@ -440,7 +454,7 @@
 
             try {
                 const response = await axios.delete(url);
-                Swal.fire('Success!', response.data.message, 'success');
+                Swal.fire('Success!', response.data.message || 'Deleted!', 'success');
                 deleteModal.hide();
                 location.reload();
             } catch (error) {
