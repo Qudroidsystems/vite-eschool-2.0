@@ -1,9 +1,11 @@
 @extends('layouts.master')
+
 @section('content')
 
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
+
             <!-- Start page title -->
             <div class="row">
                 <div class="col-12">
@@ -37,9 +39,10 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
-            @if (session('danger'))
+
+            @if (session('error'))
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ session('danger') }}
+                    {{ session('error') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
@@ -78,6 +81,7 @@
                                     </div>
                                 </div>
                             </div>
+
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0" id="kt_roles_view_table">
@@ -131,6 +135,7 @@
                                         </tbody>
                                     </table>
                                 </div>
+
                                 <div class="row mt-3 align-items-center" id="pagination-element">
                                     <div class="col-sm">
                                         <div class="text-muted text-center text-sm-start">
@@ -264,6 +269,7 @@
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -300,9 +306,9 @@
 <script>
     window.routeUrls = {
         storeSchoolClass: '{{ route("schoolclass.store") }}',
-        updateSchoolClass: '{{ route("schoolclass.update", "PLACEHOLDER") }}',
-        destroySchoolClass: '{{ route("schoolclass.destroy", "PLACEHOLDER") }}',
-        getArms: '{{ route("schoolclass.getarms", "PLACEHOLDER") }}'
+        updateSchoolClass: '{{ route("schoolclass.update", ":id") }}',
+        destroySchoolClass: '{{ route("schoolclass.destroy", ":id") }}',
+        getArms: '{{ route("schoolclass.getarms", ":id") }}'
     };
 </script>
 
@@ -316,47 +322,41 @@
 
         let currentEditId = null;
 
-        // Handle Add Form Submission
-        if (addForm) {
-            addForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                const formData = new FormData(addForm);
-                const submitBtn = document.getElementById('add-btn');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+        // Add form
+        addForm?.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const formData = new FormData(addForm);
+            const submitBtn = document.getElementById('add-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
 
-                axios.post(window.routeUrls.storeSchoolClass, formData)
-                    .then(function (response) {
-                        Swal.fire('Success!', response.data.message, 'success');
-                        addModal.hide();
-                        addForm.reset();
-                        location.reload(); // Reload to show new records
-                    })
-                    .catch(function (error) {
-                        if (error.response && error.response.status === 422) {
-                            const errors = error.response.data.errors;
-                            let errorMsg = '';
-                            for (let key in errors) {
-                                errorMsg += errors[key].join('<br>');
-                            }
-                            document.getElementById('add-alert-error-msg').innerHTML = errorMsg;
-                            document.getElementById('add-alert-error-msg').classList.remove('d-none');
-                        } else {
-                            Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
-                        }
-                    })
-                    .finally(function () {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = 'Add Class';
-                    });
-            });
-        }
+            try {
+                const response = await axios.post(window.routeUrls.storeSchoolClass, formData);
+                Swal.fire('Success!', response.data.message, 'success');
+                addModal.hide();
+                addForm.reset();
+                location.reload();
+            } catch (error) {
+                if (error.response?.status === 422) {
+                    const errors = error.response.data.errors;
+                    let msg = Object.values(errors).flat().join('<br>');
+                    document.getElementById('add-alert-error-msg').innerHTML = msg;
+                    document.getElementById('add-alert-error-msg').classList.remove('d-none');
+                } else {
+                    Swal.fire('Error!', error.response?.data?.message || 'Failed to save', 'error');
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Add Class';
+            }
+        });
 
-        // Handle Edit Button Click
-        document.querySelectorAll('.edit-item-btn').forEach(function (btn) {
+        // Edit buttons
+        document.querySelectorAll('.edit-item-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
                 currentEditId = row.querySelector('.id').dataset.id;
+
                 const schoolclass = row.querySelector('.schoolclass').dataset.schoolclass;
                 const armId = row.querySelector('.arm').dataset.armId;
                 const categoryIdsStr = row.querySelector('.classcategory').dataset.categoryIds;
@@ -364,24 +364,18 @@
                 document.getElementById('edit-id-field').value = currentEditId;
                 document.getElementById('edit-schoolclass').value = schoolclass;
 
-                // Set arm radio
-                document.querySelectorAll('#edit-arm-radios input[type="radio"]').forEach(radio => {
-                    radio.checked = radio.value == armId;
+                document.querySelectorAll('#edit-arm-radios input[type="radio"]').forEach(r => {
+                    r.checked = (r.value === armId);
                 });
 
-                // Reset category checkboxes
-                document.querySelectorAll('#edit-category-checkboxes input[type="checkbox"]').forEach(checkbox => {
-                    checkbox.checked = false;
+                document.querySelectorAll('#edit-category-checkboxes input[type="checkbox"]').forEach(c => {
+                    c.checked = false;
                 });
 
-                // Check the original categories
                 if (categoryIdsStr) {
-                    const categoryIds = categoryIdsStr.split(',');
-                    categoryIds.forEach(catId => {
-                        const checkbox = document.querySelector(`#edit-category-${catId.trim()}`);
-                        if (checkbox) {
-                            checkbox.checked = true;
-                        }
+                    categoryIdsStr.split(',').forEach(id => {
+                        const cb = document.querySelector(`#edit-category-${id.trim()}`);
+                        if (cb) cb.checked = true;
                     });
                 }
 
@@ -390,97 +384,85 @@
             });
         });
 
-        // Handle Edit Form Submission
-        if (editForm) {
-            editForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                if (!currentEditId) return;
+        // Edit form
+        editForm?.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            if (!currentEditId) return;
 
-                const formData = new FormData(editForm);
-                formData.append('_method', 'PUT');
+            const formData = new FormData(editForm);
+            formData.append('_method', 'PUT');
 
-                const submitBtn = document.getElementById('update-btn');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+            const submitBtn = document.getElementById('update-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
 
-                const updateUrl = window.routeUrls.updateSchoolClass.replace('PLACEHOLDER', currentEditId);
-                axios.post(updateUrl, formData)
-                    .then(function (response) {
-                        Swal.fire('Success!', response.data.message, 'success');
-                        editModal.hide();
-                        editForm.reset();
-                        currentEditId = null;
-                        location.reload(); // Reload to show updated records
-                    })
-                    .catch(function (error) {
-                        if (error.response && error.response.status === 422) {
-                            const errors = error.response.data.errors;
-                            let errorMsg = '';
-                            for (let key in errors) {
-                                errorMsg += errors[key].join('<br>');
-                            }
-                            document.getElementById('edit-alert-error-msg').innerHTML = errorMsg;
-                            document.getElementById('edit-alert-error-msg').classList.remove('d-none');
-                        } else {
-                            Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
-                        }
-                    })
-                    .finally(function () {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = 'Update';
-                    });
-            });
-        }
+            const url = window.routeUrls.updateSchoolClass.replace(':id', currentEditId);
 
-        // Handle Delete Button Click
-        document.querySelectorAll('.remove-item-btn').forEach(function (btn) {
+            try {
+                const response = await axios.post(url, formData);
+                Swal.fire('Success!', response.data.message, 'success');
+                editModal.hide();
+                editForm.reset();
+                currentEditId = null;
+                location.reload();
+            } catch (error) {
+                if (error.response?.status === 422) {
+                    const errors = error.response.data.errors;
+                    let msg = Object.values(errors).flat().join('<br>');
+                    document.getElementById('edit-alert-error-msg').innerHTML = msg;
+                    document.getElementById('edit-alert-error-msg').classList.remove('d-none');
+                } else {
+                    Swal.fire('Error!', error.response?.data?.message || 'Failed to update', 'error');
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Update';
+            }
+        });
+
+        // Delete buttons
+        document.querySelectorAll('.remove-item-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const row = this.closest('tr');
-                currentEditId = row.querySelector('.id').dataset.id; // Reuse for delete id
+                currentEditId = row.querySelector('.id').dataset.id;
                 deleteModal.show();
             });
         });
 
-        // Handle Delete Confirmation
-        document.getElementById('delete-record').addEventListener('click', function () {
+        document.getElementById('delete-record')?.addEventListener('click', async function () {
             if (!currentEditId) return;
 
-            const submitBtn = this;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
 
-            const destroyUrl = window.routeUrls.destroySchoolClass.replace('PLACEHOLDER', currentEditId);
-            axios.delete(destroyUrl)
-                .then(function (response) {
-                    Swal.fire('Success!', response.data.message, 'success');
-                    deleteModal.hide();
-                    location.reload();
-                })
-                .catch(function (error) {
-                    Swal.fire('Error!', error.response?.data?.message || 'Something went wrong', 'error');
-                })
-                .finally(function () {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Delete';
-                });
-        });
+            const url = window.routeUrls.destroySchoolClass.replace(':id', currentEditId);
 
-        // Handle Add Modal Close - Reset form
-        addModal._element.addEventListener('hidden.bs.modal', function () {
-            if (addForm) {
-                addForm.reset();
-                document.getElementById('add-alert-error-msg').classList.add('d-none');
+            try {
+                const response = await axios.delete(url);
+                Swal.fire('Success!', response.data.message, 'success');
+                deleteModal.hide();
+                location.reload();
+            } catch (error) {
+                Swal.fire('Error!', error.response?.data?.message || 'Failed to delete', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Delete';
             }
         });
 
-        // Handle Edit Modal Close - Reset form
-        editModal._element.addEventListener('hidden.bs.modal', function () {
-            if (editForm) {
-                editForm.reset();
-                document.getElementById('edit-alert-error-msg').classList.add('d-none');
-                currentEditId = null;
-            }
+        // Reset forms on modal close
+        addModal._element.addEventListener('hidden.bs.modal', () => {
+            addForm?.reset();
+            document.getElementById('add-alert-error-msg')?.classList.add('d-none');
+        });
+
+        editModal._element.addEventListener('hidden.bs.modal', () => {
+            editForm?.reset();
+            document.getElementById('edit-alert-error-msg')?.classList.add('d-none');
+            currentEditId = null;
         });
     });
 </script>
+
 @endsection

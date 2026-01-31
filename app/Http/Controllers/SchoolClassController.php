@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Schoolarm;
 use App\Models\Schoolclass;
 use App\Models\ClassTeacher;
-use Illuminate\Http\Request;
 use App\Models\Classcategory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class SchoolClassController extends Controller
 {
@@ -56,7 +56,7 @@ class SchoolClassController extends Controller
 
         if ($request->ajax()) {
             return response()->json([
-                'html' => view('schoolclass.index', compact('all_classes', 'arms', 'classcategories', 'pagetitle'))->render(),
+                'html'  => view('schoolclass.index', compact('all_classes', 'arms', 'classcategories', 'pagetitle'))->render(),
                 'count' => $all_classes->count(),
                 'total' => $all_classes->total(),
             ]);
@@ -74,98 +74,139 @@ class SchoolClassController extends Controller
         Log::info('Store School Class Request:', $request->all());
 
         $validator = Validator::make($request->all(), [
-            'schoolclass' => 'required|string|max:255',
-            'arm_id' => 'required|array|min:1',
-            'arm_id.*' => 'exists:schoolarm,id',
-            'classcategoryid' => 'required|array|min:1',
+            'schoolclass'       => 'required|string|max:255',
+            'arm_id'            => 'required|array|min:1',
+            'arm_id.*'          => 'exists:schoolarm,id',
+            'classcategoryid'   => 'required|array|min:1',
             'classcategoryid.*' => 'exists:classcategories,id',
         ], [
-            'schoolclass.required' => 'Please enter a school class name.',
-            'arm_id.required' => 'Please select at least one arm.',
-            'arm_id.*.exists' => 'One or more selected arms do not exist.',
-            'classcategoryid.required' => 'Please select at least one category.',
-            'classcategoryid.*.exists' => 'One or more selected categories do not exist.',
+            'schoolclass.required'       => 'Please enter a school class name.',
+            'arm_id.required'            => 'Please select at least one arm.',
+            'arm_id.*.exists'            => 'One or more selected arms do not exist.',
+            'classcategoryid.required'   => 'Please select at least one category.',
+            'classcategoryid.*.exists'   => 'One or more selected categories do not exist.',
         ]);
 
         $validator->after(function ($validator) use ($request) {
-            $armIds = $request->arm_id ?? [];
+            $armIds = $request->input('arm_id', []);
             foreach ($armIds as $armId) {
-                $exists = Schoolclass::where('schoolclass', $request->schoolclass)
+                if (Schoolclass::where('schoolclass', $request->schoolclass)
                     ->where('arm', $armId)
-                    ->exists();
-                if ($exists) {
+                    ->exists()) {
                     $arm = Schoolarm::find($armId);
                     $armName = $arm ? $arm->arm : 'Unknown';
-                    $validator->errors()->add(
-                        'schoolclass',
-                        "The combination of class '{$request->schoolclass}' and arm '{$armName}' already exists."
-                    );
+                    $validator->errors()->add('schoolclass', "Class '{$request->schoolclass}' with arm '{$armName}' already exists.");
                 }
             }
         });
 
         if ($validator->fails()) {
-            Log::error('Validation failed for store school class:', ['errors' => $validator->errors()->all(), 'input' => $request->all()]);
+            Log::warning('Validation failed for store school class', [
+                'errors' => $validator->errors()->all(),
+                'input'  => $request->all()
+            ]);
+
             if ($request->ajax()) {
                 return response()->json([
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors'  => $validator->errors()
                 ], 422);
             }
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
+        $createdIds = [];
+        $createdRecords = [];
+
         try {
-            $createdRecords = [];
-            $armIds = $request->arm_id;
-            $categoryIds = $request->classcategoryid;
-            $description = $request->description ?? 'Null';
-            $categories = Classcategory::whereIn('id', $categoryIds)->get(['id', 'category']);
+            DB::beginTransaction();
+
+            $armIds       = $request->input('arm_id');
+            $categoryIds  = $request->input('classcategoryid');
+            $description  = $request->input('description', null);
+
+            $categories = Classcategory::whereIn('id', $categoryIds)
+                ->get(['id', 'category']);
+
             foreach ($armIds as $armId) {
+                Log::info("Creating school class", [
+                    'schoolclass' => $request->schoolclass,
+                    'arm_id'      => $armId,
+                    'categories'  => $categoryIds
+                ]);
+
                 $schoolclass = new Schoolclass();
-                $schoolclass->schoolclass = $request->schoolclass;
-                $schoolclass->arm = $armId;
-                $schoolclass->description = $description;
-                $schoolclass->save();
+                $schoolclass->schoolclass  = $request->schoolclass;
+                $schoolclass->arm          = $armId;
+                $schoolclass->description  = $description;
+                $schoolclass->saveOrFail();   // Will throw exception if save fails
+
                 $schoolclass->classcategories()->attach($categoryIds);
 
                 $arm = Schoolarm::find($armId);
 
                 $createdRecords[] = [
-                    'id' => $schoolclass->id,
-                    'schoolclass' => $schoolclass->schoolclass,
-                    'arm_id' => $schoolclass->arm,
-                    'arm_name' => $arm ? $arm->arm : 'Unknown',
-                    'classcategories' => $categories->toArray(),
-                    'description' => $schoolclass->description,
-                    'updated_at' => $schoolclass->updated_at->toISOString(),
-                    'created_at' => $schoolclass->created_at->toISOString()
+                    'id'             => $schoolclass->id,
+                    'schoolclass'    => $schoolclass->schoolclass,
+                    'arm_id'         => $schoolclass->arm,
+                    'arm_name'       => $arm ? $arm->arm : 'Unknown',
+                    'classcategories'=> $categories->toArray(),
+                    'description'    => $schoolclass->description,
+                    'created_at'     => $schoolclass->created_at->toISOString(),
+                    'updated_at'     => $schoolclass->updated_at->toISOString(),
                 ];
+
+                $createdIds[] = $schoolclass->id;
             }
 
-            Log::info('School classes stored successfully:', $createdRecords);
+            DB::commit();
+
+            Log::info('School classes created successfully', [
+                'ids'      => $createdIds,
+                'records'  => $createdRecords
+            ]);
 
             if ($request->ajax()) {
                 return response()->json([
-                    'message' => 'School class(es) added successfully!',
-                    'schoolclasses' => $createdRecords
-                ], 200);
+                    'message'       => 'School class(es) added successfully!',
+                    'schoolclasses' => $createdRecords,
+                    'created_ids'   => $createdIds,
+                    'debug_db_name' => DB::getDatabaseName(),
+                ], 201);
             }
 
             return redirect()->back()->with('success', 'School class(es) registered successfully!');
-        } catch (\Exception $e) {
-            Log::error('Error storing school class:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'input' => $request->all()
+        } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+            Log::error('Database error while storing school class', [
+                'message' => $e->getMessage(),
+                'sql'     => $e->getSql() ?? 'N/A',
+                'bindings'=> $e->getBindings() ?? [],
+                'input'   => $request->all()
             ]);
+
             if ($request->ajax()) {
                 return response()->json([
-                    'message' => 'Error storing school class',
-                    'error' => $e->getMessage()
+                    'message' => 'Database error: ' . $e->getMessage(),
+                    'debug'   => 'Check laravel.log for details'
                 ], 500);
             }
-            return redirect()->back()->with('error', 'Error storing school class');
+            return redirect()->back()->with('error', 'Database error occurred.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Unexpected error storing school class', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+                'input'   => $request->all()
+            ]);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'message' => 'Server error: ' . $e->getMessage(),
+                    'debug'   => 'Check laravel.log'
+                ], 500);
+            }
+            return redirect()->back()->with('error', 'An unexpected error occurred.');
         }
     }
 
@@ -174,16 +215,16 @@ class SchoolClassController extends Controller
         Log::info('Update School Class Request:', ['id' => $id, 'data' => $request->all()]);
 
         $validator = Validator::make($request->all(), [
-            'schoolclass' => 'required|string|max:255',
-            'arm_id' => 'required|exists:schoolarm,id',
-            'classcategoryid' => 'required|array|min:1',
+            'schoolclass'       => 'required|string|max:255',
+            'arm_id'            => 'required|exists:schoolarm,id',
+            'classcategoryid'   => 'required|array|min:1',
             'classcategoryid.*' => 'exists:classcategories,id',
         ], [
-            'schoolclass.required' => 'Please enter a school class name.',
-            'arm_id.required' => 'Please select one arm.',
-            'arm_id.exists' => 'The selected arm does not exist.',
-            'classcategoryid.required' => 'Please select at least one category.',
-            'classcategoryid.*.exists' => 'One or more selected categories do not exist.',
+            'schoolclass.required'       => 'Please enter a school class name.',
+            'arm_id.required'            => 'Please select one arm.',
+            'arm_id.exists'              => 'The selected arm does not exist.',
+            'classcategoryid.required'   => 'Please select at least one category.',
+            'classcategoryid.*.exists'   => 'One or more selected categories do not exist.',
         ]);
 
         $validator->after(function ($validator) use ($request, $id) {
@@ -203,58 +244,69 @@ class SchoolClassController extends Controller
         });
 
         if ($validator->fails()) {
-            Log::error('Validation failed for update school class:', ['errors' => $validator->errors()->all(), 'input' => $request->all()]);
+            Log::error('Validation failed for update school class:', [
+                'errors' => $validator->errors()->all(),
+                'input'  => $request->all()
+            ]);
+
             if ($request->ajax()) {
                 return response()->json([
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors'  => $validator->errors()
                 ], 422);
             }
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
         try {
+            DB::beginTransaction();
+
             $schoolclass = Schoolclass::findOrFail($id);
-            $schoolclass->schoolclass = $request->schoolclass;
-            $schoolclass->arm = $request->arm_id;
-            $schoolclass->description = $request->description ?? 'Null';
-            $schoolclass->save();
+            $schoolclass->schoolclass  = $request->schoolclass;
+            $schoolclass->arm          = $request->arm_id;
+            $schoolclass->description  = $request->description ?? null;
+            $schoolclass->saveOrFail();
+
             $schoolclass->classcategories()->sync($request->classcategoryid);
+
+            DB::commit();
 
             $arm = Schoolarm::find($schoolclass->arm);
             $categories = Classcategory::whereIn('id', $request->classcategoryid)->get(['id', 'category']);
 
             $updatedRecord = [
-                'id' => $schoolclass->id,
-                'schoolclass' => $schoolclass->schoolclass,
-                'arm_id' => $schoolclass->arm,
-                'arm_name' => $arm ? $arm->arm : 'Unknown',
-                'classcategories' => $categories->toArray(),
-                'description' => $schoolclass->description,
-                'updated_at' => $schoolclass->updated_at->toISOString(),
-                'created_at' => $schoolclass->created_at->toISOString()
+                'id'             => $schoolclass->id,
+                'schoolclass'    => $schoolclass->schoolclass,
+                'arm_id'         => $schoolclass->arm,
+                'arm_name'       => $arm ? $arm->arm : 'Unknown',
+                'classcategories'=> $categories->toArray(),
+                'description'    => $schoolclass->description,
+                'updated_at'     => $schoolclass->updated_at->toISOString(),
+                'created_at'     => $schoolclass->created_at->toISOString()
             ];
 
             Log::info('School class updated successfully:', $updatedRecord);
 
             if ($request->ajax()) {
                 return response()->json([
-                    'message' => 'School class updated successfully!',
+                    'message'    => 'School class updated successfully!',
                     'schoolclass' => $updatedRecord
                 ], 200);
             }
 
             return redirect()->route('schoolclass.index')->with('success', 'School class updated successfully.');
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Error updating school class:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'input' => $request->all()
             ]);
+
             if ($request->ajax()) {
                 return response()->json([
                     'message' => 'Error updating school class',
-                    'error' => $e->getMessage()
+                    'error'   => $e->getMessage()
                 ], 500);
             }
             return redirect()->back()->with('error', 'Error updating school class');
@@ -268,6 +320,7 @@ class SchoolClassController extends Controller
         try {
             $schoolclass = Schoolclass::findOrFail($id);
             ClassTeacher::where('schoolclassid', $id)->delete();
+            $schoolclass->classcategories()->detach();
             $schoolclass->delete();
 
             return response()->json(['message' => 'School class deleted successfully!']);
@@ -281,29 +334,47 @@ class SchoolClassController extends Controller
     {
         Log::info('Delete School Class AJAX Request:', ['schoolclassid' => $request->schoolclassid]);
 
-        $schoolclass = Schoolclass::find($request->schoolclassid);
-        if ($schoolclass) {
-            \DB::table('classteacher')->where('schoolclassid', $request->schoolclassid)->delete();
-            \DB::table('schoolclass')->where('id', $request->schoolclassid)->delete();
+        try {
+            $schoolclass = Schoolclass::find($request->schoolclassid);
+
+            if (!$schoolclass) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School class not found'
+                ], 404);
+            }
+
+            DB::transaction(function () use ($request) {
+                DB::table('classteacher')->where('schoolclassid', $request->schoolclassid)->delete();
+                DB::table('schoolclass_classcategory')->where('schoolclass_id', $request->schoolclassid)->delete();
+                DB::table('schoolclass')->where('id', $request->schoolclassid)->delete();
+            });
+
             return response()->json([
                 'success' => true,
                 'message' => 'School class has been removed'
             ]);
+        } catch (\Exception $e) {
+            Log::error('Error in deleteschoolclass:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting school class'
+            ], 500);
         }
-
-        return response()->json([
-            'success' => false,
-            'message' => 'School class not found'
-        ], 404);
     }
 
     public function getArms($id)
     {
         Log::info('Fetching arms for schoolclass', ['id' => $id]);
+
         try {
             $schoolClass = Schoolclass::findOrFail($id);
             $armIds = [$schoolClass->arm];
-            return response()->json(['success' => true, 'armIds' => $armIds], 200);
+
+            return response()->json([
+                'success' => true,
+                'armIds'  => $armIds
+            ], 200);
         } catch (\Exception $e) {
             Log::error('Get arms error', ['error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to fetch arms'], 500);
