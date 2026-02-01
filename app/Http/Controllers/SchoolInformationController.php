@@ -13,7 +13,6 @@ use Illuminate\View\View;
 
 class SchoolInformationController extends Controller
 {
-    // Middleware can be uncommented as needed
     // public function __construct()
     // {
     //     $this->middleware('permission:View schoolinformation|Create schoolinformation|Update schoolinformation|Delete schoolinformation', ['only' => ['index', 'show']]);
@@ -32,7 +31,7 @@ class SchoolInformationController extends Controller
         ];
 
         if (config('app.debug')) {
-            Log::info('School information loaded:', ['count' => $data->count()]);
+            \Log::info('School information loaded:', ['count' => $data->count()]);
         }
 
         return view('schoolinformation.index', compact('data', 'pagetitle', 'status_counts'))
@@ -47,10 +46,10 @@ class SchoolInformationController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        Log::debug("Creating school information", $request->all());
+        \Log::debug("Creating school information", $request->all());
 
         if (!auth()->user()->hasPermissionTo('Create schoolinformation')) {
-            Log::warning("User ID " . auth()->user()->id . " attempted to create school information without 'Create schoolinformation' permission");
+            \Log::warning("User ID " . auth()->user()->id . " attempted to create school information without 'Create schoolinformation' permission");
             return response()->json([
                 'success' => false,
                 'message' => 'User does not have the right permissions',
@@ -87,13 +86,13 @@ class SchoolInformationController extends Controller
                 $validated['app_logo'] = $path;
             }
 
-            if (isset($validated['is_active']) && $validated['is_active']) {
+            if ($validated['is_active']) {
                 SchoolInformation::where('is_active', true)->update(['is_active' => false]);
             }
 
             $school = SchoolInformation::create($validated);
 
-            Log::debug("School information created successfully: ID {$school->id}");
+            \Log::debug("School information created successfully: ID {$school->id}");
             return response()->json([
                 'success' => true,
                 'message' => 'School information created successfully',
@@ -105,14 +104,14 @@ class SchoolInformationController extends Controller
                 ],
             ], 201);
         } catch (ValidationException $e) {
-            Log::error("Validation error creating school information: " . json_encode($e->errors()));
+            \Log::error("Validation error creating school information: " . json_encode($e->errors()));
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            Log::error("Create school information error: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+            \Log::error("Create school information error: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create school information: ' . $e->getMessage(),
@@ -133,119 +132,102 @@ class SchoolInformationController extends Controller
         return view('schoolinformation.edit', compact('school'));
     }
 
-    public function update(Request $request, $id): JsonResponse
-    {
-        Log::debug("Updating school information ID: {$id}", $request->all());
+    public function update(Request $request, $id)
+{
+    // Check if this is a POST request with _update flag or PUT request
+    $isUpdate = $request->has('_update') || $request->method() === 'PUT';
 
-        // Check permission
-        if (!auth()->user()->hasPermissionTo('Update schoolinformation')) {
-            Log::warning("User ID " . auth()->user()->id . " attempted to update school information without 'Update schoolinformation' permission");
-            return response()->json([
-                'success' => false,
-                'message' => 'User does not have the right permissions',
-            ], 403);
-        }
-
-        try {
-            $validated = $request->validate([
-                'school_name' => 'required|string|max:255',
-                'school_address' => 'required|string|max:500',
-                'school_phone' => 'required|string|max:20',
-                'school_email' => 'required|email|unique:school_information,school_email,' . $id,
-                'school_logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-                'app_logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-                'school_motto' => 'nullable|string|max:255',
-                'school_website' => 'nullable|url|max:255',
-                'no_of_times_school_opened' => 'required|integer|min:0',
-                'date_school_opened' => 'nullable|date',
-                'date_next_term_begins' => 'nullable|date',
-                'is_active' => 'boolean',
-            ], [
-                'no_of_times_school_opened.integer' => 'The number of times school opened must be a valid integer.',
-                'date_school_opened.date' => 'The date school opened must be a valid date.',
-                'date_next_term_begins.date' => 'The date next term begins must be a valid date.',
-            ]);
-
-            $school = SchoolInformation::findOrFail($id);
-
-            // Handle school logo
-            if ($request->hasFile('school_logo')) {
-                // Delete old logo if exists
-                if ($school->school_logo && Storage::disk('public')->exists($school->school_logo)) {
-                    Storage::disk('public')->delete($school->school_logo);
-                }
-                $path = $request->file('school_logo')->store('school_logos', 'public');
-                $validated['school_logo'] = $path;
-            } else {
-                // Keep existing logo
-                unset($validated['school_logo']);
-            }
-
-            // Handle app logo
-            if ($request->hasFile('app_logo')) {
-                // Delete old logo if exists
-                if ($school->app_logo && Storage::disk('public')->exists($school->app_logo)) {
-                    Storage::disk('public')->delete($school->app_logo);
-                }
-                $path = $request->file('app_logo')->store('app_logos', 'public');
-                $validated['app_logo'] = $path;
-            } else {
-                // Keep existing logo
-                unset($validated['app_logo']);
-            }
-
-            // Handle active school logic
-            if (isset($validated['is_active']) && $validated['is_active']) {
-                SchoolInformation::where('is_active', true)->where('id', '!=', $id)->update(['is_active' => false]);
-            }
-
-            $school->update($validated);
-
-            Log::debug("School information ID: {$id} updated successfully");
-
-            return response()->json([
-                'success' => true,
-                'message' => 'School information updated successfully',
-                'school' => [
-                    'id' => $school->id,
-                    'school_name' => $school->school_name,
-                    'school_email' => $school->school_email,
-                    'is_active' => $school->is_active,
-                ],
-            ], 200);
-        } catch (ValidationException $e) {
-            Log::error("Validation error updating school information ID {$id}: " . json_encode($e->errors()));
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors(),
-            ], 422);
-        } catch (\Exception $e) {
-            Log::error("Update school information error for ID {$id}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update school information: ' . $e->getMessage(),
-            ], 500);
-        }
+    if (!$isUpdate) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid request method for update'
+        ], 405);
     }
+
+    \Log::debug("Updating school information ID: {$id}", $request->all());
+
+    try {
+        $validated = $request->validate([
+            'school_name' => 'required|string|max:255',
+            'school_address' => 'required|string|max:500',
+            'school_phone' => 'required|string|max:20',
+            'school_email' => 'required|email|unique:school_information,school_email,' . $id,
+            'school_logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'app_logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'school_motto' => 'nullable|string|max:255',
+            'school_website' => 'nullable|url|max:255',
+            'no_of_times_school_opened' => 'required|integer|min:0',
+            'date_school_opened' => 'nullable|date',
+            'date_next_term_begins' => 'nullable|date',
+            'is_active' => 'boolean',
+        ], [
+            'no_of_times_school_opened.integer' => 'The number of times school opened must be a valid integer.',
+            'date_school_opened.date' => 'The date school opened must be a valid date.',
+            'date_next_term_begins.date' => 'The date next term begins must be a valid date.',
+        ]);
+
+        $school = SchoolInformation::findOrFail($id);
+
+        if ($request->hasFile('school_logo')) {
+            if ($school->school_logo && Storage::disk('public')->exists($school->school_logo)) {
+                Storage::disk('public')->delete($school->school_logo);
+            }
+            $path = $request->file('school_logo')->store('school_logos', 'public');
+            $validated['school_logo'] = $path;
+        } else {
+            $validated['school_logo'] = $school->school_logo;
+        }
+
+        if ($request->hasFile('app_logo')) {
+            if ($school->app_logo && Storage::disk('public')->exists($school->app_logo)) {
+                Storage::disk('public')->delete($school->app_logo);
+            }
+            $path = $request->file('app_logo')->store('app_logos', 'public');
+            $validated['app_logo'] = $path;
+        } else {
+            $validated['app_logo'] = $school->app_logo;
+        }
+
+        if ($validated['is_active']) {
+            SchoolInformation::where('is_active', true)->where('id', '!=', $id)->update(['is_active' => false]);
+        }
+
+        $school->update($validated);
+
+        \Log::debug("School information ID: {$id} updated successfully");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'School information updated successfully',
+            'school' => [
+                'id' => $school->id,
+                'school_name' => $school->school_name,
+                'school_email' => $school->school_email,
+                'is_active' => $school->is_active,
+            ],
+        ], 200);
+    } catch (ValidationException $e) {
+        \Log::error("Validation error updating school information ID {$id}: " . json_encode($e->errors()));
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors(),
+        ], 422);
+    } catch (\Exception $e) {
+        \Log::error("Update school information error for ID {$id}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update school information: ' . $e->getMessage(),
+        ], 500);
+    }
+}
 
     public function destroy($id): JsonResponse
     {
-        Log::debug("Attempting to delete school information ID: {$id}");
-
-        // Check permission
-        if (!auth()->user()->hasPermissionTo('Delete schoolinformation')) {
-            Log::warning("User ID " . auth()->user()->id . " attempted to delete school information without 'Delete schoolinformation' permission");
-            return response()->json([
-                'success' => false,
-                'message' => 'User does not have the right permissions',
-            ], 403);
-        }
-
+        \Log::debug("Attempting to delete school information ID: {$id}");
         try {
             $school = SchoolInformation::findOrFail($id);
 
-            // Delete logos if they exist
             if ($school->school_logo && Storage::disk('public')->exists($school->school_logo)) {
                 Storage::disk('public')->delete($school->school_logo);
             }
@@ -256,13 +238,13 @@ class SchoolInformationController extends Controller
 
             $school->delete();
 
-            Log::debug("School information ID: {$id} deleted successfully");
+            \Log::debug("School information ID: {$id} deleted successfully");
             return response()->json([
                 'success' => true,
                 'message' => 'School information deleted successfully',
             ], 200);
         } catch (\Exception $e) {
-            Log::error("Delete school information error for ID {$id}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+            \Log::error("Delete school information error for ID {$id}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete school information: ' . $e->getMessage(),
@@ -286,62 +268,21 @@ class SchoolInformationController extends Controller
                     'school_motto' => $school->school_motto,
                     'school_website' => $school->school_website,
                     'no_of_times_school_opened' => $school->no_of_times_school_opened,
-                    'date_school_opened' => $school->date_school_opened ? $school->date_school_opened->format('Y-m-d') : null,
-                    'date_next_term_begins' => $school->date_next_term_begins ? $school->date_next_term_begins->format('Y-m-d') : null,
-                    'is_active' => (bool)$school->is_active,
-                    'logo_url' => $school->school_logo ? Storage::url($school->school_logo) : null,
-                    'app_logo_url' => $school->app_logo ? Storage::url($school->app_logo) : null,
+                    'date_school_opened' => $school->date_school_opened,
+                    'date_next_term_begins' => $school->date_next_term_begins,
+                    'is_active' => $school->is_active,
+                    'logo_url' => $school->getLogoUrlAttribute(),
+                    'app_logo_url' => $school->getAppLogoUrlAttribute(),
                 ],
             ], 200);
         } catch (\Exception $e) {
-            Log::error("Edit JSON error for ID {$id}: {$e->getMessage()}");
+            \Log::error("Edit JSON error for ID {$id}: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load school data: ' . $e->getMessage(),
+                'message' => 'Failed to load school data',
             ], 500);
         }
     }
 
-    // Optional: Bulk delete method
-    public function bulkDestroy(Request $request): JsonResponse
-    {
-        $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'exists:school_information,id',
-        ]);
 
-        try {
-            $ids = $request->ids;
-
-            // Get schools to delete
-            $schools = SchoolInformation::whereIn('id', $ids)->get();
-
-            foreach ($schools as $school) {
-                // Delete logos if they exist
-                if ($school->school_logo && Storage::disk('public')->exists($school->school_logo)) {
-                    Storage::disk('public')->delete($school->school_logo);
-                }
-
-                if ($school->app_logo && Storage::disk('public')->exists($school->app_logo)) {
-                    Storage::disk('public')->delete($school->app_logo);
-                }
-            }
-
-            // Delete all selected schools
-            SchoolInformation::whereIn('id', $ids)->delete();
-
-            Log::debug("Bulk delete completed for IDs: " . implode(', ', $ids));
-
-            return response()->json([
-                'success' => true,
-                'message' => count($ids) . ' school(s) deleted successfully',
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error("Bulk delete error: {$e->getMessage()}");
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete schools: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
 }
