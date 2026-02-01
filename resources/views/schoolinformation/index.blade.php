@@ -170,7 +170,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="8" class="noresult" style="display: block;">No results found</td>
+                                                    <td colspan="9" class="noresult" style="display: block;">No results found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -214,6 +214,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="add-school-form" enctype="multipart/form-data">
+                            @csrf
                             <div class="modal-body">
                                 <input type="hidden" id="add-id-field" name="id">
                                 <div class="row">
@@ -379,6 +380,8 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="edit-school-form" enctype="multipart/form-data">
+                            @csrf
+                            @method('PUT')
                             <div class="modal-body">
                                 <input type="hidden" id="edit-id-field" name="id">
                                 <div class="row">
@@ -575,5 +578,568 @@
 <!-- Include SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-{{-- <script src="{{ asset('assets/js/schoolinformation-list.init.js') }}"></script> --}}
+<!-- Include jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize variables for cropper
+    let schoolLogoCropper = null;
+    let appLogoCropper = null;
+    let editSchoolLogoCropper = null;
+    let editAppLogoCropper = null;
+
+    // Edit button click handler
+    $(document).on('click', '.edit-item-btn', function() {
+        const id = $(this).data('id');
+
+        // Clear previous data
+        $('#edit-school-form')[0].reset();
+        $('#edit-school-logo-preview').html('');
+        $('#edit-app-logo-preview').html('');
+
+        // Show loading state
+        $('#update-btn').prop('disabled', true).text('Loading...');
+
+        // Fetch school data
+        $.ajax({
+            url: '/school-info/' + id + '/edit-json',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const school = response.school;
+
+                    // Populate form fields
+                    $('#edit-id-field').val(school.id);
+                    $('#edit_school_name').val(school.school_name);
+                    $('#edit_school_address').val(school.school_address);
+                    $('#edit_school_phone').val(school.school_phone);
+                    $('#edit_school_email').val(school.school_email);
+                    $('#edit_school_motto').val(school.school_motto || '');
+                    $('#edit_school_website').val(school.school_website || '');
+                    $('#edit_no_of_times_school_opened').val(school.no_of_times_school_opened);
+                    $('#edit_date_school_opened').val(school.date_school_opened || '');
+                    $('#edit_date_next_term_begins').val(school.date_next_term_begins || '');
+                    $('#edit_is_active').prop('checked', school.is_active);
+
+                    // Display current logos
+                    if (school.logo_url) {
+                        $('#edit-school-logo-preview').html(
+                            '<img src="' + school.logo_url + '" class="img-thumbnail" style="max-height: 100px;">' +
+                            '<p class="text-muted mt-1 mb-0">Current Logo</p>'
+                        );
+                    }
+
+                    if (school.app_logo_url) {
+                        $('#edit-app-logo-preview').html(
+                            '<img src="' + school.app_logo_url + '" class="img-thumbnail" style="max-height: 100px;">' +
+                            '<p class="text-muted mt-1 mb-0">Current App Logo</p>'
+                        );
+                    }
+
+                    // Show modal
+                    $('#editModal').modal('show');
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to load school data'
+                    });
+                }
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load school data. Please try again.'
+                });
+            },
+            complete: function() {
+                $('#update-btn').prop('disabled', false).text('Update School');
+            }
+        });
+    });
+
+    // Edit form submission
+    $('#edit-school-form').on('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const id = $('#edit-id-field').val();
+
+        // Show loading state
+        $('#update-btn').prop('disabled', true).text('Updating...');
+        $('#edit-alert-error-msg').addClass('d-none').text('');
+
+        $.ajax({
+            url: '/school-info/' + id,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#editModal').modal('hide');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    $('#edit-alert-error-msg').removeClass('d-none').text(response.message);
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'An error occurred while updating the school.';
+
+                if (xhr.status === 422) {
+                    const errors = xhr.responseJSON.errors;
+                    errorMessage = Object.values(errors).flat().join('<br>');
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+
+                $('#edit-alert-error-msg').removeClass('d-none').html(errorMessage);
+            },
+            complete: function() {
+                $('#update-btn').prop('disabled', false).text('Update School');
+            }
+        });
+    });
+
+    // Add form submission
+    $('#add-school-form').on('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        // Show loading state
+        $('#add-btn').prop('disabled', true).text('Adding...');
+        $('#add-alert-error-msg').addClass('d-none').text('');
+
+        $.ajax({
+            url: '/school-info',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#showModal').modal('hide');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    $('#add-alert-error-msg').removeClass('d-none').text(response.message);
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'An error occurred while adding the school.';
+
+                if (xhr.status === 422) {
+                    const errors = xhr.responseJSON.errors;
+                    errorMessage = Object.values(errors).flat().join('<br>');
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+
+                $('#add-alert-error-msg').removeClass('d-none').html(errorMessage);
+            },
+            complete: function() {
+                $('#add-btn').prop('disabled', false).text('Add School');
+            }
+        });
+    });
+
+    // Delete functionality
+    let deleteId = null;
+
+    $(document).on('click', '.remove-item-btn', function() {
+        deleteId = $(this).data('id');
+        $('#deleteRecordModal').modal('show');
+    });
+
+    $('#delete-record').on('click', function() {
+        if (!deleteId) return;
+
+        $(this).prop('disabled', true).text('Deleting...');
+
+        $.ajax({
+            url: '/school-info/' + deleteId,
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#deleteRecordModal').modal('hide');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message
+                    });
+                }
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to delete school. Please try again.'
+                });
+            },
+            complete: function() {
+                $('#delete-record').prop('disabled', false).text('Yes, Delete It!');
+                deleteId = null;
+            }
+        });
+    });
+
+    // Image cropper functionality
+    initializeCroppers();
+
+    function initializeCroppers() {
+        // Add form croppers
+        initializeCropper('school_logo', 'school-logo-cropper', 'school-logo-cropper-container', 'school-crop-btn', 'school-reset-crop-btn', 'school-crop-width', 'school-crop-height');
+        initializeCropper('app_logo', 'app-logo-cropper', 'app-logo-cropper-container', 'app-crop-btn', 'app-reset-crop-btn', 'app-crop-width', 'app-crop-height');
+
+        // Edit form croppers
+        initializeCropper('edit_school_logo', 'edit-school-logo-cropper', 'edit-school-logo-cropper-container', 'edit-school-crop-btn', 'edit-school-reset-crop-btn', 'edit-school-crop-width', 'edit-school-crop-height');
+        initializeCropper('edit_app_logo', 'edit-app-logo-cropper', 'edit-app-logo-cropper-container', 'edit-app-crop-btn', 'edit-app-reset-crop-btn', 'edit-app-crop-width', 'edit-app-crop-height');
+    }
+
+    function initializeCropper(inputId, cropperId, containerId, cropBtnId, resetBtnId, widthInputId, heightInputId) {
+        const input = document.getElementById(inputId);
+        const container = document.getElementById(containerId);
+        let cropper = null;
+
+        if (input) {
+            input.addEventListener('change', function(e) {
+                const files = e.target.files;
+
+                if (files && files.length > 0) {
+                    const file = files[0];
+                    const reader = new FileReader();
+
+                    reader.onload = function(event) {
+                        container.classList.remove('d-none');
+                        const image = document.getElementById(cropperId);
+                        image.src = event.target.result;
+
+                        // Destroy previous cropper instance
+                        if (cropper) {
+                            cropper.destroy();
+                        }
+
+                        // Initialize new cropper
+                        cropper = new Cropper(image, {
+                            aspectRatio: NaN,
+                            viewMode: 1,
+                            autoCropArea: 1,
+                            responsive: true,
+                            restore: false
+                        });
+
+                        // Set crop dimensions based on input values
+                        const widthInput = document.getElementById(widthInputId);
+                        const heightInput = document.getElementById(heightInputId);
+
+                        if (widthInput && heightInput) {
+                            widthInput.value = inputId.includes('school') ? 300 : 200;
+                            heightInput.value = inputId.includes('school') ? 300 : 200;
+                        }
+                    };
+
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Crop button
+        const cropBtn = document.getElementById(cropBtnId);
+        if (cropBtn) {
+            cropBtn.addEventListener('click', function() {
+                if (cropper) {
+                    const width = parseInt(document.getElementById(widthInputId).value) || 300;
+                    const height = parseInt(document.getElementById(heightInputId).value) || 300;
+
+                    const canvas = cropper.getCroppedCanvas({
+                        width: width,
+                        height: height
+                    });
+
+                    // Convert canvas to blob
+                    canvas.toBlob(function(blob) {
+                        // Create a new File from the blob
+                        const file = new File([blob], 'cropped_' + input.files[0].name, {
+                            type: blob.type,
+                            lastModified: Date.now()
+                        });
+
+                        // Create a new DataTransfer object
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+
+                        // Replace the file in the input
+                        input.files = dataTransfer.files;
+
+                        // Show preview
+                        const previewDiv = inputId.includes('edit') ?
+                            (inputId.includes('school') ? 'edit-school-logo-preview' : 'edit-app-logo-preview') :
+                            (inputId.includes('school') ? 'school-logo-preview' : 'app-logo-preview');
+
+                        const previewUrl = canvas.toDataURL();
+                        $('#' + previewDiv).html(
+                            '<img src="' + previewUrl + '" class="img-thumbnail" style="max-height: 100px;">' +
+                            '<p class="text-muted mt-1 mb-0">Cropped Image (' + width + 'x' + height + 'px)</p>'
+                        );
+
+                        // Hide cropper container
+                        container.classList.add('d-none');
+
+                        // Destroy cropper
+                        cropper.destroy();
+                        cropper = null;
+                    }, 'image/jpeg', 0.95);
+                }
+            });
+        }
+
+        // Reset button
+        const resetBtn = document.getElementById(resetBtnId);
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                if (cropper) {
+                    cropper.reset();
+                }
+            });
+        }
+    }
+
+    // Modal cleanup
+    $('#editModal').on('hidden.bs.modal', function() {
+        $('#edit-school-form')[0].reset();
+        $('#edit-school-logo-preview').html('');
+        $('#edit-app-logo-preview').html('');
+        $('#edit-alert-error-msg').addClass('d-none').text('');
+
+        // Clear file inputs
+        $('#edit_school_logo').val('');
+        $('#edit_app_logo').val('');
+    });
+
+    $('#showModal').on('hidden.bs.modal', function() {
+        $('#add-school-form')[0].reset();
+        $('#school-logo-preview').html('');
+        $('#app-logo-preview').html('');
+        $('#add-alert-error-msg').addClass('d-none').text('');
+
+        // Clear file inputs
+        $('#school_logo').val('');
+        $('#app_logo').val('');
+    });
+
+    // Chart initialization
+    initializeStatusChart();
+
+    function initializeStatusChart() {
+        const canvas = document.getElementById('schoolsByStatusChart');
+        if (!canvas) return;
+
+        const statusData = JSON.parse(canvas.getAttribute('data-status'));
+
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(statusData),
+                datasets: [{
+                    data: Object.values(statusData),
+                    backgroundColor: [
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(108, 117, 125, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(40, 167, 69)',
+                        'rgb(108, 117, 125)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed + ' schools';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Filter functionality
+    window.filterData = function() {
+        const status = $('#idStatus').val();
+        const email = $('#idEmail').val();
+
+        $('tbody tr').each(function() {
+            const rowStatus = $(this).find('.status').data('status');
+            const rowEmail = $(this).find('.email').data('email');
+            let showRow = true;
+
+            if (status !== 'all' && rowStatus !== status) {
+                showRow = false;
+            }
+
+            if (email !== 'all' && rowEmail !== email) {
+                showRow = false;
+            }
+
+            if (showRow) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    };
+
+    // Search functionality
+    $('.search').on('keyup', function() {
+        const searchTerm = $(this).val().toLowerCase();
+
+        $('tbody tr').each(function() {
+            const name = $(this).find('.name').data('name').toLowerCase();
+            const address = $(this).find('.name').data('address').toLowerCase();
+
+            if (name.includes(searchTerm) || address.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+
+    // Check all functionality
+    $('#checkAll').on('change', function() {
+        $('input[name="chk_child"]').prop('checked', this.checked);
+        toggleRemoveActionsButton();
+    });
+
+    $(document).on('change', 'input[name="chk_child"]', function() {
+        if ($('input[name="chk_child"]:checked').length === $('input[name="chk_child"]').length) {
+            $('#checkAll').prop('checked', true);
+        } else {
+            $('#checkAll').prop('checked', false);
+        }
+        toggleRemoveActionsButton();
+    });
+
+    function toggleRemoveActionsButton() {
+        if ($('input[name="chk_child"]:checked').length > 0) {
+            $('#remove-actions').removeClass('d-none');
+        } else {
+            $('#remove-actions').addClass('d-none');
+        }
+    }
+
+    window.deleteMultiple = function() {
+        const selectedIds = [];
+        $('input[name="chk_child"]:checked').each(function() {
+            selectedIds.push($(this).closest('tr').find('.id').data('id'));
+        });
+
+        if (selectedIds.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Selection',
+                text: 'Please select at least one school to delete.'
+            });
+            return;
+        }
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'Delete Multiple Schools',
+            text: 'Are you sure you want to delete ' + selectedIds.length + ' selected school(s)?',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete them!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/school-info/bulk-delete',
+                    method: 'DELETE',
+                    data: {
+                        ids: selectedIds
+                    },
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Deleted!',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to delete schools. Please try again.'
+                        });
+                    }
+                });
+            }
+        });
+    };
+});
+</script>
 @endsection

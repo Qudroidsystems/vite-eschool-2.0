@@ -258,14 +258,21 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/scoresheet/download-marks-sheet', [MyScoreSheetController::class, 'downloadMarkSheet'])->name('scoresheet.download-marks-sheet');
     Route::post('/subjectscoresheet/bulk-update', [MyScoreSheetController::class, 'bulkUpdateScores']) ->name('subjectscoresheet.bulk-update');
 
+    // Route::prefix('school-info')->name('admin.school-info.')->group(function () {
+    //     Route::get('/', [SchoolInformationController::class, 'index'])->name('index');
+    //     Route::post('/', [SchoolInformationController::class, 'store'])->name('store');
+    //     Route::match(['PUT', 'PATCH', 'POST'], '/{id}', [SchoolInformationController::class, 'update'])->name('update');
+    //     Route::delete('/{id}', [SchoolInformationController::class, 'destroy'])->name('destroy');
+    //     Route::get('/{id}', [SchoolInformationController::class, 'show'])->name('show');
+    //     Route::get('/{id}/edit-json', [SchoolInformationController::class, 'editJson'])->name('edit-json');
+    // });
+
     Route::prefix('school-info')->name('admin.school-info.')->group(function () {
         Route::get('/', [SchoolInformationController::class, 'index'])->name('index');
         Route::post('/', [SchoolInformationController::class, 'store'])->name('store');
-        Route::post('/{id}', [SchoolInformationController::class, 'update'])->name('update');
+        Route::match(['PUT', 'PATCH', 'POST'], '/{id}', [SchoolInformationController::class, 'update'])->name('update');
         Route::delete('/{id}', [SchoolInformationController::class, 'destroy'])->name('destroy');
         Route::get('/{id}', [SchoolInformationController::class, 'show'])->name('show');
-
-        // Make sure this line exists exactly like this:
         Route::get('/{id}/edit-json', [SchoolInformationController::class, 'editJson'])->name('edit-json');
     });
 
