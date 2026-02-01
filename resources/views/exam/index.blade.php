@@ -368,15 +368,18 @@
 <!-- Include SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    console.log('CSRF Token:', csrfToken); // Debug
 
     // Initialize modal filtering
     initModalFiltering();
-
-    // Attach event listeners
-    attachEventListeners();
 
     // Edit button click handler
     document.addEventListener('click', function(e) {
@@ -384,6 +387,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const examId = e.target.closest('.edit-exam-btn').dataset.id;
             if (examId) {
+                console.log('Editing exam:', examId); // Debug
                 loadExamForEdit(examId);
             }
         }
@@ -392,6 +396,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const examId = e.target.closest('.delete-exam-btn').dataset.id;
             if (examId) {
+                console.log('Deleting exam:', examId); // Debug
                 deleteExam(examId);
             }
         }
@@ -414,6 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (addForm) {
         addForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Add form submitted'); // Debug
             submitAddForm();
         });
     }
@@ -422,6 +428,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Edit form submitted'); // Debug
             submitEditForm();
         });
     }
@@ -517,6 +524,7 @@ function loadClassesForSubject(subjectTeacherId, mode = 'add') {
         return response.json();
     })
     .then(data => {
+        console.log('Classes response:', data); // Debug
         if (data.success && data.classes && data.classes.length > 0) {
             let html = '<div class="row">';
 
@@ -551,36 +559,48 @@ function loadClassesForSubject(subjectTeacherId, mode = 'add') {
 }
 
 function loadExamForEdit(examId) {
-    showLoading('Loading exam data...');
+    Swal.fire({
+        title: 'Loading...',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
 
     fetch(`/exams/${examId}/edit`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         }
     })
     .then(response => {
+        console.log('Edit response status:', response.status); // Debug
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
         return response.json();
     })
     .then(data => {
-        console.log('Edit response:', data); // Debug log
+        console.log('Edit response data:', data); // Debug
         if (data.success && data.exam) {
             populateEditForm(data);
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
+            Swal.close();
         } else {
-            throw new Error('Invalid response format');
+            throw new Error(data.message || 'Invalid response format');
         }
     })
     .catch(error => {
         console.error('Error loading exam:', error);
-        showError('Error loading exam data. Please try again.');
-    })
-    .finally(() => {
-        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load exam data. Please try again.',
+            timer: 3000
+        });
     });
 }
 
@@ -595,12 +615,24 @@ function populateEditForm(data) {
 
     // Date fields - format for datetime-local input
     if (exam.start_time) {
-        const startDate = new Date(exam.start_time);
+        // Handle different date formats
+        let startDate;
+        if (exam.start_time.includes('T')) {
+            startDate = new Date(exam.start_time);
+        } else {
+            startDate = new Date(exam.start_time.replace(' ', 'T'));
+        }
         document.getElementById('edit-start_time').value = formatDateForInput(startDate);
     }
 
     if (exam.end_time) {
-        const endDate = new Date(exam.end_time);
+        // Handle different date formats
+        let endDate;
+        if (exam.end_time.includes('T')) {
+            endDate = new Date(exam.end_time);
+        } else {
+            endDate = new Date(exam.end_time.replace(' ', 'T'));
+        }
         document.getElementById('edit-end_time').value = formatDateForInput(endDate);
     }
 
@@ -625,16 +657,21 @@ function populateEditForm(data) {
 }
 
 function formatDateForInput(date) {
-    if (!date) return '';
+    if (!date || isNaN(date)) return '';
 
-    // Format to YYYY-MM-DDTHH:MM
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    try {
+        // Format to YYYY-MM-DDTHH:MM
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
 
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+        console.error('Date formatting error:', error);
+        return '';
+    }
 }
 
 function loadClassesForEdit(subjectTeacherId, selectedClassIds = []) {
@@ -653,6 +690,7 @@ function loadClassesForEdit(subjectTeacherId, selectedClassIds = []) {
         return response.json();
     })
     .then(data => {
+        console.log('Edit classes response:', data); // Debug
         if (data.success && data.classes && data.classes.length > 0) {
             let html = '<div class="row">';
 
@@ -693,43 +731,81 @@ function submitAddForm() {
     // Validate class selection
     const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
     if (classCheckboxes.length === 0) {
-        showError('Please select at least one class.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select at least one class.',
+            timer: 3000
+        });
         return;
     }
 
     const formData = new FormData(form);
 
-    submitBtn.textContent = 'Creating...';
+    // Log form data for debugging
+    console.log('Add form data:');
+    for (let [key, value] of formData.entries()) {
+        console.log(key + ': ' + value);
+    }
+
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
     submitBtn.disabled = true;
 
     fetch('{{ route('exams.store') }}', {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': csrfToken
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Add response status:', response.status); // Debug
+        return response.json();
+    })
     .then(data => {
+        console.log('Add response data:', data); // Debug
         if (data.success) {
-            showSuccess(data.message || 'Exam created successfully!');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addExamModal'));
-            modal.hide();
-            form.reset();
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message || 'Exam created successfully!',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addExamModal'));
+                if (modal) modal.hide();
+                form.reset();
 
-            // Reset class container
-            document.getElementById('addClassContainer').innerHTML =
-                '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+                // Reset class container
+                document.getElementById('addClassContainer').innerHTML =
+                    '<p class="text-muted text-center mb-0">Select a subject first...</p>';
 
-            // Reload page after 1 second
-            setTimeout(() => window.location.reload(), 1000);
+                // Reload page
+                window.location.reload();
+            });
         } else {
-            showFormErrors('add-alert-error-msg', data.errors || {});
+            let errorMsg = 'An error occurred.';
+            if (data.errors) {
+                errorMsg = Object.values(data.errors).flat().join('<br>');
+            } else if (data.message) {
+                errorMsg = data.message;
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMsg,
+                timer: 5000
+            });
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showError('An error occurred. Please try again.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred. Please try again.',
+            timer: 3000
+        });
     })
     .finally(() => {
         submitBtn.textContent = originalText;
@@ -744,46 +820,90 @@ function submitEditForm() {
     const originalText = submitBtn.textContent;
 
     if (!examId) {
-        showError('Invalid exam ID.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Invalid exam ID.',
+            timer: 3000
+        });
         return;
     }
 
     // Validate class selection
     const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
     if (classCheckboxes.length === 0) {
-        showError('Please select at least one class.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select at least one class.',
+            timer: 3000
+        });
         return;
     }
 
     const formData = new FormData(form);
-    formData.append('_method', 'PUT');
 
-    submitBtn.textContent = 'Updating...';
+    // Log form data for debugging
+    console.log('Edit form data for exam', examId, ':');
+    for (let [key, value] of formData.entries()) {
+        console.log(key + ': ' + value);
+    }
+
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
     submitBtn.disabled = true;
 
+    // Use the proper PUT route
     fetch(`/exams/${examId}`, {
-        method: 'POST',
+        method: 'POST', // Use POST with _method override
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': csrfToken
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Update response status:', response.status); // Debug
+        return response.json();
+    })
     .then(data => {
+        console.log('Update response data:', data); // Debug
         if (data.success) {
-            showSuccess(data.message || 'Exam updated successfully!');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
-            modal.hide();
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message || 'Exam updated successfully!',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+                if (modal) modal.hide();
 
-            // Reload page after 1 second
-            setTimeout(() => window.location.reload(), 1000);
+                // Reload page
+                window.location.reload();
+            });
         } else {
-            showFormErrors('edit-alert-error-msg', data.errors || {});
+            let errorMsg = 'An error occurred.';
+            if (data.errors) {
+                errorMsg = Object.values(data.errors).flat().join('<br>');
+            } else if (data.message) {
+                errorMsg = data.message;
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMsg,
+                timer: 5000
+            });
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showError('An error occurred. Please try again.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred. Please try again.',
+            timer: 3000
+        });
     })
     .finally(() => {
         submitBtn.textContent = originalText;
@@ -800,28 +920,61 @@ function deleteExam(examId) {
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
         confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel'
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
     }).then((result) => {
         if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             fetch(`/exams/${examId}`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Delete response status:', response.status); // Debug
+                return response.json();
+            })
             .then(data => {
+                console.log('Delete response data:', data); // Debug
+                Swal.close();
                 if (data.success) {
-                    showSuccess(data.message || 'Exam deleted successfully!');
-                    setTimeout(() => window.location.reload(), 1000);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: data.message || 'Exam deleted successfully!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
                 } else {
-                    showError(data.message || 'Failed to delete exam.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to delete exam.',
+                        timer: 3000
+                    });
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showError('Failed to delete exam. Please try again.');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to delete exam. Please try again.',
+                    timer: 3000
+                });
             });
         }
     });
@@ -830,7 +983,12 @@ function deleteExam(examId) {
 function deleteMultiple() {
     const checkedBoxes = document.querySelectorAll('input[name="chk_child"]:checked');
     if (checkedBoxes.length === 0) {
-        showWarning('Please select at least one exam to delete.');
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Selection',
+            text: 'Please select at least one exam to delete.',
+            timer: 3000
+        });
         return;
     }
 
@@ -846,86 +1004,65 @@ function deleteMultiple() {
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
         confirmButtonText: 'Yes, delete them!',
-        cancelButtonText: 'Cancel'
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
     }).then((result) => {
         if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             fetch(`/exams/bulk-destroy`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({ ids: ids })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Bulk delete response status:', response.status); // Debug
+                return response.json();
+            })
             .then(data => {
+                console.log('Bulk delete response data:', data); // Debug
+                Swal.close();
                 if (data.success) {
-                    showSuccess(data.message || 'Exams deleted successfully!');
-                    setTimeout(() => window.location.reload(), 1000);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: data.message || 'Exams deleted successfully!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
                 } else {
-                    showError(data.message || 'Failed to delete exams.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to delete exams.',
+                        timer: 3000
+                    });
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showError('Failed to delete exams. Please try again.');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to delete exams. Please try again.',
+                    timer: 3000
+                });
             });
         }
-    });
-}
-
-// Helper functions
-function showFormErrors(containerId, errors) {
-    const container = document.getElementById(containerId);
-    if (container) {
-        container.classList.remove('d-none');
-        let errorHtml = '';
-        Object.values(errors).forEach(errorArray => {
-            errorArray.forEach(error => {
-                errorHtml += `<div>${error}</div>`;
-            });
-        });
-        container.innerHTML = errorHtml;
-    }
-}
-
-function showLoading(message = 'Loading...') {
-    Swal.fire({
-        title: message,
-        allowOutsideClick: false,
-        showConfirmButton: false,
-        willOpen: () => {
-            Swal.showLoading();
-        }
-    });
-}
-
-function showSuccess(message) {
-    Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: message,
-        timer: 3000,
-        showConfirmButton: false
-    });
-}
-
-function showError(message) {
-    Swal.fire({
-        icon: 'error',
-        title: 'Error!',
-        text: message,
-        timer: 4000
-    });
-}
-
-function showWarning(message) {
-    Swal.fire({
-        icon: 'warning',
-        title: 'Warning',
-        text: message,
-        timer: 3000
     });
 }
 
@@ -934,35 +1071,6 @@ function toggleRemoveActions() {
     if (removeActions) {
         const checkedBoxes = document.querySelectorAll('input[name="chk_child"]:checked');
         removeActions.classList.toggle('d-none', checkedBoxes.length === 0);
-    }
-}
-
-function attachEventListeners() {
-    // Edit modal filtering
-    const editTerm = document.getElementById('edit-termid');
-    const editSession = document.getElementById('edit-session');
-    const editSubject = document.getElementById('edit-subject_id');
-
-    if (editTerm && editSession && editSubject) {
-        editTerm.addEventListener('change', function() {
-            filterSubjects(this.value, editSession.value, editSubject);
-        });
-
-        editSession.addEventListener('change', function() {
-            filterSubjects(editTerm.value, this.value, editSubject);
-        });
-    }
-
-    // Subject change listener for edit modal
-    if (editSubject) {
-        editSubject.addEventListener('change', function() {
-            if (this.value) {
-                loadClassesForSubject(this.value, 'edit');
-            } else {
-                document.getElementById('editClassContainer').innerHTML =
-                    '<p class="text-muted text-center mb-0">Select a subject first...</p>';
-            }
-        });
     }
 }
 </script>
@@ -980,6 +1088,22 @@ function attachEventListeners() {
 option[style*="display: none"] {
     display: none !important;
 }
+
+.spinner-border {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    vertical-align: text-bottom;
+    border: 0.2em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border .75s linear infinite;
+}
+
+@keyframes spinner-border {
+    to { transform: rotate(360deg); }
+}
 </style>
+
 
 @endsection
