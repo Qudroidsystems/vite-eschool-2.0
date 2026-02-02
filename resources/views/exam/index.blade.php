@@ -45,7 +45,8 @@
                         <div class="card">
                             <div class="card-header d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h5 class="card-title mb-0">Exams <span class="badge bg-dark-subtle text-dark ms-1">{{ $exams->total() }}</span></h5>
+                                    <!-- FIXED: Changed $exams to $paginatedExams -->
+                                    <h5 class="card-title mb-0">Exams <span class="badge bg-dark-subtle text-dark ms-1">{{ $paginatedExams->total() }}</span></h5>
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
@@ -81,8 +82,10 @@
                                             </tr>
                                         </thead>
                                         <tbody class="fw-semibold text-gray-600 list form-check-all">
-                                            @php $i = ($exams->currentPage() - 1) * $exams->perPage() @endphp
-                                            @forelse ($exams as $exam)
+                                            <!-- FIXED: Changed $exams to $paginatedExams -->
+                                            @php $i = ($paginatedExams->currentPage() - 1) * $paginatedExams->perPage() @endphp
+                                            <!-- FIXED: Changed $exams to $paginatedExams -->
+                                            @forelse ($paginatedExams as $exam)
                                                 @if($exam->id)
                                                 <tr>
                                                     <td class="id" data-id="{{ $exam->id }}">
@@ -162,32 +165,36 @@
                                 </div>
                                 <div class="row mt-3 align-items-center" id="pagination-element">
                                     <div class="col-sm">
+                                        <!-- FIXED: Changed $exams to $paginatedExams -->
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $exams->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $exams->total() }}</span> Results
+                                            Showing <span class="fw-semibold">{{ $paginatedExams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $paginatedExams->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $paginatedExams->total() }}</span> Results
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
                                         <div class="pagination-wrap hstack gap-2 justify-content-center">
-                                            @if($exams->onFirstPage())
+                                            <!-- FIXED: Changed $exams to $paginatedExams -->
+                                            @if($paginatedExams->onFirstPage())
                                                 <span class="page-item pagination-prev disabled">
                                                     <i class="mdi mdi-chevron-left align-middle"></i>
                                                 </span>
                                             @else
-                                                <a class="page-item pagination-prev" href="{{ $exams->previousPageUrl() }}">
+                                                <a class="page-item pagination-prev" href="{{ $paginatedExams->previousPageUrl() }}">
                                                     <i class="mdi mdi-chevron-left align-middle"></i>
                                                 </a>
                                             @endif
 
                                             <ul class="pagination listjs-pagination mb-0">
-                                                @foreach ($exams->links()->elements[0] as $page => $url)
-                                                    <li class="page-item {{ $exams->currentPage() == $page ? 'active' : '' }}">
+                                                <!-- FIXED: Changed $exams to $paginatedExams -->
+                                                @foreach ($paginatedExams->links()->elements[0] as $page => $url)
+                                                    <li class="page-item {{ $paginatedExams->currentPage() == $page ? 'active' : '' }}">
                                                         <a class="page-link" href="{{ $url }}">{{ $page }}</a>
                                                     </li>
                                                 @endforeach
                                             </ul>
 
-                                            @if($exams->hasMorePages())
-                                                <a class="page-item pagination-next" href="{{ $exams->nextPageUrl() }}">
+                                            <!-- FIXED: Changed $exams to $paginatedExams -->
+                                            @if($paginatedExams->hasMorePages())
+                                                <a class="page-item pagination-next" href="{{ $paginatedExams->nextPageUrl() }}">
                                                     <i class="mdi mdi-chevron-right align-middle"></i>
                                                 </a>
                                             @else
