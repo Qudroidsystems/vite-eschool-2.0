@@ -34,6 +34,18 @@ class Exam extends Model
         return $this->belongsTo(Schoolclass::class, 'schoolclass_id');
     }
 
+    // Add this relationship to Subject
+    public function subject()
+    {
+        return $this->belongsTo(Subject::class, 'subject_id');
+    }
+
+    // Relationship to SubjectTeacher (through subject_id)
+    public function subjectTeacher()
+    {
+        return $this->belongsTo(SubjectTeacher::class, 'subject_id', 'id');
+    }
+
     // Accessor for formatted start time
     public function getFormattedStartTimeAttribute()
     {
@@ -54,7 +66,6 @@ class Exam extends Model
         }
         return null;
     }
-
 
     public function questions()
     {

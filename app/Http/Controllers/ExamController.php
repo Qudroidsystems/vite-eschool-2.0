@@ -28,13 +28,13 @@ class ExamController extends Controller
         $this->middleware('permission:Delete exam', ['only' => ['destroy', 'bulkDestroy', 'deleteStudentAttempt']]);
     }
 
-  public function index(Request $request)
+public function index(Request $request)
 {
     $user = auth()->user();
 
-    $query = Exam::query()->with(['schoolclass', 'subject']);
-
-    $query->where('staffId', $user->id);
+    $query = Exam::query()
+        ->with(['schoolclass', 'subject'])
+        ->where('staffId', $user->id);
 
     if ($request->filled('search')) {
         $search = $request->search;
@@ -44,53 +44,42 @@ class ExamController extends Controller
         });
     }
 
-    // Get all exams and group them by their common attributes
-    $exams = $query->orderBy('id', 'desc')->get();
+    $exams = $query->orderBy('id', 'desc')->paginate(15);
 
-    // Group exams by title, subject_id, termid, session to show as single records
+    // Group exams on the fly for display
     $groupedExams = collect();
 
-    foreach ($exams->groupBy(['title', 'subject_id', 'termid', 'session']) as $group) {
+    // Get all exams grouped by their common attributes
+    $allExams = Exam::where('staffId', $user->id)
+        ->with(['schoolclass', 'subject'])
+        ->get()
+        ->groupBy(['title', 'subject_id', 'termid', 'session']);
+
+    // For each group, get the classes
+    foreach ($allExams as $groupKey => $group) {
         $firstExam = $group->first();
 
-        // Get all classes for this exam group
-        $classIds = $group->pluck('schoolclass_id')->toArray();
+        // Get all unique class IDs for this group
+        $classIds = $group->pluck('schoolclass_id')->unique()->toArray();
+
+        // Get class details
         $classes = Schoolclass::whereIn('id', $classIds)
             ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
-            ->select('schoolclass.schoolclass', 'schoolarm.arm', 'schoolclass.id')
+            ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm')
             ->get();
 
-        // Format class names
-        $classNames = $classes->map(function($class) {
-            return $class->schoolclass . ($class->arm ? ' (' . $class->arm . ')' : '');
-        })->implode(', ');
-
-        // Create a modified exam object with class information
-        $groupedExam = (object)[
-            'id' => $firstExam->id,
-            'title' => $firstExam->title,
-            'description' => $firstExam->description,
-            'duration' => $firstExam->duration,
-            'start_time' => $firstExam->start_time,
-            'end_time' => $firstExam->end_time,
-            'is_published' => $firstExam->is_published,
-            'classes' => $classes,
-            'class_names' => $classNames,
-            'total_exams' => $group->count(), // Number of individual exam records
-            'subject' => $firstExam->subject,
-            'termid' => $firstExam->termid,
-            'session' => $firstExam->session,
-            'subject_id' => $firstExam->subject_id
-        ];
-
-        $groupedExams->push($groupedExam);
+        // Add class information to the first exam of the group
+        $firstExam->classes = $classes;
+        $groupedExams->push($firstExam);
     }
 
-    // Paginate the grouped exams
+    // Manually paginate grouped exams
     $page = $request->get('page', 1);
     $perPage = 15;
+    $offset = ($page - 1) * $perPage;
+
     $paginatedExams = new \Illuminate\Pagination\LengthAwarePaginator(
-        $groupedExams->forPage($page, $perPage),
+        $groupedExams->slice($offset, $perPage)->values(),
         $groupedExams->count(),
         $perPage,
         $page,
