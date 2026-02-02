@@ -380,6 +380,222 @@
     </div>
 </div>
 
+<!-- Question Form Modal -->
+<div class="modal fade" id="questionFormModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Question to
+                    <span id="selected-exam-title"></span>
+                    <span id="multiple-exams-badge" class="badge bg-info ms-2" style="display: none;">Multiple Exams</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Exam Selection Info -->
+                <div id="exam-selection-info" class="alert alert-info mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="ri-information-line fs-4 me-2"></i>
+                        <div>
+                            <div id="single-exam-info" style="display: none;">
+                                <strong>Exam:</strong> <span id="exam-title-text"></span><br>
+                                <strong>Class:</strong> <span id="exam-class-text"></span><br>
+                                <strong>Subject:</strong> <span id="exam-subject-text"></span>
+                            </div>
+                            <div id="multiple-exams-info" style="display: none;">
+                                <strong>Selected Exams:</strong> <span id="selected-exams-count"></span> exams<br>
+                                <small class="text-muted">This question will be added to all selected exams.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question Form -->
+                <form id="question-form" enctype="multipart/form-data">
+                    @csrf
+                    <div id="method-field"></div>
+                    <input type="hidden" name="question_id" id="question_id_field">
+                    <div id="selected-exams-field"></div>
+
+                    <div class="mb-3">
+                        <label for="question_text" class="form-label required">Question Text</label>
+                        <div id="question-text-editor" style="min-height: 150px;"></div>
+                        <textarea name="question_text" id="question_text" style="display: none;" required></textarea>
+                        <div class="form-text">Enter the main question text here.</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="type" class="form-label required">Question Type</label>
+                            <select name="type" id="type" class="form-control question-type" required>
+                                <option value="" disabled selected>Select a type</option>
+                                <option value="mcq">Multiple Choice (MCQ)</option>
+                                <option value="true_false">True/False</option>
+                                <option value="short_answer">Short Answer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="marks" class="form-label required">Marks</label>
+                            <input type="number" name="marks" id="marks" class="form-control" value="1" min="0.1" step="0.1" required>
+                        </div>
+                    </div>
+
+                    <!-- Question Type Options -->
+                    <div id="question-options-container">
+                        <!-- Options will be dynamically loaded based on type -->
+                    </div>
+
+                    <!-- Image Upload -->
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Upload Image (Optional)</label>
+                        <input type="file" name="image" id="image" class="form-control" accept="image/*" />
+                        <div id="image-preview" class="mt-3" style="display: none;">
+                            <img id="preview-img" src="#" alt="Image Preview" style="max-width: 200px; max-height: 200px;" class="img-thumbnail">
+                            <button type="button" class="btn btn-sm btn-danger ms-2" id="remove-image">
+                                <i class="ri-close-line"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Reusable Option -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_reusable" id="is_reusable" value="1">
+                            <label class="form-check-label" for="is_reusable">
+                                <strong>Mark as reusable question</strong>
+                                <div class="form-text">This question can be reused in other exams</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div class="alert alert-danger d-none" id="form-errors">
+                        <ul id="error-list" class="mb-0"></ul>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-secondary" id="change-exam-selection">
+                    <i class="ri-arrow-left-line me-1"></i> Change Exams
+                </button>
+                <button type="submit" class="btn btn-primary" id="save-question-btn" form="question-form">
+                    <i class="ri-save-line me-1"></i> Save Question
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MCQ Options Template -->
+<template id="mcq-options-template">
+    <div class="mcq-options">
+        <h6 class="fw-bold mb-3">Multiple Choice Options (Select at least 2)</h6>
+        <div class="alert alert-warning">
+            <i class="ri-alert-line me-2"></i> You must select one correct option
+        </div>
+        <div class="options-fields">
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">A:</label>
+                    <input type="text" name="options[a][option_text]" class="form-control me-3" placeholder="Enter option A..." required />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="a" required />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">B:</label>
+                    <input type="text" name="options[b][option_text]" class="form-control me-3" placeholder="Enter option B..." required />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="b" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">C:</label>
+                    <input type="text" name="options[c][option_text]" class="form-control me-3" placeholder="Enter option C..." />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="c" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">D:</label>
+                    <input type="text" name="options[d][option_text]" class="form-control me-3" placeholder="Enter option D..." />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="d" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">E:</label>
+                    <input type="text" name="options[e][option_text]" class="form-control me-3" placeholder="Enter option E..." />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="e" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- True/False Options Template -->
+<template id="tf-options-template">
+    <div class="tf-options">
+        <h6 class="fw-bold mb-3">True/False Options</h6>
+        <div class="alert alert-warning">
+            <i class="ri-alert-line me-2"></i> Select the correct answer
+        </div>
+        <div class="options-fields">
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <input type="hidden" name="options[true][option_text]" value="True">
+                    <label class="fw-semibold me-3">True</label>
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="true" required />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <input type="hidden" name="options[false][option_text]" value="False">
+                    <label class="fw-semibold me-3">False</label>
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="false" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Short Answer Options Template -->
+<template id="sa-options-template">
+    <div class="sa-options">
+        <h6 class="fw-bold mb-3">Correct Answer</h6>
+        <div class="mb-3">
+            <div id="short-answer-editor" style="min-height: 100px;"></div>
+            <textarea name="options[answer][option_text]" id="short_answer_text" style="display: none;" required></textarea>
+        </div>
+    </div>
+</template>
+
 <!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -474,7 +690,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Reusable Questions Bank</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row mb-3">
@@ -558,14 +774,137 @@
     </div>
 </div>
 
+<!-- Include Quill.js CSS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<style>
+.handle {
+    cursor: move;
+}
 
+.question-checkbox:checked + .form-check-label {
+    background-color: #e7f1ff;
+}
 
+.sortable-ghost {
+    opacity: 0.5;
+    background-color: #f8f9fa;
+}
 
-<!-- Include SortableJS for drag-drop -->
+.sortable-chosen {
+    background-color: #e7f1ff;
+}
+
+.question-text {
+    line-height: 1.5;
+    max-height: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.badge {
+    font-weight: 500;
+}
+
+#reusable-questions-list .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+#reusable-questions-list .form-check-input:checked + .form-check-label {
+    background-color: #e7f1ff;
+    border-radius: 0.375rem;
+}
+
+.exam-card {
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+}
+
+.exam-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.exam-card.border-primary {
+    border-color: #0d6efd !important;
+}
+
+.exam-card .form-check-input {
+    margin-top: 0.3rem;
+}
+
+.class-group h6 {
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+/* Modal styles */
+.modal-backdrop {
+    z-index: 1040 !important;
+}
+
+.modal {
+    z-index: 1050 !important;
+}
+
+.modal-xl {
+    max-width: 90% !important;
+}
+
+#question-text-editor, #short-answer-editor {
+    min-height: 150px;
+}
+
+.ql-toolbar {
+    border-top-left-radius: 0.375rem !important;
+    border-top-right-radius: 0.375rem !important;
+}
+
+.ql-container {
+    border-bottom-left-radius: 0.375rem !important;
+    border-bottom-right-radius: 0.375rem !important;
+}
+
+#image-preview img {
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: contain;
+}
+
+.option-field {
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #f8f9fa;
+}
+
+.option-field:hover {
+    background-color: #e9ecef;
+}
+
+.form-check-input.is-correct:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+#image-preview {
+    display: flex;
+    align-items: center;
+}
+
+.required:after {
+    content: " *";
+    color: #dc3545;
+}
+</style>
+
+<!-- Include required libraries -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
-<!-- Include SweetAlert for notifications -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -574,6 +913,8 @@ $(document).ready(function() {
     let selectedQuestions = [];
     let currentDuplicateQuestionId = null;
     let selectedExams = [];
+    let questionTextEditor = null;
+    let shortAnswerEditor = null;
 
     // Initialize Sortable for drag-drop
     if (document.getElementById('sortable-questions')) {
@@ -750,10 +1091,18 @@ $(document).ready(function() {
 
     // Bulk move
     $('#bulk-move-btn').click(function() {
-        console.log('Opening move exam modal');
+        if (selectedQuestions.length === 0) {
+            showError('Please select questions to move');
+            return;
+        }
+
+        console.log('Opening move exam modal for', selectedQuestions.length, 'questions');
+        $('#move-count').text(selectedQuestions.length);
+        $('#selected-questions').val(selectedQuestions.join(','));
         $('#moveExamModal').modal('show');
     });
 
+    // Move exam form submission
     $('#move-exam-form').submit(function(e) {
         e.preventDefault();
 
@@ -764,6 +1113,16 @@ $(document).ready(function() {
         }
 
         console.log('Moving questions to exam:', targetExamId);
+
+        // Show loading
+        Swal.fire({
+            title: 'Moving Questions',
+            text: 'Please wait...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         $.ajax({
             url: '{{ route("questions.bulk.update") }}',
@@ -776,6 +1135,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 console.log('Move response:', response);
+                Swal.close();
                 if (response.success) {
                     showSuccess(response.message);
                     $('#moveExamModal').modal('hide');
@@ -786,6 +1146,7 @@ $(document).ready(function() {
             },
             error: function(xhr, status, error) {
                 console.error('Move error:', status, error, xhr.responseText);
+                Swal.close();
                 showError('An error occurred while moving questions');
             }
         });
@@ -793,6 +1154,8 @@ $(document).ready(function() {
 
     // Bulk mark as reusable
     $('#bulk-reusable-btn').click(function() {
+        if (selectedQuestions.length === 0) return;
+
         Swal.fire({
             title: 'Mark as Reusable',
             text: `Mark ${selectedQuestions.length} question(s) as reusable?`,
@@ -855,59 +1218,8 @@ $(document).ready(function() {
     // Add question button
     $('#add-question-btn').click(function() {
         console.log('Add question button clicked');
-        console.log('Route URL for get-exams:', '{{ route("questions.getExams") }}');
-
-        // Test the route first
-        $.ajax({
-            url: '{{ route("questions.getExams") }}',
-            method: 'GET',
-            dataType: 'json',
-            beforeSend: function() {
-                console.log('Testing route accessibility...');
-            },
-            success: function(response, status, xhr) {
-                console.log('Route test successful! Status:', xhr.status);
-                console.log('Response preview:', JSON.stringify(response).substring(0, 100) + '...');
-
-                // If test succeeds, load the modal
-                loadExamsForSelection();
-                $('#examSelectionModal').modal('show');
-            },
-            error: function(xhr, status, error) {
-                console.error('Route test failed:', status, error);
-                console.error('Full URL:', xhr.responseURL);
-                console.error('Status:', xhr.status);
-
-                // Show alternative option
-                Swal.fire({
-                    title: 'Cannot Load Exams',
-                    html: `
-                        <p>The system cannot load exams list. This could be because:</p>
-                        <ul>
-                            <li>You need to create exams first</li>
-                            <li>There's a temporary server issue</li>
-                            <li>The route is not accessible</li>
-                        </ul>
-                        <p>Would you like to:</p>
-                    `,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Create New Exam',
-                    cancelButtonText: 'Go to Exams Page',
-                    showDenyButton: true,
-                    denyButtonText: 'Try Again'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.href = '{{ route("exams.create") }}';
-                    } else if (result.isDenied) {
-                        // Try again
-                        $('#add-question-btn').click();
-                    } else if (result.dismiss === Swal.DismissReason.cancel) {
-                        window.location.href = '{{ route("exams.index") }}';
-                    }
-                });
-            }
-        });
+        loadExamsForSelection();
+        $('#examSelectionModal').modal('show');
     });
 
     // Load exams grouped by class
@@ -1175,40 +1487,343 @@ $(document).ready(function() {
         $('.exam-card').parent().show();
     });
 
-    // Proceed to question form
+    // Proceed to question form modal
     $('#proceed-to-question-form-btn').click(function() {
         if (selectedExams.length === 0) {
             showError('Please select at least one exam');
             return;
         }
 
-        // For simplicity, take only the first selected exam
-        const firstExamId = selectedExams[0].id;
-        const examTitle = selectedExams[0].title;
-        console.log('Proceeding with exam:', examTitle, 'ID:', firstExamId);
+        console.log('Opening question form modal for exams:', selectedExams);
 
-        // Show confirmation
-        Swal.fire({
-            title: 'Add Question',
-            html: `Add question to <strong>${examTitle}</strong>?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, Continue',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Close the modal
-                $('#examSelectionModal').modal('hide');
+        // Close exam selection modal
+        $('#examSelectionModal').modal('hide');
 
-                // Redirect to create question page with selected exam ID
-                const createUrl = '{{ route("questions.create") }}?exam_id=' + firstExamId;
-                console.log('Redirecting to:', createUrl);
-                window.location.href = createUrl;
+        // Prepare and show question form modal
+        prepareQuestionFormModal();
+        $('#questionFormModal').modal('show');
+    });
+
+    // Function to prepare the question form modal
+    function prepareQuestionFormModal() {
+        console.log('Preparing question form modal with exams:', selectedExams);
+
+        // Clear previous form
+        $('#question-form')[0].reset();
+        $('#method-field').html('');
+        $('#question_id_field').val('');
+        $('#selected-exams-field').empty();
+        $('#form-errors').addClass('d-none').find('#error-list').empty();
+
+        // Reset image preview
+        $('#image').val('');
+        $('#image-preview').hide();
+        $('#preview-img').attr('src', '#');
+
+        // Set modal title and info
+        if (selectedExams.length === 1) {
+            $('#single-exam-info').show();
+            $('#multiple-exams-info').hide();
+            $('#multiple-exams-badge').hide();
+
+            const exam = selectedExams[0];
+            $('#selected-exam-title').text(exam.title);
+            $('#exam-title-text').text(exam.title);
+            $('#exam-class-text').text(exam.class);
+            $('#exam-subject-text').text('To be loaded');
+        } else {
+            $('#single-exam-info').hide();
+            $('#multiple-exams-info').show();
+            $('#multiple-exams-badge').show();
+
+            $('#selected-exam-title').text('Multiple Exams');
+            $('#selected-exams-count').text(selectedExams.length);
+        }
+
+        // Add hidden fields for selected exams
+        selectedExams.forEach(exam => {
+            $('#selected-exams-field').append(`<input type="hidden" name="exam_ids[]" value="${exam.id}">`);
+        });
+
+        // Set form action and method
+        $('#method-field').html(`
+            <input type="hidden" name="_method" value="POST">
+            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+        `);
+
+        // Load default question type options (MCQ)
+        loadQuestionTypeOptions('mcq');
+
+        // Initialize Quill editor for question text
+        initializeQuestionTextEditor();
+    }
+
+    // Function to load question type options
+    function loadQuestionTypeOptions(type) {
+        console.log('Loading question type options for:', type);
+        $('#question-options-container').empty();
+
+        let templateId = '';
+        switch(type) {
+            case 'mcq':
+                templateId = 'mcq-options-template';
+                break;
+            case 'true_false':
+                templateId = 'tf-options-template';
+                break;
+            case 'short_answer':
+                templateId = 'sa-options-template';
+                break;
+        }
+
+        const template = document.getElementById(templateId);
+        if (template) {
+            const content = template.content.cloneNode(true);
+            $('#question-options-container').append(content);
+
+            // Initialize short answer editor if needed
+            if (type === 'short_answer') {
+                initializeShortAnswerEditor();
+            }
+        }
+    }
+
+    // Initialize Quill editor for question text
+    function initializeQuestionTextEditor() {
+        // Destroy existing editor if it exists
+        if (questionTextEditor) {
+            questionTextEditor = null;
+            $('#question-text-editor').empty();
+        }
+
+        // Initialize new editor
+        questionTextEditor = new Quill('#question-text-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'script': 'sub'}, { 'script': 'super' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    [{ 'direction': 'rtl' }],
+                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'font': [] }],
+                    [{ 'align': [] }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Enter your question here...'
+        });
+
+        // Update hidden textarea with editor content
+        questionTextEditor.on('text-change', function() {
+            $('#question_text').val(questionTextEditor.root.innerHTML);
+        });
+    }
+
+    // Initialize Quill editor for short answer
+    function initializeShortAnswerEditor() {
+        // Destroy existing editor if it exists
+        if (shortAnswerEditor) {
+            shortAnswerEditor = null;
+            $('#short-answer-editor').empty();
+        }
+
+        // Initialize new editor
+        shortAnswerEditor = new Quill('#short-answer-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Enter the correct answer...'
+        });
+
+        // Update hidden textarea with editor content
+        shortAnswerEditor.on('text-change', function() {
+            $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
+        });
+    }
+
+    // Handle question type change
+    $(document).on('change', '#type', function() {
+        const type = $(this).val();
+        loadQuestionTypeOptions(type);
+    });
+
+    // Handle change exam selection button
+    $('#change-exam-selection').click(function() {
+        $('#questionFormModal').modal('hide');
+        setTimeout(() => {
+            $('#examSelectionModal').modal('show');
+        }, 300);
+    });
+
+    // Handle image preview
+    $(document).on('change', '#image', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                $('#preview-img').attr('src', e.target.result);
+                $('#image-preview').show();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Handle remove image
+    $(document).on('click', '#remove-image', function() {
+        $('#image').val('');
+        $('#image-preview').hide();
+        $('#preview-img').attr('src', '#');
+    });
+
+    // Handle form submission
+    $('#question-form').submit(function(e) {
+        e.preventDefault();
+        console.log('Submitting question form');
+
+        // Update hidden textareas with editor content
+        if (questionTextEditor) {
+            $('#question_text').val(questionTextEditor.root.innerHTML);
+        }
+
+        if (shortAnswerEditor) {
+            $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
+        }
+
+        // Validate form
+        if (!validateQuestionForm()) {
+            return;
+        }
+
+        const formData = new FormData(this);
+        const url = '{{ route("questions.store") }}';
+
+        console.log('Submitting to:', url);
+        console.log('Form data:', Object.fromEntries(formData));
+
+        $('#save-question-btn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+        $('#form-errors').addClass('d-none');
+
+        $.ajax({
+            url: url,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                console.log('Success response:', response);
+                if (response.success) {
+                    showSuccess('Question added successfully!');
+                    $('#questionFormModal').modal('hide');
+
+                    // Reload page after a delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showFormErrors(response.errors || ['An error occurred']);
+                }
+            },
+            error: function(xhr) {
+                console.error('Error response:', xhr.responseText);
+                if (xhr.status === 422) {
+                    const errors = xhr.responseJSON.errors;
+                    showFormErrors(Object.values(errors).flat());
+                } else {
+                    showFormErrors(['An unexpected error occurred. Please try again.']);
+                }
+            },
+            complete: function() {
+                $('#save-question-btn').prop('disabled', false).html('<i class="ri-save-line me-1"></i> Save Question');
             }
         });
     });
 
-    // View question
+    // Validate question form
+    function validateQuestionForm() {
+        const type = $('#type').val();
+        let isValid = true;
+        const errors = [];
+
+        // Check question text
+        if (!questionTextEditor || questionTextEditor.getText().trim() === '') {
+            errors.push('Question text is required');
+            isValid = false;
+        }
+
+        // Check type
+        if (!type) {
+            errors.push('Please select a question type');
+            isValid = false;
+        }
+
+        // Check type-specific validation
+        if (type === 'mcq') {
+            const filledOptions = $('input[name^="options["][name$="][option_text]"]').filter(function() {
+                return $(this).val().trim() !== '';
+            }).length;
+
+            const correctSelected = $('.is-correct:checked').length;
+
+            if (filledOptions < 2) {
+                errors.push('At least 2 MCQ options must be filled');
+                isValid = false;
+            }
+            if (correctSelected === 0) {
+                errors.push('Please select a correct option for MCQ');
+                isValid = false;
+            }
+        } else if (type === 'true_false') {
+            const correctSelected = $('.is-correct:checked').length;
+            if (correctSelected === 0) {
+                errors.push('Please select correct answer for True/False');
+                isValid = false;
+            }
+        } else if (type === 'short_answer') {
+            if (!shortAnswerEditor || shortAnswerEditor.getText().trim() === '') {
+                errors.push('Correct answer is required for Short Answer');
+                isValid = false;
+            }
+        }
+
+        // Check marks
+        const marks = $('#marks').val();
+        if (!marks || parseFloat(marks) <= 0) {
+            errors.push('Marks must be greater than 0');
+            isValid = false;
+        }
+
+        if (!isValid) {
+            showFormErrors(errors);
+        }
+
+        return isValid;
+    }
+
+    // Show form errors
+    function showFormErrors(errors) {
+        const errorList = $('#error-list');
+        errorList.empty();
+
+        errors.forEach(error => {
+            errorList.append(`<li>${error}</li>`);
+        });
+
+        $('#form-errors').removeClass('d-none');
+        $('html, body').animate({
+            scrollTop: $('#form-errors').offset().top - 100
+        }, 500);
+    }
+
+    // View question details
     $(document).on('click', '.view-question', function() {
         const questionId = $(this).data('id');
         console.log('Viewing question:', questionId);
@@ -1224,7 +1839,89 @@ $(document).ready(function() {
 
         $.get('{{ url("questions") }}/' + questionId + '/details', function(response) {
             console.log('Question details loaded:', response);
-            $('#view-question-content').html(response);
+            $('#view-question-content').html(`
+                <div class="question-details">
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-2">Question Text:</h6>
+                        <div class="border rounded p-3 bg-light">
+                            ${response.question_text || 'No question text'}
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-2">Question Info:</h6>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Type:</span>
+                                    <span class="badge bg-${response.type === 'mcq' ? 'info' : response.type === 'true_false' ? 'warning' : 'success'}">
+                                        ${response.type.toUpperCase()}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Marks:</span>
+                                    <span class="badge bg-primary">${response.marks || 0}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Reusable:</span>
+                                    <span class="badge bg-${response.is_reusable ? 'success' : 'secondary'}">
+                                        ${response.is_reusable ? 'Yes' : 'No'}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Exam:</span>
+                                    <span>${response.exam_title || 'Unknown Exam'}</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-2">Image:</h6>
+                            ${response.image ?
+                                `<a href="{{ asset('storage/') }}/${response.image}" target="_blank">
+                                    <img src="{{ asset('storage/') }}/${response.image}"
+                                         alt="Question Image"
+                                         class="img-fluid rounded border"
+                                         style="max-height: 200px;">
+                                </a>` :
+                                '<p class="text-muted">No image</p>'
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-2">Options:</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Option</th>
+                                        <th>Text</th>
+                                        <th>Correct</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${response.options && response.options.length > 0 ?
+                                        response.options.map(option => `
+                                            <tr class="${option.is_correct ? 'table-success' : ''}">
+                                                <td class="fw-bold">${option.label ? option.label.toUpperCase() : 'N/A'}</td>
+                                                <td>${option.option_text || 'No text'}</td>
+                                                <td>
+                                                    ${option.is_correct ?
+                                                        '<span class="badge bg-success"><i class="ri-check-line"></i> Correct</span>' :
+                                                        '<span class="badge bg-secondary">Incorrect</span>'
+                                                    }
+                                                </td>
+                                            </tr>
+                                        `).join('') :
+                                        '<tr><td colspan="3" class="text-center">No options found</td></tr>'
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `);
             $('#viewQuestionModal').modal('show');
         }).fail(function(xhr, status, error) {
             console.error('Failed to load question details:', error);
@@ -1340,6 +2037,17 @@ $(document).ready(function() {
     // Load reusable questions
     function loadReusableQuestions(search = '', examId = '') {
         console.log('Loading reusable questions, search:', search, 'examId:', examId);
+
+        // Show loading
+        $('#reusable-questions-list').html(`
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading reusable questions...</p>
+            </div>
+        `);
+
         $.get('{{ route("questions.reusable.list") }}', {
             search: search,
             exam_id: examId
@@ -1392,7 +2100,7 @@ $(document).ready(function() {
             $('#reusable-questions-list').html(`
                 <div class="alert alert-danger">
                     <i class="ri-alert-line me-2"></i>
-                    Failed to load reusable questions
+                    Failed to load reusable questions. Please try again.
                 </div>
             `);
         });
@@ -1451,6 +2159,16 @@ $(document).ready(function() {
             if (result.isConfirmed) {
                 const examId = result.value.examId;
 
+                // Show loading
+                Swal.fire({
+                    title: 'Adding Questions',
+                    text: 'Please wait...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
                 $.ajax({
                     url: '{{ route("questions.bulk.update") }}',
                     method: 'POST',
@@ -1462,15 +2180,18 @@ $(document).ready(function() {
                     },
                     success: function(response) {
                         console.log('Add reusable response:', response);
+                        Swal.close();
                         if (response.success) {
                             showSuccess(`Added ${selectedQuestions.length} question(s) to exam`);
                             $('#reusableQuestionsModal').modal('hide');
+                            setTimeout(() => location.reload(), 1500);
                         } else {
                             showError(response.message);
                         }
                     },
                     error: function(xhr, status, error) {
                         console.error('Add reusable error:', status, error, xhr.responseText);
+                        Swal.close();
                         showError('Failed to add questions');
                     }
                 });
@@ -1492,70 +2213,4 @@ $(document).ready(function() {
     console.log('Page initialization complete');
 });
 </script>
-
-<style>
-.handle {
-    cursor: move;
-}
-
-.question-checkbox:checked + .form-check-label {
-    background-color: #e7f1ff;
-}
-
-.sortable-ghost {
-    opacity: 0.5;
-    background-color: #f8f9fa;
-}
-
-.sortable-chosen {
-    background-color: #e7f1ff;
-}
-
-.question-text {
-    line-height: 1.5;
-    max-height: 60px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.table-hover tbody tr:hover {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-.badge {
-    font-weight: 500;
-}
-
-#reusable-questions-list .list-group-item:hover {
-    background-color: #f8f9fa;
-}
-
-#reusable-questions-list .form-check-input:checked + .form-check-label {
-    background-color: #e7f1ff;
-    border-radius: 0.375rem;
-}
-
-.exam-card {
-    transition: all 0.2s ease;
-    border: 1px solid #dee2e6;
-}
-
-.exam-card:hover {
-    border-color: #0d6efd;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-
-.exam-card.border-primary {
-    border-color: #0d6efd !important;
-}
-
-.exam-card .form-check-input {
-    margin-top: 0.3rem;
-}
-
-.class-group h6 {
-    color: #495057;
-    font-size: 0.9rem;
-}
-</style>
 @endsection

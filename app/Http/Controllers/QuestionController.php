@@ -616,36 +616,42 @@ class QuestionController extends Controller
     }
 
 
-   
+   public function getExamsForSelection(Request $request)
+{
+    $user = Auth::user();
 
-    /**
-     * Get exams for selection
-     */
-    public function getExamsForSelection(Request $request)
-    {
-        $user = Auth::user();
+    \Log::info('Getting exams for user: ' . $user->id);
 
-        $exams = Exam::with(['schoolclass.armRelation', 'subject', 'questions'])
-            ->where('staffId', $user->id)
-            ->orderBy('title')
-            ->get()
-            ->map(function($exam) {
-                return [
-                    'id' => $exam->id,
-                    'title' => $exam->title,
-                    'subject' => $exam->subject->name ?? 'No Subject',
-                    'class_name' => $exam->schoolclass ?
-                        $exam->schoolclass->schoolclass .
-                        ($exam->schoolclass->armRelation ? ' (' . $exam->schoolclass->armRelation->arm . ')' : '') :
-                        'No Class',
-                    'question_count' => $exam->questions->count(),
-                    'marks' => $exam->questions->sum('marks')
-                ];
-            });
+    $exams = Exam::with(['schoolclass.armRelation', 'subject', 'questions'])
+        ->where('staffId', $user->id)
+        ->orderBy('title')
+        ->get()
+        ->map(function($exam) {
+            \Log::info('Exam ID: ' . $exam->id . ', Subject ID: ' . $exam->subject_id . ', Subject: ' . ($exam->subject ? $exam->subject->name : 'null'));
 
-        return response()->json([
-            'success' => true,
-            'exams' => $exams
-        ]);
-    }
+            return [
+                'id' => $exam->id,
+                'title' => $exam->title,
+                'subject' => $exam->subject ? $exam->subject->name : ($exam->subject_id ? 'Subject ID: ' . $exam->subject_id : 'No Subject'),
+                'subject_id' => $exam->subject_id, // Add this for debugging
+                'class_name' => $exam->schoolclass ?
+                    $exam->schoolclass->schoolclass .
+                    ($exam->schoolclass->armRelation ? ' (' . $exam->schoolclass->armRelation->arm . ')' : '') :
+                    'No Class',
+                'question_count' => $exam->questions->count(),
+                'marks' => $exam->questions->sum('marks')
+            ];
+        });
+
+    \Log::info('Returning ' . $exams->count() . ' exams');
+
+    return response()->json([
+        'success' => true,
+        'exams' => $exams,
+        'debug' => [
+            'user_id' => $user->id,
+            'exam_count' => $exams->count()
+        ]
+    ]);
+}
 }
