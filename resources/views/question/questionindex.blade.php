@@ -568,17 +568,21 @@
 
 <script>
 $(document).ready(function() {
+    console.log('Document ready - Question Management page loaded');
+
     let selectedQuestions = [];
     let currentDuplicateQuestionId = null;
     let selectedExams = [];
 
     // Initialize Sortable for drag-drop
     if (document.getElementById('sortable-questions')) {
+        console.log('Initializing SortableJS');
         const sortable = Sortable.create(document.getElementById('sortable-questions'), {
             handle: '.handle',
             animation: 150,
             onEnd: function(evt) {
                 const examId = $(evt.item).data('exam-id');
+                console.log('Question reordered for exam ID:', examId);
                 const questions = [];
 
                 $('#sortable-questions tr[data-exam-id="' + examId + '"]').each(function(index) {
@@ -609,6 +613,7 @@ $(document).ready(function() {
 
     // Helper function to show success message
     function showSuccess(message) {
+        console.log('Success:', message);
         Swal.fire({
             icon: 'success',
             title: 'Success',
@@ -620,6 +625,7 @@ $(document).ready(function() {
 
     // Helper function to show error message
     function showError(message) {
+        console.error('Error:', message);
         Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -642,6 +648,7 @@ $(document).ready(function() {
 
     // Filter functionality
     function applyFilters() {
+        console.log('Applying filters');
         const params = new URLSearchParams();
 
         const examId = $('#exam-filter').val();
@@ -654,6 +661,7 @@ $(document).ready(function() {
         if (type) params.set('type', type);
         if (search) params.set('search', search);
 
+        console.log('Redirecting with params:', params.toString());
         window.location.href = '{{ route("questions.all") }}?' + params.toString();
     }
 
@@ -662,11 +670,13 @@ $(document).ready(function() {
 
     // Bulk selection
     $('#select-all').change(function() {
+        console.log('Select all changed:', this.checked);
         $('.question-checkbox').prop('checked', this.checked);
         updateBulkButtons();
     });
 
     $('.question-checkbox').change(function() {
+        console.log('Question checkbox changed:', this.value, this.checked);
         if (!this.checked) {
             $('#select-all').prop('checked', false);
         }
@@ -677,6 +687,8 @@ $(document).ready(function() {
         selectedQuestions = $('.question-checkbox:checked').map(function() {
             return this.value;
         }).get();
+
+        console.log('Selected questions:', selectedQuestions);
 
         if (selectedQuestions.length > 0) {
             $('#bulk-delete-btn, #bulk-move-btn, #bulk-reusable-btn').removeClass('d-none');
@@ -702,6 +714,7 @@ $(document).ready(function() {
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
+                console.log('Bulk delete confirmed for:', selectedQuestions);
                 $.ajax({
                     url: '{{ route("questions.bulk.update") }}',
                     method: 'POST',
@@ -711,6 +724,7 @@ $(document).ready(function() {
                         action: 'delete'
                     },
                     success: function(response) {
+                        console.log('Bulk delete response:', response);
                         if (response.success) {
                             showSuccess(response.message);
                             selectedQuestions.forEach(function(id) {
@@ -724,7 +738,8 @@ $(document).ready(function() {
                             showError(response.message);
                         }
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
+                        console.error('Bulk delete error:', status, error, xhr.responseText);
                         showError('An error occurred while deleting questions');
                     }
                 });
@@ -734,6 +749,7 @@ $(document).ready(function() {
 
     // Bulk move
     $('#bulk-move-btn').click(function() {
+        console.log('Opening move exam modal');
         $('#moveExamModal').modal('show');
     });
 
@@ -746,6 +762,8 @@ $(document).ready(function() {
             return;
         }
 
+        console.log('Moving questions to exam:', targetExamId);
+
         $.ajax({
             url: '{{ route("questions.bulk.update") }}',
             method: 'POST',
@@ -756,6 +774,7 @@ $(document).ready(function() {
                 data: { exam_id: targetExamId }
             },
             success: function(response) {
+                console.log('Move response:', response);
                 if (response.success) {
                     showSuccess(response.message);
                     $('#moveExamModal').modal('hide');
@@ -764,7 +783,8 @@ $(document).ready(function() {
                     showError(response.message);
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('Move error:', status, error, xhr.responseText);
                 showError('An error occurred while moving questions');
             }
         });
@@ -781,6 +801,7 @@ $(document).ready(function() {
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
+                console.log('Mark as reusable:', selectedQuestions);
                 $.ajax({
                     url: '{{ route("questions.bulk.update") }}',
                     method: 'POST',
@@ -790,6 +811,7 @@ $(document).ready(function() {
                         action: 'mark_reusable'
                     },
                     success: function(response) {
+                        console.log('Reusable response:', response);
                         if (response.success) {
                             showSuccess(response.message);
                             selectedQuestions.forEach(function(id) {
@@ -802,7 +824,8 @@ $(document).ready(function() {
                             showError(response.message);
                         }
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
+                        console.error('Reusable error:', status, error, xhr.responseText);
                         showError('An error occurred');
                     }
                 });
@@ -814,6 +837,7 @@ $(document).ready(function() {
     $('.export-action').click(function(e) {
         e.preventDefault();
         const type = $(this).data('type');
+        console.log('Export type:', type);
 
         // Collect current filter parameters
         const params = new URLSearchParams(window.location.search);
@@ -827,64 +851,140 @@ $(document).ready(function() {
         }
     });
 
-    // Add question button - FIXED
+    // Add question button - DEBUG VERSION
     $('#add-question-btn').click(function() {
+        console.log('Add question button clicked');
+        console.log('Route URL:', '{{ route("questions.getExams") }}');
         loadExamsForSelection();
         $('#examSelectionModal').modal('show');
     });
 
-    // Load exams grouped by class - SIMPLIFIED VERSION
+    // Load exams grouped by class - DEBUG VERSION
     function loadExamsForSelection() {
+        console.log('Loading exams for selection...');
+
         // Show loading
         $('#exams-by-class-container').html(`
             <div class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading exams...</span>
                 </div>
+                <p class="mt-2">Loading exams list...</p>
             </div>
         `);
+
+        // Debug: Check if route exists
+        console.log('Making AJAX request to:', '{{ route("questions.getExams") }}');
 
         // Simple AJAX call to get exams
         $.ajax({
             url: '{{ route("questions.getExams") }}',
             method: 'GET',
             dataType: 'json',
-            success: function(response) {
-                console.log('Exams response:', response); // Debug
-                if (response && response.success) {
-                    renderExamsByClass(response.exams);
+            beforeSend: function() {
+                console.log('AJAX request sent to:', this.url);
+            },
+            success: function(response, status, xhr) {
+                console.log('AJAX Success - Status:', status);
+                console.log('Full response:', response);
+                console.log('Response headers:', xhr.getAllResponseHeaders());
+
+                if (response) {
+                    console.log('Response has success property:', response.success);
+                    console.log('Response has exams property:', response.exams);
+                    console.log('Exams data type:', typeof response.exams);
+                    console.log('Exams length:', response.exams ? response.exams.length : 'null');
+
+                    if (response.success) {
+                        renderExamsByClass(response.exams);
+                    } else {
+                        console.error('Response indicates failure:', response.message);
+                        showError('Failed to load exams: ' + (response.message || 'Unknown error'));
+                        $('#exams-by-class-container').html(`
+                            <div class="alert alert-danger">
+                                <i class="ri-alert-line me-2"></i>
+                                Server error: ${response.message || 'Unknown error'}
+                            </div>
+                        `);
+                    }
                 } else {
-                    showError('Failed to load exams: ' + (response?.message || 'Unknown error'));
+                    console.error('Response is empty or null');
+                    showError('Empty response from server');
+                    $('#exams-by-class-container').html(`
+                        <div class="alert alert-danger">
+                            <i class="ri-alert-line me-2"></i>
+                            Empty response from server
+                        </div>
+                    `);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX Error:', status, error);
-                showError('Failed to load exams. Please try again.');
+                console.error('AJAX Error Details:');
+                console.error('Status:', status);
+                console.error('Error:', error);
+                console.error('XHR object:', xhr);
+                console.error('Response Text:', xhr.responseText);
+                console.error('Status Code:', xhr.status);
+                console.error('Status Text:', xhr.statusText);
+
+                let errorMessage = 'Failed to load exams. ';
+                if (xhr.status === 0) {
+                    errorMessage += 'Network error or CORS issue.';
+                } else if (xhr.status === 404) {
+                    errorMessage += 'Route not found (404).';
+                } else if (xhr.status === 500) {
+                    errorMessage += 'Server error (500).';
+                } else {
+                    errorMessage += 'Status: ' + xhr.status;
+                }
+
+                showError(errorMessage);
                 $('#exams-by-class-container').html(`
                     <div class="alert alert-danger">
                         <i class="ri-alert-line me-2"></i>
-                        Failed to load exams. Please try again.
+                        ${errorMessage}<br>
+                        <small>Check console for details</small>
                     </div>
                 `);
+            },
+            complete: function(xhr, status) {
+                console.log('AJAX request completed with status:', status);
             }
         });
     }
 
     // Simple render function
     function renderExamsByClass(exams) {
-        if (!exams || exams.length === 0) {
+        console.log('Rendering exams:', exams);
+
+        if (!exams) {
+            console.error('Exams is undefined or null');
             $('#exams-by-class-container').html(`
-                <div class="alert alert-info">
-                    <i class="ri-information-line me-2"></i>
-                    No exams found. Please create an exam first.
+                <div class="alert alert-warning">
+                    <i class="ri-alert-line me-2"></i>
+                    No exams data received from server
                 </div>
             `);
             return;
         }
 
+        if (exams.length === 0) {
+            console.log('No exams found for this user');
+            $('#exams-by-class-container').html(`
+                <div class="alert alert-info">
+                    <i class="ri-information-line me-2"></i>
+                    No exams found. Please <a href="{{ route('exams.create') }}" class="alert-link">create an exam</a> first.
+                </div>
+            `);
+            return;
+        }
+
+        console.log('Rendering', exams.length, 'exams');
+
         let html = '<div class="list-group">';
 
-        exams.forEach(function(exam) {
+        exams.forEach(function(exam, index) {
+            console.log('Exam', index, ':', exam);
             html += `
                 <div class="list-group-item">
                     <div class="form-check">
@@ -918,10 +1018,12 @@ $(document).ready(function() {
         html += '</div>';
 
         $('#exams-by-class-container').html(html);
+        console.log('Exams rendered successfully');
 
         // Re-attach event listeners
         $('.exam-checkbox').change(updateSelectedExams);
         $('#select-all-exams-checkbox').change(function() {
+            console.log('Select all exams:', this.checked);
             $('.exam-checkbox').prop('checked', this.checked);
             updateSelectedExams();
         });
@@ -939,6 +1041,8 @@ $(document).ready(function() {
                 class: $(this).data('class')
             });
         });
+
+        console.log('Selected exams:', selectedExams);
 
         // Update UI
         const selectedCount = selectedExams.length;
@@ -974,6 +1078,7 @@ $(document).ready(function() {
     // Search exams
     $('#search-exams-input').on('keyup', debounce(function() {
         const searchTerm = $(this).val().toLowerCase();
+        console.log('Searching exams for:', searchTerm);
 
         $('.list-group-item').each(function() {
             const item = $(this);
@@ -989,6 +1094,7 @@ $(document).ready(function() {
     }, 300));
 
     $('#clear-search-exams').click(function() {
+        console.log('Clearing search');
         $('#search-exams-input').val('');
         $('.list-group-item').show();
     });
@@ -1002,17 +1108,21 @@ $(document).ready(function() {
 
         // For simplicity, take only the first selected exam
         const firstExamId = selectedExams[0].id;
+        console.log('Proceeding with exam ID:', firstExamId);
 
         // Close the modal
         $('#examSelectionModal').modal('hide');
 
         // Redirect to create question page with selected exam ID
-        window.location.href = '{{ route("questions.create") }}?exam_id=' + firstExamId;
+        const createUrl = '{{ route("questions.create") }}?exam_id=' + firstExamId;
+        console.log('Redirecting to:', createUrl);
+        window.location.href = createUrl;
     });
 
     // View question
     $(document).on('click', '.view-question', function() {
         const questionId = $(this).data('id');
+        console.log('Viewing question:', questionId);
 
         $('#view-question-content').html(`
             <div class="text-center py-5">
@@ -1024,9 +1134,11 @@ $(document).ready(function() {
         `);
 
         $.get('{{ url("questions") }}/' + questionId + '/details', function(response) {
+            console.log('Question details loaded:', response);
             $('#view-question-content').html(response);
             $('#viewQuestionModal').modal('show');
-        }).fail(function() {
+        }).fail(function(xhr, status, error) {
+            console.error('Failed to load question details:', error);
             showError('Failed to load question details');
         });
     });
@@ -1034,6 +1146,7 @@ $(document).ready(function() {
     // Duplicate question (quick)
     $(document).on('click', '.duplicate-question', function() {
         const questionId = $(this).data('id');
+        console.log('Duplicating question:', questionId);
         currentDuplicateQuestionId = questionId;
         $('#duplicate-question-id').val(questionId);
         $('#duplicateModal').modal('show');
@@ -1049,6 +1162,8 @@ $(document).ready(function() {
             return;
         }
 
+        console.log('Duplicating question to exam:', targetExamId, 'count:', count);
+
         $('#confirm-duplicate').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Duplicating...');
 
         // Create the first copy
@@ -1060,6 +1175,7 @@ $(document).ready(function() {
                 target_exam_id: targetExamId
             },
             success: function(response) {
+                console.log('Duplicate response:', response);
                 if (response.success) {
                     showSuccess(`Successfully duplicated question`);
                     $('#duplicateModal').modal('hide');
@@ -1068,7 +1184,8 @@ $(document).ready(function() {
                     showError(response.message);
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('Duplicate error:', status, error, xhr.responseText);
                 showError('Error duplicating question');
             },
             complete: function() {
@@ -1083,6 +1200,8 @@ $(document).ready(function() {
     $(document).on('click', '.delete-question', function() {
         const questionId = $(this).data('id');
         const questionText = $(this).closest('tr').find('.question-text').text().substring(0, 50) + '...';
+
+        console.log('Deleting question:', questionId);
 
         Swal.fire({
             title: 'Delete Question',
@@ -1102,6 +1221,7 @@ $(document).ready(function() {
                         _token: '{{ csrf_token() }}'
                     },
                     success: function(response) {
+                        console.log('Delete response:', response);
                         if (response.success) {
                             showSuccess('Question deleted successfully');
                             $('tr[data-id="' + questionId + '"]').fadeOut(300, function() {
@@ -1112,7 +1232,8 @@ $(document).ready(function() {
                             });
                         }
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
+                        console.error('Delete error:', status, error, xhr.responseText);
                         showError('Failed to delete question');
                     }
                 });
@@ -1122,16 +1243,19 @@ $(document).ready(function() {
 
     // View reusable questions
     $('#view-reusable-btn').click(function() {
+        console.log('Viewing reusable questions');
         loadReusableQuestions();
         $('#reusableQuestionsModal').modal('show');
     });
 
     // Load reusable questions
     function loadReusableQuestions(search = '', examId = '') {
+        console.log('Loading reusable questions, search:', search, 'examId:', examId);
         $.get('{{ route("questions.reusable.list") }}', {
             search: search,
             exam_id: examId
         }, function(response) {
+            console.log('Reusable questions response:', response);
             if (response.questions && response.questions.length > 0) {
                 let html = '<div class="list-group">';
                 response.questions.forEach(function(question, index) {
@@ -1174,12 +1298,21 @@ $(document).ready(function() {
                     </div>
                 `);
             }
+        }).fail(function(xhr, status, error) {
+            console.error('Failed to load reusable questions:', error);
+            $('#reusable-questions-list').html(`
+                <div class="alert alert-danger">
+                    <i class="ri-alert-line me-2"></i>
+                    Failed to load reusable questions
+                </div>
+            `);
         });
     }
 
     // Update reusable button state
     function updateReusableButton() {
         const selected = $('.reusable-checkbox:checked').length;
+        console.log('Reusable questions selected:', selected);
         $('#add-reusable-questions').prop('disabled', selected === 0);
     }
 
@@ -1197,6 +1330,8 @@ $(document).ready(function() {
         const selectedQuestions = $('.reusable-checkbox:checked').map(function() {
             return this.value;
         }).get();
+
+        console.log('Adding reusable questions:', selectedQuestions);
 
         if (selectedQuestions.length === 0) return;
 
@@ -1237,6 +1372,7 @@ $(document).ready(function() {
                         data: { exam_id: examId }
                     },
                     success: function(response) {
+                        console.log('Add reusable response:', response);
                         if (response.success) {
                             showSuccess(`Added ${selectedQuestions.length} question(s) to exam`);
                             $('#reusableQuestionsModal').modal('hide');
@@ -1244,7 +1380,8 @@ $(document).ready(function() {
                             showError(response.message);
                         }
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
+                        console.error('Add reusable error:', status, error, xhr.responseText);
                         showError('Failed to add questions');
                     }
                 });
@@ -1256,11 +1393,14 @@ $(document).ready(function() {
     $(document).on('click', '.edit-question', function() {
         const questionId = $(this).data('id');
         const examId = $(this).data('exam-id');
+        console.log('Editing question:', questionId, 'for exam:', examId);
         window.location.href = '{{ url("questions") }}/' + questionId + '/edit?exam_id=' + examId;
     });
 
     // Initialize on page load
+    console.log('Initializing bulk buttons');
     updateBulkButtons();
+    console.log('Page initialization complete');
 });
 </script>
 
