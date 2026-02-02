@@ -188,17 +188,9 @@ class ExamController extends Controller
             )
             ->get();
 
-        // Check if we're in edit mode by checking the request referrer or exam_id
-        $selectedClasses = [];
-        if (request()->header('referer') && str_contains(request()->header('referer'), '/edit')) {
-            // We're likely in edit mode, but we need more context
-            // This is handled separately in the JavaScript
-        }
-
         return response()->json([
             'success' => true,
-            'classes' => $classes,
-            'selectedClasses' => $selectedClasses
+            'classes' => $classes
         ]);
     }
 
@@ -241,27 +233,51 @@ class ExamController extends Controller
 
     public function edit(string $id)
     {
-        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+        // Get only the specific exam instance (single class)
+        $exam = Exam::where('id', $id)
+                    ->where('staffId', auth()->user()->id)
+                    ->with(['schoolclass'])
+                    ->firstOrFail();
 
-        // Get all exams in the same group (same title, subject, term, session)
-        $groupExams = Exam::where('staffId', $exam->staffId)
-            ->where('title', $exam->title)
-            ->where('subject_id', $exam->subject_id)
-            ->where('termid', $exam->termid)
-            ->where('session', $exam->session)
-            ->get();
-
-        // Get selected class IDs
-        $groupClassIds = $groupExams->pluck('schoolclass_id')->toArray();
+        // Log for debugging
+        \Log::info('Edit exam data:', [
+            'exam_id' => $id,
+            'exam_title' => $exam->title,
+            'class_id' => $exam->schoolclass_id,
+            'subject_id' => $exam->subject_id,
+            'termid' => $exam->termid,
+            'session' => $exam->session,
+            'schoolclass_name' => $exam->schoolclass ? $exam->schoolclass->schoolclass : null,
+            'schoolclass_arm' => $exam->schoolclass ? $exam->schoolclass->arm : null
+        ]);
 
         if (request()->ajax()) {
+            // Return exam data including class information
             return response()->json([
-                'success'         => true,
-                'exam'            => $exam,
-                'schoolclass_ids' => $groupClassIds,
-                'termid'          => $exam->termid,
-                'sessionid'       => $exam->session,
-                'subject_id'      => $exam->subject_id
+                'success' => true,
+                'exam' => [
+                    'id' => $exam->id,
+                    'title' => $exam->title,
+                    'description' => $exam->description,
+                    'duration' => $exam->duration,
+                    'start_time' => $exam->start_time,
+                    'end_time' => $exam->end_time,
+                    'termid' => $exam->termid,
+                    'session' => $exam->session,
+                    'subject_id' => $exam->subject_id,
+                    'schoolclass_id' => $exam->schoolclass_id,
+                    'is_published' => $exam->is_published,
+                    'schoolclass' => $exam->schoolclass ? [
+                        'schoolclass' => $exam->schoolclass->schoolclass,
+                        'arm' => $exam->schoolclass->arm
+                    ] : null
+                ],
+                'schoolclass_id' => (int)$exam->schoolclass_id,
+                'termid' => (int)$exam->termid,
+                'sessionid' => (int)$exam->session,
+                'subject_id' => (int)$exam->subject_id,
+                'schoolclass_name' => $exam->schoolclass ? $exam->schoolclass->schoolclass : 'Class not found',
+                'schoolclass_arm' => $exam->schoolclass ? $exam->schoolclass->arm : null
             ]);
         }
 
@@ -276,6 +292,7 @@ class ExamController extends Controller
             'user_id' => auth()->id()
         ]);
 
+        // Get the specific exam instance
         $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
         $validated = $request->validate([
@@ -287,49 +304,19 @@ class ExamController extends Controller
             'termid'          => 'required|integer',
             'session'         => 'required|integer',
             'subject_id'      => 'required|integer',
-            'schoolclass_ids' => 'required|array|min:1',
-            'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
+            'schoolclass_id'  => 'required|integer|exists:schoolclass,id',
             'is_published'    => 'boolean|nullable',
         ]);
 
         $validated['is_published'] = $request->has('is_published');
         $validated['staffId'] = $exam->staffId;
 
-        \Log::info('Validated data:', $validated);
+        \Log::info('Validated data for update:', $validated);
 
-        // Delete all exams in the group
-        $deletedCount = Exam::where('staffId', $exam->staffId)
-            ->where('title', $exam->title)
-            ->where('subject_id', $exam->subject_id)
-            ->where('termid', $exam->termid)
-            ->where('session', $exam->session)
-            ->delete();
+        // Update only this specific exam instance
+        $exam->update($validated);
 
-        \Log::info("Deleted {$deletedCount} exams from group");
-
-        // Create new exams for each selected class
-        $createdCount = 0;
-        foreach ($validated['schoolclass_ids'] as $classId) {
-            $examData = [
-                'staffId' => $validated['staffId'],
-                'title' => $validated['title'],
-                'description' => $validated['description'],
-                'duration' => $validated['duration'],
-                'start_time' => $validated['start_time'],
-                'end_time' => $validated['end_time'],
-                'termid' => $validated['termid'],
-                'session' => $validated['session'],
-                'subject_id' => $validated['subject_id'],
-                'schoolclass_id' => $classId,
-                'is_published' => $validated['is_published']
-            ];
-
-            Exam::create($examData);
-            $createdCount++;
-            \Log::info("Created exam for class {$classId}");
-        }
-
-        $message = "Exam updated successfully for {$createdCount} class" . ($createdCount > 1 ? 'es' : '.') . ".";
+        $message = "Exam updated successfully.";
 
         \Log::info($message);
 

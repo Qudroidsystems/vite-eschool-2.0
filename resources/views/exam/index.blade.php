@@ -345,7 +345,7 @@
                                 <div class="mb-3">
                                     <label class="form-label required">Assigned Class</label>
                                     <div id="editClassContainer" class="border rounded p-3 bg-light">
-                                        <p class="text-muted text-center mb-0">Loading class...</p>
+                                        <p class="text-muted text-center mb-0">Loading class information...</p>
                                     </div>
                                     <input type="hidden" id="edit-schoolclass_id" name="schoolclass_id">
                                 </div>
@@ -549,10 +549,8 @@ function loadClassesForSubject(subjectTeacherId, mode = 'add') {
                 });
                 html += '</div>';
                 container.innerHTML = html;
-            } else {
-                // For edit modal: we handle it separately in loadClassForEdit
-                // This function won't be used for edit modal
             }
+            // For edit modal, we handle it differently
         } else {
             container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
         }
@@ -577,7 +575,7 @@ function loadExamForEdit(examId) {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            'X-CSRF-TOKEN': csrfToken
         }
     })
     .then(response => {
@@ -588,13 +586,15 @@ function loadExamForEdit(examId) {
         return response.json();
     })
     .then(data => {
-        console.log('Edit response data for exam:', examId, data);
+        console.log('RAW Edit response data:', JSON.stringify(data, null, 2));
+
         if (data.success && data.exam) {
             populateEditForm(data);
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
             Swal.close();
         } else {
+            console.error('Invalid response format:', data);
             throw new Error(data.message || 'Invalid response format');
         }
     })
@@ -610,8 +610,21 @@ function loadExamForEdit(examId) {
 }
 
 function populateEditForm(data) {
-    const exam = data.exam;
     console.log('Populating edit form with data:', data);
+
+    // Check if we have all required data
+    if (!data.exam) {
+        console.error('Missing exam data in response:', data);
+        Swal.fire({
+            icon: 'error',
+            title: 'Data Error',
+            text: 'Failed to load exam data properly.',
+            timer: 3000
+        });
+        return;
+    }
+
+    const exam = data.exam;
 
     // Basic fields
     document.getElementById('edit-id-field').value = exam.id;
@@ -641,77 +654,38 @@ function populateEditForm(data) {
     }
 
     // Select fields
-    document.getElementById('edit-termid').value = data.termid || '';
-    document.getElementById('edit-session').value = data.sessionid || '';
+    document.getElementById('edit-termid').value = exam.termid || '';
+    document.getElementById('edit-session').value = exam.session || '';
     document.getElementById('edit-publishStatus').checked = exam.is_published == 1;
 
     // Subject selection
     const subjectSelect = document.getElementById('edit-subject_id');
-    subjectSelect.value = data.subject_id || '';
+    subjectSelect.value = exam.subject_id || '';
 
     // Apply filtering based on selected term and session
-    filterSubjects(data.termid, data.sessionid, subjectSelect);
+    filterSubjects(exam.termid, exam.session, subjectSelect);
 
-    // Load the specific class for this exam
-    setTimeout(() => {
-        if (data.subject_id && data.schoolclass_id) {
-            console.log('Loading class for subject:', data.subject_id, 'with class ID:', data.schoolclass_id);
-            loadClassForEdit(data.subject_id, data.schoolclass_id);
-        } else {
-            console.error('Missing data for loading class');
-            document.getElementById('editClassContainer').innerHTML =
-                '<p class="text-danger text-center mb-0">Error: Missing subject or class data</p>';
-        }
-    }, 200);
-}
-
-function loadClassForEdit(subjectTeacherId, selectedClassId) {
-    console.log('Loading class for edit - Subject ID:', subjectTeacherId, 'Selected Class ID:', selectedClassId);
-
+    // Display class information directly from the data
     const container = document.getElementById('editClassContainer');
+    const className = data.schoolclass_name || (exam.schoolclass ? exam.schoolclass.schoolclass : 'Class not found');
+    const classArm = data.schoolclass_arm || (exam.schoolclass ? exam.schoolclass.arm : null);
+    const classId = data.schoolclass_id || exam.schoolclass_id;
 
-    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading class...</p>';
+    const html = `
+        <div class="alert alert-info mb-0">
+            <div class="d-flex align-items-center">
+                <i class="ri-information-line me-2"></i>
+                <div>
+                    <strong>${className} ${classArm ? '(' + classArm + ')' : ''}</strong>
+                    <p class="mb-0 mt-1">This exam is assigned to this class. You cannot change the class.</p>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" name="schoolclass_id" value="${classId}" id="edit-schoolclass_id">`;
 
-    fetch(`/exams/subject-classes/${subjectTeacherId}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    })
-    .then(data => {
-        console.log('Class response:', data);
-        if (data.success && data.classes && data.classes.length > 0) {
-            // Find the selected class
-            const selectedClass = data.classes.find(cls => parseInt(cls.id) === parseInt(selectedClassId));
+    container.innerHTML = html;
 
-            if (selectedClass) {
-                const html = `
-                    <div class="alert alert-info mb-0">
-                        <div class="d-flex align-items-center">
-                            <i class="ri-information-line me-2"></i>
-                            <div>
-                                <strong>${selectedClass.schoolclass} ${selectedClass.arm ? '(' + selectedClass.arm + ')' : ''}</strong>
-                                <p class="mb-0 mt-1">This exam is assigned to this class. You cannot change the class.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <input type="hidden" name="schoolclass_id" value="${selectedClass.id}" id="edit-schoolclass_id">`;
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = '<p class="text-danger text-center mb-0">Class not found for this subject.</p>';
-            }
-        } else {
-            container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
-        }
-    })
-    .catch(error => {
-        console.error('Error loading class:', error);
-        container.innerHTML = '<p class="text-danger text-center mb-0">Error loading class. Please try again.</p>';
-    });
+    console.log('Class displayed:', { className, classArm, classId });
 }
 
 function formatDateForInput(date) {
@@ -764,7 +738,7 @@ function submitAddForm() {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            'X-CSRF-TOKEN': csrfToken
         }
     })
     .then(response => {
@@ -854,7 +828,7 @@ function submitEditForm() {
         method: 'POST', // Use POST with _method override
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-CSRF-TOKEN': csrfToken,
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
@@ -933,7 +907,7 @@ function deleteExam(examId) {
             fetch(`/exams/${examId}`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-CSRF-TOKEN': csrfToken,
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -1017,7 +991,7 @@ function deleteMultiple() {
             fetch(`/exams/bulk-destroy`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-CSRF-TOKEN': csrfToken,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
