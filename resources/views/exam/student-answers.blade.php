@@ -8,7 +8,7 @@
         --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     }
-    
+
     .answers-header {
         background: var(--primary-gradient);
         border-radius: 16px;
@@ -17,7 +17,7 @@
         margin-bottom: 2rem;
         color: white;
     }
-    
+
     .score-card {
         background: white;
         border-radius: 16px;
@@ -27,7 +27,7 @@
         position: relative;
         overflow: hidden;
     }
-    
+
     .score-card::before {
         content: '';
         position: absolute;
@@ -37,7 +37,7 @@
         height: 4px;
         background: var(--success-gradient);
     }
-    
+
     .score-badge {
         background: var(--success-gradient);
         color: white;
@@ -47,14 +47,14 @@
         display: inline-block;
         margin-bottom: 1rem;
     }
-    
+
     .answers-table-card {
         border-radius: 16px;
         border: none;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         overflow: hidden;
     }
-    
+
     .question-preview {
         max-width: 200px;
         max-height: 150px;
@@ -62,18 +62,18 @@
         cursor: pointer;
         transition: transform 0.3s ease;
     }
-    
+
     .question-preview:hover {
         transform: scale(1.05);
     }
-    
+
     .answer-cell {
         background: #f8fafc;
         border-radius: 8px;
         padding: 0.75rem;
         word-break: break-word;
     }
-    
+
     .correct-badge {
         background: var(--success-gradient);
         color: white;
@@ -82,7 +82,7 @@
         font-size: 0.875rem;
         font-weight: 600;
     }
-    
+
     .incorrect-badge {
         background: var(--danger-gradient);
         color: white;
@@ -91,7 +91,7 @@
         font-size: 0.875rem;
         font-weight: 600;
     }
-    
+
     .not-attempted-badge {
         background: var(--warning-gradient);
         color: white;
@@ -100,7 +100,7 @@
         font-size: 0.875rem;
         font-weight: 600;
     }
-    
+
     .question-html {
         line-height: 1.6;
         color: #374151;
@@ -111,22 +111,22 @@
         -webkit-line-clamp: 4;
         -webkit-box-orient: vertical;
     }
-    
+
     .question-html h2 {
         color: #1f2937;
         font-size: 1.125rem;
         margin-bottom: 0.5rem;
     }
-    
+
     .question-html p {
         margin-bottom: 0.75rem;
     }
-    
+
     .question-html strong {
         font-weight: 600;
         color: #1f2937;
     }
-    
+
     .view-more-btn {
         position: absolute;
         bottom: 0;
@@ -140,17 +140,17 @@
         border-radius: 4px 0 0 0;
         transition: color 0.2s ease;
     }
-    
+
     .view-more-btn:hover {
         color: #5a67d8;
         text-decoration: underline;
     }
-    
+
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    
+
     .answers-table-card {
         animation: fadeIn 0.5s ease;
     }
@@ -161,49 +161,49 @@
         white-space: nowrap;
         -webkit-overflow-scrolling: touch;
     }
-    
+
     .table-scroll-container table {
         min-width: 1200px; /* Ensure table is wide enough to scroll */
     }
-    
+
     .table-scroll-container th,
     .table-scroll-container td {
         min-width: 150px; /* Minimum width for each column to prevent squishing */
         white-space: normal; /* Allow wrapping in cells */
         word-break: break-word;
     }
-    
+
     .table-scroll-container th:first-child,
     .table-scroll-container td:first-child {
         min-width: 75px; /* Smaller for SN */
     }
-    
+
     .table-scroll-container th:nth-child(2),
     .table-scroll-container td:nth-child(2) {
         min-width: 250px; /* Adjusted for better fit with truncation */
     }
-    
+
     .table-scroll-container th:nth-child(3),
     .table-scroll-container td:nth-child(3) {
         min-width: 150px; /* For Image */
         text-align: center;
     }
-    
+
     /* Scrollbar Styling */
     .table-scroll-container::-webkit-scrollbar {
         height: 8px;
     }
-    
+
     .table-scroll-container::-webkit-scrollbar-track {
         background: #f1f1f1;
         border-radius: 4px;
     }
-    
+
     .table-scroll-container::-webkit-scrollbar-thumb {
         background: var(--primary-gradient);
         border-radius: 4px;
     }
-    
+
     .table-scroll-container::-webkit-scrollbar-thumb:hover {
         background: #5a67d8;
     }
@@ -227,8 +227,8 @@
                     </div>
                     <!-- NEW: Print Button -->
                     <div class="d-flex justify-content-end mb-3">
-                        <a href="{{ route('exams.students.question-paper', [$exam->id, $student->id]) }}" 
-                           class="btn btn-success" 
+                        <a href="{{ route('exams.student.question-paper', [$exam->id, $student->id]) }}"
+                           class="btn btn-success"
                            target="_blank">
                             <i class="ri-printer-line me-1"></i> Print Question Paper (PDF)
                         </a>
@@ -238,7 +238,7 @@
             <!-- End page title -->
 
             @if($result)
-          
+
             <div class="row">
     <div class="col-12">
         <div class="answers-header" style="padding: 1rem; margin-bottom: 1rem;">

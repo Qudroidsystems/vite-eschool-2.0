@@ -473,6 +473,7 @@ Route::group(['middleware' => ['auth']], function () {
     // Download question paper PDF with student's answers
     Route::get('exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
         ->name('exams.student.question-paper');
+       
 
     // Analytics dashboard for the exam
     Route::get('exams/{exam}/analytics', [ExamController::class, 'analytics'])
