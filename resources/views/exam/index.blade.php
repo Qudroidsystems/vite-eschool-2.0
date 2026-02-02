@@ -372,7 +372,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-    console.log('CSRF Token:', csrfToken); // Debug
+    console.log('CSRF Token:', csrfToken);
 
     // Initialize modal filtering
     initModalFiltering();
@@ -383,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const examId = e.target.closest('.edit-exam-btn').dataset.id;
             if (examId) {
-                console.log('Editing exam:', examId); // Debug
+                console.log('Editing exam:', examId);
                 loadExamForEdit(examId);
             }
         }
@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const examId = e.target.closest('.delete-exam-btn').dataset.id;
             if (examId) {
-                console.log('Deleting exam:', examId); // Debug
+                console.log('Deleting exam:', examId);
                 deleteExam(examId);
             }
         }
@@ -415,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (addForm) {
         addForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log('Add form submitted'); // Debug
+            console.log('Add form submitted');
             submitAddForm();
         });
     }
@@ -424,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log('Edit form submitted'); // Debug
+            console.log('Edit form submitted');
             submitEditForm();
         });
     }
@@ -520,7 +520,7 @@ function loadClassesForSubject(subjectTeacherId, mode = 'add') {
         return response.json();
     })
     .then(data => {
-        console.log('Classes response:', data); // Debug
+        console.log('Classes response:', data);
         if (data.success && data.classes && data.classes.length > 0) {
             let html = '<div class="row">';
 
@@ -572,14 +572,14 @@ function loadExamForEdit(examId) {
         }
     })
     .then(response => {
-        console.log('Edit response status:', response.status); // Debug
+        console.log('Edit response status:', response.status);
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
         return response.json();
     })
     .then(data => {
-        console.log('Edit response data:', data); // Debug
+        console.log('Edit response data:', data);
         if (data.success && data.exam) {
             populateEditForm(data);
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -611,7 +611,6 @@ function populateEditForm(data) {
 
     // Date fields - format for datetime-local input
     if (exam.start_time) {
-        // Handle different date formats
         let startDate;
         if (exam.start_time.includes('T')) {
             startDate = new Date(exam.start_time);
@@ -622,7 +621,6 @@ function populateEditForm(data) {
     }
 
     if (exam.end_time) {
-        // Handle different date formats
         let endDate;
         if (exam.end_time.includes('T')) {
             endDate = new Date(exam.end_time);
@@ -633,21 +631,21 @@ function populateEditForm(data) {
     }
 
     // Select fields
-    document.getElementById('edit-termid').value = exam.termid || '';
-    document.getElementById('edit-session').value = exam.session || '';
+    document.getElementById('edit-termid').value = data.termid || '';
+    document.getElementById('edit-session').value = data.sessionid || '';
     document.getElementById('edit-publishStatus').checked = exam.is_published == 1;
 
-    // Subject selection with filtering
+    // Subject selection
     const subjectSelect = document.getElementById('edit-subject_id');
-    subjectSelect.value = exam.subject_id || '';
+    subjectSelect.value = data.subject_id || '';
 
     // Apply filtering based on selected term and session
-    filterSubjects(exam.termid, exam.session, subjectSelect);
+    filterSubjects(data.termid, data.sessionid, subjectSelect);
 
-    // Load classes for this subject
+    // Load classes for this subject with pre-selected classes
     setTimeout(() => {
-        if (exam.subject_id) {
-            loadClassesForEdit(exam.subject_id, data.schoolclass_ids || []);
+        if (data.subject_id) {
+            loadClassesForEdit(data.subject_id, data.schoolclass_ids || []);
         }
     }, 100);
 }
@@ -686,11 +684,12 @@ function loadClassesForEdit(subjectTeacherId, selectedClassIds = []) {
         return response.json();
     })
     .then(data => {
-        console.log('Edit classes response:', data); // Debug
+        console.log('Edit classes response:', data);
         if (data.success && data.classes && data.classes.length > 0) {
             let html = '<div class="row">';
 
             data.classes.forEach(cls => {
+                // Check if this class ID is in the selectedClassIds array
                 const isChecked = selectedClassIds.includes(parseInt(cls.id));
                 html += `
                     <div class="col-md-6 mb-2">
@@ -755,11 +754,11 @@ function submitAddForm() {
         }
     })
     .then(response => {
-        console.log('Add response status:', response.status); // Debug
+        console.log('Add response status:', response.status);
         return response.json();
     })
     .then(data => {
-        console.log('Add response data:', data); // Debug
+        console.log('Add response data:', data);
         if (data.success) {
             Swal.fire({
                 icon: 'success',
@@ -838,6 +837,7 @@ function submitEditForm() {
     }
 
     const formData = new FormData(form);
+    formData.append('_method', 'PUT'); // Add method override for PUT
 
     // Log form data for debugging
     console.log('Edit form data for exam', examId, ':');
@@ -848,7 +848,6 @@ function submitEditForm() {
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
     submitBtn.disabled = true;
 
-    // Use the proper PUT route
     fetch(`/exams/${examId}`, {
         method: 'POST', // Use POST with _method override
         body: formData,
@@ -858,11 +857,11 @@ function submitEditForm() {
         }
     })
     .then(response => {
-        console.log('Update response status:', response.status); // Debug
+        console.log('Update response status:', response.status);
         return response.json();
     })
     .then(data => {
-        console.log('Update response data:', data); // Debug
+        console.log('Update response data:', data);
         if (data.success) {
             Swal.fire({
                 icon: 'success',
@@ -938,11 +937,11 @@ function deleteExam(examId) {
                 }
             })
             .then(response => {
-                console.log('Delete response status:', response.status); // Debug
+                console.log('Delete response status:', response.status);
                 return response.json();
             })
             .then(data => {
-                console.log('Delete response data:', data); // Debug
+                console.log('Delete response data:', data);
                 Swal.close();
                 if (data.success) {
                     Swal.fire({
@@ -1024,11 +1023,11 @@ function deleteMultiple() {
                 body: JSON.stringify({ ids: ids })
             })
             .then(response => {
-                console.log('Bulk delete response status:', response.status); // Debug
+                console.log('Bulk delete response status:', response.status);
                 return response.json();
             })
             .then(data => {
-                console.log('Bulk delete response data:', data); // Debug
+                console.log('Bulk delete response data:', data);
                 Swal.close();
                 if (data.success) {
                     Swal.fire({
@@ -1100,6 +1099,5 @@ option[style*="display: none"] {
     to { transform: rotate(360deg); }
 }
 </style>
-
 
 @endsection
