@@ -67,8 +67,8 @@
                                         <p class="text-primary mb-0 fs-6">
                                             <i class="ri-building-line align-middle"></i>
                                             Class: {{ $exam->schoolclass->schoolclass }}
-                                            @if($exam->schoolclass->arm)
-                                                ({{ $exam->schoolclass->arm }})
+                                            @if($exam->schoolclass->armRelation && $exam->schoolclass->armRelation->arm)
+                                                ({{ $exam->schoolclass->armRelation->arm }})
                                             @endif
                                         </p>
                                     @endif
@@ -115,8 +115,8 @@
                                                         @if($exam->schoolclass)
                                                             <span class="badge bg-info-subtle text-info">
                                                                 {{ $exam->schoolclass->schoolclass }}
-                                                                @if($exam->schoolclass->arm)
-                                                                    ({{ $exam->schoolclass->arm }})
+                                                                @if($exam->schoolclass->armRelation && $exam->schoolclass->armRelation->arm)
+                                                                    ({{ $exam->schoolclass->armRelation->arm }})
                                                                 @endif
                                                             </span>
                                                         @else
@@ -185,8 +185,8 @@
                                             <strong>Exam:</strong> {{ $exam->title }}<br>
                                             @if($exam->schoolclass)
                                                 <strong>Class:</strong> {{ $exam->schoolclass->schoolclass }}
-                                                @if($exam->schoolclass->arm)
-                                                    ({{ $exam->schoolclass->arm }})
+                                                @if($exam->schoolclass->armRelation && $exam->schoolclass->armRelation->arm)
+                                                    ({{ $exam->schoolclass->armRelation->arm }})
                                                 @endif
                                             @else
                                                 <strong>Class:</strong> <span class="text-warning">Not assigned</span>
@@ -347,8 +347,8 @@
                                             <strong>Exam:</strong> {{ $exam->title }}<br>
                                             @if($exam->schoolclass)
                                                 <strong>Class:</strong> {{ $exam->schoolclass->schoolclass }}
-                                                @if($exam->schoolclass->arm)
-                                                    ({{ $exam->schoolclass->arm }})
+                                                @if($exam->schoolclass->armRelation && $exam->schoolclass->armRelation->arm)
+                                                    ({{ $exam->schoolclass->armRelation->arm }})
                                                 @endif
                                             @else
                                                 <strong>Class:</strong> <span class="text-warning">Not assigned</span>
@@ -533,8 +533,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Get class information for the exam
     const examClass = @json($exam->schoolclass);
+    const armName = examClass && examClass.arm_relation ? examClass.arm_relation.arm : '';
     const classDisplay = examClass ?
-        `${examClass.schoolclass}${examClass.arm ? ' (' + examClass.arm + ')' : ''}` :
+        `${examClass.schoolclass}${armName ? ' (' + armName + ')' : ''}` :
         'No Class';
 
     // Helper functions
@@ -775,7 +776,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += `</div>`;
                     } else if (data.type === 'mcq') {
                         html += `<div class="row g-3">`;
-                        // Use index for label if label empty (handles missing column)
                         const optionLabels = ['A', 'B', 'C', 'D', 'E'];
                         data.options.forEach((option, index) => {
                             const label = (option.label ? option.label.toUpperCase() : optionLabels[index]) || (index + 1);
@@ -864,14 +864,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             const optionsFields = container.querySelector('.options-fields');
                             optionsFields.innerHTML = '';
 
-                            // No sort needed—DB loads in creation order (a-b-c-d-e)
-                            // Use index for letter if label empty (handles missing column)
                             const optionLetters = ['a', 'b', 'c', 'd', 'e'];
                             data.options.forEach((option, index) => {
-                                if (index >= optionLetters.length) return; // Safety for >5 (unlikely)
+                                if (index >= optionLetters.length) return;
                                 const letter = option.label || optionLetters[index];
                                 const upper = letter.toUpperCase();
-                                const radioHtml = (option.is_correct ? 'checked' : ''); // Works for '1'/1 truthy
+                                const radioHtml = (option.is_correct ? 'checked' : '');
                                 optionsFields.innerHTML += `
                                     <div class="option-field mb-3">
                                         <div class="d-flex align-items-center">
@@ -886,8 +884,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </div>
                                     </div>`;
                             });
-                            // Debug log (remove in prod)
-                            console.log('Populated MCQ options:', data.options.map((o, i) => ({...o, assigned_letter: optionLetters[i] || o.label})));
                         } else if (data.question.type === 'true_false') {
                             const container = document.getElementById('edit_tf_options');
                             container.style.display = 'block';
@@ -909,8 +905,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <label class="ms-2">False</label>
                                     </div>
                                 </div>`;
-                            // Debug log (remove in prod)
-                            console.log('TF correct:', { true: trueOption?.is_correct, false: falseOption?.is_correct });
                         } else if (data.question.type === 'short_answer') {
                             const container = document.getElementById('edit_sa_options');
                             container.style.display = 'block';

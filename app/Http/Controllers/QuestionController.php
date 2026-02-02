@@ -125,21 +125,29 @@ class QuestionController extends Controller
 
         return redirect()->route('questions.show', $request->exam_id)->with('success', 'Question added successfully');
     }
+
     /**
      * Display the specified resource.
-     */public function show(string $id)
-{
-    // Ensure we get a single Exam instance with its questions and options
-    $exam = Exam::with(['questions.options', 'schoolclass'])->findOrFail($id);
-    $pagetitle = 'Questions Management'; // Define the page title
-    return view('question.index', compact('exam', 'pagetitle'));
-}
+     */
+    public function show(string $id)
+    {
+        // Ensure we get a single Exam instance with its questions and options
+        $exam = Exam::with([
+            'questions.options',
+            'schoolclass.armRelation' // Eager load the arm relationship
+        ])->findOrFail($id);
 
+        $pagetitle = 'Questions Management';
+        return view('question.index', compact('exam', 'pagetitle'));
+    }
 
     public function showDetails(Question $question)
     {
+        $question->load('exam.schoolclass.armRelation');
+
         return response()->json([
             'exam_id' => $question->exam_id,
+            'exam_title' => $question->exam->title,
             'question_text' => $question->question_text,
             'type' => $question->type,
             'image' => $question->image,
@@ -153,28 +161,27 @@ class QuestionController extends Controller
         ]);
     }
 
-  public function edit(Question $question)
+    public function edit(Question $question)
     {
-        // No need to find the question again - Laravel's route model binding already did it
-    $question->load('options'); // Eager load the options relationship
+        $question->load('options');
 
-    return response()->json([
-        'success' => true,
-        'exam_id' => $question->exam_id,
-        'question' => [
-            'id' => $question->id,
-            'question_text' => $question->question_text,
-            'type' => $question->type,
-            'image' => $question->image,
-        ],
-        'options' => $question->options->map(function($option) {
-            return [
-                'option_text' => $option->option_text,
-                'is_correct' => $option->is_correct,
-                'label' => $option->label ?? '',
-            ];
-        })
-    ]);
+        return response()->json([
+            'success' => true,
+            'exam_id' => $question->exam_id,
+            'question' => [
+                'id' => $question->id,
+                'question_text' => $question->question_text,
+                'type' => $question->type,
+                'image' => $question->image,
+            ],
+            'options' => $question->options->map(function($option) {
+                return [
+                    'option_text' => $option->option_text,
+                    'is_correct' => $option->is_correct,
+                    'label' => $option->label ?? '',
+                ];
+            })
+        ]);
     }
 
     public function update(Request $request, Question $question)
