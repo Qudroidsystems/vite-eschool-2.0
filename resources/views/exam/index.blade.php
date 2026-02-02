@@ -96,7 +96,7 @@
                                                     <td class="start_time">{{ $exam->start_time->format('M d, Y h:i A') }}</td>
                                                     <td class="end_time">{{ $exam->end_time->format('M d, Y h:i A') }}</td>
                                                     <td class="questions">
-                                                        <a href="{{ route('questions.index', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
+                                                        <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
                                                     </td>
                                                     <td>
                                                         <a href="{{ route('exams.students', $exam->id) }}" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
