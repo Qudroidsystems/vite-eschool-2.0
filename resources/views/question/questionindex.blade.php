@@ -558,7 +558,7 @@
     </div>
 </div>
 
-@endsection
+
 
 
 <!-- Include SortableJS for drag-drop -->
