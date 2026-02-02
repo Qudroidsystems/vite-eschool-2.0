@@ -22,8 +22,8 @@ class ExamController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:View exam', ['only' => ['index', 'showStudents', 'showStudentAnswers', 'analytics']]);
-        $this->middleware('permission:Create exam', ['only' => ['store']]);
+        $this->middleware('permission:View exam', ['only' => ['index', 'show', 'showStudents', 'showStudentAnswers', 'analytics']]);
+        $this->middleware('permission:Create exam', ['only' => ['create', 'store']]);
         $this->middleware('permission:Update exam', ['only' => ['edit', 'update']]);
         $this->middleware('permission:Delete exam', ['only' => ['destroy', 'bulkDestroy', 'deleteStudentAttempt']]);
     }
@@ -31,7 +31,6 @@ class ExamController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $current = "Current";
 
         $query = Exam::query()->with(['schoolclass']);
 
@@ -99,107 +98,9 @@ class ExamController extends Controller
         return view('exam.index', compact('pagetitle', 'exams', 'terms', 'sessions', 'mysubjects', 'myclass'));
     }
 
-    public function getFilteredSubjects(Request $request)
+    public function create()
     {
-        $user = auth()->user();
-
-        $query = SubjectTeacher::where('staffid', $user->id)
-            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-            ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
-            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid');
-
-        if ($request->filled('term_id')) {
-            $query->where('subjectteacher.termid', $request->term_id);
-        }
-
-        if ($request->filled('session_id')) {
-            $query->where('subjectteacher.sessionid', $request->session_id);
-        }
-
-        if ($request->filled('class_id')) {
-            $query->where('schoolclass.id', $request->class_id);
-        }
-
-        $subjects = $query->select([
-                'subjectteacher.id as id',
-                'subject.subject as subject',
-                'subject.subject_code as subjectcode',
-                'schoolclass.schoolclass as schoolclass',
-                'schoolclass.id as class_id',
-                'schoolarm.arm as arm',
-                'subjectteacher.termid as termid',
-                'subjectteacher.sessionid as sessionid',
-                'schoolterm.term as term',
-                'schoolsession.session as session'
-            ])
-            ->get()
-            ->unique('id')
-            ->sortBy('subject')
-            ->map(function($item) {
-                $displayText = sprintf('%s (%s) - %s %s - %s %s',
-                    $item->subject,
-                    $item->subjectcode,
-                    $item->term,
-                    $item->session,
-                    $item->schoolclass,
-                    $item->arm ? '(' . $item->arm . ')' : ''
-                );
-
-                return [
-                    'id' => $item->id,
-                    'display_text' => $displayText,
-                    'subject' => $item->subject,
-                    'subjectcode' => $item->subjectcode,
-                    'schoolclass' => $item->schoolclass,
-                    'class_id' => $item->class_id,
-                    'arm' => $item->arm,
-                    'term' => $item->term,
-                    'session' => $item->session,
-                    'termid' => $item->termid,
-                    'sessionid' => $item->sessionid
-                ];
-            })
-            ->values();
-
-        return response()->json(['subjects' => $subjects]);
-    }
-
-    public function getClassesForSubject($subjectTeacherId)
-    {
-        $user = auth()->user();
-
-        // Verify the subject belongs to the teacher
-        $subjectTeacher = SubjectTeacher::where('id', $subjectTeacherId)
-            ->where('staffid', $user->id)
-            ->firstOrFail();
-
-        // Get all classes for this subject teacher
-        $classes = DB::table('subjectclass')
-            ->join('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
-            ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
-            ->where('subjectclass.subjectteacherid', $subjectTeacherId)
-            ->select(
-                'schoolclass.id',
-                'schoolclass.schoolclass',
-                'schoolarm.arm'
-            )
-            ->get();
-
-        // Check if we're in edit mode by checking the request referrer or exam_id
-        $selectedClasses = [];
-        if (request()->header('referer') && str_contains(request()->header('referer'), '/edit')) {
-            // We're likely in edit mode, but we need more context
-            // This is handled separately in the JavaScript
-        }
-
-        return response()->json([
-            'success' => true,
-            'classes' => $classes,
-            'selectedClasses' => $selectedClasses
-        ]);
+        //
     }
 
     public function store(Request $request)
@@ -237,6 +138,12 @@ class ExamController extends Controller
         }
 
         return redirect()->route('exams.index')->with('success', $message);
+    }
+
+    public function show($id)
+    {
+        // Not implemented - use showStudents instead
+        abort(404);
     }
 
     public function edit(string $id)
@@ -369,6 +276,101 @@ class ExamController extends Controller
         ]);
     }
 
+    public function getFilteredSubjects(Request $request)
+    {
+        $user = auth()->user();
+
+        $query = SubjectTeacher::where('staffid', $user->id)
+            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+            ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
+            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
+            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid');
+
+        if ($request->filled('term_id')) {
+            $query->where('subjectteacher.termid', $request->term_id);
+        }
+
+        if ($request->filled('session_id')) {
+            $query->where('subjectteacher.sessionid', $request->session_id);
+        }
+
+        if ($request->filled('class_id')) {
+            $query->where('schoolclass.id', $request->class_id);
+        }
+
+        $subjects = $query->select([
+                'subjectteacher.id as id',
+                'subject.subject as subject',
+                'subject.subject_code as subjectcode',
+                'schoolclass.schoolclass as schoolclass',
+                'schoolclass.id as class_id',
+                'schoolarm.arm as arm',
+                'subjectteacher.termid as termid',
+                'subjectteacher.sessionid as sessionid',
+                'schoolterm.term as term',
+                'schoolsession.session as session'
+            ])
+            ->get()
+            ->unique('id')
+            ->sortBy('subject')
+            ->map(function($item) {
+                $displayText = sprintf('%s (%s) - %s %s - %s %s',
+                    $item->subject,
+                    $item->subjectcode,
+                    $item->term,
+                    $item->session,
+                    $item->schoolclass,
+                    $item->arm ? '(' . $item->arm . ')' : ''
+                );
+
+                return [
+                    'id' => $item->id,
+                    'display_text' => $displayText,
+                    'subject' => $item->subject,
+                    'subjectcode' => $item->subjectcode,
+                    'schoolclass' => $item->schoolclass,
+                    'class_id' => $item->class_id,
+                    'arm' => $item->arm,
+                    'term' => $item->term,
+                    'session' => $item->session,
+                    'termid' => $item->termid,
+                    'sessionid' => $item->sessionid
+                ];
+            })
+            ->values();
+
+        return response()->json(['subjects' => $subjects]);
+    }
+
+    public function getClassesForSubject($subjectTeacherId)
+    {
+        $user = auth()->user();
+
+        // Verify the subject belongs to the teacher
+        $subjectTeacher = SubjectTeacher::where('id', $subjectTeacherId)
+            ->where('staffid', $user->id)
+            ->firstOrFail();
+
+        // Get all classes for this subject teacher
+        $classes = DB::table('subjectclass')
+            ->join('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
+            ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
+            ->where('subjectclass.subjectteacherid', $subjectTeacherId)
+            ->select(
+                'schoolclass.id',
+                'schoolclass.schoolclass',
+                'schoolarm.arm'
+            )
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'classes' => $classes
+        ]);
+    }
+
     public function showStudents(Request $request, $examId)
     {
         $exam = Exam::where('id', $examId)
@@ -430,15 +432,18 @@ class ExamController extends Controller
         $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
 
         try {
+            // Delete student answers
             Answer::where('exam_id', $examId)
                   ->where('user_id', $studentId)
                   ->delete();
 
+            // Delete results
             DB::table('results')
               ->where('exam_id', $examId)
               ->where('user_id', $studentId)
               ->delete();
 
+            // Delete exam attempt
             $deletedAttempt = DB::table('exam_attempts')
               ->where('exam_id', $examId)
               ->where('student_id', $studentId)
@@ -448,7 +453,7 @@ class ExamController extends Controller
                 ? 'Student\'s exam attempt deleted successfully. They can now retake the exam.'
                 : 'No active attempt found for this student.';
 
-            if (request()->ajax()) {
+            if (request()->ajax() || request()->wantsJson()) {
                 return response()->json(['success' => true, 'message' => $message]);
             }
 
@@ -456,7 +461,7 @@ class ExamController extends Controller
         } catch (\Exception $e) {
             \Log::error("Error deleting student attempt: " . $e->getMessage());
 
-            if (request()->ajax()) {
+            if (request()->ajax() || request()->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'Error deleting attempt'], 500);
             }
 

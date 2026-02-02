@@ -96,22 +96,23 @@
                                                 <td>
                                                     <div class="btn-group" role="group">
                                                         @if($student->attempt_status === 'completed')
-                                                            <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}" 
-                                                               class="btn btn-subtle-info btn-icon btn-sm" 
-                                                               data-bs-toggle="tooltip" 
-                                                               data-bs-placement="top" 
+                                                            <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}"
+                                                               class="btn btn-subtle-info btn-icon btn-sm"
+                                                               data-bs-toggle="tooltip"
+                                                               data-bs-placement="top"
                                                                title="View Answers">
                                                                 <i class="ph-eye"></i>
                                                             </a>
                                                         @endif
-                                                        <button type="button" 
-                                                                class="btn btn-subtle-danger btn-icon btn-sm delete-attempt" 
-                                                                data-bs-toggle="tooltip" 
-                                                                data-bs-placement="top" 
+                                                        <button type="button"
+                                                                class="btn btn-subtle-danger btn-icon btn-sm delete-attempt"
+                                                                data-bs-toggle="tooltip"
+                                                                data-bs-placement="top"
                                                                 title="Delete Attempt (allows retake)"
-                                                                data-exam-id="{{ $exam->id }}" 
+                                                                data-exam-id="{{ $exam->id }}"
                                                                 data-student-id="{{ $student->id }}"
-                                                                data-student-name="{{ $student->lastname }} {{ $student->firstname }}">
+                                                                data-student-name="{{ $student->lastname }} {{ $student->firstname }}"
+                                                                data-delete-url="{{ route('exams.student.attempt.delete', ['exam' => $exam->id, 'student' => $student->id]) }}">
                                                             <i class="ph-trash-simple"></i>
                                                         </button>
                                                     </div>
@@ -155,22 +156,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     const deleteButtons = document.querySelectorAll('.delete-attempt');
-    
+
     deleteButtons.forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const examId = this.dataset.examId;
             const studentId = this.dataset.studentId;
             const studentName = this.dataset.studentName;
+            const deleteUrl = this.dataset.deleteUrl; // Using the pre-generated URL
             const row = this.closest('tr');
             const isInProgress = row.querySelector('.badge.bg-warning') !== null;
-            
-            const confirmMsg = isInProgress 
+
+            const confirmMsg = isInProgress
                 ? `Are you sure you want to delete ${studentName}'s ongoing exam attempt? This will stop the exam and allow a retake.`
                 : `Are you sure you want to delete ${studentName}'s exam attempt? This will allow them to retake the exam.`;
-            
+
             // SweetAlert confirmation
             Swal.fire({
                 title: 'Are you sure?',
@@ -194,7 +196,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
 
-                    fetch(`/exams/${examId}/students/${studentId}/attempt/delete`, {
+                    // Using the pre-generated URL from data attribute
+                    fetch(deleteUrl, {
                         method: 'DELETE',
                         headers: {
                             'Content-Type': 'application/json',
@@ -215,19 +218,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (data.success) {
                             // Remove the row from the table
                             row.remove();
-                            
+
                             // Update the total count badge
                             updateCountBadge();
-                            
+
                             // Update pagination text
                             updatePaginationText();
-                            
+
                             // Update serial numbers
                             updateSerialNumbers();
-                            
+
                             // Check if table is empty
                             checkEmptyTable();
-                            
+
                             // Show success message
                             Swal.fire({
                                 title: 'Deleted!',
@@ -258,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
-    
+
     function updateCountBadge() {
         const badge = document.getElementById('students-count');
         if (badge) {
@@ -268,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     function updatePaginationText() {
         const paginationText = document.getElementById('pagination-text');
         if (paginationText) {
@@ -279,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     function updateSerialNumbers() {
         const rows = document.querySelectorAll('#students-tbody tr:not(.empty-row)');
         let i = (1 + (Math.max(0, rows.length - 15) / 15) * 15);
@@ -290,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     function checkEmptyTable() {
         const tbody = document.getElementById('students-tbody');
         const rows = tbody.querySelectorAll('tr:not(.empty-row)');
