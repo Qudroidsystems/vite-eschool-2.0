@@ -127,15 +127,13 @@ class QuestionController extends Controller
     }
     /**
      * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        // Ensure we get a single Exam instance with its questions and options
-        $exam = Exam::with('questions.options')->findOrFail($id);
-        $pagetitle = 'Questions Management'; // Define the page title
-        return view('question.index', compact('exam', 'pagetitle'));
-    }
-
+     */public function show(string $id)
+{
+    // Ensure we get a single Exam instance with its questions and options
+    $exam = Exam::with(['questions.options', 'schoolclass'])->findOrFail($id);
+    $pagetitle = 'Questions Management'; // Define the page title
+    return view('question.index', compact('exam', 'pagetitle'));
+}
 
 
     public function showDetails(Question $question)

@@ -63,6 +63,15 @@
                                 <div class="flex-grow-1">
                                     <h5 class="card-title mb-0">Manage Questions <span class="badge bg-dark-subtle text-dark ms-1" id="total-badge">{{ $exam->questions->count() }}</span></h5>
                                     <p class="text-muted mb-0 fs-6">for {{ $exam->title }}</p>
+                                    @if($exam->schoolclass)
+                                        <p class="text-primary mb-0 fs-6">
+                                            <i class="ri-building-line align-middle"></i>
+                                            Class: {{ $exam->schoolclass->schoolclass }}
+                                            @if($exam->schoolclass->arm)
+                                                ({{ $exam->schoolclass->arm }})
+                                            @endif
+                                        </p>
+                                    @endif
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
@@ -84,6 +93,7 @@
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="sn">SN</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="question">Question Text</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="type">Type</th>
+                                                <th class="min-w-125px">Class</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="image">Image</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="options">Options</th>
                                                 <th class="min-w-100px">Actions</th>
@@ -101,11 +111,23 @@
                                                     <td class="sn">{{ $i++ }}</td>
                                                     <td class="question">{{ Str::limit(strip_tags($question->question_text), 50) }}</td>
                                                     <td class="type">{{ ucfirst(str_replace('_', ' ', $question->type)) }}</td>
+                                                    <td class="class-info">
+                                                        @if($exam->schoolclass)
+                                                            <span class="badge bg-info-subtle text-info">
+                                                                {{ $exam->schoolclass->schoolclass }}
+                                                                @if($exam->schoolclass->arm)
+                                                                    ({{ $exam->schoolclass->arm }})
+                                                                @endif
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-warning-subtle text-warning">No Class</span>
+                                                        @endif
+                                                    </td>
                                                     <td class="image">
                                                         @if ($question->image)
                                                             <img src="{{ asset('storage/' . $question->image) }}" alt="Question Image" style="max-width: 50px; max-height: 50px;">
                                                         @else
-                                                            No Image
+                                                            <span class="text-muted">No Image</span>
                                                         @endif
                                                     </td>
                                                     <td class="options">{{ $question->options->count() }}</td>
@@ -125,7 +147,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="noresult" style="display: block;">No questions found</td>
+                                                    <td colspan="8" class="noresult" style="display: block;">No questions found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -156,6 +178,22 @@
                             @csrf
                             <div class="modal-body">
                                 <input type="hidden" name="exam_id" value="{{ $exam->id }}">
+                                <div class="alert alert-info mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="ri-information-line fs-4 me-2"></i>
+                                        <div>
+                                            <strong>Exam:</strong> {{ $exam->title }}<br>
+                                            @if($exam->schoolclass)
+                                                <strong>Class:</strong> {{ $exam->schoolclass->schoolclass }}
+                                                @if($exam->schoolclass->arm)
+                                                    ({{ $exam->schoolclass->arm }})
+                                                @endif
+                                            @else
+                                                <strong>Class:</strong> <span class="text-warning">Not assigned</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
                                 <div id="questions-container">
                                     <div class="question-field mb-7 border p-5 rounded">
                                         <div class="mb-3">
@@ -302,6 +340,22 @@
                             <div class="modal-body">
                                 <input type="hidden" id="edit-id-field" name="id">
                                 <input type="hidden" name="exam_id" id="edit_exam_id">
+                                <div class="alert alert-info mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="ri-information-line fs-4 me-2"></i>
+                                        <div>
+                                            <strong>Exam:</strong> {{ $exam->title }}<br>
+                                            @if($exam->schoolclass)
+                                                <strong>Class:</strong> {{ $exam->schoolclass->schoolclass }}
+                                                @if($exam->schoolclass->arm)
+                                                    ({{ $exam->schoolclass->arm }})
+                                                @endif
+                                            @else
+                                                <strong>Class:</strong> <span class="text-warning">Not assigned</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="question-field mb-7 border p-5 rounded">
                                     <div class="mb-3">
                                         <label for="edit_question_text" class="form-label">Question Text</label>
@@ -477,6 +531,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let searchTerm = '';
     let totalQuestions = {{ $exam->questions->count() }};
 
+    // Get class information for the exam
+    const examClass = @json($exam->schoolclass);
+    const classDisplay = examClass ?
+        `${examClass.schoolclass}${examClass.arm ? ' (' + examClass.arm + ')' : ''}` :
+        'No Class';
+
     // Helper functions
     function stripTags(html) {
         return html.replace(/<[^>]*>/g, '');
@@ -517,8 +577,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="sn">${currentSN}</td>
                 <td class="question">${limitText(question.question_text)}</td>
                 <td class="type">${formatType(question.type)}</td>
+                <td class="class-info">
+                    <span class="badge bg-info-subtle text-info">${classDisplay}</span>
+                </td>
                 <td class="image">
-                    ${question.image ? `<img src="/storage/${question.image}" alt="Question Image" style="max-width: 50px; max-height: 50px;">` : 'No Image'}
+                    ${question.image ? `<img src="/storage/${question.image}" alt="Question Image" style="max-width: 50px; max-height: 50px;">` : '<span class="text-muted">No Image</span>'}
                 </td>
                 <td class="options">${question.options_count}</td>
                 <td>
@@ -555,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function() {
         row.querySelector('.question').textContent = limitText(question.question_text);
         row.querySelector('.type').textContent = formatType(question.type);
         const imgCell = row.querySelector('.image');
-        imgCell.innerHTML = question.image ? `<img src="/storage/${question.image}" alt="Question Image" style="max-width: 50px; max-height: 50px;">` : 'No Image';
+        imgCell.innerHTML = question.image ? `<img src="/storage/${question.image}" alt="Question Image" style="max-width: 50px; max-height: 50px;">` : '<span class="text-muted">No Image</span>';
         row.querySelector('.options').textContent = question.options_count;
         row.dataset.url = `/questions/${question.id}`;
         row.querySelector('.remove-item-btn').dataset.url = `/questions/${question.id}`;
@@ -568,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
             row.remove();
         }
         if (tableBody.querySelectorAll('tr:not(.noresult)').length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" class="noresult" style="display: block;">No questions found</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" class="noresult" style="display: block;">No questions found</td></tr>';
         }
         totalQuestions--;
         updateQuestionCount();
@@ -582,7 +645,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function addNoResultRow() {
         if (tableBody.querySelectorAll('tr:not(.noresult)').length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" class="noresult" style="display: block;">No questions found</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" class="noresult" style="display: block;">No questions found</td></tr>';
         }
     }
 
@@ -665,6 +728,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="card">
                             <div class="card-header bg-light">
                                 <h4 class="card-title fw-bold">Question</h4>
+                                <div class="d-flex align-items-center mt-2">
+                                    <span class="badge bg-primary me-2">Exam: ${data.exam_title}</span>
+                                    <span class="badge bg-info">Class: ${classDisplay}</span>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div class="fs-5 mb-4">${data.question_text}</div>`;
@@ -1243,5 +1310,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<style>
+/* Additional styling for class column */
+.badge.bg-info-subtle {
+    border: 1px solid rgba(var(--bs-info-rgb), 0.2);
+}
+
+.badge.bg-warning-subtle {
+    border: 1px solid rgba(var(--bs-warning-rgb), 0.2);
+}
+
+td.class-info {
+    min-width: 120px;
+}
+</style>
 
 @endsection
