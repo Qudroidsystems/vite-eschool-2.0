@@ -62,14 +62,19 @@ public function index(Request $request)
         // Get all unique class IDs for this group
         $classIds = $group->pluck('schoolclass_id')->unique()->toArray();
 
-        // Get class details
-        $classes = Schoolclass::whereIn('id', $classIds)
-            ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
-            ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm')
-            ->get();
+        if (!empty($classIds)) {
+            // Get class details - FIXED: Specify schoolclass.id
+            $classes = Schoolclass::whereIn('schoolclass.id', $classIds)
+                ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
+                ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm')
+                ->get();
 
-        // Add class information to the first exam of the group
-        $firstExam->classes = $classes;
+            // Add class information to the first exam of the group
+            $firstExam->classes = $classes;
+        } else {
+            $firstExam->classes = collect();
+        }
+
         $groupedExams->push($firstExam);
     }
 
@@ -137,7 +142,6 @@ public function index(Request $request)
 
     return view('exam.index', compact('pagetitle', 'paginatedExams', 'terms', 'sessions', 'mysubjects', 'myclass'));
 }
-
 
     public function create()
     {
