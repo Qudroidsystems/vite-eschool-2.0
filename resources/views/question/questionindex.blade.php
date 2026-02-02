@@ -746,16 +746,15 @@ $(document).ready(function() {
             return;
         }
 
-        const formData = new FormData(this);
-        formData.append('question_ids', selectedQuestions);
-        formData.append('action', 'change_exam');
-
         $.ajax({
             url: '{{ route("questions.bulk.update") }}',
             method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
+            data: {
+                _token: '{{ csrf_token() }}',
+                question_ids: selectedQuestions,
+                action: 'change_exam',
+                data: { exam_id: targetExamId }
+            },
             success: function(response) {
                 if (response.success) {
                     showSuccess(response.message);
@@ -828,95 +827,95 @@ $(document).ready(function() {
         }
     });
 
-    // Add question button
+    // Add question button - FIXED
     $('#add-question-btn').click(function() {
         loadExamsForSelection();
         $('#examSelectionModal').modal('show');
     });
 
-    // Load exams grouped by class
+    // Load exams grouped by class - SIMPLIFIED VERSION
     function loadExamsForSelection() {
+        // Show loading
+        $('#exams-by-class-container').html(`
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading exams...</span>
+                </div>
+            </div>
+        `);
+
+        // Simple AJAX call to get exams
         $.ajax({
             url: '{{ route("questions.getExams") }}',
             method: 'GET',
+            dataType: 'json',
             success: function(response) {
-                if (response.success) {
+                console.log('Exams response:', response); // Debug
+                if (response && response.success) {
                     renderExamsByClass(response.exams);
                 } else {
-                    showError('Failed to load exams');
+                    showError('Failed to load exams: ' + (response?.message || 'Unknown error'));
                 }
             },
-            error: function() {
-                showError('Failed to load exams');
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+                showError('Failed to load exams. Please try again.');
+                $('#exams-by-class-container').html(`
+                    <div class="alert alert-danger">
+                        <i class="ri-alert-line me-2"></i>
+                        Failed to load exams. Please try again.
+                    </div>
+                `);
             }
         });
     }
 
-    // Render exams grouped by class
+    // Simple render function
     function renderExamsByClass(exams) {
-        let html = '';
+        if (!exams || exams.length === 0) {
+            $('#exams-by-class-container').html(`
+                <div class="alert alert-info">
+                    <i class="ri-information-line me-2"></i>
+                    No exams found. Please create an exam first.
+                </div>
+            `);
+            return;
+        }
 
-        // Group exams by class
-        const examsByClass = {};
-        exams.forEach(exam => {
-            const classKey = exam.class_name || 'No Class';
-            if (!examsByClass[classKey]) {
-                examsByClass[classKey] = [];
-            }
-            examsByClass[classKey].push(exam);
-        });
+        let html = '<div class="list-group">';
 
-        // Render each class group
-        Object.keys(examsByClass).forEach(className => {
+        exams.forEach(function(exam) {
             html += `
-                <div class="class-group mb-4">
-                    <h6 class="fw-bold border-bottom pb-2 mb-3">
-                        <i class="ri-building-line me-2"></i>${className}
-                    </h6>
-                    <div class="row">
-            `;
-
-            examsByClass[className].forEach(exam => {
-                html += `
-                    <div class="col-md-6 mb-3">
-                        <div class="card exam-card">
-                            <div class="card-body p-3">
-                                <div class="form-check">
-                                    <input class="form-check-input exam-checkbox"
-                                           type="checkbox"
-                                           value="${exam.id}"
-                                           id="exam-${exam.id}"
-                                           data-title="${exam.title}"
-                                           data-class="${className}">
-                                    <label class="form-check-label w-100" for="exam-${exam.id}">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <strong class="d-block">${exam.title}</strong>
-                                                <small class="text-muted">
-                                                    <i class="ri-book-open-line me-1"></i>${exam.subject || 'No Subject'}
-                                                </small>
-                                                <br>
-                                                <small class="text-muted">
-                                                    <i class="ri-question-line me-1"></i>${exam.question_count} questions
-                                                </small>
-                                            </div>
-                                            <div>
-                                                <span class="badge bg-primary">${exam.marks || 'N/A'}</span>
-                                            </div>
-                                        </div>
-                                    </label>
+                <div class="list-group-item">
+                    <div class="form-check">
+                        <input class="form-check-input exam-checkbox"
+                               type="checkbox"
+                               value="${exam.id}"
+                               id="exam-${exam.id}"
+                               data-title="${exam.title}"
+                               data-class="${exam.class_name || 'No Class'}">
+                        <label class="form-check-label w-100" for="exam-${exam.id}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="d-block">${exam.title}</strong>
+                                    <small class="text-muted d-block">
+                                        <i class="ri-building-line me-1"></i>${exam.class_name || 'No Class'}
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="ri-book-open-line me-1"></i>${exam.subject || 'No Subject'}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-primary">${exam.question_count || 0} questions</span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += `
+                        </label>
                     </div>
                 </div>
             `;
         });
+
+        html += '</div>';
 
         $('#exams-by-class-container').html(html);
 
@@ -926,6 +925,8 @@ $(document).ready(function() {
             $('.exam-checkbox').prop('checked', this.checked);
             updateSelectedExams();
         });
+
+        updateSelectedExams();
     }
 
     // Update selected exams
@@ -974,38 +975,38 @@ $(document).ready(function() {
     $('#search-exams-input').on('keyup', debounce(function() {
         const searchTerm = $(this).val().toLowerCase();
 
-        $('.exam-card').each(function() {
-            const card = $(this);
-            const examTitle = card.find('strong').text().toLowerCase();
-            const examClass = card.find('.text-muted').text().toLowerCase();
+        $('.list-group-item').each(function() {
+            const item = $(this);
+            const examTitle = item.find('strong').text().toLowerCase();
+            const examClass = item.find('.text-muted').text().toLowerCase();
 
             if (examTitle.includes(searchTerm) || examClass.includes(searchTerm) || searchTerm === '') {
-                card.parent().show();
+                item.show();
             } else {
-                card.parent().hide();
+                item.hide();
             }
         });
     }, 300));
 
     $('#clear-search-exams').click(function() {
         $('#search-exams-input').val('');
-        $('.exam-card').parent().show();
+        $('.list-group-item').show();
     });
 
-    // Proceed to question form modal (simplified)
+    // Proceed to question form - REDIRECT VERSION
     $('#proceed-to-question-form-btn').click(function() {
         if (selectedExams.length === 0) {
             showError('Please select at least one exam');
             return;
         }
 
-        // Get the first selected exam (for now, we'll just use the first one)
+        // For simplicity, take only the first selected exam
         const firstExamId = selectedExams[0].id;
 
-        // Close exam selection modal
+        // Close the modal
         $('#examSelectionModal').modal('hide');
 
-        // Open new question form for that exam
+        // Redirect to create question page with selected exam ID
         window.location.href = '{{ route("questions.create") }}?exam_id=' + firstExamId;
     });
 
@@ -1050,31 +1051,31 @@ $(document).ready(function() {
 
         $('#confirm-duplicate').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Duplicating...');
 
-        // Create multiple copies
-        const promises = [];
-        for (let i = 0; i < count; i++) {
-            promises.push(
-                $.ajax({
-                    url: '{{ url("questions") }}/' + currentDuplicateQuestionId + '/duplicate',
-                    method: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        target_exam_id: targetExamId
-                    }
-                })
-            );
-        }
-
-        Promise.all(promises).then(function(responses) {
-            $('#duplicateModal').modal('hide');
-            showSuccess(`Successfully duplicated ${count} question(s)`);
-            setTimeout(() => location.reload(), 1500);
-        }).catch(function(error) {
-            showError('Error duplicating question(s)');
-        }).finally(function() {
-            $('#confirm-duplicate').prop('disabled', false).text('Duplicate');
-            $('#duplicate-count').val(1);
-            $('#duplicate-target-exam').val('');
+        // Create the first copy
+        $.ajax({
+            url: '{{ url("questions") }}/' + currentDuplicateQuestionId + '/duplicate',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                target_exam_id: targetExamId
+            },
+            success: function(response) {
+                if (response.success) {
+                    showSuccess(`Successfully duplicated question`);
+                    $('#duplicateModal').modal('hide');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showError(response.message);
+                }
+            },
+            error: function() {
+                showError('Error duplicating question');
+            },
+            complete: function() {
+                $('#confirm-duplicate').prop('disabled', false).text('Duplicate');
+                $('#duplicate-count').val(1);
+                $('#duplicate-target-exam').val('');
+            }
         });
     });
 
