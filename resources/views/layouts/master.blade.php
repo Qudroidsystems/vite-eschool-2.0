@@ -726,7 +726,7 @@
                         </li>
                         @can('View question')
                         <li class="nav-item">
-                            <a href="{{ route('questions.index') }}" class="nav-link" data-key="t-questions">Questions Management</a>
+                            <a href="{{ route('questions.all') }}" class="nav-link" data-key="t-questions">Questions Management</a>
                         </li>
                         @endcan
                     </ul>

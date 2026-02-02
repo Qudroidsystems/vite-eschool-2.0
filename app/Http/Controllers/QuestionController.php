@@ -4,35 +4,92 @@ namespace App\Http\Controllers;
 
 use App\Models\Exam;
 use App\Models\Question;
+use App\Models\Schoolclass;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\QuestionsImport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\IOFactory;
+use Illuminate\Support\Facades\Auth;
 
 class QuestionController extends Controller
 {
     public function __construct()
     {
         $this->middleware('permission:View question', ['only' => ['index', 'show', 'showDetails', 'edit']]);
-        $this->middleware('permission:Create question', ['only' => ['create', 'store']]);
-        $this->middleware('permission:Update question', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:Delete question', ['only' => ['destroy']]);
+        $this->middleware('permission:Create question', ['only' => ['create', 'store', 'import', 'duplicate']]);
+        $this->middleware('permission:Update question', ['only' => ['edit', 'update', 'bulkUpdate', 'reorder']]);
+        $this->middleware('permission:Delete question', ['only' => ['destroy', 'bulkDestroy']]);
     }
 
     /**
-     * Display a listing of the resource.
+     * Display a listing of ALL questions across all exams
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $user = Auth::user();
+
+        // Get all questions for this teacher across all exams
+        $query = Question::with(['exam.schoolclass.armRelation', 'exam.subject', 'options'])
+            ->whereHas('exam', function($q) use ($user) {
+                $q->where('staffId', $user->id);
+            })
+            ->orderBy('exam_id')
+            ->orderBy('order');
+
+        // Apply filters
+        if ($request->filled('exam_id')) {
+            $query->where('exam_id', $request->exam_id);
+        }
+
+        if ($request->filled('class_id')) {
+            $query->whereHas('exam', function($q) use ($request) {
+                $q->where('schoolclass_id', $request->class_id);
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('question_text', 'like', "%{$search}%")
+                  ->orWhereHas('options', function($q2) use ($search) {
+                      $q2->where('option_text', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $questions = $query->paginate(20);
+
+        // Get exams and classes for filters
+        $exams = Exam::where('staffId', $user->id)->get(['id', 'title']);
+        $classes = Schoolclass::all();
+
+        $pagetitle = 'All Questions Management';
+
+        return view('question.questionindex', compact('pagetitle', 'questions', 'exams', 'classes'));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Display questions for a specific exam.
      */
-    public function create()
+    public function show(string $id)
     {
-        //
+        // Ensure we get a single Exam instance with its questions and options
+        $exam = Exam::with([
+            'questions.options',
+            'schoolclass.armRelation'
+        ])->findOrFail($id);
+
+        $pagetitle = 'Questions Management for ' . $exam->title;
+        return view('question.index', compact('exam', 'pagetitle'));
     }
 
     /**
@@ -59,6 +116,8 @@ class QuestionController extends Controller
                     }
                 },
             ],
+            'marks' => 'nullable|numeric|min:0.1',
+            'is_reusable' => 'nullable|boolean',
         ];
 
         if ($request->type === 'mcq') {
@@ -77,6 +136,8 @@ class QuestionController extends Controller
             $imagePath = $request->file('image')->store('question_images', 'public');
         }
 
+        // Get next order number for this exam
+        $order = Question::where('exam_id', $validated['exam_id'])->max('order') + 1;
 
         // Create question with image path
         $question = Question::create([
@@ -84,6 +145,9 @@ class QuestionController extends Controller
             'question_text' => $validated['question_text'],
             'type' => $validated['type'],
             'image' => $imagePath,
+            'marks' => $validated['marks'] ?? 1,
+            'order' => $order,
+            'is_reusable' => $validated['is_reusable'] ?? false,
         ]);
 
         if ($validated['type'] === 'mcq') {
@@ -126,21 +190,6 @@ class QuestionController extends Controller
         return redirect()->route('questions.show', $request->exam_id)->with('success', 'Question added successfully');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        // Ensure we get a single Exam instance with its questions and options
-        $exam = Exam::with([
-            'questions.options',
-            'schoolclass.armRelation' // Eager load the arm relationship
-        ])->findOrFail($id);
-
-        $pagetitle = 'Questions Management';
-        return view('question.index', compact('exam', 'pagetitle'));
-    }
-
     public function showDetails(Question $question)
     {
         $question->load('exam.schoolclass.armRelation');
@@ -151,6 +200,8 @@ class QuestionController extends Controller
             'question_text' => $question->question_text,
             'type' => $question->type,
             'image' => $question->image,
+            'marks' => $question->marks,
+            'is_reusable' => $question->is_reusable,
             'options' => $question->options->map(function($option) {
                 return [
                     'option_text' => $option->option_text,
@@ -173,6 +224,8 @@ class QuestionController extends Controller
                 'question_text' => $question->question_text,
                 'type' => $question->type,
                 'image' => $question->image,
+                'marks' => $question->marks,
+                'is_reusable' => $question->is_reusable,
             ],
             'options' => $question->options->map(function($option) {
                 return [
@@ -202,7 +255,9 @@ class QuestionController extends Controller
                     }
                 },
             ],
-            'exam_id' => 'required|exists:exams,id'
+            'exam_id' => 'required|exists:exams,id',
+            'marks' => 'nullable|numeric|min:0.1',
+            'is_reusable' => 'nullable|boolean',
         ];
 
         if ($type === 'mcq') {
@@ -241,7 +296,9 @@ class QuestionController extends Controller
         // Update question (no type change)
         $question->update([
             'question_text' => $validated['question_text'],
-            'exam_id' => $validated['exam_id']
+            'exam_id' => $validated['exam_id'],
+            'marks' => $validated['marks'] ?? $question->marks,
+            'is_reusable' => $validated['is_reusable'] ?? $question->is_reusable,
         ]);
 
         // Handle image upload
@@ -299,5 +356,262 @@ class QuestionController extends Controller
         $question->options()->delete();
         $question->delete();
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * ============================================
+     * NEW FEATURES IMPLEMENTATION
+     * ============================================
+     */
+
+    /**
+     * Import questions from Excel/CSV
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'exam_id' => 'required|exists:exams,id',
+            'file' => 'required|mimes:csv,xlsx,xls'
+        ]);
+
+        try {
+            Excel::import(new QuestionsImport($request->exam_id), $request->file('file'));
+
+            return redirect()->back()->with('success', 'Questions imported successfully!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error importing questions: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export questions to PDF
+     */
+    public function exportPdf(Request $request)
+    {
+        $questions = $this->getFilteredQuestions($request);
+
+        $pdf = Pdf::loadView('questions.export.pdf', compact('questions'));
+        return $pdf->download('questions-' . date('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Export questions to Word
+     */
+    public function exportWord(Request $request)
+    {
+        $questions = $this->getFilteredQuestions($request);
+
+        $phpWord = new PhpWord();
+        $section = $phpWord->addSection();
+
+        foreach ($questions as $index => $question) {
+            $section->addText(($index + 1) . ". " . strip_tags($question->question_text));
+
+            if ($question->type === 'mcq') {
+                $options = ['A', 'B', 'C', 'D', 'E'];
+                foreach ($question->options as $i => $option) {
+                    if ($option->option_text) {
+                        $section->addText("   {$options[$i]}. {$option->option_text}");
+                    }
+                }
+            }
+
+            $section->addText(" ");
+        }
+
+        $fileName = 'questions-' . date('Y-m-d') . '.docx';
+        $tempFile = tempnam(sys_get_temp_dir(), $fileName);
+
+        $objWriter = IOFactory::createWriter($phpWord, 'Word2007');
+        $objWriter->save($tempFile);
+
+        return response()->download($tempFile, $fileName)->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Duplicate a question
+     */
+    public function duplicate(Request $request, Question $question)
+    {
+        try {
+            $newQuestion = $question->replicate();
+            $newQuestion->exam_id = $request->input('target_exam_id', $question->exam_id);
+            $newQuestion->order = Question::where('exam_id', $newQuestion->exam_id)->max('order') + 1;
+            $newQuestion->push();
+
+            // Duplicate options
+            foreach ($question->options as $option) {
+                $newOption = $option->replicate();
+                $newOption->question_id = $newQuestion->id;
+                $newOption->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Question duplicated successfully',
+                'question' => $newQuestion
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error duplicating question: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reorder questions via drag-drop
+     */
+    public function reorder(Request $request)
+    {
+        $request->validate([
+            'exam_id' => 'required|exists:exams,id',
+            'questions' => 'required|array',
+            'questions.*.id' => 'required|exists:questions,id',
+            'questions.*.order' => 'required|integer'
+        ]);
+
+        try {
+            foreach ($request->questions as $item) {
+                Question::where('id', $item['id'])
+                    ->where('exam_id', $request->exam_id)
+                    ->update(['order' => $item['order']]);
+            }
+
+            return response()->json(['success' => true, 'message' => 'Questions reordered successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error reordering questions'], 500);
+        }
+    }
+
+    /**
+     * Bulk operations (delete, change type, etc.)
+     */
+    public function bulkUpdate(Request $request)
+    {
+        $request->validate([
+            'question_ids' => 'required|array',
+            'question_ids.*' => 'exists:questions,id',
+            'action' => 'required|in:delete,change_exam,mark_reusable',
+            'data' => 'nullable|array'
+        ]);
+
+        $ids = $request->question_ids;
+
+        switch ($request->action) {
+            case 'delete':
+                Question::whereIn('id', $ids)->delete();
+                $message = 'Questions deleted successfully';
+                break;
+
+            case 'mark_reusable':
+                Question::whereIn('id', $ids)->update(['is_reusable' => true]);
+                $message = 'Questions marked as reusable';
+                break;
+
+            case 'change_exam':
+                $request->validate(['data.exam_id' => 'required|exists:exams,id']);
+
+                // Get the target exam
+                $targetExamId = $request->data['exam_id'];
+
+                foreach ($ids as $questionId) {
+                    $question = Question::find($questionId);
+
+                    // Get next order number for target exam
+                    $newOrder = Question::where('exam_id', $targetExamId)->max('order') + 1;
+
+                    // Update question
+                    $question->update([
+                        'exam_id' => $targetExamId,
+                        'order' => $newOrder
+                    ]);
+                }
+
+                $message = 'Questions moved to new exam';
+                break;
+
+            default:
+                return response()->json(['success' => false, 'message' => 'Invalid action'], 400);
+        }
+
+        return response()->json(['success' => true, 'message' => $message]);
+    }
+
+    /**
+     * Bulk destroy questions
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:questions,id'
+        ]);
+
+        $count = Question::whereIn('id', $request->ids)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$count} question(s) deleted successfully"
+        ]);
+    }
+
+    /**
+     * Get reusable questions for selection
+     */
+    public function getReusableQuestions(Request $request)
+    {
+        $user = Auth::user();
+
+        $questions = Question::with(['exam.schoolclass', 'options'])
+            ->whereHas('exam', function($q) use ($user) {
+                $q->where('staffId', $user->id);
+            })
+            ->where('is_reusable', true)
+            ->get()
+            ->map(function($question) {
+                return [
+                    'id' => $question->id,
+                    'text' => strip_tags($question->question_text),
+                    'exam_title' => $question->exam->title,
+                    'class' => $question->exam->schoolclass ?
+                        $question->exam->schoolclass->schoolclass .
+                        ($question->exam->schoolclass->armRelation ? ' (' . $question->exam->schoolclass->armRelation->arm . ')' : '') :
+                        'No Class',
+                    'type' => $question->type,
+                    'marks' => $question->marks,
+                    'options_count' => $question->options->count()
+                ];
+            });
+
+        return response()->json(['questions' => $questions]);
+    }
+
+    /**
+     * Helper method to get filtered questions
+     */
+    private function getFilteredQuestions(Request $request)
+    {
+        $user = Auth::user();
+
+        $query = Question::query()
+            ->with(['exam.schoolclass.armRelation', 'options'])
+            ->whereHas('exam', function($q) use ($user) {
+                $q->where('staffId', $user->id);
+            })
+            ->orderBy('exam_id')
+            ->orderBy('order');
+
+        if ($request->filled('exam_id')) {
+            $query->where('exam_id', $request->exam_id);
+        }
+
+        if ($request->filled('class_id')) {
+            $query->whereHas('exam', function($q) use ($request) {
+                $q->where('schoolclass_id', $request->class_id);
+            });
+        }
+
+        return $query->get();
     }
 }
