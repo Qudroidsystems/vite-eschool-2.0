@@ -75,6 +75,7 @@
                                                 <th class="min-w-125px">Start Time</th>
                                                 <th class="min-w-125px">End Time</th>
                                                 <th class="min-w-125px">Questions</th>
+                                                <th class="min-w-150px">Assigned Classes</th>
                                                 <th class="min-w-100px">View Students</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
@@ -82,7 +83,23 @@
                                         <tbody class="fw-semibold text-gray-600 list form-check-all">
                                             @php $i = ($exams->currentPage() - 1) * $exams->perPage() @endphp
                                             @forelse ($exams as $exam)
-                                                @if($exam->id)
+                                                @php
+                                                    // Get all classes for this exam group
+                                                    $allExams = App\Models\Exam::where('staffId', auth()->user()->id)
+                                                        ->where('title', $exam->title)
+                                                        ->where('subject_id', $exam->subject_id)
+                                                        ->where('termid', $exam->termid)
+                                                        ->where('session', $exam->session)
+                                                        ->with(['schoolclass' => function($query) {
+                                                            $query->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
+                                                                  ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm');
+                                                        }])
+                                                        ->get();
+
+                                                    $classes = $allExams->pluck('schoolclass')->unique('id');
+                                                    $totalExamsInGroup = $allExams->count();
+                                                @endphp
+
                                                 <tr>
                                                     <td class="id" data-id="{{ $exam->id }}">
                                                         <div class="form-check form-check-sm form-check-custom form-check-solid">
@@ -93,10 +110,46 @@
                                                     <td class="title">{{ $exam->title }}</td>
                                                     <td class="description">{{ Str::limit($exam->description ?? '', 50) }}</td>
                                                     <td class="duration">{{ $exam->duration }} mins</td>
-                                                    <td class="start_time">{{ $exam->start_time->format('M d, Y h:i A') }}</td>
-                                                    <td class="end_time">{{ $exam->end_time->format('M d, Y h:i A') }}</td>
+                                                    <td class="start_time">{{ \Carbon\Carbon::parse($exam->start_time)->format('M d, Y h:i A') }}</td>
+                                                    <td class="end_time">{{ \Carbon\Carbon::parse($exam->end_time)->format('M d, Y h:i A') }}</td>
                                                     <td class="questions">
                                                         <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
+                                                    </td>
+                                                    <td class="classes">
+                                                        @if($classes->count() > 0)
+                                                            @php
+                                                                $displayLimit = 2; // Show only 2 classes initially
+                                                            @endphp
+
+                                                            <div class="class-list">
+                                                                @foreach($classes->take($displayLimit) as $class)
+                                                                    <span class="badge bg-primary-subtle text-primary mb-1 me-1">
+                                                                        {{ $class->schoolclass }}{{ $class->arm ? ' (' . $class->arm . ')' : '' }}
+                                                                    </span>
+                                                                @endforeach
+
+                                                                @if($classes->count() > $displayLimit)
+                                                                    @php
+                                                                        $remainingClasses = $classes->skip($displayLimit);
+                                                                        $popoverContent = '';
+                                                                        foreach($remainingClasses as $class) {
+                                                                            $popoverContent .= '<div class="mb-1">' . $class->schoolclass . ($class->arm ? ' (' . $class->arm . ')' : '') . '</div>';
+                                                                        }
+                                                                    @endphp
+
+                                                                    <a href="javascript:void(0);"
+                                                                       class="text-muted fs-7 view-all-classes"
+                                                                       data-bs-toggle="popover"
+                                                                       data-bs-html="true"
+                                                                       data-bs-content="{{ $popoverContent }}"
+                                                                       data-bs-title="All Classes ({{ $classes->count() }})">
+                                                                        +{{ $classes->count() - $displayLimit }} more
+                                                                    </a>
+                                                                @endif
+                                                            </div>
+                                                        @else
+                                                            <span class="text-muted">No class assigned</span>
+                                                        @endif
                                                     </td>
                                                     <td>
                                                         <a href="{{ route('exams.students', $exam->id) }}" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
@@ -116,10 +169,9 @@
                                                         </ul>
                                                     </td>
                                                 </tr>
-                                                @endif
                                             @empty
                                                 <tr>
-                                                    <td colspan="10" class="noresult text-center py-4">No exams found</td>
+                                                    <td colspan="11" class="noresult text-center py-4">No exams found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -144,11 +196,13 @@
                                             @endif
 
                                             <ul class="pagination listjs-pagination mb-0">
-                                                @foreach ($exams->links()->elements[0] as $page => $url)
-                                                    <li class="page-item {{ $exams->currentPage() == $page ? 'active' : '' }}">
-                                                        <a class="page-link" href="{{ $url }}">{{ $page }}</a>
-                                                    </li>
-                                                @endforeach
+                                                @if(isset($exams->links()->elements[0]))
+                                                    @foreach ($exams->links()->elements[0] as $page => $url)
+                                                        <li class="page-item {{ $exams->currentPage() == $page ? 'active' : '' }}">
+                                                            <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                                        </li>
+                                                    @endforeach
+                                                @endif
                                             </ul>
 
                                             @if($exams->hasMorePages())
@@ -377,6 +431,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize modal filtering
     initModalFiltering();
 
+    // Initialize popovers
+    initPopovers();
+
     // Edit button click handler
     document.addEventListener('click', function(e) {
         if (e.target.closest('.edit-exam-btn')) {
@@ -441,6 +498,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function initPopovers() {
+    const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+    const popoverList = [...popoverTriggerList].map(popoverTriggerEl => {
+        return new bootstrap.Popover(popoverTriggerEl, {
+            html: true,
+            trigger: 'hover focus',
+            placement: 'top'
+        });
+    });
+
+    // Close popovers when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.view-all-classes') && !e.target.closest('.popover')) {
+            popoverList.forEach(popover => {
+                popover.hide();
+            });
+        }
+    });
+}
 
 function initModalFiltering() {
     // Add modal filtering
@@ -1124,6 +1201,44 @@ option[style*="display: none"] {
 
 @keyframes spinner-border {
     to { transform: rotate(360deg); }
+}
+
+/* Styles for class badges */
+.class-list .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    display: inline-block;
+    margin-bottom: 0.25rem;
+}
+
+.view-all-classes {
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+.view-all-classes:hover {
+    text-decoration: underline;
+}
+
+.popover {
+    max-width: 300px;
+}
+
+.popover-body {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.popover-body div {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.popover-body div:last-child {
+    border-bottom: none;
 }
 </style>
 
