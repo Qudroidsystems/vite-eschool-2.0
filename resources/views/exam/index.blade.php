@@ -74,7 +74,6 @@
                                                 <th class="min-w-125px">Duration</th>
                                                 <th class="min-w-125px">Start Time</th>
                                                 <th class="min-w-125px">End Time</th>
-                                                <th class="min-w-125px">Class</th>
                                                 <th class="min-w-125px">Questions</th>
                                                 <th class="min-w-100px">View Students</th>
                                                 <th class="min-w-100px">Actions</th>
@@ -96,12 +95,6 @@
                                                     <td class="duration">{{ $exam->duration }} mins</td>
                                                     <td class="start_time">{{ $exam->start_time->format('M d, Y h:i A') }}</td>
                                                     <td class="end_time">{{ $exam->end_time->format('M d, Y h:i A') }}</td>
-                                                    <td class="class">
-                                                        {{ $exam->schoolclass->schoolclass ?? 'N/A' }}
-                                                        @if(isset($exam->schoolclass->arm))
-                                                            ({{ $exam->schoolclass->arm }})
-                                                        @endif
-                                                    </td>
                                                     <td class="questions">
                                                         <a href="{{ route('questions.index', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
                                                     </td>
@@ -126,7 +119,7 @@
                                                 @endif
                                             @empty
                                                 <tr>
-                                                    <td colspan="11" class="noresult text-center py-4">No exams found</td>
+                                                    <td colspan="10" class="noresult text-center py-4">No exams found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -343,11 +336,10 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label required">Assigned Class</label>
-                                    <div id="editClassContainer" class="border rounded p-3 bg-light">
-                                        <p class="text-muted text-center mb-0">Loading class information...</p>
+                                    <label class="form-label required">Select Classes</label>
+                                    <div id="editClassContainer" class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                        <p class="text-muted text-center mb-0">Loading classes...</p>
                                     </div>
-                                    <input type="hidden" id="edit-schoolclass_id" name="schoolclass_id">
                                 </div>
 
                                 <div class="mb-3">
@@ -376,15 +368,12 @@
 <!-- Include SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
-
 <script>
-// Define csrfToken in global scope
-const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-console.log('CSRF Token:', csrfToken);
-
 document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    console.log('CSRF Token:', csrfToken);
+
     // Initialize modal filtering
     initModalFiltering();
 
@@ -533,27 +522,25 @@ function loadClassesForSubject(subjectTeacherId, mode = 'add') {
     .then(data => {
         console.log('Classes response for', mode, 'mode:', data);
         if (data.success && data.classes && data.classes.length > 0) {
-            if (mode === 'add') {
-                // For add modal: show checkboxes
-                let html = '<div class="row">';
-                data.classes.forEach(cls => {
-                    html += `
-                        <div class="col-md-6 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox"
-                                       name="schoolclass_ids[]"
-                                       value="${cls.id}"
-                                       id="class_add_${cls.id}">
-                                <label class="form-check-label" for="class_add_${cls.id}">
-                                    ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
-                                </label>
-                            </div>
-                        </div>`;
-                });
-                html += '</div>';
-                container.innerHTML = html;
-            }
-            // For edit modal, we handle it differently
+            let html = '<div class="row">';
+
+            data.classes.forEach(cls => {
+                html += `
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input class-checkbox" type="checkbox"
+                                   name="schoolclass_ids[]"
+                                   value="${cls.id}"
+                                   id="class_${mode}_${cls.id}">
+                            <label class="form-check-label" for="class_${mode}_${cls.id}">
+                                ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
+                            </label>
+                        </div>
+                    </div>`;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
         } else {
             container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
         }
@@ -578,7 +565,7 @@ function loadExamForEdit(examId) {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json',
-            'X-CSRF-TOKEN': csrfToken // Use the globally defined csrfToken
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         }
     })
     .then(response => {
@@ -589,15 +576,13 @@ function loadExamForEdit(examId) {
         return response.json();
     })
     .then(data => {
-        console.log('RAW Edit response data:', JSON.stringify(data, null, 2));
-
+        console.log('Edit response data for exam:', examId, data);
         if (data.success && data.exam) {
             populateEditForm(data);
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
             Swal.close();
         } else {
-            console.error('Invalid response format:', data);
             throw new Error(data.message || 'Invalid response format');
         }
     })
@@ -613,21 +598,8 @@ function loadExamForEdit(examId) {
 }
 
 function populateEditForm(data) {
-    console.log('Populating edit form with data:', data);
-
-    // Check if we have all required data
-    if (!data.exam) {
-        console.error('Missing exam data in response:', data);
-        Swal.fire({
-            icon: 'error',
-            title: 'Data Error',
-            text: 'Failed to load exam data properly.',
-            timer: 3000
-        });
-        return;
-    }
-
     const exam = data.exam;
+    console.log('Populating edit form with data:', data);
 
     // Basic fields
     document.getElementById('edit-id-field').value = exam.id;
@@ -657,38 +629,102 @@ function populateEditForm(data) {
     }
 
     // Select fields
-    document.getElementById('edit-termid').value = exam.termid || '';
-    document.getElementById('edit-session').value = exam.session || '';
+    document.getElementById('edit-termid').value = data.termid || '';
+    document.getElementById('edit-session').value = data.sessionid || '';
     document.getElementById('edit-publishStatus').checked = exam.is_published == 1;
 
     // Subject selection
     const subjectSelect = document.getElementById('edit-subject_id');
-    subjectSelect.value = exam.subject_id || '';
+    subjectSelect.value = data.subject_id || '';
 
     // Apply filtering based on selected term and session
-    filterSubjects(exam.termid, exam.session, subjectSelect);
+    filterSubjects(data.termid, data.sessionid, subjectSelect);
 
-    // Display class information directly from the data
+    // Load classes for this subject with pre-selected classes
+    setTimeout(() => {
+        if (data.subject_id) {
+            console.log('Loading classes for subject:', data.subject_id, 'with selected IDs:', data.schoolclass_ids);
+            loadClassesForEditWithSelection(data.subject_id, data.schoolclass_ids || []);
+        } else {
+            console.error('No subject_id provided in edit data');
+            document.getElementById('editClassContainer').innerHTML =
+                '<p class="text-danger text-center mb-0">Error: No subject selected</p>';
+        }
+    }, 200);
+}
+
+function loadClassesForEditWithSelection(subjectTeacherId, selectedClassIds = []) {
+    console.log('Loading classes for edit - Subject ID:', subjectTeacherId, 'Selected Class IDs:', selectedClassIds);
+
     const container = document.getElementById('editClassContainer');
-    const className = data.schoolclass_name || (exam.schoolclass ? exam.schoolclass.schoolclass : 'Class not found');
-    const classArm = data.schoolclass_arm || (exam.schoolclass ? exam.schoolclass.arm : null);
-    const classId = data.schoolclass_id || exam.schoolclass_id;
 
-    const html = `
-        <div class="alert alert-info mb-0">
-            <div class="d-flex align-items-center">
-                <i class="ri-information-line me-2"></i>
-                <div>
-                    <strong>${className} ${classArm ? '(' + classArm + ')' : ''}</strong>
-                    <p class="mb-0 mt-1">This exam is assigned to this class. You cannot change the class.</p>
-                </div>
-            </div>
-        </div>
-        <input type="hidden" name="schoolclass_id" value="${classId}" id="edit-schoolclass_id">`;
+    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
 
-    container.innerHTML = html;
+    fetch(`/exams/subject-classes/${subjectTeacherId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        console.log('Edit classes response:', data);
+        if (data.success && data.classes && data.classes.length > 0) {
+            let html = '<div class="row">';
 
-    console.log('Class displayed:', { className, classArm, classId });
+            data.classes.forEach(cls => {
+                // Check if this class ID is in the selectedClassIds array
+                const classId = parseInt(cls.id);
+                const isChecked = selectedClassIds.some(id => parseInt(id) === classId);
+
+                console.log(`Class ${cls.id} (${cls.schoolclass}) - Should be checked: ${isChecked}`);
+
+                html += `
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input class-checkbox"
+                                   type="checkbox"
+                                   name="schoolclass_ids[]"
+                                   value="${cls.id}"
+                                   id="class_edit_${cls.id}"
+                                   ${isChecked ? 'checked' : ''}>
+                            <label class="form-check-label" for="class_edit_${cls.id}">
+                                ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
+                            </label>
+                        </div>
+                    </div>`;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Verify checkboxes are checked
+            setTimeout(() => {
+                const checkboxes = container.querySelectorAll('.class-checkbox');
+                console.log(`Total checkboxes: ${checkboxes.length}`);
+                const checkedBoxes = container.querySelectorAll('.class-checkbox:checked');
+                console.log(`Checked boxes: ${checkedBoxes.length}`);
+
+                // Double-check each checkbox
+                selectedClassIds.forEach(classId => {
+                    const checkbox = document.getElementById(`class_edit_${classId}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        console.log(`Manually checked checkbox for class ${classId}`);
+                    }
+                });
+            }, 100);
+        } else {
+            container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading classes:', error);
+        container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
+    });
 }
 
 function formatDateForInput(date) {
@@ -741,7 +777,7 @@ function submitAddForm() {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': csrfToken
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         }
     })
     .then(response => {
@@ -815,6 +851,18 @@ function submitEditForm() {
         return;
     }
 
+    // Validate class selection
+    const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
+    if (classCheckboxes.length === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select at least one class.',
+            timer: 3000
+        });
+        return;
+    }
+
     const formData = new FormData(form);
     formData.append('_method', 'PUT'); // Add method override for PUT
 
@@ -831,7 +879,7 @@ function submitEditForm() {
         method: 'POST', // Use POST with _method override
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': csrfToken,
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
@@ -910,7 +958,7 @@ function deleteExam(examId) {
             fetch(`/exams/${examId}`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -994,7 +1042,7 @@ function deleteMultiple() {
             fetch(`/exams/bulk-destroy`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
