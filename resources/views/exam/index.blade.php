@@ -74,6 +74,7 @@
                                                 <th class="min-w-125px">Duration</th>
                                                 <th class="min-w-125px">Start Time</th>
                                                 <th class="min-w-125px">End Time</th>
+                                                <th class="min-w-125px">Class</th>
                                                 <th class="min-w-125px">Questions</th>
                                                 <th class="min-w-100px">View Students</th>
                                                 <th class="min-w-100px">Actions</th>
@@ -95,6 +96,12 @@
                                                     <td class="duration">{{ $exam->duration }} mins</td>
                                                     <td class="start_time">{{ $exam->start_time->format('M d, Y h:i A') }}</td>
                                                     <td class="end_time">{{ $exam->end_time->format('M d, Y h:i A') }}</td>
+                                                    <td class="class">
+                                                        {{ $exam->schoolclass->schoolclass ?? 'N/A' }}
+                                                        @if(isset($exam->schoolclass->arm))
+                                                            ({{ $exam->schoolclass->arm }})
+                                                        @endif
+                                                    </td>
                                                     <td class="questions">
                                                         <a href="{{ route('questions.index', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
                                                     </td>
@@ -119,7 +126,7 @@
                                                 @endif
                                             @empty
                                                 <tr>
-                                                    <td colspan="10" class="noresult text-center py-4">No exams found</td>
+                                                    <td colspan="11" class="noresult text-center py-4">No exams found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -336,10 +343,11 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label required">Select Classes</label>
-                                    <div id="editClassContainer" class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
-                                        <p class="text-muted text-center mb-0">Loading classes...</p>
+                                    <label class="form-label required">Assigned Class</label>
+                                    <div id="editClassContainer" class="border rounded p-3 bg-light">
+                                        <p class="text-muted text-center mb-0">Loading class...</p>
                                     </div>
+                                    <input type="hidden" id="edit-schoolclass_id" name="schoolclass_id">
                                 </div>
 
                                 <div class="mb-3">
@@ -522,25 +530,29 @@ function loadClassesForSubject(subjectTeacherId, mode = 'add') {
     .then(data => {
         console.log('Classes response for', mode, 'mode:', data);
         if (data.success && data.classes && data.classes.length > 0) {
-            let html = '<div class="row">';
-
-            data.classes.forEach(cls => {
-                html += `
-                    <div class="col-md-6 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input class-checkbox" type="checkbox"
-                                   name="schoolclass_ids[]"
-                                   value="${cls.id}"
-                                   id="class_${mode}_${cls.id}">
-                            <label class="form-check-label" for="class_${mode}_${cls.id}">
-                                ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
-                            </label>
-                        </div>
-                    </div>`;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
+            if (mode === 'add') {
+                // For add modal: show checkboxes
+                let html = '<div class="row">';
+                data.classes.forEach(cls => {
+                    html += `
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="schoolclass_ids[]"
+                                       value="${cls.id}"
+                                       id="class_add_${cls.id}">
+                                <label class="form-check-label" for="class_add_${cls.id}">
+                                    ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
+                                </label>
+                            </div>
+                        </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                // For edit modal: we handle it separately in loadClassForEdit
+                // This function won't be used for edit modal
+            }
         } else {
             container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
         }
@@ -640,25 +652,25 @@ function populateEditForm(data) {
     // Apply filtering based on selected term and session
     filterSubjects(data.termid, data.sessionid, subjectSelect);
 
-    // Load classes for this subject with pre-selected classes
+    // Load the specific class for this exam
     setTimeout(() => {
-        if (data.subject_id) {
-            console.log('Loading classes for subject:', data.subject_id, 'with selected IDs:', data.schoolclass_ids);
-            loadClassesForEditWithSelection(data.subject_id, data.schoolclass_ids || []);
+        if (data.subject_id && data.schoolclass_id) {
+            console.log('Loading class for subject:', data.subject_id, 'with class ID:', data.schoolclass_id);
+            loadClassForEdit(data.subject_id, data.schoolclass_id);
         } else {
-            console.error('No subject_id provided in edit data');
+            console.error('Missing data for loading class');
             document.getElementById('editClassContainer').innerHTML =
-                '<p class="text-danger text-center mb-0">Error: No subject selected</p>';
+                '<p class="text-danger text-center mb-0">Error: Missing subject or class data</p>';
         }
     }, 200);
 }
 
-function loadClassesForEditWithSelection(subjectTeacherId, selectedClassIds = []) {
-    console.log('Loading classes for edit - Subject ID:', subjectTeacherId, 'Selected Class IDs:', selectedClassIds);
+function loadClassForEdit(subjectTeacherId, selectedClassId) {
+    console.log('Loading class for edit - Subject ID:', subjectTeacherId, 'Selected Class ID:', selectedClassId);
 
     const container = document.getElementById('editClassContainer');
 
-    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
+    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading class...</p>';
 
     fetch(`/exams/subject-classes/${subjectTeacherId}`, {
         headers: {
@@ -671,59 +683,34 @@ function loadClassesForEditWithSelection(subjectTeacherId, selectedClassIds = []
         return response.json();
     })
     .then(data => {
-        console.log('Edit classes response:', data);
+        console.log('Class response:', data);
         if (data.success && data.classes && data.classes.length > 0) {
-            let html = '<div class="row">';
+            // Find the selected class
+            const selectedClass = data.classes.find(cls => parseInt(cls.id) === parseInt(selectedClassId));
 
-            data.classes.forEach(cls => {
-                // Check if this class ID is in the selectedClassIds array
-                const classId = parseInt(cls.id);
-                const isChecked = selectedClassIds.some(id => parseInt(id) === classId);
-
-                console.log(`Class ${cls.id} (${cls.schoolclass}) - Should be checked: ${isChecked}`);
-
-                html += `
-                    <div class="col-md-6 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input class-checkbox"
-                                   type="checkbox"
-                                   name="schoolclass_ids[]"
-                                   value="${cls.id}"
-                                   id="class_edit_${cls.id}"
-                                   ${isChecked ? 'checked' : ''}>
-                            <label class="form-check-label" for="class_edit_${cls.id}">
-                                ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
-                            </label>
+            if (selectedClass) {
+                const html = `
+                    <div class="alert alert-info mb-0">
+                        <div class="d-flex align-items-center">
+                            <i class="ri-information-line me-2"></i>
+                            <div>
+                                <strong>${selectedClass.schoolclass} ${selectedClass.arm ? '(' + selectedClass.arm + ')' : ''}</strong>
+                                <p class="mb-0 mt-1">This exam is assigned to this class. You cannot change the class.</p>
+                            </div>
                         </div>
-                    </div>`;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-
-            // Verify checkboxes are checked
-            setTimeout(() => {
-                const checkboxes = container.querySelectorAll('.class-checkbox');
-                console.log(`Total checkboxes: ${checkboxes.length}`);
-                const checkedBoxes = container.querySelectorAll('.class-checkbox:checked');
-                console.log(`Checked boxes: ${checkedBoxes.length}`);
-
-                // Double-check each checkbox
-                selectedClassIds.forEach(classId => {
-                    const checkbox = document.getElementById(`class_edit_${classId}`);
-                    if (checkbox) {
-                        checkbox.checked = true;
-                        console.log(`Manually checked checkbox for class ${classId}`);
-                    }
-                });
-            }, 100);
+                    </div>
+                    <input type="hidden" name="schoolclass_id" value="${selectedClass.id}" id="edit-schoolclass_id">`;
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p class="text-danger text-center mb-0">Class not found for this subject.</p>';
+            }
         } else {
             container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
         }
     })
     .catch(error => {
-        console.error('Error loading classes:', error);
-        container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
+        console.error('Error loading class:', error);
+        container.innerHTML = '<p class="text-danger text-center mb-0">Error loading class. Please try again.</p>';
     });
 }
 
@@ -846,18 +833,6 @@ function submitEditForm() {
             icon: 'error',
             title: 'Error',
             text: 'Invalid exam ID.',
-            timer: 3000
-        });
-        return;
-    }
-
-    // Validate class selection
-    const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
-    if (classCheckboxes.length === 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Please select at least one class.',
             timer: 3000
         });
         return;
