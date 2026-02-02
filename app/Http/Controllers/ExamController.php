@@ -28,111 +28,126 @@ class ExamController extends Controller
         $this->middleware('permission:Delete exam', ['only' => ['destroy', 'bulkDestroy', 'deleteStudentAttempt']]);
     }
 
-    public function index(Request $request)
-    {
-        $user = auth()->user();
+  public function index(Request $request)
+{
+    $user = auth()->user();
 
-        // Get unique exam groups (grouped by title, subject_id, termid, session)
-        $query = Exam::where('staffId', $user->id)
-            ->select(
-                DB::raw('MIN(id) as id'),
-                'title',
-                'description',
-                'duration',
-                'start_time',
-                'end_time',
-                'is_published',
-                'termid',
-                'session',
-                'subject_id',
-                'staffId',
-                DB::raw('COUNT(DISTINCT schoolclass_id) as class_count')
-            )
-            ->groupBy('title', 'subject_id', 'termid', 'session', 'description', 'duration', 'start_time', 'end_time', 'is_published', 'staffId');
+    $query = Exam::query()->with(['schoolclass', 'subject']);
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
+    $query->where('staffId', $user->id);
 
-        // Get grouped exams with pagination
-        $groupedExams = $query->orderBy('start_time', 'desc')->paginate(15);
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('title', 'like', "%{$search}%")
+              ->orWhere('description', 'like', "%{$search}%");
+        });
+    }
 
-        // For each grouped exam, load all classes
-        foreach ($groupedExams as $exam) {
-            $classes = Schoolclass::whereIn('id', function($query) use ($exam, $user) {
-                $query->select('schoolclass_id')
-                    ->from('exams')
-                    ->where('staffId', $user->id)
-                    ->where('title', $exam->title)
-                    ->where('subject_id', $exam->subject_id)
-                    ->where('termid', $exam->termid)
-                    ->where('session', $exam->session);
-            })
+    // Get all exams and group them by their common attributes
+    $exams = $query->orderBy('id', 'desc')->get();
+
+    // Group exams by title, subject_id, termid, session to show as single records
+    $groupedExams = collect();
+
+    foreach ($exams->groupBy(['title', 'subject_id', 'termid', 'session']) as $group) {
+        $firstExam = $group->first();
+
+        // Get all classes for this exam group
+        $classIds = $group->pluck('schoolclass_id')->toArray();
+        $classes = Schoolclass::whereIn('id', $classIds)
             ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
-            ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm')
+            ->select('schoolclass.schoolclass', 'schoolarm.arm', 'schoolclass.id')
             ->get();
 
-            $exam->classes = $classes;
-            $exam->class_names = $classes->map(function($class) {
-                return $class->schoolclass . ($class->arm ? ' (' . $class->arm . ')' : '');
-            })->implode(', ');
-        }
+        // Format class names
+        $classNames = $classes->map(function($class) {
+            return $class->schoolclass . ($class->arm ? ' (' . $class->arm . ')' : '');
+        })->implode(', ');
 
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'data'         => $groupedExams->items(),
-                'current_page' => $groupedExams->currentPage(),
-                'last_page'    => $groupedExams->lastPage(),
-                'per_page'     => $groupedExams->perPage(),
-                'total'        => $groupedExams->total(),
-                'from'         => $groupedExams->firstItem(),
-                'to'           => $groupedExams->lastItem(),
-            ]);
-        }
+        // Create a modified exam object with class information
+        $groupedExam = (object)[
+            'id' => $firstExam->id,
+            'title' => $firstExam->title,
+            'description' => $firstExam->description,
+            'duration' => $firstExam->duration,
+            'start_time' => $firstExam->start_time,
+            'end_time' => $firstExam->end_time,
+            'is_published' => $firstExam->is_published,
+            'classes' => $classes,
+            'class_names' => $classNames,
+            'total_exams' => $group->count(), // Number of individual exam records
+            'subject' => $firstExam->subject,
+            'termid' => $firstExam->termid,
+            'session' => $firstExam->session,
+            'subject_id' => $firstExam->subject_id
+        ];
 
-        $terms = Schoolterm::all();
-        $sessions = Schoolsession::all();
-
-        // Get all subjects for the teacher
-        $mysubjects = SubjectTeacher::where('staffid', $user->id)
-            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-            ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
-            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
-            ->select([
-                'subjectteacher.id as id',
-                'subject.subject as subject',
-                'subject.subject_code as subjectcode',
-                'schoolclass.schoolclass as schoolclass',
-                'schoolclass.id as class_id',
-                'schoolarm.arm as arm',
-                'subjectteacher.termid as termid',
-                'subjectteacher.sessionid as sessionid',
-                'schoolterm.term as term',
-                'schoolsession.session as session'
-            ])
-            ->get()
-            ->unique('id')
-            ->sortBy('subject')
-            ->values();
-
-        $myclass = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->select(
-                'schoolclass.id as schoolclassID',
-                'schoolclass.schoolclass',
-                'schoolarm.arm as arm_name'
-            )->get();
-
-        $pagetitle = 'Exams Management';
-
-        return view('exam.index', compact('pagetitle', 'groupedExams', 'terms', 'sessions', 'mysubjects', 'myclass'));
+        $groupedExams->push($groupedExam);
     }
+
+    // Paginate the grouped exams
+    $page = $request->get('page', 1);
+    $perPage = 15;
+    $paginatedExams = new \Illuminate\Pagination\LengthAwarePaginator(
+        $groupedExams->forPage($page, $perPage),
+        $groupedExams->count(),
+        $perPage,
+        $page,
+        ['path' => $request->url(), 'query' => $request->query()]
+    );
+
+    if ($request->ajax() || $request->wantsJson()) {
+        return response()->json([
+            'data'         => $paginatedExams->items(),
+            'current_page' => $paginatedExams->currentPage(),
+            'last_page'    => $paginatedExams->lastPage(),
+            'per_page'     => $paginatedExams->perPage(),
+            'total'        => $paginatedExams->total(),
+            'from'         => $paginatedExams->firstItem(),
+            'to'           => $paginatedExams->lastItem(),
+        ]);
+    }
+
+    $terms = Schoolterm::all();
+    $sessions = Schoolsession::all();
+
+    // Get all subjects for the teacher
+    $mysubjects = SubjectTeacher::where('staffid', $user->id)
+        ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+        ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
+        ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
+        ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+        ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+        ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+        ->select([
+            'subjectteacher.id as id',
+            'subject.subject as subject',
+            'subject.subject_code as subjectcode',
+            'schoolclass.schoolclass as schoolclass',
+            'schoolclass.id as class_id',
+            'schoolarm.arm as arm',
+            'subjectteacher.termid as termid',
+            'subjectteacher.sessionid as sessionid',
+            'schoolterm.term as term',
+            'schoolsession.session as session'
+        ])
+        ->get()
+        ->unique('id')
+        ->sortBy('subject')
+        ->values();
+
+    $myclass = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+        ->select(
+            'schoolclass.id as schoolclassID',
+            'schoolclass.schoolclass',
+            'schoolarm.arm as arm_name'
+        )->get();
+
+    $pagetitle = 'Exams Management';
+
+    return view('exam.index', compact('pagetitle', 'paginatedExams', 'terms', 'sessions', 'mysubjects', 'myclass'));
+}
 
     public function create()
     {
@@ -286,33 +301,13 @@ class ExamController extends Controller
     public function destroy(string $id)
     {
         $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
-
-        // Get all exams in the same group
-        $groupExams = Exam::where('staffId', $exam->staffId)
-            ->where('title', $exam->title)
-            ->where('subject_id', $exam->subject_id)
-            ->where('termid', $exam->termid)
-            ->where('session', $exam->session)
-            ->get();
-
-        $deletedCount = $groupExams->count();
-
-        // Delete all exams in the group
-        Exam::where('staffId', $exam->staffId)
-            ->where('title', $exam->title)
-            ->where('subject_id', $exam->subject_id)
-            ->where('termid', $exam->termid)
-            ->where('session', $exam->session)
-            ->delete();
+        $exam->delete();
 
         if (request()->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => "{$deletedCount} exam(s) deleted successfully."
-            ]);
+            return response()->json(['success' => true, 'message' => 'Exam deleted successfully.']);
         }
 
-        return redirect()->route('exams.index')->with('success', "{$deletedCount} exam(s) deleted successfully.");
+        return redirect()->route('exams.index')->with('success', 'Exam deleted successfully');
     }
 
     public function bulkDestroy(Request $request)
@@ -322,37 +317,13 @@ class ExamController extends Controller
             return response()->json(['success' => false, 'message' => 'No exams selected'], 400);
         }
 
-        // Get unique exam groups to delete
-        $examsToDelete = Exam::whereIn('id', $ids)
+        $count = Exam::whereIn('id', $ids)
             ->where('staffId', auth()->user()->id)
-            ->get();
-
-        $deletedCount = 0;
-        $processedGroups = [];
-
-        foreach ($examsToDelete as $exam) {
-            $groupKey = $exam->staffId . '_' . $exam->title . '_' . $exam->subject_id . '_' . $exam->termid . '_' . $exam->session;
-
-            // Skip if group already processed
-            if (in_array($groupKey, $processedGroups)) {
-                continue;
-            }
-
-            // Delete entire group
-            $groupCount = Exam::where('staffId', $exam->staffId)
-                ->where('title', $exam->title)
-                ->where('subject_id', $exam->subject_id)
-                ->where('termid', $exam->termid)
-                ->where('session', $exam->session)
-                ->delete();
-
-            $deletedCount += $groupCount;
-            $processedGroups[] = $groupKey;
-        }
+            ->delete();
 
         return response()->json([
             'success' => true,
-            'message' => "{$deletedCount} exam(s) deleted successfully."
+            'message' => "{$count} exam(s) deleted successfully."
         ]);
     }
 
@@ -616,7 +587,7 @@ class ExamController extends Controller
             $defaultPath = 'student_avatars/unnamed.jpg';
             $student->picture_path = Storage::disk('public')->exists($defaultPath)
                 ? asset('storage/' . $defaultPath)
-                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiVFNUU1RTUiLz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Qzk5QUMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4Ii8+Cjwvc3ZnPgo=';
+                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNFNUU1RTUiLz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Qzk5QUMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4Ii8+Cjwvc3ZnPgo=';
         }
 
         $result = DB::table('results')
