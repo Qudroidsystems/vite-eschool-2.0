@@ -75,6 +75,7 @@
                                                 <th class="min-w-125px">Start Time</th>
                                                 <th class="min-w-125px">End Time</th>
                                                 <th class="min-w-125px">Questions</th>
+                                                <th class="min-w-150px">Assigned Class(es)</th>
                                                 <th class="min-w-100px">View Students</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
@@ -98,6 +99,40 @@
                                                     <td class="questions">
                                                         <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
                                                     </td>
+                                                    <td class="classes">
+                                                        @if(isset($exam->classes) && $exam->classes->count() > 0)
+                                                            @php
+                                                                $classes = $exam->classes;
+                                                                $displayLimit = 2; // Show only 2 classes initially
+                                                            @endphp
+
+                                                            <div class="class-list">
+                                                                @foreach($classes->take($displayLimit) as $class)
+                                                                    <span class="badge bg-primary-subtle text-primary mb-1 me-1 d-inline-block">
+                                                                        {{ $class->schoolclass }}{{ $class->arm ? ' (' . $class->arm . ')' : '' }}
+                                                                    </span>
+                                                                @endforeach
+
+                                                                @if($classes->count() > $displayLimit)
+                                                                    <a href="javascript:void(0);"
+                                                                       class="text-muted fs-7 view-all-classes"
+                                                                       data-bs-toggle="popover"
+                                                                       data-bs-html="true"
+                                                                       data-bs-content="
+                                                                       <div class='popover-class-list'>
+                                                                           @foreach($classes as $class)
+                                                                               <div class='mb-1'>{{ $class->schoolclass }}{{ $class->arm ? ' (' . $class->arm . ')' : '' }}</div>
+                                                                           @endforeach
+                                                                       </div>"
+                                                                       data-bs-title="All Classes ({{ $classes->count() }})">
+                                                                        +{{ $classes->count() - $displayLimit }} more
+                                                                    </a>
+                                                                @endif
+                                                            </div>
+                                                        @else
+                                                            <span class="text-muted">No class assigned</span>
+                                                        @endif
+                                                    </td>
                                                     <td>
                                                         <a href="{{ route('exams.students', $exam->id) }}" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
                                                     </td>
@@ -119,7 +154,7 @@
                                                 @endif
                                             @empty
                                                 <tr>
-                                                    <td colspan="10" class="noresult text-center py-4">No exams found</td>
+                                                    <td colspan="11" class="noresult text-center py-4">No exams found</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -373,6 +408,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
     console.log('CSRF Token:', csrfToken);
+
+    // Initialize popovers for class lists
+    const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+    const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+
+    // Close popovers when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.view-all-classes') && !e.target.closest('.popover')) {
+            popoverList.forEach(popover => {
+                popover.hide();
+            });
+        }
+    });
 
     // Initialize modal filtering
     initModalFiltering();
@@ -1125,7 +1173,47 @@ option[style*="display: none"] {
 @keyframes spinner-border {
     to { transform: rotate(360deg); }
 }
+
+/* Class list styling */
+.class-list .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.popover-class-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.popover-class-list div {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #f1f1f1;
+    font-size: 0.875rem;
+}
+
+.popover-class-list div:last-child {
+    border-bottom: none;
+}
+
+.view-all-classes {
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.view-all-classes:hover {
+    text-decoration: underline;
+    color: var(--bs-primary) !important;
+}
+
+/* Adjust table cell width for class column */
+td.classes {
+    min-width: 150px;
+    max-width: 250px;
+}
 </style>
 
 @endsection
-
