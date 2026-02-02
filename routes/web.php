@@ -493,14 +493,28 @@ Route::group(['middleware' => ['auth']], function () {
     // Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
 
 
-    // Existing routes - KEEP THESE
-    Route::resource('questions', QuestionController::class);
-    Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);
-    Route::get('/{question}/details', [QuestionController::class, 'details'])->name('questions.details');
-    Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+    // // Existing routes - KEEP THESE
+    // Route::resource('questions', QuestionController::class);
+    // Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);
+    // Route::get('/{question}/details', [QuestionController::class, 'details'])->name('questions.details');
+    // Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
 
-    // NEW ROUTES for enhanced features - ADD THESE BELOW
-    Route::get('/all-questions', [QuestionController::class, 'index'])->name('questions.all');
+    // // NEW ROUTES for enhanced features - ADD THESE BELOW
+    // Route::get('/all-questions', [QuestionController::class, 'index'])->name('questions.all');
+    // Route::post('/questions/import', [QuestionController::class, 'import'])->name('questions.import');
+    // Route::post('/questions/export/pdf', [QuestionController::class, 'exportPdf'])->name('questions.export.pdf');
+    // Route::post('/questions/export/word', [QuestionController::class, 'exportWord'])->name('questions.export.word');
+    // Route::post('/questions/{question}/duplicate', [QuestionController::class, 'duplicate'])->name('questions.duplicate');
+    // Route::post('/questions/reorder', [QuestionController::class, 'reorder'])->name('questions.reorder');
+    // Route::post('/questions/bulk-update', [QuestionController::class, 'bulkUpdate'])->name('questions.bulk.update');
+    // Route::get('/questions/reusable/list', [QuestionController::class, 'getReusableQuestions'])->name('questions.reusable.list');
+    // Route::delete('/questions/bulk-destroy', [QuestionController::class, 'bulkDestroy'])->name('questions.bulk.destroy');
+    // Route::get('/questions/get-exams', [QuestionController::class, 'getExamsForSelection'])->name('questions.getExams');
+
+
+    // Specific routes FIRST
+    Route::get('/questions/get-exams', [QuestionController::class, 'getExamsForSelection'])->name('questions.getExams');
+    Route::get('/questions/all-questions', [QuestionController::class, 'index'])->name('questions.all');
     Route::post('/questions/import', [QuestionController::class, 'import'])->name('questions.import');
     Route::post('/questions/export/pdf', [QuestionController::class, 'exportPdf'])->name('questions.export.pdf');
     Route::post('/questions/export/word', [QuestionController::class, 'exportWord'])->name('questions.export.word');
@@ -509,7 +523,14 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('/questions/bulk-update', [QuestionController::class, 'bulkUpdate'])->name('questions.bulk.update');
     Route::get('/questions/reusable/list', [QuestionController::class, 'getReusableQuestions'])->name('questions.reusable.list');
     Route::delete('/questions/bulk-destroy', [QuestionController::class, 'bulkDestroy'])->name('questions.bulk.destroy');
-    Route::get('/questions/get-exams', [QuestionController::class, 'getExamsForSelection'])->name('questions.getExams');
+
+    // Resource routes LAST
+    Route::resource('questions', QuestionController::class);
+
+    // Other question routes
+    Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);
+    Route::get('/{question}/details', [QuestionController::class, 'details'])->name('questions.details');
+    Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
 
     Route::resource('cbt', CBTController::class);
     Route::get('/cbt/{examid}/takecbt', [CBTController::class, 'takeCBT'])->name('cbt.take');

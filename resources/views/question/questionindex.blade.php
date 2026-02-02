@@ -566,6 +566,7 @@
 <!-- Include SweetAlert for notifications -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+
 <script>
 $(document).ready(function() {
     console.log('Document ready - Question Management page loaded');
@@ -851,15 +852,65 @@ $(document).ready(function() {
         }
     });
 
-    // Add question button - DEBUG VERSION
+    // Add question button
     $('#add-question-btn').click(function() {
         console.log('Add question button clicked');
-        console.log('Route URL:', '{{ route("questions.getExams") }}');
-        loadExamsForSelection();
-        $('#examSelectionModal').modal('show');
+        console.log('Route URL for get-exams:', '{{ route("questions.getExams") }}');
+
+        // Test the route first
+        $.ajax({
+            url: '{{ route("questions.getExams") }}',
+            method: 'GET',
+            dataType: 'json',
+            beforeSend: function() {
+                console.log('Testing route accessibility...');
+            },
+            success: function(response, status, xhr) {
+                console.log('Route test successful! Status:', xhr.status);
+                console.log('Response preview:', JSON.stringify(response).substring(0, 100) + '...');
+
+                // If test succeeds, load the modal
+                loadExamsForSelection();
+                $('#examSelectionModal').modal('show');
+            },
+            error: function(xhr, status, error) {
+                console.error('Route test failed:', status, error);
+                console.error('Full URL:', xhr.responseURL);
+                console.error('Status:', xhr.status);
+
+                // Show alternative option
+                Swal.fire({
+                    title: 'Cannot Load Exams',
+                    html: `
+                        <p>The system cannot load exams list. This could be because:</p>
+                        <ul>
+                            <li>You need to create exams first</li>
+                            <li>There's a temporary server issue</li>
+                            <li>The route is not accessible</li>
+                        </ul>
+                        <p>Would you like to:</p>
+                    `,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Create New Exam',
+                    cancelButtonText: 'Go to Exams Page',
+                    showDenyButton: true,
+                    denyButtonText: 'Try Again'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = '{{ route("exams.create") }}';
+                    } else if (result.isDenied) {
+                        // Try again
+                        $('#add-question-btn').click();
+                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                        window.location.href = '{{ route("exams.index") }}';
+                    }
+                });
+            }
+        });
     });
 
-    // Load exams grouped by class - DEBUG VERSION
+    // Load exams grouped by class
     function loadExamsForSelection() {
         console.log('Loading exams for selection...');
 
@@ -873,152 +924,157 @@ $(document).ready(function() {
             </div>
         `);
 
-        // Debug: Check if route exists
-        console.log('Making AJAX request to:', '{{ route("questions.getExams") }}');
+        // Clear previous selections
+        selectedExams = [];
+        updateSelectedExams();
 
-        // Simple AJAX call to get exams
+        // Get exams via AJAX
         $.ajax({
             url: '{{ route("questions.getExams") }}',
             method: 'GET',
             dataType: 'json',
             beforeSend: function() {
-                console.log('AJAX request sent to:', this.url);
+                console.log('Fetching exams from:', this.url);
             },
             success: function(response, status, xhr) {
-                console.log('AJAX Success - Status:', status);
-                console.log('Full response:', response);
-                console.log('Response headers:', xhr.getAllResponseHeaders());
+                console.log('Exams loaded successfully!');
+                console.log('Response status:', xhr.status);
+                console.log('Response has success:', response.success);
+                console.log('Number of exams:', response.exams ? response.exams.length : 0);
 
-                if (response) {
-                    console.log('Response has success property:', response.success);
-                    console.log('Response has exams property:', response.exams);
-                    console.log('Exams data type:', typeof response.exams);
-                    console.log('Exams length:', response.exams ? response.exams.length : 'null');
-
-                    if (response.success) {
+                if (response && response.success) {
+                    if (response.exams && response.exams.length > 0) {
                         renderExamsByClass(response.exams);
                     } else {
-                        console.error('Response indicates failure:', response.message);
-                        showError('Failed to load exams: ' + (response.message || 'Unknown error'));
+                        console.warn('No exams found for this user');
                         $('#exams-by-class-container').html(`
-                            <div class="alert alert-danger">
-                                <i class="ri-alert-line me-2"></i>
-                                Server error: ${response.message || 'Unknown error'}
+                            <div class="alert alert-info">
+                                <i class="ri-information-line me-2"></i>
+                                No exams found. Please <a href="{{ route('exams.create') }}" class="alert-link">create an exam</a> first.
                             </div>
                         `);
                     }
                 } else {
-                    console.error('Response is empty or null');
-                    showError('Empty response from server');
+                    console.error('Invalid response format:', response);
+                    showError('Invalid response from server');
                     $('#exams-by-class-container').html(`
                         <div class="alert alert-danger">
                             <i class="ri-alert-line me-2"></i>
-                            Empty response from server
+                            Invalid response format from server
                         </div>
                     `);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX Error Details:');
-                console.error('Status:', status);
-                console.error('Error:', error);
-                console.error('XHR object:', xhr);
-                console.error('Response Text:', xhr.responseText);
-                console.error('Status Code:', xhr.status);
-                console.error('Status Text:', xhr.statusText);
+                console.error('Failed to load exams:', error);
+                console.error('Status:', xhr.status);
+                console.error('Response:', xhr.responseText);
 
                 let errorMessage = 'Failed to load exams. ';
-                if (xhr.status === 0) {
-                    errorMessage += 'Network error or CORS issue.';
-                } else if (xhr.status === 404) {
-                    errorMessage += 'Route not found (404).';
+                if (xhr.status === 404) {
+                    errorMessage = 'Route not found. Please contact administrator.';
                 } else if (xhr.status === 500) {
-                    errorMessage += 'Server error (500).';
-                } else {
-                    errorMessage += 'Status: ' + xhr.status;
+                    errorMessage = 'Server error. Please try again later.';
+                } else if (xhr.status === 401) {
+                    errorMessage = 'Please login again.';
                 }
 
-                showError(errorMessage);
                 $('#exams-by-class-container').html(`
                     <div class="alert alert-danger">
                         <i class="ri-alert-line me-2"></i>
                         ${errorMessage}<br>
-                        <small>Check console for details</small>
+                        <small>Error: ${xhr.status} - ${error}</small>
                     </div>
                 `);
             },
-            complete: function(xhr, status) {
-                console.log('AJAX request completed with status:', status);
+            complete: function() {
+                console.log('Exams loading complete');
             }
         });
     }
 
     // Simple render function
     function renderExamsByClass(exams) {
-        console.log('Rendering exams:', exams);
-
-        if (!exams) {
-            console.error('Exams is undefined or null');
-            $('#exams-by-class-container').html(`
-                <div class="alert alert-warning">
-                    <i class="ri-alert-line me-2"></i>
-                    No exams data received from server
-                </div>
-            `);
-            return;
-        }
-
-        if (exams.length === 0) {
-            console.log('No exams found for this user');
-            $('#exams-by-class-container').html(`
-                <div class="alert alert-info">
-                    <i class="ri-information-line me-2"></i>
-                    No exams found. Please <a href="{{ route('exams.create') }}" class="alert-link">create an exam</a> first.
-                </div>
-            `);
-            return;
-        }
-
         console.log('Rendering', exams.length, 'exams');
 
-        let html = '<div class="list-group">';
+        if (!exams || exams.length === 0) {
+            console.error('No exams to render');
+            return;
+        }
 
-        exams.forEach(function(exam, index) {
-            console.log('Exam', index, ':', exam);
+        let html = '';
+
+        // Group exams by class for better organization
+        const examsByClass = {};
+        exams.forEach(function(exam) {
+            const className = exam.class_name || 'Unclassified';
+            if (!examsByClass[className]) {
+                examsByClass[className] = [];
+            }
+            examsByClass[className].push(exam);
+        });
+
+        // Render each class group
+        Object.keys(examsByClass).forEach(function(className) {
             html += `
-                <div class="list-group-item">
-                    <div class="form-check">
-                        <input class="form-check-input exam-checkbox"
-                               type="checkbox"
-                               value="${exam.id}"
-                               id="exam-${exam.id}"
-                               data-title="${exam.title}"
-                               data-class="${exam.class_name || 'No Class'}">
-                        <label class="form-check-label w-100" for="exam-${exam.id}">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong class="d-block">${exam.title}</strong>
-                                    <small class="text-muted d-block">
-                                        <i class="ri-building-line me-1"></i>${exam.class_name || 'No Class'}
-                                    </small>
-                                    <small class="text-muted d-block">
-                                        <i class="ri-book-open-line me-1"></i>${exam.subject || 'No Subject'}
-                                    </small>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-primary">${exam.question_count || 0} questions</span>
+                <div class="class-group mb-4">
+                    <h6 class="fw-bold border-bottom pb-2 mb-3">
+                        <i class="ri-building-line me-2"></i>${className}
+                    </h6>
+                    <div class="row">
+            `;
+
+            examsByClass[className].forEach(function(exam) {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card exam-card h-100">
+                            <div class="card-body p-3">
+                                <div class="form-check h-100">
+                                    <input class="form-check-input exam-checkbox"
+                                           type="checkbox"
+                                           value="${exam.id}"
+                                           id="exam-${exam.id}"
+                                           data-title="${exam.title}"
+                                           data-class="${exam.class_name || 'No Class'}">
+                                    <label class="form-check-label w-100 h-100" for="exam-${exam.id}">
+                                        <div class="d-flex flex-column justify-content-between h-100">
+                                            <div>
+                                                <strong class="d-block mb-1">${exam.title}</strong>
+                                                <small class="text-muted d-block mb-1">
+                                                    <i class="ri-book-open-line me-1"></i>${exam.subject || 'No Subject'}
+                                                </small>
+                                            </div>
+                                            <div class="mt-2">
+                                                <span class="badge bg-primary">${exam.question_count || 0} questions</span>
+                                                <span class="badge bg-secondary ms-1">${exam.marks || 0} marks</span>
+                                            </div>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
-                        </label>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
                     </div>
                 </div>
             `;
         });
 
-        html += '</div>';
-
         $('#exams-by-class-container').html(html);
         console.log('Exams rendered successfully');
+
+        // Add hover effect
+        $('.exam-card').hover(
+            function() {
+                $(this).addClass('border-primary shadow-sm');
+            },
+            function() {
+                $(this).removeClass('border-primary shadow-sm');
+            }
+        );
 
         // Re-attach event listeners
         $('.exam-checkbox').change(updateSelectedExams);
@@ -1080,15 +1136,34 @@ $(document).ready(function() {
         const searchTerm = $(this).val().toLowerCase();
         console.log('Searching exams for:', searchTerm);
 
-        $('.list-group-item').each(function() {
-            const item = $(this);
-            const examTitle = item.find('strong').text().toLowerCase();
-            const examClass = item.find('.text-muted').text().toLowerCase();
+        if (!searchTerm) {
+            $('.class-group').show();
+            $('.exam-card').parent().show();
+            return;
+        }
 
-            if (examTitle.includes(searchTerm) || examClass.includes(searchTerm) || searchTerm === '') {
-                item.show();
+        $('.class-group').each(function() {
+            const classGroup = $(this);
+            const className = classGroup.find('h6').text().toLowerCase();
+            let hasVisibleExams = false;
+
+            classGroup.find('.exam-card').each(function() {
+                const card = $(this);
+                const examTitle = card.find('strong').text().toLowerCase();
+                const examSubject = card.find('.text-muted').text().toLowerCase();
+
+                if (examTitle.includes(searchTerm) || examSubject.includes(searchTerm) || className.includes(searchTerm)) {
+                    card.parent().show();
+                    hasVisibleExams = true;
+                } else {
+                    card.parent().hide();
+                }
+            });
+
+            if (hasVisibleExams) {
+                classGroup.show();
             } else {
-                item.hide();
+                classGroup.hide();
             }
         });
     }, 300));
@@ -1096,10 +1171,11 @@ $(document).ready(function() {
     $('#clear-search-exams').click(function() {
         console.log('Clearing search');
         $('#search-exams-input').val('');
-        $('.list-group-item').show();
+        $('.class-group').show();
+        $('.exam-card').parent().show();
     });
 
-    // Proceed to question form - REDIRECT VERSION
+    // Proceed to question form
     $('#proceed-to-question-form-btn').click(function() {
         if (selectedExams.length === 0) {
             showError('Please select at least one exam');
@@ -1108,15 +1184,28 @@ $(document).ready(function() {
 
         // For simplicity, take only the first selected exam
         const firstExamId = selectedExams[0].id;
-        console.log('Proceeding with exam ID:', firstExamId);
+        const examTitle = selectedExams[0].title;
+        console.log('Proceeding with exam:', examTitle, 'ID:', firstExamId);
 
-        // Close the modal
-        $('#examSelectionModal').modal('hide');
+        // Show confirmation
+        Swal.fire({
+            title: 'Add Question',
+            html: `Add question to <strong>${examTitle}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Continue',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Close the modal
+                $('#examSelectionModal').modal('hide');
 
-        // Redirect to create question page with selected exam ID
-        const createUrl = '{{ route("questions.create") }}?exam_id=' + firstExamId;
-        console.log('Redirecting to:', createUrl);
-        window.location.href = createUrl;
+                // Redirect to create question page with selected exam ID
+                const createUrl = '{{ route("questions.create") }}?exam_id=' + firstExamId;
+                console.log('Redirecting to:', createUrl);
+                window.location.href = createUrl;
+            }
+        });
     });
 
     // View question
@@ -1446,9 +1535,27 @@ $(document).ready(function() {
     border-radius: 0.375rem;
 }
 
+.exam-card {
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+}
+
 .exam-card:hover {
     border-color: #0d6efd;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.exam-card.border-primary {
+    border-color: #0d6efd !important;
+}
+
+.exam-card .form-check-input {
+    margin-top: 0.3rem;
+}
+
+.class-group h6 {
+    color: #495057;
+    font-size: 0.9rem;
 }
 </style>
 @endsection
