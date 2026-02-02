@@ -376,12 +376,15 @@
 <!-- Include SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+
+
 <script>
+// Define csrfToken in global scope
+const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+console.log('CSRF Token:', csrfToken);
+
 document.addEventListener('DOMContentLoaded', function() {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-    console.log('CSRF Token:', csrfToken);
-
     // Initialize modal filtering
     initModalFiltering();
 
@@ -575,7 +578,7 @@ function loadExamForEdit(examId) {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json',
-            'X-CSRF-TOKEN': csrfToken
+            'X-CSRF-TOKEN': csrfToken // Use the globally defined csrfToken
         }
     })
     .then(response => {
