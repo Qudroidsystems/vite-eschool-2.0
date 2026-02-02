@@ -520,21 +520,18 @@ function loadClassesForSubject(subjectTeacherId, mode = 'add') {
         return response.json();
     })
     .then(data => {
-        console.log('Classes response:', data);
+        console.log('Classes response for', mode, 'mode:', data);
         if (data.success && data.classes && data.classes.length > 0) {
             let html = '<div class="row">';
 
             data.classes.forEach(cls => {
-                const isChecked = mode === 'edit' && data.selectedClasses &&
-                                 data.selectedClasses.includes(parseInt(cls.id));
                 html += `
                     <div class="col-md-6 mb-2">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox"
+                            <input class="form-check-input class-checkbox" type="checkbox"
                                    name="schoolclass_ids[]"
                                    value="${cls.id}"
-                                   id="class_${mode}_${cls.id}"
-                                   ${isChecked ? 'checked' : ''}>
+                                   id="class_${mode}_${cls.id}">
                             <label class="form-check-label" for="class_${mode}_${cls.id}">
                                 ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
                             </label>
@@ -579,7 +576,7 @@ function loadExamForEdit(examId) {
         return response.json();
     })
     .then(data => {
-        console.log('Edit response data:', data);
+        console.log('Edit response data for exam:', examId, data);
         if (data.success && data.exam) {
             populateEditForm(data);
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -602,6 +599,7 @@ function loadExamForEdit(examId) {
 
 function populateEditForm(data) {
     const exam = data.exam;
+    console.log('Populating edit form with data:', data);
 
     // Basic fields
     document.getElementById('edit-id-field').value = exam.id;
@@ -645,30 +643,19 @@ function populateEditForm(data) {
     // Load classes for this subject with pre-selected classes
     setTimeout(() => {
         if (data.subject_id) {
-            loadClassesForEdit(data.subject_id, data.schoolclass_ids || []);
+            console.log('Loading classes for subject:', data.subject_id, 'with selected IDs:', data.schoolclass_ids);
+            loadClassesForEditWithSelection(data.subject_id, data.schoolclass_ids || []);
+        } else {
+            console.error('No subject_id provided in edit data');
+            document.getElementById('editClassContainer').innerHTML =
+                '<p class="text-danger text-center mb-0">Error: No subject selected</p>';
         }
-    }, 100);
+    }, 200);
 }
 
-function formatDateForInput(date) {
-    if (!date || isNaN(date)) return '';
+function loadClassesForEditWithSelection(subjectTeacherId, selectedClassIds = []) {
+    console.log('Loading classes for edit - Subject ID:', subjectTeacherId, 'Selected Class IDs:', selectedClassIds);
 
-    try {
-        // Format to YYYY-MM-DDTHH:MM
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    } catch (error) {
-        console.error('Date formatting error:', error);
-        return '';
-    }
-}
-
-function loadClassesForEdit(subjectTeacherId, selectedClassIds = []) {
     const container = document.getElementById('editClassContainer');
 
     container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
@@ -690,11 +677,16 @@ function loadClassesForEdit(subjectTeacherId, selectedClassIds = []) {
 
             data.classes.forEach(cls => {
                 // Check if this class ID is in the selectedClassIds array
-                const isChecked = selectedClassIds.includes(parseInt(cls.id));
+                const classId = parseInt(cls.id);
+                const isChecked = selectedClassIds.some(id => parseInt(id) === classId);
+
+                console.log(`Class ${cls.id} (${cls.schoolclass}) - Should be checked: ${isChecked}`);
+
                 html += `
                     <div class="col-md-6 mb-2">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox"
+                            <input class="form-check-input class-checkbox"
+                                   type="checkbox"
                                    name="schoolclass_ids[]"
                                    value="${cls.id}"
                                    id="class_edit_${cls.id}"
@@ -708,6 +700,23 @@ function loadClassesForEdit(subjectTeacherId, selectedClassIds = []) {
 
             html += '</div>';
             container.innerHTML = html;
+
+            // Verify checkboxes are checked
+            setTimeout(() => {
+                const checkboxes = container.querySelectorAll('.class-checkbox');
+                console.log(`Total checkboxes: ${checkboxes.length}`);
+                const checkedBoxes = container.querySelectorAll('.class-checkbox:checked');
+                console.log(`Checked boxes: ${checkedBoxes.length}`);
+
+                // Double-check each checkbox
+                selectedClassIds.forEach(classId => {
+                    const checkbox = document.getElementById(`class_edit_${classId}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        console.log(`Manually checked checkbox for class ${classId}`);
+                    }
+                });
+            }, 100);
         } else {
             container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
         }
@@ -716,6 +725,24 @@ function loadClassesForEdit(subjectTeacherId, selectedClassIds = []) {
         console.error('Error loading classes:', error);
         container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
     });
+}
+
+function formatDateForInput(date) {
+    if (!date || isNaN(date)) return '';
+
+    try {
+        // Format to YYYY-MM-DDTHH:MM
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+        console.error('Date formatting error:', error);
+        return '';
+    }
 }
 
 function submitAddForm() {
