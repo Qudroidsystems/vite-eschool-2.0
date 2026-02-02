@@ -560,7 +560,7 @@
 
 @endsection
 
-@section('scripts')
+
 <!-- Include SortableJS for drag-drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
 <!-- Include SweetAlert for notifications -->
