@@ -24,7 +24,8 @@ class QuestionController extends Controller
      */
     public function index()
     {
-        //
+        // This should probably show a list of exams or redirect
+        return redirect()->route('exams.index');
     }
 
     /**
@@ -60,7 +61,7 @@ class QuestionController extends Controller
                 },
             ],
         ];
-    
+
         if ($request->type === 'mcq') {
             $rules['options.*.option_text'] = 'nullable|string';
         } elseif ($request->type === 'true_false') {
@@ -68,24 +69,23 @@ class QuestionController extends Controller
         } elseif ($request->type === 'short_answer') {
             $rules['options.answer.option_text'] = 'required|string';
         }
-    
+
         $validated = $request->validate($rules);
-    
+
         // Handle image upload
         $imagePath = "";
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('question_images', 'public');
         }
 
-    
         // Create question with image path
         $question = Question::create([
             'exam_id' => $validated['exam_id'],
             'question_text' => $validated['question_text'],
             'type' => $validated['type'],
-            'image' => $imagePath, 
+            'image' => $imagePath,
         ]);
-    
+
         if ($validated['type'] === 'mcq') {
             $optionLabels = ['a', 'b', 'c', 'd', 'e'];
             $filledOptions = 0;
@@ -122,16 +122,30 @@ class QuestionController extends Controller
                 'label' => 'answer',
             ]);
         }
-    
-        return redirect()->route('questions.show', $request->exam_id)->with('success', 'Question added successfully');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Question added successfully',
+            'question' => [
+                'id' => $question->id,
+                'question_text' => $question->question_text,
+                'type' => $question->type,
+                'image' => $question->image,
+                'options_count' => $question->options->count()
+            ]
+        ]);
     }
+
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show($id)
     {
         // Ensure we get a single Exam instance with its questions and options
-        $exam = Exam::with('questions.options')->findOrFail($id);
+        $exam = Exam::with(['questions.options' => function($query) {
+            $query->orderBy('label');
+        }])->findOrFail($id);
+
         $pagetitle = 'Questions Management'; // Define the page title
         return view('question.index', compact('exam', 'pagetitle'));
     }
@@ -155,28 +169,28 @@ class QuestionController extends Controller
         ]);
     }
 
-  public function edit(Question $question)
+    public function edit(Question $question)
     {
         // No need to find the question again - Laravel's route model binding already did it
-    $question->load('options'); // Eager load the options relationship
-    
-    return response()->json([
-        'success' => true,
-        'exam_id' => $question->exam_id,
-        'question' => [
-            'id' => $question->id,
-            'question_text' => $question->question_text,
-            'type' => $question->type,
-            'image' => $question->image,
-        ],
-        'options' => $question->options->map(function($option) {
-            return [
-                'option_text' => $option->option_text,
-                'is_correct' => $option->is_correct,
-                'label' => $option->label ?? '',
-            ];
-        })
-    ]);
+        $question->load('options'); // Eager load the options relationship
+
+        return response()->json([
+            'success' => true,
+            'exam_id' => $question->exam_id,
+            'question' => [
+                'id' => $question->id,
+                'question_text' => $question->question_text,
+                'type' => $question->type,
+                'image' => $question->image,
+            ],
+            'options' => $question->options->map(function($option) {
+                return [
+                    'option_text' => $option->option_text,
+                    'is_correct' => $option->is_correct,
+                    'label' => $option->label ?? '',
+                ];
+            })
+        ]);
     }
 
     public function update(Request $request, Question $question)
@@ -282,7 +296,14 @@ class QuestionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Question updated successfully'
+            'message' => 'Question updated successfully',
+            'question' => [
+                'id' => $question->id,
+                'question_text' => $question->question_text,
+                'type' => $question->type,
+                'image' => $question->image,
+                'options_count' => $question->options->count()
+            ]
         ]);
     }
 
@@ -293,6 +314,30 @@ class QuestionController extends Controller
         }
         $question->options()->delete();
         $question->delete();
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'message' => 'Question deleted successfully']);
+    }
+
+    // Add bulk delete method
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:questions,id'
+        ]);
+
+        $questions = Question::whereIn('id', $request->ids)->get();
+
+        foreach ($questions as $question) {
+            if ($question->image) {
+                Storage::disk('public')->delete($question->image);
+            }
+            $question->options()->delete();
+            $question->delete();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => count($request->ids) . ' question(s) deleted successfully'
+        ]);
     }
 }

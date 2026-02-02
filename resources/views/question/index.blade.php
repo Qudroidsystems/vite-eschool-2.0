@@ -668,21 +668,21 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="card-body">
                                 <div class="fs-5 mb-4">${data.question_text}</div>`;
-                    
+
                     if (data.image) {
                         html += `<div class="text-center mb-4"><img src="/storage/${data.image}" alt="Question image" class="img-fluid rounded border" style="max-height: 300px;"></div>`;
                     }
-                    
+
                     let typeName = {
                         'mcq': 'Multiple Choice',
                         'true_false': 'True/False',
                         'short_answer': 'Short Answer'
                     }[data.type];
-                    
+
                     html += `<div class="badge bg-primary mb-4">Type: ${typeName}</div>`;
-                    
+
                     html += `<h5 class="fw-bold mb-3">Answer Options</h5>`;
-                    
+
                     if (data.type === 'true_false') {
                         html += `<div class="row g-3">`;
                         data.options.forEach(option => {
@@ -750,7 +750,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             </div>`;
                     }
-                    
+
                     html += `</div></div>`;
                     document.getElementById('viewModalBody').innerHTML = html;
                 })
@@ -780,8 +780,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         // Handle image
                         const currentImageDiv = document.getElementById('edit_current_image');
-                        currentImageDiv.innerHTML = data.question.image ? 
-                            `<img src="/storage/${data.question.image}" class="img-fluid mb-3" style="max-height: 150px;">` : 
+                        currentImageDiv.innerHTML = data.question.image ?
+                            `<img src="/storage/${data.question.image}" class="img-fluid mb-3" style="max-height: 150px;">` :
                             '<div class="text-muted">No image</div>';
 
                         // Reset hidden
@@ -790,13 +790,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Handle options - first hide all and uncheck all radios
                         document.querySelectorAll('#editModal .options-container').forEach(c => c.style.display = 'none');
                         document.querySelectorAll('#editModal .is-correct').forEach(r => r.checked = false);
-                        
+
                         if (data.question.type === 'mcq') {
                             const container = document.getElementById('edit_mcq_options');
                             container.style.display = 'block';
                             const optionsFields = container.querySelector('.options-fields');
                             optionsFields.innerHTML = '';
-                            
+
                             // No sort needed—DB loads in creation order (a-b-c-d-e)
                             // Use index for letter if label empty (handles missing column)
                             const optionLetters = ['a', 'b', 'c', 'd', 'e'];
@@ -809,10 +809,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div class="option-field mb-3">
                                         <div class="d-flex align-items-center">
                                             <label class="fw-semibold me-3">${upper}:</label>
-                                            <input type="text" name="options[${letter}][option_text]" 
+                                            <input type="text" name="options[${letter}][option_text]"
                                                 class="form-control me-3" value="${option.option_text || ''}" />
                                             <div class="form-check">
-                                                <input class="form-check-input is-correct" type="radio" 
+                                                <input class="form-check-input is-correct" type="radio"
                                                     name="correct_option" value="${letter}" ${radioHtml} />
                                                 <label class="form-check-label">Correct</label>
                                             </div>
@@ -887,17 +887,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add form submission
     document.getElementById('add-question-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         // Validate Quill question text
         const questionText = addQuill.getText().trim();
         if (!questionText) {
             alert('Question text is required.');
             return;
         }
-        
+
         // Update hidden textarea with Quill content
         document.getElementById('question_text').value = addQuill.root.innerHTML;
-        
+
         // Validate short answer if applicable
         const type = document.getElementById('type').value;
         if (type === 'short_answer') {
@@ -908,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             document.getElementById('add_sa_answer').value = addSaQuill.root.innerHTML;
         }
-        
+
         const formData = new FormData(this);
         const submitBtn = document.getElementById('add-btn');
         const originalText = submitBtn.textContent;
@@ -976,17 +976,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Edit form submission
     document.getElementById('edit-question-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         // Validate Quill question text
         const questionText = editQuill.getText().trim();
         if (!questionText) {
             alert('Question text is required.');
             return;
         }
-        
+
         // Update hidden textarea with Quill content
         document.getElementById('edit_question_text').value = editQuill.root.innerHTML;
-        
+
         // Validate short answer if applicable
         const type = document.getElementById('edit_type').value;
         if (type === 'short_answer') {
@@ -997,7 +997,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             document.getElementById('edit_sa_answer').value = editSaQuill.root.innerHTML;
         }
-        
+
         const id = document.getElementById('edit-id-field').value;
         const formData = new FormData(this);
         formData.append('_method', 'PUT');
