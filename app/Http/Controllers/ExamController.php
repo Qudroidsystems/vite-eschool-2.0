@@ -37,6 +37,7 @@ class ExamController extends Controller
                 $query->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
                       ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm');
             }, 'subject'])
+            ->withCount('questions')  // Add this to count questions
             ->where('staffId', $user->id);
 
         if ($request->filled('search')) {

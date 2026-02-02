@@ -97,16 +97,26 @@
                                                     <td class="start_time">{{ $exam->start_time->format('M d, Y h:i A') }}</td>
                                                     <td class="end_time">{{ $exam->end_time->format('M d, Y h:i A') }}</td>
                                                     <td class="questions">
-                                                        <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
+                                                        <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">
+                                                            View Questions
+                                                            <span class="badge bg-danger rounded-pill ms-1">{{ $exam->questions_count ?? 0 }}</span>
+                                                        </a>
                                                     </td>
                                                     <td class="classes">
                                                         @if($exam->schoolclass)
-                                                            <span class="badge bg-primary-subtle text-primary">
-                                                                {{ $exam->schoolclass->schoolclass }}
-                                                                @if($exam->schoolclass->arm)
-                                                                    ({{ $exam->schoolclass->arm }})
-                                                                @endif
-                                                            </span>
+                                                            <div>
+                                                                <span class="badge bg-primary-subtle text-primary">
+                                                                    {{ $exam->schoolclass->schoolclass }}
+                                                                    @if($exam->schoolclass->arm)
+                                                                        ({{ $exam->schoolclass->arm }})
+                                                                    @endif
+                                                                </span>
+                                                                <div class="mt-1">
+                                                                    <span class="badge bg-info-subtle text-info">
+                                                                        {{ $exam->questions_count ?? 0 }} question{{ ($exam->questions_count ?? 0) != 1 ? 's' : '' }}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
                                                         @else
                                                             <span class="text-muted">No class assigned</span>
                                                         @endif
@@ -141,7 +151,7 @@
                                 <div class="row mt-3 align-items-center" id="pagination-element">
                                     <div class="col-sm">
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $exams->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $exams->total() }}</span> Results
+                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $examss->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $exams->total() }}</span> Results
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
@@ -1149,6 +1159,20 @@ option[style*="display: none"] {
 td.classes {
     min-width: 150px;
     max-width: 250px;
+}
+
+/* Question count badge styling */
+.questions .badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    margin-left: 4px;
+}
+
+/* Class badge container */
+.classes > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 </style>
 
