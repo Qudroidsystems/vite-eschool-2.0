@@ -614,4 +614,36 @@ class QuestionController extends Controller
 
         return $query->get();
     }
+
+
+    /**
+     * Get exams for selection
+     */
+    public function getExamsForSelection(Request $request)
+    {
+        $user = Auth::user();
+
+        $exams = Exam::with(['schoolclass.armRelation', 'subject', 'questions'])
+            ->where('staffId', $user->id)
+            ->orderBy('title')
+            ->get()
+            ->map(function($exam) {
+                return [
+                    'id' => $exam->id,
+                    'title' => $exam->title,
+                    'subject' => $exam->subject->name ?? 'No Subject',
+                    'class_name' => $exam->schoolclass ?
+                        $exam->schoolclass->schoolclass .
+                        ($exam->schoolclass->armRelation ? ' (' . $exam->schoolclass->armRelation->arm . ')' : '') :
+                        'No Class',
+                    'question_count' => $exam->questions->count(),
+                    'marks' => $exam->questions->sum('marks')
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'exams' => $exams
+        ]);
+    }
 }

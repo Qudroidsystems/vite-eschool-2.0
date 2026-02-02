@@ -309,6 +309,77 @@
     </div>
 </div>
 
+<!-- Exam Selection Modal -->
+<div class="modal fade" id="examSelectionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Exams for Questions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="ri-information-line fs-4 me-2"></i>
+                        <div>
+                            <strong>Instructions:</strong>
+                            <ul class="mb-0">
+                                <li>Select one or more exams to add questions to</li>
+                                <li>Questions will be added to all selected exams</li>
+                                <li>Use search to filter exams by title or class</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="mb-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="ri-search-line"></i>
+                        </span>
+                        <input type="text" class="form-control" id="search-exams-input" placeholder="Search exams by title, class, or subject...">
+                        <button class="btn btn-outline-secondary" type="button" id="clear-search-exams">
+                            <i class="ri-close-line"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Exams Grouped by Class -->
+                <div id="exams-by-class-container" style="max-height: 400px; overflow-y: auto;">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading exams...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Exams Summary -->
+                <div class="selected-exams-summary mt-4 p-3 bg-light rounded" id="selected-exams-summary" style="display: none;">
+                    <h6 class="fw-bold mb-2">Selected Exams: <span id="selected-count">0</span></h6>
+                    <div id="selected-exams-list" class="small"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i> Cancel
+                </button>
+                <div class="form-check me-auto">
+                    <input class="form-check-input" type="checkbox" id="select-all-exams-checkbox">
+                    <label class="form-check-label" for="select-all-exams-checkbox">
+                        Select all
+                    </label>
+                </div>
+                <button type="button" class="btn btn-primary" id="proceed-to-question-form-btn" disabled>
+                    <i class="ri-arrow-right-line me-1"></i> Proceed with <span id="selected-exam-count">0</span> Exam(s)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -403,7 +474,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Reusable Questions Bank</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row mb-3">
@@ -433,38 +504,6 @@
                     <i class="ri-add-line me-1"></i> Add Selected to Exam
                 </button>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add/Edit Question Modal -->
-<div class="modal fade" id="questionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <form id="question-form" enctype="multipart/form-data">
-                @csrf
-                <div id="method-field"></div>
-                <input type="hidden" name="exam_id" id="exam_id_field">
-                <input type="hidden" name="question_id" id="question_id_field">
-
-                <div class="modal-header">
-                    <h5 class="modal-title" id="question-modal-title">Add New Question</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body">
-                    <!-- Content will be loaded via AJAX -->
-                    <div id="question-form-content"></div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="save-question-btn">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        Save Question
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
@@ -519,6 +558,9 @@
     </div>
 </div>
 
+@endsection
+
+@section('scripts')
 <!-- Include SortableJS for drag-drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
 <!-- Include SweetAlert for notifications -->
@@ -528,39 +570,42 @@
 $(document).ready(function() {
     let selectedQuestions = [];
     let currentDuplicateQuestionId = null;
+    let selectedExams = [];
 
     // Initialize Sortable for drag-drop
-    const sortable = Sortable.create(document.getElementById('sortable-questions'), {
-        handle: '.handle',
-        animation: 150,
-        onEnd: function(evt) {
-            const examId = $(evt.item).data('exam-id');
-            const questions = [];
+    if (document.getElementById('sortable-questions')) {
+        const sortable = Sortable.create(document.getElementById('sortable-questions'), {
+            handle: '.handle',
+            animation: 150,
+            onEnd: function(evt) {
+                const examId = $(evt.item).data('exam-id');
+                const questions = [];
 
-            $('#sortable-questions tr[data-exam-id="' + examId + '"]').each(function(index) {
-                questions.push({
-                    id: $(this).data('id'),
-                    order: index + 1
+                $('#sortable-questions tr[data-exam-id="' + examId + '"]').each(function(index) {
+                    questions.push({
+                        id: $(this).data('id'),
+                        order: index + 1
+                    });
                 });
-            });
 
-            // Update order via AJAX
-            $.ajax({
-                url: '{{ route("questions.reorder") }}',
-                method: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    exam_id: examId,
-                    questions: questions
-                },
-                success: function(response) {
-                    if (response.success) {
-                        showSuccess('Questions reordered successfully');
+                // Update order via AJAX
+                $.ajax({
+                    url: '{{ route("questions.reorder") }}',
+                    method: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        exam_id: examId,
+                        questions: questions
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showSuccess('Questions reordered successfully');
+                        }
                     }
-                }
-            });
-        }
-    });
+                });
+            }
+        });
+    }
 
     // Helper function to show success message
     function showSuccess(message) {
@@ -609,7 +654,7 @@ $(document).ready(function() {
         if (type) params.set('type', type);
         if (search) params.set('search', search);
 
-        window.location.href = '{{ route("questions.index") }}?' + params.toString();
+        window.location.href = '{{ route("questions.all") }}?' + params.toString();
     }
 
     $('#exam-filter, #class-filter, #type-filter').change(applyFilters);
@@ -774,117 +819,194 @@ $(document).ready(function() {
         // Collect current filter parameters
         const params = new URLSearchParams(window.location.search);
 
-        Swal.fire({
-            title: 'Export Questions',
-            text: 'Export questions with current filters?',
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonText: 'Export',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                if (type === 'pdf') {
-                    window.open('{{ route("questions.export.pdf") }}?' + params.toString(), '_blank');
-                } else if (type === 'word') {
-                    window.open('{{ route("questions.export.word") }}?' + params.toString(), '_blank');
-                } else if (type === 'excel') {
-                    // Implement Excel export if needed
-                    showError('Excel export is not yet implemented');
-                }
-            }
-        });
+        if (type === 'pdf') {
+            window.open('{{ route("questions.export.pdf") }}?' + params.toString(), '_blank');
+        } else if (type === 'word') {
+            window.open('{{ route("questions.export.word") }}?' + params.toString(), '_blank');
+        } else if (type === 'excel') {
+            showError('Excel export is not yet implemented');
+        }
     });
 
     // Add question button
     $('#add-question-btn').click(function() {
-        // Show exam selection first
-        const examSelect = $('#importModal select[name="exam_id"]').clone();
-        examSelect.attr('id', 'add-question-exam-select').addClass('mb-3');
-
-        const content = `
-            <div class="alert alert-info">
-                <i class="ri-information-line me-2"></i>
-                Please select an exam to add questions to.
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Select Exam</label>
-                ${examSelect[0].outerHTML}
-            </div>
-            <div class="text-center">
-                <button type="button" class="btn btn-primary" id="select-exam-btn">
-                    <i class="ri-arrow-right-line me-1"></i> Continue
-                </button>
-            </div>
-        `;
-
-        $('#question-form-content').html(content);
-        $('#question-modal-title').text('Add New Question');
-        $('#method-field').html('<input type="hidden" name="_method" value="POST">');
-        $('#question_id_field').val('');
-        $('#questionModal').modal('show');
-
-        // When exam is selected, load the question form
-        $(document).on('click', '#select-exam-btn', function() {
-            const examId = $('#add-question-exam-select').val();
-            if (!examId) {
-                showError('Please select an exam');
-                return;
-            }
-
-            $('#exam_id_field').val(examId);
-            loadQuestionForm(null, examId);
-        });
+        loadExamsForSelection();
+        $('#examSelectionModal').modal('show');
     });
 
-    // Load question form
-    function loadQuestionForm(questionId = null, examId = null) {
-        let url = '{{ route("questions.create") }}';
-        if (questionId) {
-            url = '{{ url("questions") }}/' + questionId + '/edit';
-        } else if (examId) {
-            url = '{{ route("questions.create") }}?exam_id=' + examId;
-        }
-
-        $('#question-form-content').html(`
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-2">Loading question form...</p>
-            </div>
-        `);
-
-        $.get(url, function(response) {
-            $('#question-form-content').html(response);
-
-            // Initialize Quill editor if needed
-            if (typeof Quill !== 'undefined') {
-                // Find and initialize any Quill editors in the loaded content
-                $('[id$="-editor"]').each(function() {
-                    const editorId = $(this).attr('id');
-                    if (!window[editorId]) {
-                        // Initialize Quill editor here if needed
-                    }
-                });
+    // Load exams grouped by class
+    function loadExamsForSelection() {
+        $.ajax({
+            url: '{{ route("questions.getExams") }}',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    renderExamsByClass(response.exams);
+                } else {
+                    showError('Failed to load exams');
+                }
+            },
+            error: function() {
+                showError('Failed to load exams');
             }
-        }).fail(function() {
-            showError('Failed to load question form');
-            $('#questionModal').modal('hide');
         });
     }
 
-    // Edit question
-    $(document).on('click', '.edit-question', function() {
-        const questionId = $(this).data('id');
-        const examId = $(this).data('exam-id');
+    // Render exams grouped by class
+    function renderExamsByClass(exams) {
+        let html = '';
 
-        $('#question-modal-title').text('Edit Question');
-        $('#method-field').html('<input type="hidden" name="_method" value="PUT">');
-        $('#exam_id_field').val(examId);
-        $('#question_id_field').val(questionId);
+        // Group exams by class
+        const examsByClass = {};
+        exams.forEach(exam => {
+            const classKey = exam.class_name || 'No Class';
+            if (!examsByClass[classKey]) {
+                examsByClass[classKey] = [];
+            }
+            examsByClass[classKey].push(exam);
+        });
 
-        loadQuestionForm(questionId);
-        $('#questionModal').modal('show');
+        // Render each class group
+        Object.keys(examsByClass).forEach(className => {
+            html += `
+                <div class="class-group mb-4">
+                    <h6 class="fw-bold border-bottom pb-2 mb-3">
+                        <i class="ri-building-line me-2"></i>${className}
+                    </h6>
+                    <div class="row">
+            `;
+
+            examsByClass[className].forEach(exam => {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card exam-card">
+                            <div class="card-body p-3">
+                                <div class="form-check">
+                                    <input class="form-check-input exam-checkbox"
+                                           type="checkbox"
+                                           value="${exam.id}"
+                                           id="exam-${exam.id}"
+                                           data-title="${exam.title}"
+                                           data-class="${className}">
+                                    <label class="form-check-label w-100" for="exam-${exam.id}">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <strong class="d-block">${exam.title}</strong>
+                                                <small class="text-muted">
+                                                    <i class="ri-book-open-line me-1"></i>${exam.subject || 'No Subject'}
+                                                </small>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <i class="ri-question-line me-1"></i>${exam.question_count} questions
+                                                </small>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-primary">${exam.marks || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        $('#exams-by-class-container').html(html);
+
+        // Re-attach event listeners
+        $('.exam-checkbox').change(updateSelectedExams);
+        $('#select-all-exams-checkbox').change(function() {
+            $('.exam-checkbox').prop('checked', this.checked);
+            updateSelectedExams();
+        });
+    }
+
+    // Update selected exams
+    function updateSelectedExams() {
+        selectedExams = [];
+        $('.exam-checkbox:checked').each(function() {
+            selectedExams.push({
+                id: $(this).val(),
+                title: $(this).data('title'),
+                class: $(this).data('class')
+            });
+        });
+
+        // Update UI
+        const selectedCount = selectedExams.length;
+        $('#selected-count').text(selectedCount);
+        $('#selected-exam-count').text(selectedCount);
+
+        if (selectedCount > 0) {
+            $('#selected-exams-summary').show();
+            $('#proceed-to-question-form-btn').prop('disabled', false);
+
+            // Update selected exams list
+            let selectedList = '';
+            selectedExams.forEach((exam, index) => {
+                if (index < 3) {
+                    selectedList += `<span class="badge bg-secondary me-1 mb-1">${exam.title}</span>`;
+                }
+            });
+            if (selectedCount > 3) {
+                selectedList += `<span class="badge bg-info">+${selectedCount - 3} more</span>`;
+            }
+            $('#selected-exams-list').html(selectedList);
+        } else {
+            $('#selected-exams-summary').hide();
+            $('#proceed-to-question-form-btn').prop('disabled', true);
+        }
+
+        // Update select all checkbox
+        const totalExams = $('.exam-checkbox').length;
+        const checkedCount = $('.exam-checkbox:checked').length;
+        $('#select-all-exams-checkbox').prop('checked', totalExams > 0 && checkedCount === totalExams);
+    }
+
+    // Search exams
+    $('#search-exams-input').on('keyup', debounce(function() {
+        const searchTerm = $(this).val().toLowerCase();
+
+        $('.exam-card').each(function() {
+            const card = $(this);
+            const examTitle = card.find('strong').text().toLowerCase();
+            const examClass = card.find('.text-muted').text().toLowerCase();
+
+            if (examTitle.includes(searchTerm) || examClass.includes(searchTerm) || searchTerm === '') {
+                card.parent().show();
+            } else {
+                card.parent().hide();
+            }
+        });
+    }, 300));
+
+    $('#clear-search-exams').click(function() {
+        $('#search-exams-input').val('');
+        $('.exam-card').parent().show();
+    });
+
+    // Proceed to question form modal (simplified)
+    $('#proceed-to-question-form-btn').click(function() {
+        if (selectedExams.length === 0) {
+            showError('Please select at least one exam');
+            return;
+        }
+
+        // Get the first selected exam (for now, we'll just use the first one)
+        const firstExamId = selectedExams[0].id;
+
+        // Close exam selection modal
+        $('#examSelectionModal').modal('hide');
+
+        // Open new question form for that exam
+        window.location.href = '{{ route("questions.create") }}?exam_id=' + firstExamId;
     });
 
     // View question
@@ -1129,55 +1251,11 @@ $(document).ready(function() {
         });
     });
 
-    // Question form submission
-    $('#question-form').submit(function(e) {
-        e.preventDefault();
-
-        const formData = new FormData(this);
-        const isEdit = $('#method-field input[name="_method"]').val() === 'PUT';
-        const url = isEdit ?
-            '{{ url("questions") }}/' + $('#question_id_field').val() :
-            '{{ route("questions.store") }}';
-
-        $('#save-question-btn').prop('disabled', true)
-            .find('.spinner-border').removeClass('d-none');
-
-        $.ajax({
-            url: url,
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success || !response.errors) {
-                    showSuccess(isEdit ? 'Question updated successfully' : 'Question added successfully');
-                    $('#questionModal').modal('hide');
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    let errorHtml = '<div class="alert alert-danger"><ul class="mb-0">';
-                    if (response.errors) {
-                        response.errors.forEach(error => {
-                            errorHtml += `<li>${error}</li>`;
-                        });
-                    } else {
-                        errorHtml += '<li>An error occurred while saving the question</li>';
-                    }
-                    errorHtml += '</ul></div>';
-                    $('#question-form-content').prepend(errorHtml);
-                }
-            },
-            error: function(xhr) {
-                let errorMessage = 'An error occurred while saving the question';
-                if (xhr.responseJSON && xhr.responseJSON.errors) {
-                    errorMessage = Object.values(xhr.responseJSON.errors).flat().join('<br>');
-                }
-                showError(errorMessage);
-            },
-            complete: function() {
-                $('#save-question-btn').prop('disabled', false)
-                    .find('.spinner-border').addClass('d-none');
-            }
-        });
+    // Edit question (redirect to edit page)
+    $(document).on('click', '.edit-question', function() {
+        const questionId = $(this).data('id');
+        const examId = $(this).data('exam-id');
+        window.location.href = '{{ url("questions") }}/' + questionId + '/edit?exam_id=' + examId;
     });
 
     // Initialize on page load
@@ -1225,6 +1303,11 @@ $(document).ready(function() {
 #reusable-questions-list .form-check-input:checked + .form-check-label {
     background-color: #e7f1ff;
     border-radius: 0.375rem;
+}
+
+.exam-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 </style>
 @endsection
