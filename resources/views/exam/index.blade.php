@@ -30,7 +30,7 @@
                                 <div class="row g-3">
                                     <div class="col-xxl-3">
                                         <div class="search-box">
-                                            <input type="text" class="form-control search" placeholder="Search exams">
+                                            <input type="text" class="form-control search" placeholder="Search exams" value="{{ request('search', '') }}">
                                             <i class="ri-search-line search-icon"></i>
                                         </div>
                                     </div>
@@ -45,8 +45,7 @@
                         <div class="card">
                             <div class="card-header d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <!-- FIXED: Changed $exams to $paginatedExams -->
-                                    <h5 class="card-title mb-0">Exams <span class="badge bg-dark-subtle text-dark ms-1">{{ $paginatedExams->total() }}</span></h5>
+                                    <h5 class="card-title mb-0">Exams <span class="badge bg-dark-subtle text-dark ms-1">{{ $exams->total() }}</span></h5>
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
@@ -76,16 +75,14 @@
                                                 <th class="min-w-125px">Start Time</th>
                                                 <th class="min-w-125px">End Time</th>
                                                 <th class="min-w-125px">Questions</th>
-                                                <th class="min-w-150px">Assigned Class(es)</th>
+                                                <th class="min-w-150px">Assigned Class</th>
                                                 <th class="min-w-100px">View Students</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="fw-semibold text-gray-600 list form-check-all">
-                                            <!-- FIXED: Changed $exams to $paginatedExams -->
-                                            @php $i = ($paginatedExams->currentPage() - 1) * $paginatedExams->perPage() @endphp
-                                            <!-- FIXED: Changed $exams to $paginatedExams -->
-                                            @forelse ($paginatedExams as $exam)
+                                            @php $i = ($exams->currentPage() - 1) * $exams->perPage() @endphp
+                                            @forelse ($exams as $exam)
                                                 @if($exam->id)
                                                 <tr>
                                                     <td class="id" data-id="{{ $exam->id }}">
@@ -103,35 +100,13 @@
                                                         <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">View Questions</a>
                                                     </td>
                                                     <td class="classes">
-                                                        @if(isset($exam->classes) && $exam->classes->count() > 0)
-                                                            @php
-                                                                $classes = $exam->classes;
-                                                                $displayLimit = 2; // Show only 2 classes initially
-                                                            @endphp
-
-                                                            <div class="class-list">
-                                                                @foreach($classes->take($displayLimit) as $class)
-                                                                    <span class="badge bg-primary-subtle text-primary mb-1 me-1 d-inline-block">
-                                                                        {{ $class->schoolclass }}{{ $class->arm ? ' (' . $class->arm . ')' : '' }}
-                                                                    </span>
-                                                                @endforeach
-
-                                                                @if($classes->count() > $displayLimit)
-                                                                    <a href="javascript:void(0);"
-                                                                       class="text-muted fs-7 view-all-classes"
-                                                                       data-bs-toggle="popover"
-                                                                       data-bs-html="true"
-                                                                       data-bs-content="
-                                                                       <div class='popover-class-list'>
-                                                                           @foreach($classes as $class)
-                                                                               <div class='mb-1'>{{ $class->schoolclass }}{{ $class->arm ? ' (' . $class->arm . ')' : '' }}</div>
-                                                                           @endforeach
-                                                                       </div>"
-                                                                       data-bs-title="All Classes ({{ $classes->count() }})">
-                                                                        +{{ $classes->count() - $displayLimit }} more
-                                                                    </a>
+                                                        @if($exam->schoolclass)
+                                                            <span class="badge bg-primary-subtle text-primary">
+                                                                {{ $exam->schoolclass->schoolclass }}
+                                                                @if($exam->schoolclass->arm)
+                                                                    ({{ $exam->schoolclass->arm }})
                                                                 @endif
-                                                            </div>
+                                                            </span>
                                                         @else
                                                             <span class="text-muted">No class assigned</span>
                                                         @endif
@@ -165,36 +140,32 @@
                                 </div>
                                 <div class="row mt-3 align-items-center" id="pagination-element">
                                     <div class="col-sm">
-                                        <!-- FIXED: Changed $exams to $paginatedExams -->
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $paginatedExams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $paginatedExams->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $paginatedExams->total() }}</span> Results
+                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $exams->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $exams->total() }}</span> Results
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
                                         <div class="pagination-wrap hstack gap-2 justify-content-center">
-                                            <!-- FIXED: Changed $exams to $paginatedExams -->
-                                            @if($paginatedExams->onFirstPage())
+                                            @if($exams->onFirstPage())
                                                 <span class="page-item pagination-prev disabled">
                                                     <i class="mdi mdi-chevron-left align-middle"></i>
                                                 </span>
                                             @else
-                                                <a class="page-item pagination-prev" href="{{ $paginatedExams->previousPageUrl() }}">
+                                                <a class="page-item pagination-prev" href="{{ $exams->previousPageUrl() }}">
                                                     <i class="mdi mdi-chevron-left align-middle"></i>
                                                 </a>
                                             @endif
 
                                             <ul class="pagination listjs-pagination mb-0">
-                                                <!-- FIXED: Changed $exams to $paginatedExams -->
-                                                @foreach ($paginatedExams->links()->elements[0] as $page => $url)
-                                                    <li class="page-item {{ $paginatedExams->currentPage() == $page ? 'active' : '' }}">
+                                                @foreach ($exams->links()->elements[0] as $page => $url)
+                                                    <li class="page-item {{ $exams->currentPage() == $page ? 'active' : '' }}">
                                                         <a class="page-link" href="{{ $url }}">{{ $page }}</a>
                                                     </li>
                                                 @endforeach
                                             </ul>
 
-                                            <!-- FIXED: Changed $exams to $paginatedExams -->
-                                            @if($paginatedExams->hasMorePages())
-                                                <a class="page-item pagination-next" href="{{ $paginatedExams->nextPageUrl() }}">
+                                            @if($exams->hasMorePages())
+                                                <a class="page-item pagination-next" href="{{ $exams->nextPageUrl() }}">
                                                     <i class="mdi mdi-chevron-right align-middle"></i>
                                                 </a>
                                             @else
@@ -413,21 +384,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-    console.log('CSRF Token:', csrfToken);
-
-    // Initialize popovers for class lists
-    const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
-    const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
-
-    // Close popovers when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.view-all-classes') && !e.target.closest('.popover')) {
-            popoverList.forEach(popover => {
-                popover.hide();
-            });
-        }
-    });
 
     // Initialize modal filtering
     initModalFiltering();
@@ -1181,39 +1137,12 @@ option[style*="display: none"] {
     to { transform: rotate(360deg); }
 }
 
-/* Class list styling */
-.class-list .badge {
+/* Class badge styling */
+.classes .badge {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
     border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
-}
-
-.popover-class-list {
-    max-height: 200px;
-    overflow-y: auto;
-    padding: 0.5rem;
-}
-
-.popover-class-list div {
-    padding: 0.25rem 0;
-    border-bottom: 1px solid #f1f1f1;
-    font-size: 0.875rem;
-}
-
-.popover-class-list div:last-child {
-    border-bottom: none;
-}
-
-.view-all-classes {
-    text-decoration: none;
-    cursor: pointer;
-    font-size: 0.875rem;
-}
-
-.view-all-classes:hover {
-    text-decoration: underline;
-    color: var(--bs-primary) !important;
 }
 
 /* Adjust table cell width for class column */
