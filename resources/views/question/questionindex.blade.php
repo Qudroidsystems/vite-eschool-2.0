@@ -483,6 +483,9 @@
                 <button type="button" class="btn btn-secondary" id="change-exam-selection">
                     <i class="ri-arrow-left-line me-1"></i> Change Exams
                 </button>
+                <button type="button" class="btn btn-success" id="save-and-add-another-btn">
+                    <i class="ri-add-circle-line me-1"></i> Save & Add Another
+                </button>
                 <button type="submit" class="btn btn-primary" id="save-question-btn" form="question-form">
                     <i class="ri-save-line me-1"></i> Save Question
                 </button>
@@ -498,57 +501,18 @@
         <div class="alert alert-warning">
             <i class="ri-alert-line me-2"></i> You must select one correct option
         </div>
-        <div class="options-fields">
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">A:</label>
-                    <input type="text" name="options[a][option_text]" class="form-control me-3" placeholder="Enter option A..." required />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="a" required />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">B:</label>
-                    <input type="text" name="options[b][option_text]" class="form-control me-3" placeholder="Enter option B..." required />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="b" />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">C:</label>
-                    <input type="text" name="options[c][option_text]" class="form-control me-3" placeholder="Enter option C..." />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="c" />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">D:</label>
-                    <input type="text" name="options[d][option_text]" class="form-control me-3" placeholder="Enter option D..." />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="d" />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">E:</label>
-                    <input type="text" name="options[e][option_text]" class="form-control me-3" placeholder="Enter option E..." />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="e" />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
+
+        <div class="options-fields" id="mcq-options-fields">
+            <!-- Options will be dynamically added here -->
+        </div>
+
+        <button type="button" class="btn btn-outline-primary btn-sm" id="add-mcq-option">
+            <i class="ri-add-line me-1"></i> Add Another Option
+        </button>
+
+        <div class="alert alert-info mt-3">
+            <i class="ri-information-line me-2"></i>
+            Options labeled A-E will be saved as default labels. Additional options will be saved with custom labels.
         </div>
     </div>
 </template>
@@ -1541,9 +1505,14 @@ $(document).ready(function() {
         }
 
         // Add hidden fields for selected exams
-        selectedExams.forEach(exam => {
-            $('#selected-exams-field').append(`<input type="hidden" name="exam_ids[]" value="${exam.id}">`);
-        });
+        if (selectedExams.length === 1) {
+            $('#selected-exams-field').append(`<input type="hidden" name="exam_id" value="${selectedExams[0].id}">`);
+        } else {
+            // If multiple exams selected, we need to handle this differently
+            selectedExams.forEach(exam => {
+                $('#selected-exams-field').append(`<input type="hidden" name="exam_ids[]" value="${exam.id}">`);
+            });
+        }
 
         // Set form action and method
         $('#method-field').html(`
@@ -1556,6 +1525,111 @@ $(document).ready(function() {
 
         // Initialize Quill editor for question text
         initializeQuestionTextEditor();
+    }
+
+    // Function to add MCQ option fields
+    function addMCQOption(label = null, value = '', isCorrect = false) {
+        const optionsContainer = $('#mcq-options-fields');
+        const optionCount = optionsContainer.find('.option-field').length;
+
+        // Generate label if not provided
+        if (!label) {
+            if (optionCount < 5) {
+                const defaultLabels = ['A', 'B', 'C', 'D', 'E'];
+                label = defaultLabels[optionCount];
+            } else {
+                label = `Option ${optionCount + 1}`;
+            }
+        }
+
+        const optionId = `option-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const fieldName = label.toLowerCase().replace(/[^a-z]/g, '');
+
+        const optionHtml = `
+            <div class="option-field mb-3" id="${optionId}">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">${label}:</label>
+                    <input type="text"
+                           name="options[${fieldName}][option_text]"
+                           class="form-control me-3"
+                           placeholder="Enter option ${label}..."
+                           value="${value}"
+                           ${optionCount < 2 ? 'required' : ''} />
+                    <div class="form-check me-2">
+                        <input class="form-check-input is-correct"
+                               type="radio"
+                               name="correct_option"
+                               value="${fieldName}"
+                               ${isCorrect ? 'checked' : ''} />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                    ${optionCount >= 2 ? `
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-option" data-option="${optionId}">
+                            <i class="ri-close-line"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        optionsContainer.append(optionHtml);
+
+        // Add remove option functionality
+        $(`#${optionId} .remove-option`).click(function() {
+            $(this).closest('.option-field').remove();
+            updateMCQValidation();
+        });
+    }
+
+    // Function to update MCQ validation
+    function updateMCQValidation() {
+        const filledOptions = $('#mcq-options-fields input[type="text"]').filter(function() {
+            return $(this).val().trim() !== '';
+        }).length;
+
+        const minRequiredOptions = 2;
+
+        // Update required attribute based on count
+        $('#mcq-options-fields input[type="text"]').each(function(index) {
+            if (index < minRequiredOptions) {
+                $(this).prop('required', true);
+            } else {
+                $(this).prop('required', false);
+            }
+        });
+
+        // Show warning if not enough options
+        if (filledOptions < minRequiredOptions) {
+            $('#mcq-options-fields').before(`
+                <div class="alert alert-danger" id="option-warning">
+                    <i class="ri-alert-line me-2"></i>
+                    At least ${minRequiredOptions} options must be filled
+                </div>
+            `);
+        } else {
+            $('#option-warning').remove();
+        }
+    }
+
+    // Initialize MCQ options with default A and B
+    function initializeMCQOptions() {
+        const optionsContainer = $('#mcq-options-fields');
+        optionsContainer.empty();
+
+        // Add first two required options
+        addMCQOption('A', '', false);
+        addMCQOption('B', '', false);
+
+        // Add more options button functionality
+        $('#add-mcq-option').off('click').click(function() {
+            addMCQOption();
+            updateMCQValidation();
+        });
+
+        // Add input validation on change
+        optionsContainer.on('input', 'input[type="text"]', function() {
+            updateMCQValidation();
+        });
     }
 
     // Function to load question type options
@@ -1581,8 +1655,10 @@ $(document).ready(function() {
             const content = template.content.cloneNode(true);
             $('#question-options-container').append(content);
 
-            // Initialize short answer editor if needed
-            if (type === 'short_answer') {
+            // Initialize specific options
+            if (type === 'mcq') {
+                initializeMCQOptions();
+            } else if (type === 'short_answer') {
                 initializeShortAnswerEditor();
             }
         }
@@ -1747,6 +1823,105 @@ $(document).ready(function() {
         });
     });
 
+    // Handle Save & Add Another button
+    $('#save-and-add-another-btn').click(function() {
+        console.log('Save & Add Another clicked');
+
+        // Update hidden textareas with editor content
+        if (questionTextEditor) {
+            $('#question_text').val(questionTextEditor.root.innerHTML);
+        }
+
+        if (shortAnswerEditor) {
+            $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
+        }
+
+        // Validate form
+        if (!validateQuestionForm()) {
+            return;
+        }
+
+        const formData = new FormData($('#question-form')[0]);
+        const url = '{{ route("questions.store") }}';
+
+        console.log('Submitting to:', url);
+
+        $('#save-and-add-another-btn, #save-question-btn').prop('disabled', true)
+            .find('.spinner-border').removeClass('d-none');
+        $('#form-errors').addClass('d-none');
+
+        $.ajax({
+            url: url,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                console.log('Save & Add Another response:', response);
+                if (response.success) {
+                    showSuccess('Question saved! Adding another...');
+
+                    // Reset form but keep selected exams
+                    resetQuestionForm();
+
+                    // Re-enable buttons
+                    $('#save-and-add-another-btn, #save-question-btn').prop('disabled', false)
+                        .find('.spinner-border').addClass('d-none');
+                } else {
+                    showFormErrors(response.errors || ['An error occurred']);
+                    $('#save-and-add-another-btn, #save-question-btn').prop('disabled', false)
+                        .find('.spinner-border').addClass('d-none');
+                }
+            },
+            error: function(xhr) {
+                console.error('Error response:', xhr.responseText);
+                if (xhr.status === 422) {
+                    const errors = xhr.responseJSON.errors;
+                    showFormErrors(Object.values(errors).flat());
+                } else {
+                    showFormErrors(['An unexpected error occurred. Please try again.']);
+                }
+                $('#save-and-add-another-btn, #save-question-btn').prop('disabled', false)
+                    .find('.spinner-border').addClass('d-none');
+            }
+        });
+    });
+
+    // Function to reset the question form
+    function resetQuestionForm() {
+        // Clear form fields but keep selected exams
+        $('#type').val('mcq');
+        $('#marks').val('1');
+        $('#is_reusable').prop('checked', false);
+
+        // Reset editors
+        if (questionTextEditor) {
+            questionTextEditor.root.innerHTML = '';
+            $('#question_text').val('');
+        }
+
+        if (shortAnswerEditor) {
+            shortAnswerEditor.root.innerHTML = '';
+            $('#short_answer_text').val('');
+        }
+
+        // Reset image
+        $('#image').val('');
+        $('#image-preview').hide();
+        $('#preview-img').attr('src', '#');
+
+        // Clear errors
+        $('#form-errors').addClass('d-none').find('#error-list').empty();
+
+        // Reload default options
+        loadQuestionTypeOptions('mcq');
+
+        // Focus on question text editor
+        if (questionTextEditor) {
+            questionTextEditor.focus();
+        }
+    }
+
     // Validate question form
     function validateQuestionForm() {
         const type = $('#type').val();
@@ -1767,7 +1942,7 @@ $(document).ready(function() {
 
         // Check type-specific validation
         if (type === 'mcq') {
-            const filledOptions = $('input[name^="options["][name$="][option_text]"]').filter(function() {
+            const filledOptions = $('#mcq-options-fields input[type="text"]').filter(function() {
                 return $(this).val().trim() !== '';
             }).length;
 

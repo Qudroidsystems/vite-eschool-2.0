@@ -78,121 +78,141 @@ class QuestionController extends Controller
     }
 
     /**
-     * Display questions for a specific exam.
-     */
-    public function show(string $id)
-    {
-        // Ensure we get a single Exam instance with its questions and options
-        $exam = Exam::with([
-            'questions.options',
-            'schoolclass.armRelation'
-        ])->findOrFail($id);
-
-        $pagetitle = 'Questions Management for ' . $exam->title;
-        return view('question.index', compact('exam', 'pagetitle'));
-    }
-
-    /**
-     * Store a newly created resource in storage.
+     * Store a newly created question
      */
     public function store(Request $request)
     {
+        \Log::info('Storing new question', $request->all());
+
+        // Handle multiple exam_ids or single exam_id
+        if ($request->has('exam_ids') && is_array($request->exam_ids)) {
+            // Multiple exams selected
+            $examIds = $request->exam_ids;
+        } else {
+            // Single exam selected
+            $examIds = [$request->exam_id];
+        }
+
+        // Validate exam IDs
+        foreach ($examIds as $examId) {
+            if (!Exam::where('id', $examId)->where('staffId', Auth::id())->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => ['Invalid exam selected']
+                ], 422);
+            }
+        }
+
         $rules = [
-            'exam_id' => 'required|exists:exams,id',
             'question_text' => 'required|string',
             'type' => 'required|in:mcq,true_false,short_answer',
             'image' => 'nullable|image|max:2048',
-            'options' => 'required|array',
-            'correct_option' => [
-                'required',
-                function ($attribute, $value, $fail) use ($request) {
-                    $type = $request->input('type');
-                    if ($type === 'mcq' && !in_array($value, ['a', 'b', 'c', 'd', 'e'])) {
-                        $fail("The selected correct option for MCQ must be one of A, B, C, D, or E. Received: '$value'");
-                    } elseif ($type === 'true_false' && !in_array($value, ['true', 'false'])) {
-                        $fail("The selected correct option for True/False must be True or False. Received: '$value'");
-                    } elseif ($type === 'short_answer' && $value !== 'answer') {
-                        $fail("The selected correct option for Short Answer must be 'answer'. Received: '$value'");
-                    }
-                },
-            ],
+            'correct_option' => 'required',
             'marks' => 'nullable|numeric|min:0.1',
             'is_reusable' => 'nullable|boolean',
         ];
 
+        // Add type-specific validation
         if ($request->type === 'mcq') {
-            $rules['options.*.option_text'] = 'nullable|string';
-        } elseif ($request->type === 'true_false') {
-            $rules['options.*.option_text'] = 'nullable|string';
+            $rules['options'] = 'required|array';
         } elseif ($request->type === 'short_answer') {
             $rules['options.answer.option_text'] = 'required|string';
         }
 
+        \Log::info('Validation rules:', $rules);
+
         $validated = $request->validate($rules);
 
-        // Handle image upload
+        \Log::info('Validated data:', $validated);
+
+        $createdQuestions = [];
         $imagePath = "";
+
+        // Handle image upload (only once for all exams)
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('question_images', 'public');
         }
 
-        // Get next order number for this exam
-        $order = Question::where('exam_id', $validated['exam_id'])->max('order') + 1;
+        // Create question for each selected exam
+        foreach ($examIds as $examId) {
+            // Get next order number for this exam
+            $order = Question::where('exam_id', $examId)->max('order') + 1;
 
-        // Create question with image path
-        $question = Question::create([
-            'exam_id' => $validated['exam_id'],
-            'question_text' => $validated['question_text'],
-            'type' => $validated['type'],
-            'image' => $imagePath,
-            'marks' => $validated['marks'] ?? 1,
-            'order' => $order,
-            'is_reusable' => $validated['is_reusable'] ?? false,
-        ]);
+            // Create question
+            $question = Question::create([
+                'exam_id' => $examId,
+                'question_text' => $validated['question_text'],
+                'type' => $validated['type'],
+                'image' => $imagePath,
+                'marks' => $validated['marks'] ?? 1,
+                'order' => $order,
+                'is_reusable' => $validated['is_reusable'] ?? false,
+            ]);
 
-        if ($validated['type'] === 'mcq') {
-            $optionLabels = ['a', 'b', 'c', 'd', 'e'];
-            $filledOptions = 0;
-            foreach ($optionLabels as $label) {
-                if (isset($validated['options'][$label]['option_text']) && !empty($validated['options'][$label]['option_text'])) {
-                    $question->options()->create([
-                        'option_text' => $validated['options'][$label]['option_text'],
-                        'is_correct' => $validated['correct_option'] === $label,
-                        'label' => $label,
-                    ]);
-                    $filledOptions++;
+            $createdQuestions[] = $question;
+
+            // Create options based on type
+            if ($validated['type'] === 'mcq') {
+                $filledOptions = 0;
+
+                // Process MCQ options
+                foreach ($request->options as $key => $option) {
+                    if (isset($option['option_text']) && !empty(trim($option['option_text']))) {
+                        $question->options()->create([
+                            'option_text' => $option['option_text'],
+                            'is_correct' => $validated['correct_option'] === $key,
+                            'label' => $key,
+                        ]);
+                        $filledOptions++;
+                    }
                 }
+
+                if ($filledOptions < 2) {
+                    // Clean up on failure
+                    foreach ($createdQuestions as $q) {
+                        $q->options()->delete();
+                        $q->delete();
+                    }
+                    if ($imagePath) Storage::disk('public')->delete($imagePath);
+
+                    return response()->json([
+                        'success' => false,
+                        'errors' => ['At least 2 options must be filled for MCQ']
+                    ]);
+                }
+            } elseif ($validated['type'] === 'true_false') {
+                $question->options()->create([
+                    'option_text' => 'True',
+                    'is_correct' => $validated['correct_option'] === 'true',
+                    'label' => 'true',
+                ]);
+                $question->options()->create([
+                    'option_text' => 'False',
+                    'is_correct' => $validated['correct_option'] === 'false',
+                    'label' => 'false',
+                ]);
+            } elseif ($validated['type'] === 'short_answer') {
+                $question->options()->create([
+                    'option_text' => $validated['options']['answer']['option_text'],
+                    'is_correct' => true,
+                    'label' => 'answer',
+                ]);
             }
-            if ($filledOptions < 2) {
-                if ($imagePath) Storage::disk('public')->delete($imagePath);
-                $question->delete();
-                return back()->withErrors(['options' => 'At least 2 options must be filled for MCQ']);
-            }
-        } elseif ($validated['type'] === 'true_false') {
-            $question->options()->create([
-                'option_text' => 'True',
-                'is_correct' => $validated['correct_option'] === 'true',
-                'label' => 'true',
-            ]);
-            $question->options()->create([
-                'option_text' => 'False',
-                'is_correct' => $validated['correct_option'] === 'false',
-                'label' => 'false',
-            ]);
-        } elseif ($validated['type'] === 'short_answer') {
-            $question->options()->create([
-                'option_text' => $validated['options']['answer']['option_text'],
-                'is_correct' => true,
-                'label' => 'answer',
-            ]);
         }
 
-        return redirect()->route('questions.show', $request->exam_id)->with('success', 'Question added successfully');
+        return response()->json([
+            'success' => true,
+            'message' => count($examIds) > 1 ?
+                'Question added to ' . count($examIds) . ' exams successfully' :
+                'Question added successfully',
+            'question_count' => count($createdQuestions),
+            'exam_ids' => $examIds
+        ]);
     }
 
     public function showDetails(Question $question)
     {
-        $question->load('exam.schoolclass.armRelation');
+        $question->load('exam.schoolclass.armRelation', 'exam.subject', 'options');
 
         return response()->json([
             'exam_id' => $question->exam_id,
@@ -359,10 +379,46 @@ class QuestionController extends Controller
     }
 
     /**
-     * ============================================
-     * NEW FEATURES IMPLEMENTATION
-     * ============================================
+     * Get exams for selection
      */
+    public function getExamsForSelection(Request $request)
+    {
+        $user = Auth::user();
+
+        \Log::info('Getting exams for user: ' . $user->id);
+
+        $exams = Exam::with(['schoolclass.armRelation', 'subject', 'questions'])
+            ->where('staffId', $user->id)
+            ->orderBy('title')
+            ->get()
+            ->map(function($exam) {
+                \Log::info('Exam ID: ' . $exam->id . ', Subject: ' . ($exam->subject ? $exam->subject->name : 'null'));
+
+                return [
+                    'id' => $exam->id,
+                    'title' => $exam->title,
+                    'subject' => $exam->subject ? $exam->subject->name : 'No Subject',
+                    'subject_id' => $exam->subject_id,
+                    'class_name' => $exam->schoolclass ?
+                        $exam->schoolclass->schoolclass .
+                        ($exam->schoolclass->armRelation ? ' (' . $exam->schoolclass->armRelation->arm . ')' : '') :
+                        'No Class',
+                    'question_count' => $exam->questions->count(),
+                    'marks' => $exam->questions->sum('marks')
+                ];
+            });
+
+        \Log::info('Returning ' . $exams->count() . ' exams');
+
+        return response()->json([
+            'success' => true,
+            'exams' => $exams,
+            'debug' => [
+                'user_id' => $user->id,
+                'exam_count' => $exams->count()
+            ]
+        ]);
+    }
 
     /**
      * Import questions from Excel/CSV
@@ -539,24 +595,6 @@ class QuestionController extends Controller
     }
 
     /**
-     * Bulk destroy questions
-     */
-    public function bulkDestroy(Request $request)
-    {
-        $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'exists:questions,id'
-        ]);
-
-        $count = Question::whereIn('id', $request->ids)->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => "{$count} question(s) deleted successfully"
-        ]);
-    }
-
-    /**
      * Get reusable questions for selection
      */
     public function getReusableQuestions(Request $request)
@@ -614,44 +652,4 @@ class QuestionController extends Controller
 
         return $query->get();
     }
-
-
-   public function getExamsForSelection(Request $request)
-{
-    $user = Auth::user();
-
-    \Log::info('Getting exams for user: ' . $user->id);
-
-    $exams = Exam::with(['schoolclass.armRelation', 'subject', 'questions'])
-        ->where('staffId', $user->id)
-        ->orderBy('title')
-        ->get()
-        ->map(function($exam) {
-            \Log::info('Exam ID: ' . $exam->id . ', Subject ID: ' . $exam->subject_id . ', Subject: ' . ($exam->subject ? $exam->subject->name : 'null'));
-
-            return [
-                'id' => $exam->id,
-                'title' => $exam->title,
-                'subject' => $exam->subject ? $exam->subject->name : ($exam->subject_id ? 'Subject ID: ' . $exam->subject_id : 'No Subject'),
-                'subject_id' => $exam->subject_id, // Add this for debugging
-                'class_name' => $exam->schoolclass ?
-                    $exam->schoolclass->schoolclass .
-                    ($exam->schoolclass->armRelation ? ' (' . $exam->schoolclass->armRelation->arm . ')' : '') :
-                    'No Class',
-                'question_count' => $exam->questions->count(),
-                'marks' => $exam->questions->sum('marks')
-            ];
-        });
-
-    \Log::info('Returning ' . $exams->count() . ' exams');
-
-    return response()->json([
-        'success' => true,
-        'exams' => $exams,
-        'debug' => [
-            'user_id' => $user->id,
-            'exam_count' => $exams->count()
-        ]
-    ]);
-}
 }
