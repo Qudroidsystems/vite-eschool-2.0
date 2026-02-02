@@ -258,15 +258,6 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/scoresheet/download-marks-sheet', [MyScoreSheetController::class, 'downloadMarkSheet'])->name('scoresheet.download-marks-sheet');
     Route::post('/subjectscoresheet/bulk-update', [MyScoreSheetController::class, 'bulkUpdateScores']) ->name('subjectscoresheet.bulk-update');
 
-    // Route::prefix('school-info')->name('admin.school-info.')->group(function () {
-    //     Route::get('/', [SchoolInformationController::class, 'index'])->name('index');
-    //     Route::post('/', [SchoolInformationController::class, 'store'])->name('store');
-    //     Route::match(['PUT', 'PATCH', 'POST'], '/{id}', [SchoolInformationController::class, 'update'])->name('update');
-    //     Route::delete('/{id}', [SchoolInformationController::class, 'destroy'])->name('destroy');
-    //     Route::get('/{id}', [SchoolInformationController::class, 'show'])->name('show');
-    //     Route::get('/{id}/edit-json', [SchoolInformationController::class, 'editJson'])->name('edit-json');
-    // });
-
     Route::prefix('school-info')->name('admin.school-info.')->group(function () {
         Route::get('/', [SchoolInformationController::class, 'index'])->name('index');
         Route::post('/', [SchoolInformationController::class, 'store'])->name('store');
@@ -461,48 +452,48 @@ Route::group(['middleware' => ['auth']], function () {
 
 
     // Main resource routes (index, create, store, show, edit, update, destroy)
-Route::resource('exams', ExamController::class)->except(['show']); // 'show' not used
+    Route::resource('exams', ExamController::class)->except(['show']); // 'show' not used
 
-// Custom routes (override or add what resource doesn't cover)
-Route::delete('exams/bulk-destroy', [ExamController::class, 'bulkDestroy'])
-    ->name('exams.bulk-destroy');
+    // Custom routes (override or add what resource doesn't cover)
+    Route::delete('exams/bulk-destroy', [ExamController::class, 'bulkDestroy'])
+        ->name('exams.bulk-destroy');
 
-// View students who attempted this exam + class filter support
-Route::get('exams/{exam}/students', [ExamController::class, 'showStudents'])
-    ->name('exams.students');
+    // View students who attempted this exam + class filter support
+    Route::get('exams/{exam}/students', [ExamController::class, 'showStudents'])
+        ->name('exams.students');
 
-// Delete a student's attempt (allow retake)
-Route::delete('exams/{exam}/students/{student}/attempt', [ExamController::class, 'deleteStudentAttempt'])
-    ->name('exams.student.attempt.delete');
+    // Delete a student's attempt (allow retake)
+    Route::delete('exams/{exam}/students/{student}/attempt', [ExamController::class, 'deleteStudentAttempt'])
+        ->name('exams.student.attempt.delete');
 
-// View detailed answers for one student
-Route::get('exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])
-    ->name('exams.student.answers');
+    // View detailed answers for one student
+    Route::get('exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])
+        ->name('exams.student.answers');
 
-// Download question paper PDF with student's answers
-Route::get('exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
-    ->name('exams.student.question-paper');
+    // Download question paper PDF with student's answers
+    Route::get('exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
+        ->name('exams.student.question-paper');
 
-// Analytics dashboard for the exam
-Route::get('exams/{exam}/analytics', [ExamController::class, 'analytics'])
-    ->name('exams.analytics');
+    // Analytics dashboard for the exam
+    Route::get('exams/{exam}/analytics', [ExamController::class, 'analytics'])
+        ->name('exams.analytics');
 
-// Get filtered subjects based on term/session
-Route::get('exams/filtered-subjects', [ExamController::class, 'getFilteredSubjects'])
-    ->name('exams.filtered-subjects');
+    // Get filtered subjects based on term/session
+    Route::get('exams/filtered-subjects', [ExamController::class, 'getFilteredSubjects'])
+        ->name('exams.filtered-subjects');
 
-// Helper route: get classes for a subject (used in AJAX for modals)
-Route::get('exams/subject-classes/{subjectTeacherId}', [ExamController::class, 'getClassesForSubject'])
-    ->name('exams.subject-classes');
+    // Helper route: get classes for a subject (used in AJAX for modals)
+    Route::get('exams/subject-classes/{subjectTeacherId}', [ExamController::class, 'getClassesForSubject'])
+        ->name('exams.subject-classes');
 
-Route::resource('questions', QuestionController::class);
-Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);
-Route::get('/{question}/details', [QuestionController::class, 'details'])->name('questions.details');
-Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+    Route::resource('questions', QuestionController::class);
+    Route::get('/questions/{question}/details', [QuestionController::class, 'showDetails']);
+    Route::get('/{question}/details', [QuestionController::class, 'details'])->name('questions.details');
+    Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
 
-Route::resource('cbt', CBTController::class);
-Route::get('/cbt/{examid}/takecbt', [CBTController::class, 'takeCBT'])->name('cbt.take');
-Route::post('/cbt/submit', [CBTController::class, 'submit'])->name('cbt.submit');
+    Route::resource('cbt', CBTController::class);
+    Route::get('/cbt/{examid}/takecbt', [CBTController::class, 'takeCBT'])->name('cbt.take');
+    Route::post('/cbt/submit', [CBTController::class, 'submit'])->name('cbt.submit');
 
     // //Exams routes...
     // Route::resource('exams', ExamController::class);

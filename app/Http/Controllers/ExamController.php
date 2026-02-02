@@ -188,10 +188,17 @@ class ExamController extends Controller
             )
             ->get();
 
+        // Check if we're in edit mode by checking the request referrer or exam_id
+        $selectedClasses = [];
+        if (request()->header('referer') && str_contains(request()->header('referer'), '/edit')) {
+            // We're likely in edit mode, but we need more context
+            // This is handled separately in the JavaScript
+        }
+
         return response()->json([
             'success' => true,
             'classes' => $classes,
-            'selectedClasses' => [] // For edit, you might want to pass existing selections
+            'selectedClasses' => $selectedClasses
         ]);
     }
 
@@ -236,16 +243,16 @@ class ExamController extends Controller
     {
         $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
-        $groupClassIds = Exam::where('staffId', $exam->staffId)
+        // Get all exams in the same group (same title, subject, term, session)
+        $groupExams = Exam::where('staffId', $exam->staffId)
             ->where('title', $exam->title)
             ->where('subject_id', $exam->subject_id)
             ->where('termid', $exam->termid)
             ->where('session', $exam->session)
-            ->pluck('schoolclass_id')
-            ->toArray();
+            ->get();
 
-        // Get the subject teacher info
-        $subjectTeacher = SubjectTeacher::find($exam->subject_id);
+        // Get selected class IDs
+        $groupClassIds = $groupExams->pluck('schoolclass_id')->toArray();
 
         if (request()->ajax()) {
             return response()->json([
@@ -263,6 +270,12 @@ class ExamController extends Controller
 
     public function update(Request $request, string $id)
     {
+        \Log::info('Update request received:', [
+            'exam_id' => $id,
+            'data' => $request->all(),
+            'user_id' => auth()->id()
+        ]);
+
         $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
         $validated = $request->validate([
@@ -282,23 +295,43 @@ class ExamController extends Controller
         $validated['is_published'] = $request->has('is_published');
         $validated['staffId'] = $exam->staffId;
 
-        Exam::where('staffId', $exam->staffId)
+        \Log::info('Validated data:', $validated);
+
+        // Delete all exams in the group
+        $deletedCount = Exam::where('staffId', $exam->staffId)
             ->where('title', $exam->title)
             ->where('subject_id', $exam->subject_id)
             ->where('termid', $exam->termid)
             ->where('session', $exam->session)
             ->delete();
 
+        \Log::info("Deleted {$deletedCount} exams from group");
+
+        // Create new exams for each selected class
         $createdCount = 0;
         foreach ($validated['schoolclass_ids'] as $classId) {
-            $examData = $validated;
-            $examData['schoolclass_id'] = $classId;
-            unset($examData['schoolclass_ids']);
+            $examData = [
+                'staffId' => $validated['staffId'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'duration' => $validated['duration'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
+                'termid' => $validated['termid'],
+                'session' => $validated['session'],
+                'subject_id' => $validated['subject_id'],
+                'schoolclass_id' => $classId,
+                'is_published' => $validated['is_published']
+            ];
+
             Exam::create($examData);
             $createdCount++;
+            \Log::info("Created exam for class {$classId}");
         }
 
         $message = "Exam updated successfully for {$createdCount} class" . ($createdCount > 1 ? 'es' : '.') . ".";
+
+        \Log::info($message);
 
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => $message]);
