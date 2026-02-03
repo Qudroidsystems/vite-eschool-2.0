@@ -25,173 +25,142 @@ class CBTController extends Controller
         $this->middleware('permission:Take cbt-exam', ['only' => ['takeCBT']]);
         $this->middleware('permission:Submit cbt-exam', ['only' => ['submit']]);
     }
-public function index(Request $request)
-{
-    $pagetitle = 'CBT Management';
 
-    $studentId = auth()->user()->student_id;
+    public function index(Request $request)
+    {
+        $pagetitle = 'CBT Management';
 
-    $student = DB::table('studentRegistration')
-        ->where('id', $studentId)
-        ->select('id', 'firstname', 'lastname', 'admissionNo')
-        ->first();
+        $studentId = auth()->user()->student_id;
 
-    $studentClassData = DB::table('studentclass')
-        ->where('studentId', $studentId)
-        ->join('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
-        ->join('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
-        ->join('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
-        ->select(
-            'schoolclass.id as class_id',
-            'schoolclass.schoolclass as class_name',
-            'schoolterm.id as term_id',
-            'schoolterm.term as term_name',
-            'schoolsession.id as session_id',
-            'schoolsession.session as session_name'
-        )
-        ->first();
+        $student = DB::table('studentRegistration')
+            ->where('id', $studentId)
+            ->select('id', 'firstname', 'lastname', 'admissionNo')
+            ->first();
 
-    $class      = $studentClassData ? (object) ['id' => $studentClassData->class_id,   'schoolclass' => $studentClassData->class_name]   : null;
-    $termObj    = $studentClassData ? (object) ['id' => $studentClassData->term_id,    'term'       => $studentClassData->term_name]     : null;
-    $sessionObj = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session'   => $studentClassData->session_name] : null;
+        $studentClassData = DB::table('studentclass')
+            ->where('studentId', $studentId)
+            ->join('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+            ->join('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
+            ->join('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
+            ->select(
+                'schoolclass.id as class_id',
+                'schoolclass.schoolclass as class_name',
+                'schoolterm.id as term_id',
+                'schoolterm.term as term_name',
+                'schoolsession.id as session_id',
+                'schoolsession.session as session_name'
+            )
+            ->first();
 
-    $terms    = Schoolterm::orderBy('id', 'desc')->get(['id', 'term']);
-    $sessions = Schoolsession::orderBy('id', 'desc')->get(['id', 'session', 'status']);
+        $class      = $studentClassData ? (object) ['id' => $studentClassData->class_id,   'schoolclass' => $studentClassData->class_name]   : null;
+        $termObj    = $studentClassData ? (object) ['id' => $studentClassData->term_id,    'term'       => $studentClassData->term_name]     : null;
+        $sessionObj = $studentClassData ? (object) ['id' => $studentClassData->session_id, 'session'   => $studentClassData->session_name] : null;
 
-    $selectedTermId    = $request->query('term');
-    $selectedSessionId = $request->query('session');
-    $search            = trim($request->query('search', ''));
+        $terms    = Schoolterm::orderBy('id', 'desc')->get(['id', 'term']);
+        $sessions = Schoolsession::orderBy('id', 'desc')->get(['id', 'session', 'status']);
 
-    // Selected names for display
-    $selectedTermName    = $selectedTermId ? Schoolterm::find($selectedTermId)?->term ?? 'Unknown Term' : null;
-    $selectedSessionName = null;
-    if ($selectedSessionId) {
-        $sessionRecord = Schoolsession::select('session', 'status')->find($selectedSessionId);
-        if ($sessionRecord) {
-            $selectedSessionName = $sessionRecord->session;
-            if ($sessionRecord->status) {
-                $selectedSessionName .= " ({$sessionRecord->status})";
+        $selectedTermId    = $request->query('term');
+        $selectedSessionId = $request->query('session');
+        $search            = trim($request->query('search', ''));
+
+        // Selected names for display
+        $selectedTermName    = $selectedTermId ? Schoolterm::find($selectedTermId)?->term ?? 'Unknown Term' : null;
+        $selectedSessionName = null;
+        if ($selectedSessionId) {
+            $sessionRecord = Schoolsession::select('session', 'status')->find($selectedSessionId);
+            if ($sessionRecord) {
+                $selectedSessionName = $sessionRecord->session;
+                if ($sessionRecord->status) {
+                    $selectedSessionName .= " ({$sessionRecord->status})";
+                }
             }
         }
-    }
 
-    $exams    = new LengthAwarePaginator(collect([]), 0, 15, 1, [
-        'path'  => Paginator::resolveCurrentPath(),
-        'query' => $request->query(),
-    ]);
-    $attempts = [];
-    $totalreg = 0;
-    $reg      = 0;
+        $exams    = new LengthAwarePaginator(collect([]), 0, 15, 1, [
+            'path'  => Paginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
+        $attempts = [];
+        $totalreg = 0;
+        $reg      = 0;
 
-    if ($selectedTermId && $selectedSessionId && $studentClassData) {
+        if ($selectedTermId && $selectedSessionId && $studentClassData) {
 
-        // $totalreg = DB::table('subjectclass')
-        //     ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-        //     ->where('subjectclass.schoolclassid', $studentClassData->class_id)
-        //     ->where('subjectteacher.sessionid', $selectedSessionId)
-        //     ->where('subjectteacher.termid', $selectedTermId)
-        //     ->distinct()
-        //     ->count('subjectteacher.subjectid');
-
-        $totalreg = DB::table('subjectclass')
+            $totalreg = DB::table('subjectclass')
                 ->where('schoolclassid', $studentClassData->class_id)
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-                // ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
-                // ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-                // ->where('schoolsession.status', '=', $current)
-             ->where('subjectteacher.sessionid', $selectedSessionId)
-            ->where('subjectteacher.termid', $selectedTermId)
+                ->where('subjectteacher.sessionid', $selectedSessionId)
+                ->where('subjectteacher.termid', $selectedTermId)
                 ->distinct('subjectteacher.subjectid')
                 ->count('subjectteacher.subjectid');
 
-        // $reg = DB::table('student_subject_register_record')
-        //     ->where('student_subject_register_record.studentId', $studentId)
-        //     ->where('student_subject_register_record.session', $selectedSessionId)
-        //     ->count();
-
-             $reg = DB::table('student_subject_register_record')
+            $reg = DB::table('student_subject_register_record')
                 ->where('student_subject_register_record.studentId', $studentId)
                 ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
-                // ->where('schoolsession.status', '=', $current)
                 ->count();
 
-        // $registeredSubjects = DB::table('student_subject_register_record')
-        //     ->where('student_subject_register_record.studentId', $studentId)
-        //     ->where('student_subject_register_record.session', $selectedSessionId)
-        //     ->join('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
-        //     ->join('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-        //     ->where('subjectteacher.sessionid', $selectedSessionId)
-        //     ->where('subjectteacher.termid', $selectedTermId)
-        //     ->distinct()
-        //     ->pluck('subjectteacher.subjectid')
-        //     ->toArray();
-
-
-        $registeredSubjects = DB::table('student_subject_register_record')
+            $registeredSubjects = DB::table('student_subject_register_record')
                 ->where('student_subject_register_record.studentId', $studentId)
                 ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
-                // ->where('schoolsession.status', '=', $current)
                 ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
                 ->pluck('subjectteacher.id')
                 ->toArray();
 
-        $examsQuery = DB::table('exams')
-            ->whereIn('subject_id', $registeredSubjects ?: [0])
-            ->where('schoolclass_id', $studentClassData->class_id)
-            ->where('termid', $selectedTermId)
-           ->where('session', $selectedSessionId);
+            $examsQuery = DB::table('exams')
+                ->whereIn('subject_id', $registeredSubjects ?: [0])
+                ->where('schoolclass_id', $studentClassData->class_id)
+                ->where('termid', $selectedTermId)
+                ->where('session', $selectedSessionId);
 
+            if ($search !== '') {
+                $examsQuery->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
 
+            $exams = $examsQuery
+                ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
+                ->paginate(15)
+                ->appends($request->query());
 
-        if ($search !== '') {
-            $examsQuery->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-            });
+            $examIds = $exams->pluck('id')->toArray();
+
+            $attempts = ExamAttempt::where('student_id', $studentId)
+                ->whereIn('exam_id', $examIds)
+                ->where('status', 'completed')
+                ->pluck('exam_id')
+                ->toArray();
         }
 
-        $exams = $examsQuery
-            ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
-            ->paginate(15)
-            ->appends($request->query());
+        if ($request->ajax()) {
+            return response()->view('cbt.partials.exams-table', compact(
+                'exams', 'attempts', 'student', 'class', 'termObj', 'sessionObj', 'totalreg', 'reg'
+            ));
+        }
 
-        $examIds = $exams->pluck('id')->toArray();
-
-        $attempts = ExamAttempt::where('student_id', $studentId)
-            ->whereIn('exam_id', $examIds)
-            ->where('status', 'completed')
-            ->pluck('exam_id')
-            ->toArray();
-    }
-
-    if ($request->ajax()) {
-        return response()->view('cbt.partials.exams-table', compact(
-            'exams', 'attempts', 'student', 'class', 'termObj', 'sessionObj', 'totalreg', 'reg'
+        return view('cbt.index', compact(
+            'pagetitle',
+            'student',
+            'class',
+            'termObj',
+            'sessionObj',
+            'terms',
+            'sessions',
+            'selectedTermId',
+            'selectedSessionId',
+            'selectedTermName',
+            'selectedSessionName',
+            'exams',
+            'attempts',
+            'totalreg',
+            'reg'
         ));
     }
-
-    return view('cbt.index', compact(
-        'pagetitle',
-        'student',
-        'class',
-        'termObj',
-        'sessionObj',
-        'terms',
-        'sessions',
-        'selectedTermId',
-        'selectedSessionId',
-        'selectedTermName',
-        'selectedSessionName',
-        'exams',
-        'attempts',
-        'totalreg',
-        'reg'
-    ));
-}
 
     public function takeCBT($examid)
     {
@@ -229,14 +198,20 @@ public function index(Request $request)
                 'status'     => 'in_progress'
             ]);
 
+            // Include marks in questions data
             $questions = $exam->questions->map(function ($question) {
                 return [
                     'id'        => $question->id,
                     'text'      => $question->question_text,
                     'options'   => $question->options->pluck('option_text')->toArray(),
-                    'image_url' => $question->image ? asset('storage/' . $question->image) : null
+                    'image_url' => $question->image ? asset('storage/' . $question->image) : null,
+                    'marks'     => $question->marks,
+                    'type'      => $question->type
                 ];
             })->toArray();
+
+            // Calculate total marks
+            $totalExamMarks = $exam->questions->sum('marks');
 
             $studentReg = DB::table('studentRegistration')
                 ->where('id', $student)
@@ -274,7 +249,8 @@ public function index(Request $request)
                 'class',
                 'term',
                 'session',
-                'attempt'
+                'attempt',
+                'totalExamMarks'
             ));
 
         } catch (\Exception $e) {
@@ -329,24 +305,30 @@ public function index(Request $request)
                 'status'   => 'completed'
             ]);
 
-            $totalMarks = $exam->questions->count();
-            $score      = 0;
-            $attempted  = 0;
+            // Calculate marks based on actual question marks
+            $totalMarks = 0;
+            $score = 0;
+            $attempted = 0;
 
             foreach ($data['answers'] as $submittedAnswer) {
                 $question = $exam->questions->firstWhere('id', $submittedAnswer['question_id']);
-                if ($question && !empty(trim($submittedAnswer['answer'] ?? ''))) {
-                    $attempted++;
-                    $selectedOption = $question->options->firstWhere('option_text', $submittedAnswer['answer']);
-                    if ($selectedOption) {
-                        Answer::create([
-                            'user_id'     => $student,
-                            'exam_id'     => $data['exam_id'],
-                            'question_id' => $submittedAnswer['question_id'],
-                            'option_id'   => $selectedOption->id,
-                        ]);
-                        if ($selectedOption->is_correct) {
-                            $score++;
+                if ($question) {
+                    // Add question marks to total
+                    $totalMarks += $question->marks;
+
+                    if (!empty(trim($submittedAnswer['answer'] ?? ''))) {
+                        $attempted++;
+                        $selectedOption = $question->options->firstWhere('option_text', $submittedAnswer['answer']);
+                        if ($selectedOption) {
+                            Answer::create([
+                                'user_id'     => $student,
+                                'exam_id'     => $data['exam_id'],
+                                'question_id' => $submittedAnswer['question_id'],
+                                'option_id'   => $selectedOption->id,
+                            ]);
+                            if ($selectedOption->is_correct) {
+                                $score += $question->marks; // Add the question's marks
+                            }
                         }
                     }
                 }
@@ -376,7 +358,7 @@ public function index(Request $request)
         }
     }
 
-    // CRUD stubs (empty)
+    // CRUD stubs
     public function create() {}
     public function store(Request $request) {}
     public function show(string $id) {}

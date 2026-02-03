@@ -10,7 +10,7 @@
         --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
         --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     }
-    
+
     .exam-header {
         background: var(--primary-gradient);
         border-radius: 16px;
@@ -18,7 +18,7 @@
         padding: 1.5rem;
         margin-bottom: 2rem;
     }
-    
+
     .timer-display {
         background: rgba(255, 255, 255, 0.2);
         backdrop-filter: blur(10px);
@@ -26,7 +26,7 @@
         padding: 1rem 1.5rem;
         border: 1px solid rgba(255, 255, 255, 0.3);
     }
-    
+
     .exam-card {
         border-radius: 16px;
         border: none;
@@ -34,19 +34,19 @@
         overflow: hidden;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-    
+
     .exam-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     }
-    
+
     .question-card {
         background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
         border-radius: 16px;
         padding: 2rem;
         min-height: 500px;
     }
-    
+
     .question-number-badge {
         background: var(--primary-gradient);
         color: white;
@@ -59,7 +59,7 @@
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         animation: fadeIn 0.5s ease;
     }
-    
+
     .question-text-container {
         background: white;
         padding: 2rem;
@@ -69,7 +69,38 @@
         margin: 1.5rem 0;
         animation: slideIn 0.5s ease;
     }
-    
+
+    .marks-badge {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        animation: fadeIn 0.5s ease;
+        transition: all 0.3s ease;
+    }
+
+    .marks-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .marks-badge.bg-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .marks-badge.bg-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    }
+
+    .marks-badge.bg-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
     .option-card {
         background: white;
         border: 2px solid #e5e7eb;
@@ -81,7 +112,7 @@
         position: relative;
         overflow: hidden;
     }
-    
+
     .option-card::before {
         content: '';
         position: absolute;
@@ -93,17 +124,17 @@
         opacity: 0.1;
         transition: width 0.3s ease;
     }
-    
+
     .option-card:hover {
         border-color: #667eea;
         transform: translateX(5px);
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
     }
-    
+
     .option-card:hover::before {
         width: 100%;
     }
-    
+
     .option-card.selected {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-color: #667eea;
@@ -111,12 +142,12 @@
         transform: scale(1.02);
         box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
     }
-    
+
     .option-card.selected .form-check-label {
         color: white;
         font-weight: 600;
     }
-    
+
     .option-letter {
         display: inline-flex;
         align-items: center;
@@ -130,12 +161,12 @@
         margin-right: 1rem;
         transition: all 0.3s ease;
     }
-    
+
     .option-card.selected .option-letter {
         background: white;
         color: #667eea;
     }
-    
+
     .nav-button {
         border-radius: 12px;
         padding: 0.75rem 1.5rem;
@@ -144,17 +175,17 @@
         transition: all 0.3s ease;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
-    
+
     .nav-button:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
     }
-    
+
     .nav-button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
     }
-    
+
     .question-nav-btn {
         width: 50px;
         height: 50px;
@@ -166,7 +197,7 @@
         position: relative;
         overflow: hidden;
     }
-    
+
     .question-nav-btn::before {
         content: '';
         position: absolute;
@@ -180,32 +211,32 @@
         transform: translate(-50%, -50%);
         transition: width 0.3s ease, height 0.3s ease;
     }
-    
+
     .question-nav-btn:hover::before {
         width: 100%;
         height: 100%;
     }
-    
+
     .question-nav-btn.answered {
         background: var(--success-gradient);
         color: white;
         border-color: #10b981;
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
-    
+
     .question-nav-btn.unanswered {
         background: white;
         color: #6b7280;
         border-color: #e5e7eb;
     }
-    
+
     .question-nav-btn.active {
         border-width: 3px;
         border-color: #667eea;
         transform: scale(1.1);
         box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
     }
-    
+
     .stats-card {
         background: white;
         border-radius: 12px;
@@ -213,12 +244,12 @@
         border: 2px solid #f3f4f6;
         transition: all 0.3s ease;
     }
-    
+
     .stats-card:hover {
         border-color: #667eea;
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
     }
-    
+
     .stat-icon {
         width: 48px;
         height: 48px;
@@ -228,7 +259,7 @@
         justify-content: center;
         font-size: 1.5rem;
     }
-    
+
     .image-container {
         position: relative;
         border-radius: 12px;
@@ -237,7 +268,7 @@
         background: #f9fafb;
         padding: 1rem;
     }
-    
+
     .image-zoom-controls {
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
@@ -245,7 +276,7 @@
         padding: 0.5rem;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
-    
+
     .zoom-btn {
         width: 40px;
         height: 40px;
@@ -255,33 +286,33 @@
         color: #667eea;
         transition: all 0.2s ease;
     }
-    
+
     .zoom-btn:hover {
         background: #667eea;
         color: white;
         transform: scale(1.1);
     }
-    
+
     .notes-container {
         background: #fffbeb;
         border-radius: 12px;
         padding: 1.5rem;
         border: 2px solid #fef3c7;
     }
-    
+
     .notes-textarea {
         border: 2px solid #fde68a;
         border-radius: 8px;
         resize: vertical;
         transition: all 0.3s ease;
     }
-    
+
     .notes-textarea:focus {
         border-color: #f59e0b;
         box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
         outline: none;
     }
-    
+
     .submit-btn {
         background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         color: white;
@@ -292,17 +323,17 @@
         box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         transition: all 0.3s ease;
     }
-    
+
     .submit-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 25px rgba(239, 68, 68, 0.4);
     }
-    
+
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
     }
-    
+
     @keyframes slideIn {
         from {
             opacity: 0;
@@ -313,16 +344,16 @@
             transform: translateY(0);
         }
     }
-    
+
     .pulse-animation {
         animation: pulse 2s infinite;
     }
-    
+
     @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.8; }
     }
-    
+
     /* Calculator Styles */
     .calculator-container {
         background: white;
@@ -331,7 +362,7 @@
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
         width: 320px;
     }
-    
+
     .calculator-display {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -345,13 +376,13 @@
         margin-bottom: 1rem;
         box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
     }
-    
+
     .calculator-buttons {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 0.5rem;
     }
-    
+
     .calc-btn {
         padding: 1.25rem;
         border: none;
@@ -363,34 +394,56 @@
         background: #f3f4f6;
         color: #374151;
     }
-    
+
     .calc-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
-    
+
     .calc-btn:active {
         transform: translateY(0);
     }
-    
+
     .calc-btn.operator {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
     }
-    
+
     .calc-btn.equals {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
         grid-column: span 2;
     }
-    
+
     .calc-btn.clear {
         background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         color: white;
     }
-    
+
     .calc-btn.zero {
         grid-column: span 2;
+    }
+
+    /* Marks display in question navigation */
+    .question-nav-btn.with-marks {
+        position: relative;
+    }
+
+    .marks-indicator {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #ef4444;
+        color: white;
+        font-size: 0.6rem;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 </style>
 
@@ -400,7 +453,7 @@
             <!-- Modern Exam Header -->
             <div class="exam-header">
                 <div class="row align-items-center">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="d-flex align-items-center">
                             <div class="me-3">
                                 <i class="ri-file-list-3-line" style="font-size: 2.5rem; color: white;"></i>
@@ -417,8 +470,20 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center justify-content-end gap-3">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center justify-content-end gap-3 flex-wrap">
+                            <div class="timer-display">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="ri-star-line text-white" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <div class="text-white opacity-75 small">Total Marks</div>
+                                        <div id="totalMarksDisplay" class="text-white fw-bold" style="font-size: 1.75rem;">
+                                            {{ $totalExamMarks ?? 0 }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="timer-display">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="ri-time-line text-white" style="font-size: 1.5rem;"></i>
@@ -428,6 +493,7 @@
                                     </div>
                                 </div>
                             </div>
+
                             @can('Submit cbt-exam')
                                 <button class="submit-btn" id="submitExam">
                                     <i class="ri-send-plane-fill me-2"></i>Submit Exam
@@ -452,7 +518,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             @endif
-            
+
             @if (session('error'))
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     <i class="ri-close-circle-line me-2"></i>{{ session('error') }}
@@ -484,7 +550,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="card-body p-4">
                             <div class="question-card">
                                 <!-- Question Number Badge -->
@@ -494,12 +560,22 @@
                                         Question <span id="currentQuestionNum">1</span>
                                     </span>
                                 </div>
-                                
-                                <!-- Question Text -->
+
+                                <!-- Question Text with Marks Badge -->
                                 <div class="question-text-container">
-                                    <div id="questionText" class="question-text" style="font-size: 1.1rem; line-height: 1.8;"></div>
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div style="flex-grow: 1;">
+                                            <div id="questionText" class="question-text" style="font-size: 1.1rem; line-height: 1.8;"></div>
+                                        </div>
+                                        <div class="ms-3">
+                                            <span class="badge bg-primary marks-badge" id="questionMarksBadge" style="font-size: 0.9rem; padding: 0.5rem 1rem; display: none;">
+                                                <i class="ri-star-line me-1"></i>
+                                                <span id="questionMarks">0</span> Marks
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                
+
                                 <!-- Question Image -->
                                 <div id="questionImageContainer" class="my-4" style="display: none;">
                                     <div class="image-container">
@@ -517,13 +593,13 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Options -->
                                 <div id="optionsContainer" class="mt-4">
                                     <!-- Options will be loaded here -->
                                 </div>
                             </div>
-                            
+
                             <!-- Navigation -->
                             <div class="d-flex justify-content-between align-items-center mt-4">
                                 <button class="nav-button btn btn-outline-primary" id="prevQuestion">
@@ -541,7 +617,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Sidebar -->
                 <div class="col-lg-4">
                     <div class="exam-card sticky-top" style="top: 20px;">
@@ -570,9 +646,18 @@
                                             <div class="h4 mb-0 fw-bold" id="unansweredCount">0</div>
                                         </div>
                                     </div>
+                                    <div class="col-12">
+                                        <div class="stats-card">
+                                            <div class="stat-icon mb-2" style="background: #e0e7ff; color: #667eea;">
+                                                <i class="ri-star-line"></i>
+                                            </div>
+                                            <div class="small text-muted">Total Marks Attempted</div>
+                                            <div class="h4 mb-0 fw-bold" id="marksAttempted">0</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Question Navigator -->
                             <div class="mb-4">
                                 <h6 class="fw-bold mb-3">
@@ -582,7 +667,7 @@
                                     <!-- Question buttons will be generated here -->
                                 </div>
                             </div>
-                            
+
                             <!-- Notes Section -->
                             <div class="notes-container">
                                 <h6 class="fw-bold mb-3">
@@ -638,7 +723,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const elapsedMs = now - startTime;
             const elapsedSeconds = Math.floor(elapsedMs / 1000);
             console.log(`Elapsed since start: ${elapsedSeconds}s`);
-            
+
             if (elapsedSeconds >= duration) {
                 // Exam expired—clear and auto-submit
                 console.warn('Exam time expired on resume');
@@ -673,13 +758,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const hours = Math.floor(timeLeft / 3600);
             const minutes = Math.floor((timeLeft % 3600) / 60);
             const seconds = timeLeft % 60;
-            
+
             timerElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            
+
             if (timeLeft <= 300 && timeLeft > 0) {
                 timerElement.classList.add('pulse-animation');
             }
-            
+
             // Save current timeLeft (for fallback, but timestamp is primary)
             localStorage.setItem('examTimeLeft', timeLeft);
 
@@ -696,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const questions = @json($questions);
-    
+
     if (!questions || questions.length === 0) {
         console.error('No questions loaded');
         document.getElementById('questionText').innerHTML = 'No questions available';
@@ -720,7 +805,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('calculatorBtn').addEventListener('click', () => {
         showCalculator();
     });
-    
+
     function showCalculator() {
         Swal.fire({
             title: '<i class="ri-calculator-line me-2"></i>Calculator',
@@ -732,22 +817,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         <button class="calc-btn operator" onclick="calcInput('/')">/</button>
                         <button class="calc-btn operator" onclick="calcInput('*')">×</button>
                         <button class="calc-btn operator" onclick="calcBackspace()">⌫</button>
-                        
+
                         <button class="calc-btn" onclick="calcInput('7')">7</button>
                         <button class="calc-btn" onclick="calcInput('8')">8</button>
                         <button class="calc-btn" onclick="calcInput('9')">9</button>
                         <button class="calc-btn operator" onclick="calcInput('-')">−</button>
-                        
+
                         <button class="calc-btn" onclick="calcInput('4')">4</button>
                         <button class="calc-btn" onclick="calcInput('5')">5</button>
                         <button class="calc-btn" onclick="calcInput('6')">6</button>
                         <button class="calc-btn operator" onclick="calcInput('+')">+</button>
-                        
+
                         <button class="calc-btn" onclick="calcInput('1')">1</button>
                         <button class="calc-btn" onclick="calcInput('2')">2</button>
                         <button class="calc-btn" onclick="calcInput('3')">3</button>
                         <button class="calc-btn operator" onclick="calcInput('%')">%</button>
-                        
+
                         <button class="calc-btn zero" onclick="calcInput('0')">0</button>
                         <button class="calc-btn" onclick="calcInput('.')">.</button>
                         <button class="calc-btn equals" onclick="calcEquals()">=</button>
@@ -771,14 +856,14 @@ document.addEventListener('DOMContentLoaded', function() {
         currentFontSize += 2;
         updateFontSize();
     });
-    
+
     document.getElementById('fontSizeDecrease').addEventListener('click', () => {
         if (currentFontSize > 12) {
             currentFontSize -= 2;
             updateFontSize();
         }
     });
-    
+
     function updateFontSize() {
         document.querySelector('.question-text').style.fontSize = `${currentFontSize}px`;
         document.querySelectorAll('.form-check-label').forEach(label => {
@@ -791,19 +876,19 @@ document.addEventListener('DOMContentLoaded', function() {
         currentZoom += 0.1;
         updateZoom();
     });
-    
+
     document.getElementById('zoomOut').addEventListener('click', () => {
         if (currentZoom > 0.1) {
             currentZoom -= 0.1;
             updateZoom();
         }
     });
-    
+
     document.getElementById('zoomReset').addEventListener('click', () => {
         currentZoom = 1;
         updateZoom();
     });
-    
+
     function updateZoom() {
         const img = document.getElementById('questionImage');
         if (img) {
@@ -812,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
             img.style.transition = 'transform 0.3s ease';
         }
     }
-    
+
     // Image modal
     document.getElementById('questionImage').addEventListener('click', () => {
         const img = document.getElementById('questionImage');
@@ -822,23 +907,42 @@ document.addEventListener('DOMContentLoaded', function() {
             imageModal.show();
         }
     });
-    
+
     function loadQuestion(index) {
         const question = questions[index];
         document.getElementById('currentQuestionNum').textContent = index + 1;
         document.getElementById('currentQuestionNum2').textContent = index + 1;
         document.getElementById('questionText').innerHTML = question.text;
-        
+
+        // Display marks for the question
+        const marksBadge = document.getElementById('questionMarksBadge');
+        const marksText = document.getElementById('questionMarks');
+        if (question.marks) {
+            marksText.textContent = question.marks;
+            marksBadge.style.display = 'flex';
+
+            // Color code based on marks value
+            if (question.marks >= 5) {
+                marksBadge.className = 'badge bg-danger marks-badge';
+            } else if (question.marks >= 3) {
+                marksBadge.className = 'badge bg-warning marks-badge';
+            } else {
+                marksBadge.className = 'badge bg-primary marks-badge';
+            }
+        } else {
+            marksBadge.style.display = 'none';
+        }
+
         // Save notes from previous question
         if (currentQuestion !== index) {
             notes[currentQuestion] = document.getElementById('questionNotes').value;
             localStorage.setItem('examNotes', JSON.stringify(notes));
         }
-        
+
         // Load image
         const imageContainer = document.getElementById('questionImageContainer');
         const questionImage = document.getElementById('questionImage');
-        
+
         if (question.image_url) {
             imageContainer.style.display = 'block';
             questionImage.src = question.image_url;
@@ -853,28 +957,28 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             imageContainer.style.display = 'none';
         }
-        
+
         // Load options with modern design
         const optionsContainer = document.getElementById('optionsContainer');
         optionsContainer.innerHTML = '';
         const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
-        
+
         question.options.forEach((option, i) => {
             const div = document.createElement('div');
             div.className = `option-card ${answers[index] === option ? 'selected' : ''}`;
             div.innerHTML = `
                 <label class="d-flex align-items-center w-100 cursor-pointer m-0">
                     <span class="option-letter">${optionLetters[i]}</span>
-                    <input class="form-check-input question-option d-none" 
-                           type="radio" 
-                           name="answer" 
+                    <input class="form-check-input question-option d-none"
+                           type="radio"
+                           name="answer"
                            value="${option}"
                            data-question-id="${question.id}"
                            ${answers[index] === option ? 'checked' : ''}>
                     <span class="form-check-label flex-grow-1">${option}</span>
                 </label>
             `;
-            
+
             div.addEventListener('click', function() {
                 document.querySelectorAll('.option-card').forEach(card => {
                     card.classList.remove('selected');
@@ -886,33 +990,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('examAnswers', JSON.stringify(answers));
                 updateNavigation();
             });
-            
+
             optionsContainer.appendChild(div);
         });
-        
+
         document.getElementById('questionNotes').value = notes[index] || '';
         currentQuestion = index;
         updateFontSize();
         updateNavigation();
     }
 
+    function calculateMarksAttempted() {
+        let marks = 0;
+        questions.forEach((question, index) => {
+            if (answers[index]) {
+                marks += question.marks || 0;
+            }
+        });
+        return marks;
+    }
+
     function updateNavigation() {
         const navigator = document.getElementById('questionNavigator');
         navigator.innerHTML = '';
-        
+
         let answeredCount = 0;
-        questions.forEach((_, index) => {
+        let marksAttempted = 0;
+
+        questions.forEach((question, index) => {
             const btn = document.createElement('button');
             btn.className = `question-nav-btn ${answers[index] ? 'answered' : 'unanswered'} ${index === currentQuestion ? 'active' : ''}`;
+
+            // Add marks indicator for questions with high marks
+            if (question.marks && question.marks >= 3) {
+                btn.classList.add('with-marks');
+                const marksIndicator = document.createElement('span');
+                marksIndicator.className = 'marks-indicator';
+                marksIndicator.textContent = question.marks;
+                btn.appendChild(marksIndicator);
+            }
+
             btn.textContent = index + 1;
             btn.onclick = () => loadQuestion(index);
             navigator.appendChild(btn);
-            if (answers[index]) answeredCount++;
+
+            if (answers[index]) {
+                answeredCount++;
+                marksAttempted += question.marks || 0;
+            }
         });
-        
+
         document.getElementById('answeredCount').textContent = answeredCount;
         document.getElementById('unansweredCount').textContent = questions.length - answeredCount;
-        
+        document.getElementById('marksAttempted').textContent = marksAttempted;
+
         // Update navigation buttons
         document.getElementById('prevQuestion').disabled = currentQuestion === 0;
         document.getElementById('nextQuestion').disabled = currentQuestion === questions.length - 1;
@@ -922,12 +1053,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('prevQuestion').onclick = () => {
         if (currentQuestion > 0) loadQuestion(currentQuestion - 1);
     };
-    
+
     document.getElementById('nextQuestion').onclick = () => {
         if (currentQuestion < questions.length - 1) loadQuestion(currentQuestion + 1);
     };
-    
-    // Submit (unchanged from previous fix)
+
+    // Submit exam
     @if(auth()->user()->can('Submit cbt-exam'))
     document.getElementById('submitExam').onclick = () => {
         Swal.fire({
@@ -946,8 +1077,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
     @endif
-    
-    // Notes with debounce (unchanged)
+
+    // Notes with debounce
     let notesTimeout;
     document.getElementById('questionNotes').addEventListener('input', (e) => {
         clearTimeout(notesTimeout);
@@ -957,11 +1088,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 500);
     });
 
-    // Submit function (unchanged from previous)
+    // Submit function
     function submitExam(isAutoSubmit = false) {
         notes[currentQuestion] = document.getElementById('questionNotes').value;
         localStorage.setItem('examNotes', JSON.stringify(notes));
-        
+
         if (!isAutoSubmit) {
             Swal.fire({
                 title: 'Submitting...',
@@ -973,7 +1104,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         const submissionData = {
             attempt_id: {{ $attempt->id }},
             exam_id: {{ $exam->id }},
@@ -1014,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.removeItem('examTimeLeft');
                 localStorage.removeItem('examAnswers');
                 localStorage.removeItem('examNotes');
-                
+
                 Swal.fire({
                     title: 'Success!',
                     text: 'Your exam has been submitted successfully',
@@ -1074,13 +1205,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 const hours = Math.floor(timeLeft / 3600);
                 const minutes = Math.floor((timeLeft % 3600) / 60);
                 const seconds = timeLeft % 60;
-                
+
                 timerElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-                
+
                 if (timeLeft <= 300 && timeLeft > 0) {
                     timerElement.classList.add('pulse-animation');
                 }
-                
+
                 localStorage.setItem('examTimeLeft', timeLeft);
 
                 if (timeLeft <= 0) {
@@ -1093,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 timeLeft--;
             }, 1000);
-            
+
             Swal.fire({
                 title: 'Network Restored',
                 text: 'Exam resumed successfully',
@@ -1136,9 +1267,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize
     loadQuestion(0);
+    updateNavigation();
 });
 
-// Calculator functions (global scope for SweetAlert HTML) - unchanged
+// Calculator functions (global scope for SweetAlert HTML)
 let calcCurrentValue = '0';
 let calcPreviousValue = '';
 let calcOperation = null;
