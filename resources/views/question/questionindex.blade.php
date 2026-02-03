@@ -491,6 +491,10 @@ $(document).ready(function() {
                         if (response.success) {
                             showSuccess('Questions reordered successfully');
                         }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Reorder error:', error);
+                        showError('Failed to reorder questions');
                     }
                 });
             }
@@ -515,7 +519,8 @@ $(document).ready(function() {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: message
+            text: message,
+            confirmButtonText: 'OK'
         });
     }
 
@@ -800,14 +805,6 @@ $(document).ready(function() {
 
                 if (response && response.success) {
                     if (response.exams && response.exams.length > 0) {
-                        // Debug the data
-                        console.log('First exam data:', response.exams[0]);
-
-                        // Check if subjects are loaded
-                        response.exams.forEach((exam, index) => {
-                            console.log(`Exam ${index}: ${exam.title} - Subject: ${exam.subject}`);
-                        });
-
                         renderExamsByClass(response.exams);
                     } else {
                         console.warn('No exams found for this user');
@@ -889,7 +886,7 @@ $(document).ready(function() {
             `;
 
             examsByClass[className].forEach(function(exam) {
-                // Handle subject display - check if subject exists and is not empty
+                // Handle subject display
                 const subjectText = exam.subject && exam.subject !== 'No Subject' ? exam.subject : '<span class="text-warning">No Subject</span>';
 
                 html += `
@@ -1398,6 +1395,8 @@ $(document).ready(function() {
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON.errors;
                     showFormErrors(Object.values(errors).flat());
+                } else if (xhr.status === 500) {
+                    showFormErrors(['Server error. Please check the logs for details.']);
                 } else {
                     showFormErrors(['An unexpected error occurred. Please try again.']);
                 }
@@ -1463,6 +1462,8 @@ $(document).ready(function() {
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON.errors;
                     showFormErrors(Object.values(errors).flat());
+                } else if (xhr.status === 500) {
+                    showFormErrors(['Server error. Please check the logs for details.']);
                 } else {
                     showFormErrors(['An unexpected error occurred. Please try again.']);
                 }
