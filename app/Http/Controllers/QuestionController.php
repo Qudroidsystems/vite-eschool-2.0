@@ -380,36 +380,54 @@ class QuestionController extends Controller
 
 
 
-    public function getExamsForSelection(Request $request)
+public function getExamsForSelection(Request $request)
 {
     $user = Auth::user();
 
-    \Log::info('Getting exams for user: ' . $user->id);
+    \Log::info('====== DEBUG: Getting exams for user: ' . $user->id . ' ======');
 
-    // Eager load subject with the correct relationship
+    // Get exams with ALL relationships to debug
     $exams = Exam::with([
         'schoolclass.armRelation',
-        'subject:id,subject', // Specify columns to load
+        'subject:id,subject', // Make sure we're loading subject
         'questions'
     ])
     ->where('staffId', $user->id)
     ->orderBy('title')
-    ->get()
-    ->map(function($exam) {
-        \Log::info('Exam ID: ' . $exam->id . ', Has subject: ' . ($exam->subject ? 'Yes' : 'No'));
+    ->get();
 
-        // Check if subject exists and has the right property
-        $subjectName = 'No Subject';
+    \Log::info('Total exams found: ' . $exams->count());
+
+    // Debug each exam
+    $exams->each(function($exam, $index) {
+        \Log::info("Exam #{$index}:");
+        \Log::info("  ID: {$exam->id}");
+        \Log::info("  Title: {$exam->title}");
+        \Log::info("  Subject ID: " . ($exam->subject_id ?: 'NULL'));
+        \Log::info("  Has Subject Relation: " . ($exam->relationLoaded('subject') ? 'YES' : 'NO'));
+
         if ($exam->subject) {
-            \Log::info('Subject object:', $exam->subject->toArray());
-            $subjectName = $exam->subject->subject ?? 'No Subject';
+            \Log::info("  Subject Object: " . json_encode($exam->subject->toArray()));
+            \Log::info("  Subject Name: " . $exam->subject->subject);
+        } else {
+            \Log::info("  Subject Object: NULL");
         }
 
+        \Log::info("  Class: " . ($exam->schoolclass ? $exam->schoolclass->schoolclass : 'No Class'));
+    });
+
+    $formattedExams = $exams->map(function($exam) {
         return [
             'id' => $exam->id,
             'title' => $exam->title,
-            'subject' => $subjectName,
+            'subject' => $exam->subject ? $exam->subject->subject : 'No Subject',
             'subject_id' => $exam->subject_id,
+            'subject_debug' => [
+                'exists' => $exam->subject ? 'YES' : 'NO',
+                'loaded' => $exam->relationLoaded('subject') ? 'YES' : 'NO',
+                'name' => $exam->subject ? $exam->subject->subject : 'NULL',
+                'raw' => $exam->subject ? $exam->subject->toArray() : 'NULL'
+            ],
             'class_name' => $exam->schoolclass ?
                 $exam->schoolclass->schoolclass .
                 ($exam->schoolclass->armRelation ? ' (' . $exam->schoolclass->armRelation->arm . ')' : '') :
@@ -419,15 +437,16 @@ class QuestionController extends Controller
         ];
     });
 
-    \Log::info('Returning ' . $exams->count() . ' exams');
+    \Log::info('====== DEBUG: Returning exams ======');
 
     return response()->json([
         'success' => true,
-        'exams' => $exams,
-        'debug' => [
+        'exams' => $formattedExams,
+        'debug_info' => [
             'user_id' => $user->id,
             'exam_count' => $exams->count(),
-            'first_exam_subject' => $exams->first()['subject'] ?? 'none'
+            'has_subject_relationship' => $exams->first() ? $exams->first()->relationLoaded('subject') : 'NO_EXAMS',
+            'sample_exam' => $formattedExams->first() ?? 'NO_EXAMS'
         ]
     ]);
 }
