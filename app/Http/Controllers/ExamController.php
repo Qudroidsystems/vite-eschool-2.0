@@ -484,7 +484,9 @@ class ExamController extends Controller
             ], 500);
         }
     }
-public function showStudents(Request $request, $examId)
+
+
+    public function showStudents(Request $request, $examId)
 {
     $exam = Exam::where('id', $examId)
                 ->where('staffId', auth()->user()->id)
@@ -502,10 +504,29 @@ public function showStudents(Request $request, $examId)
 
     $classId = $request->query('class_id');
 
-    // Main query
+    // Main query - updated to join with studentclass table
     $query = DB::table('exam_attempts')
         ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
         ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+        ->leftJoin('studentclass', function ($join) {
+            $join->on('studentRegistration.id', '=', 'studentclass.studentId')
+                 ->where('studentclass.sessionid', function ($q) {
+                     // Get current or most recent session
+                     $q->select('id')
+                       ->from('schoolsession')
+                       ->where('status', 'Current')
+                       ->orWhereRaw('id = (SELECT MAX(id) FROM schoolsession)')
+                       ->limit(1);
+                 })
+                 ->where('studentclass.termid', function ($q) {
+                     // Get current or most recent term
+                     $q->select('id')
+                       ->from('schoolterm')
+                       ->where('status', 'Current')
+                       ->orWhereRaw('id = (SELECT MAX(id) FROM schoolterm)')
+                       ->limit(1);
+                 });
+        })
         ->leftJoin('results', function ($join) use ($examId) {
             $join->on('exam_attempts.student_id', '=', 'results.user_id')
                  ->where('results.exam_id', '=', $examId);
@@ -513,8 +534,9 @@ public function showStudents(Request $request, $examId)
         ->where('exam_attempts.exam_id', $examId)
         ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
 
+    // Apply class filter if specified
     if ($classId) {
-        $query->where('studentRegistration.schoolclassid', $classId);
+        $query->where('studentclass.schoolclassid', $classId);
     }
 
     $query->select(
@@ -525,7 +547,8 @@ public function showStudents(Request $request, $examId)
         'studentpicture.picture as picture',
         'results.score',
         'results.total_marks',
-        'exam_attempts.status as attempt_status'
+        'exam_attempts.status as attempt_status',
+        'studentclass.schoolclassid' // Include class ID for reference
     );
 
     $students = $query->orderBy('studentRegistration.lastname')->paginate(15);
@@ -626,6 +649,7 @@ public function showStudents(Request $request, $examId)
         }
     }
 
+    // Get assigned classes for the exam group
     $assignedClasses = Schoolclass::whereIn('id',
         Exam::where('title', $exam->title)
             ->where('staffId', $exam->staffId)
