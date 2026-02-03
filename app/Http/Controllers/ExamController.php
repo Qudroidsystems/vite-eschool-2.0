@@ -94,39 +94,60 @@ class ExamController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'staffId'         => 'required|integer',
-            'title'           => 'required|string|max:255',
-            'description'     => 'nullable|string',
-            'duration'        => 'required|integer|min:1',
-            'start_time'      => 'required|date',
-            'end_time'        => 'required|date|after:start_time',
-            'termid'          => 'required|integer|exists:schoolterm,id',
-            'session'         => 'required|integer|exists:schoolsession,id',
-            'subject_id'      => 'required|integer|exists:subject,id',
-            'schoolclass_ids' => 'required|array|min:1',
-            'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
-            'is_published'    => 'boolean|nullable',
-        ]);
+        try {
+            $validated = $request->validate([
+                'staffId'         => 'required|integer',
+                'title'           => 'required|string|max:255',
+                'description'     => 'nullable|string',
+                'duration'        => 'required|integer|min:1',
+                'start_time'      => 'required|date',
+                'end_time'        => 'required|date|after:start_time',
+                'termid'          => 'required|integer|exists:schoolterm,id',
+                'session'         => 'required|integer|exists:schoolsession,id',
+                'subject_id'      => 'required|integer|exists:subject,id',
+                'schoolclass_ids' => 'required|array|min:1',
+                'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
+                'is_published'    => 'boolean|nullable',
+            ]);
 
-        $validated['is_published'] = $request->has('is_published');
+            $validated['is_published'] = $request->has('is_published');
 
-        $createdCount = 0;
-        foreach ($validated['schoolclass_ids'] as $classId) {
-            $examData = $validated;
-            $examData['schoolclass_id'] = $classId;
-            unset($examData['schoolclass_ids']);
-            Exam::create($examData);
-            $createdCount++;
+            $createdCount = 0;
+            $createdExams = [];
+
+            foreach ($validated['schoolclass_ids'] as $classId) {
+                $examData = $validated;
+                $examData['schoolclass_id'] = $classId;
+                unset($examData['schoolclass_ids']);
+                $exam = Exam::create($examData);
+                $createdExams[] = $exam;
+                $createdCount++;
+            }
+
+            $message = "Exam created successfully for {$createdCount} class" . ($createdCount > 1 ? 'es' : '.') . ".";
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'exams' => $createdExams
+                ]);
+            }
+
+            return redirect()->route('exams.index')->with('success', $message);
+        } catch (\Exception $e) {
+            \Log::error('Error creating exam: ' . $e->getMessage());
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while creating the exam. Please try again.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'An error occurred while creating the exam.');
         }
-
-        $message = "Exam created successfully for {$createdCount} class" . ($createdCount > 1 ? 'es' : '.') . ".";
-
-        if ($request->ajax()) {
-            return response()->json(['success' => true, 'message' => $message]);
-        }
-
-        return redirect()->route('exams.index')->with('success', $message);
     }
 
     public function show($id)
@@ -165,76 +186,79 @@ class ExamController extends Controller
 
     public function update(Request $request, string $id)
     {
-        \Log::info('Update request received:', [
-            'exam_id' => $id,
-            'data' => $request->all(),
-            'user_id' => auth()->id()
-        ]);
+        try {
+            \Log::info('Update request received:', [
+                'exam_id' => $id,
+                'data' => $request->all(),
+                'user_id' => auth()->id()
+            ]);
 
-        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+            $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
-        $validated = $request->validate([
-            'title'           => 'required|string|max:255',
-            'description'     => 'nullable|string',
-            'duration'        => 'required|integer|min:1',
-            'start_time'      => 'required|date',
-            'end_time'        => 'required|date|after:start_time',
-            'termid'          => 'required|integer|exists:schoolterm,id',
-            'session'         => 'required|integer|exists:schoolsession,id',
-            'subject_id'      => 'required|integer|exists:subject,id',
-            'schoolclass_ids' => 'required|array|min:1',
-            'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
-            'is_published'    => 'boolean|nullable',
-        ]);
+            $validated = $request->validate([
+                'title'           => 'required|string|max:255',
+                'description'     => 'nullable|string',
+                'duration'        => 'required|integer|min:1',
+                'start_time'      => 'required|date',
+                'end_time'        => 'required|date|after:start_time',
+                'termid'          => 'required|integer|exists:schoolterm,id',
+                'session'         => 'required|integer|exists:schoolsession,id',
+                'subject_id'      => 'required|integer|exists:subject,id',
+                'schoolclass_ids' => 'required|array|min:1',
+                'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
+                'is_published'    => 'boolean|nullable',
+            ]);
 
-        $validated['is_published'] = $request->has('is_published');
-        $validated['staffId'] = $exam->staffId;
+            $validated['is_published'] = $request->has('is_published');
+            $validated['staffId'] = $exam->staffId;
 
-        \Log::info('Validated data:', $validated);
+            \Log::info('Validated data:', $validated);
 
-        // Get all exams in the group
-        $groupExams = Exam::where('staffId', $exam->staffId)
-            ->where('title', $exam->title)
-            ->where('subject_id', $exam->subject_id)
-            ->where('termid', $exam->termid)
-            ->where('session', $exam->session)
-            ->get();
+            // Get all exams in the original group
+            $originalGroupExams = Exam::where('staffId', $exam->staffId)
+                ->where('title', $exam->title)
+                ->where('subject_id', $exam->subject_id)
+                ->where('termid', $exam->termid)
+                ->where('session', $exam->session)
+                ->get();
 
-        // Get exam IDs in the group
-        $groupExamIds = $groupExams->pluck('id')->toArray();
+            // Get original class IDs
+            $originalClassIds = $originalGroupExams->pluck('schoolclass_id')->toArray();
+            $newClassIds = $validated['schoolclass_ids'];
 
-        // Get questions for all exams in the group
-        $questionIds = Question::whereIn('exam_id', $groupExamIds)->pluck('id')->toArray();
+            \Log::info('Original class IDs:', $originalClassIds);
+            \Log::info('New class IDs:', $newClassIds);
 
-        \Log::info('Group exam IDs:', $groupExamIds);
-        \Log::info('Question IDs to preserve:', $questionIds);
+            // Update existing exams
+            $updatedCount = 0;
+            $createdCount = 0;
 
-        // Create new exams for each selected class
-        $createdCount = 0;
-        $newExamIds = [];
+            // Update exams for classes that exist in both original and new
+            $classesToUpdate = array_intersect($originalClassIds, $newClassIds);
 
-        foreach ($validated['schoolclass_ids'] as $classId) {
-            // Check if an exam already exists for this class in the group
-            $existingExam = $groupExams->where('schoolclass_id', $classId)->first();
+            foreach ($classesToUpdate as $classId) {
+                $existingExam = $originalGroupExams->where('schoolclass_id', $classId)->first();
+                if ($existingExam) {
+                    $existingExam->update([
+                        'title' => $validated['title'],
+                        'description' => $validated['description'],
+                        'duration' => $validated['duration'],
+                        'start_time' => $validated['start_time'],
+                        'end_time' => $validated['end_time'],
+                        'termid' => $validated['termid'],
+                        'session' => $validated['session'],
+                        'subject_id' => $validated['subject_id'],
+                        'is_published' => $validated['is_published']
+                    ]);
+                    $updatedCount++;
+                    \Log::info("Updated existing exam for class {$classId}");
+                }
+            }
 
-            if ($existingExam) {
-                // Update existing exam
-                $existingExam->update([
-                    'title' => $validated['title'],
-                    'description' => $validated['description'],
-                    'duration' => $validated['duration'],
-                    'start_time' => $validated['start_time'],
-                    'end_time' => $validated['end_time'],
-                    'termid' => $validated['termid'],
-                    'session' => $validated['session'],
-                    'subject_id' => $validated['subject_id'],
-                    'is_published' => $validated['is_published']
-                ]);
-                $newExamIds[] = $existingExam->id;
-                $createdCount++;
-                \Log::info("Updated existing exam for class {$classId}");
-            } else {
-                // Create new exam for this class
+            // Create new exams for classes that are new
+            $classesToCreate = array_diff($newClassIds, $originalClassIds);
+
+            foreach ($classesToCreate as $classId) {
                 $newExam = Exam::create([
                     'staffId' => $validated['staffId'],
                     'title' => $validated['title'],
@@ -248,177 +272,217 @@ class ExamController extends Controller
                     'schoolclass_id' => $classId,
                     'is_published' => $validated['is_published']
                 ]);
-                $newExamIds[] = $newExam->id;
                 $createdCount++;
                 \Log::info("Created new exam for class {$classId}");
             }
-        }
 
-        // If there are existing questions, copy them to new exams
-        if (!empty($questionIds) && !empty($newExamIds)) {
-            foreach ($newExamIds as $newExamId) {
-                foreach ($questionIds as $questionId) {
-                    // Check if this question exists for this exam already
-                    $existingQuestion = Question::where('exam_id', $newExamId)
-                        ->where('id', $questionId)
-                        ->first();
+            // Do NOT delete exams for removed classes - keep them as separate exams
+            // $classesToRemove = array_diff($originalClassIds, $newClassIds);
+            // We are NOT deleting exams anymore - they remain as separate exams
 
-                    if (!$existingQuestion) {
-                        // Get the original question
-                        $originalQuestion = Question::find($questionId);
-
-                        // Duplicate the question for the new exam
-                        $newQuestion = $originalQuestion->replicate();
-                        $newQuestion->exam_id = $newExamId;
-                        $newQuestion->save();
-
-                        // Duplicate options if they exist
-                        if ($originalQuestion->options()->exists()) {
-                            foreach ($originalQuestion->options as $option) {
-                                $newOption = $option->replicate();
-                                $newOption->question_id = $newQuestion->id;
-                                $newOption->save();
-                            }
-                        }
-                    }
-                }
+            $message = "Exam updated successfully. ";
+            if ($updatedCount > 0) {
+                $message .= "Updated {$updatedCount} existing class" . ($updatedCount > 1 ? 'es' : '') . ". ";
             }
-            \Log::info("Copied questions to new exams");
-        }
-
-        // Delete exams for classes that are no longer selected
-        $classesToDelete = $groupExams->whereNotIn('schoolclass_id', $validated['schoolclass_ids']);
-
-        foreach ($classesToDelete as $examToDelete) {
-            // Only delete if the exam has no attempts
-            $hasAttempts = ExamAttempt::where('exam_id', $examToDelete->id)->exists();
-            if (!$hasAttempts) {
-                $examToDelete->delete();
-                \Log::info("Deleted exam for removed class {$examToDelete->schoolclass_id}");
-            } else {
-                \Log::info("Skipped deletion of exam {$examToDelete->id} because it has attempts");
+            if ($createdCount > 0) {
+                $message .= "Added {$createdCount} new class" . ($createdCount > 1 ? 'es' : '') . ". ";
             }
+
+            \Log::info($message);
+
+            if ($request->ajax()) {
+                return response()->json(['success' => true, 'message' => $message]);
+            }
+
+            return redirect()->route('exams.index')->with('success', $message);
+        } catch (\Exception $e) {
+            \Log::error('Error updating exam: ' . $e->getMessage());
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while updating the exam. Please try again.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'An error occurred while updating the exam.');
         }
-
-        $message = "Exam updated successfully for {$createdCount} class" . ($createdCount > 1 ? 'es' : '.') . ".";
-
-        \Log::info($message);
-
-        if ($request->ajax()) {
-            return response()->json(['success' => true, 'message' => $message]);
-        }
-
-        return redirect()->route('exams.index')->with('success', $message);
     }
 
     public function destroy(string $id)
     {
-        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
-        $exam->delete();
+        try {
+            $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
-        if (request()->ajax()) {
-            return response()->json(['success' => true, 'message' => 'Exam deleted successfully.']);
+            // Check if exam has attempts - if yes, we shouldn't delete it
+            $hasAttempts = ExamAttempt::where('exam_id', $exam->id)->exists();
+
+            if ($hasAttempts) {
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Cannot delete exam because students have already attempted it.'
+                    ], 400);
+                }
+                return redirect()->route('exams.index')->with('error', 'Cannot delete exam because students have already attempted it.');
+            }
+
+            // Do NOT delete questions - they remain in the system for other exams
+            // Questions are not deleted when exam is deleted
+
+            $exam->delete();
+
+            if (request()->ajax()) {
+                return response()->json(['success' => true, 'message' => 'Exam deleted successfully.']);
+            }
+
+            return redirect()->route('exams.index')->with('success', 'Exam deleted successfully');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting exam: ' . $e->getMessage());
+
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while deleting the exam. Please try again.'
+                ], 500);
+            }
+
+            return redirect()->route('exams.index')->with('error', 'An error occurred while deleting the exam.');
         }
-
-        return redirect()->route('exams.index')->with('success', 'Exam deleted successfully');
     }
 
     public function bulkDestroy(Request $request)
     {
-        $ids = $request->input('ids', []);
-        if (empty($ids)) {
-            return response()->json(['success' => false, 'message' => 'No exams selected'], 400);
+        try {
+            $ids = $request->input('ids', []);
+            if (empty($ids)) {
+                return response()->json(['success' => false, 'message' => 'No exams selected'], 400);
+            }
+
+            // Check if any of the exams have attempts
+            $examsWithAttempts = Exam::whereIn('id', $ids)
+                ->where('staffId', auth()->user()->id)
+                ->whereHas('attempts')
+                ->count();
+
+            if ($examsWithAttempts > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Cannot delete {$examsWithAttempts} exam(s) because students have already attempted them."
+                ], 400);
+            }
+
+            $count = Exam::whereIn('id', $ids)
+                ->where('staffId', auth()->user()->id)
+                ->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$count} exam(s) deleted successfully."
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error bulk deleting exams: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while deleting exams. Please try again.'
+            ], 500);
         }
-
-        $count = Exam::whereIn('id', $ids)
-            ->where('staffId', auth()->user()->id)
-            ->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => "{$count} exam(s) deleted successfully."
-        ]);
     }
 
     public function getFilteredSubjects(Request $request)
     {
-        $user = auth()->user();
+        try {
+            $user = auth()->user();
 
-        $query = SubjectTeacher::where('subjectteacher.staffid', $user->id)
-            ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-            ->join('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-            ->join('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid');
+            $query = SubjectTeacher::where('subjectteacher.staffid', $user->id)
+                ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+                ->join('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+                ->join('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid');
 
-        if ($request->filled('term_id')) {
-            $query->where('subjectteacher.termid', $request->term_id);
+            if ($request->filled('term_id')) {
+                $query->where('subjectteacher.termid', $request->term_id);
+            }
+
+            if ($request->filled('session_id')) {
+                $query->where('subjectteacher.sessionid', $request->session_id);
+            }
+
+            $subjects = $query->select([
+                    'subject.id as subject_id',
+                    'subject.subject as subject_name',
+                    'subject.subject_code',
+                    'schoolterm.term as term_name',
+                    'schoolterm.id as term_id',
+                    'schoolsession.session as session_name',
+                    'schoolsession.id as session_id',
+                    'subjectteacher.termid',
+                    'subjectteacher.sessionid'
+                ])
+                ->distinct()
+                ->get()
+                ->unique('subject_id')
+                ->sortBy('subject_name')
+                ->map(function($item) {
+                    $displayText = sprintf('%s (%s) - %s %s',
+                        $item->subject_name,
+                        $item->subject_code,
+                        $item->term_name,
+                        $item->session_name
+                    );
+
+                    return [
+                        'id' => $item->subject_id,
+                        'display_text' => $displayText,
+                        'subject' => $item->subject_name,
+                        'subjectcode' => $item->subject_code,
+                        'term' => $item->term_name,
+                        'session' => $item->session_name,
+                        'termid' => $item->termid,
+                        'sessionid' => $item->sessionid
+                    ];
+                })
+                ->values();
+
+            return response()->json(['subjects' => $subjects]);
+        } catch (\Exception $e) {
+            \Log::error('Error getting filtered subjects: ' . $e->getMessage());
+            return response()->json(['subjects' => []], 500);
         }
-
-        if ($request->filled('session_id')) {
-            $query->where('subjectteacher.sessionid', $request->session_id);
-        }
-
-        $subjects = $query->select([
-                'subject.id as subject_id',
-                'subject.subject as subject_name',
-                'subject.subject_code',
-                'schoolterm.term as term_name',
-                'schoolterm.id as term_id',
-                'schoolsession.session as session_name',
-                'schoolsession.id as session_id',
-                'subjectteacher.termid',
-                'subjectteacher.sessionid'
-            ])
-            ->distinct()
-            ->get()
-            ->unique('subject_id')
-            ->sortBy('subject_name')
-            ->map(function($item) {
-                $displayText = sprintf('%s (%s) - %s %s',
-                    $item->subject_name,
-                    $item->subject_code,
-                    $item->term_name,
-                    $item->session_name
-                );
-
-                return [
-                    'id' => $item->subject_id,
-                    'display_text' => $displayText,
-                    'subject' => $item->subject_name,
-                    'subjectcode' => $item->subject_code,
-                    'term' => $item->term_name,
-                    'session' => $item->session_name,
-                    'termid' => $item->termid,
-                    'sessionid' => $item->sessionid
-                ];
-            })
-            ->values();
-
-        return response()->json(['subjects' => $subjects]);
     }
 
     public function getClassesForSubject($subjectId)
     {
-        $user = auth()->user();
+        try {
+            $user = auth()->user();
 
-        // Get classes where the teacher teaches this subject
-        $classes = DB::table('subjectteacher')
-            ->join('subjectclass', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
-            ->join('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
-            ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
-            ->where('subjectteacher.staffid', $user->id)
-            ->where('subjectteacher.subjectid', $subjectId)
-            ->select(
-                'schoolclass.id',
-                'schoolclass.schoolclass',
-                'schoolarm.arm'
-            )
-            ->distinct()
-            ->get();
+            // Get classes where the teacher teaches this subject
+            $classes = DB::table('subjectteacher')
+                ->join('subjectclass', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->join('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
+                ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
+                ->where('subjectteacher.staffid', $user->id)
+                ->where('subjectteacher.subjectid', $subjectId)
+                ->select(
+                    'schoolclass.id',
+                    'schoolclass.schoolclass',
+                    'schoolarm.arm'
+                )
+                ->distinct()
+                ->get();
 
-        return response()->json([
-            'success' => true,
-            'classes' => $classes
-        ]);
+            return response()->json([
+                'success' => true,
+                'classes' => $classes
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error getting classes for subject: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading classes. Please try again.',
+                'classes' => []
+            ], 500);
+        }
     }
 
     public function showStudents(Request $request, $examId)
