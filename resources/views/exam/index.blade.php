@@ -783,7 +783,7 @@ function formatDateForInput(date) {
 function submitAddForm() {
     const form = document.getElementById('add-exam-form');
     const submitBtn = document.getElementById('add-btn');
-    const originalText = submitBtn.textContent;
+    const originalText = submitBtn.innerHTML;
 
     // Validate class selection
     const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
@@ -799,12 +799,6 @@ function submitAddForm() {
 
     const formData = new FormData(form);
 
-    // Log form data for debugging
-    console.log('Add form data:');
-    for (let [key, value] of formData.entries()) {
-        console.log(key + ': ' + value);
-    }
-
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
     submitBtn.disabled = true;
 
@@ -817,6 +811,9 @@ function submitAddForm() {
     })
     .then(response => {
         console.log('Add response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
         return response.json();
     })
     .then(data => {
@@ -860,13 +857,273 @@ function submitAddForm() {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'An error occurred. Please try again.',
+            text: 'An error occurred while creating the exam. Please try again.',
             timer: 3000
         });
     })
     .finally(() => {
-        submitBtn.textContent = originalText;
+        submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
+    });
+}
+
+function submitEditForm() {
+    const form = document.getElementById('edit-exam-form');
+    const examId = document.getElementById('edit-id-field').value;
+    const submitBtn = document.getElementById('update-btn');
+    const originalText = submitBtn.innerHTML;
+
+    if (!examId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Invalid exam ID.',
+            timer: 3000
+        });
+        return;
+    }
+
+    // Validate class selection
+    const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
+    if (classCheckboxes.length === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select at least one class.',
+            timer: 3000
+        });
+        return;
+    }
+
+    const formData = new FormData(form);
+    formData.append('_method', 'PUT');
+
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+    submitBtn.disabled = true;
+
+    fetch(`/exams/${examId}`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        console.log('Update response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Update response data:', data);
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message || 'Exam updated successfully!',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+                if (modal) modal.hide();
+
+                // Reload page
+                window.location.reload();
+            });
+        } else {
+            let errorMsg = 'An error occurred.';
+            if (data.errors) {
+                errorMsg = Object.values(data.errors).flat().join('<br>');
+            } else if (data.message) {
+                errorMsg = data.message;
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMsg,
+                timer: 5000
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred while updating the exam. Please try again.',
+            timer: 3000
+        });
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+function deleteExam(examId) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "This will delete the exam. Questions will NOT be deleted and can still be used in other exams.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(`/exams/${examId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log('Delete response status:', response.status);
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || `HTTP error! Status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Delete response data:', data);
+                Swal.close();
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: data.message || 'Exam deleted successfully! Questions were not deleted.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to delete exam.',
+                        timer: 3000
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'Failed to delete exam. Please try again.',
+                    timer: 3000
+                });
+            });
+        }
+    });
+}
+
+function deleteMultiple() {
+    const checkedBoxes = document.querySelectorAll('input[name="chk_child"]:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Selection',
+            text: 'Please select at least one exam to delete.',
+            timer: 3000
+        });
+        return;
+    }
+
+    const ids = Array.from(checkedBoxes)
+        .map(cb => cb.closest('td').dataset.id)
+        .filter(id => id);
+
+    Swal.fire({
+        title: `Delete ${ids.length} exam(s)?`,
+        text: "This will delete the exams. Questions will NOT be deleted and can still be used in other exams.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete them!',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(`/exams/bulk-destroy`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ ids: ids })
+            })
+            .then(response => {
+                console.log('Bulk delete response status:', response.status);
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || `HTTP error! Status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Bulk delete response data:', data);
+                Swal.close();
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: data.message || 'Exams deleted successfully! Questions were not deleted.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to delete exams.',
+                        timer: 3000
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'Failed to delete exams. Please try again.',
+                    timer: 3000
+                });
+            });
+        }
     });
 }
 
