@@ -309,473 +309,14 @@
     </div>
 </div>
 
-<!-- Exam Selection Modal -->
-<div class="modal fade" id="examSelectionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Select Exams for Questions</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body">
-                <div class="alert alert-info mb-4">
-                    <div class="d-flex align-items-start">
-                        <i class="ri-information-line fs-4 me-2"></i>
-                        <div>
-                            <strong>Instructions:</strong>
-                            <ul class="mb-0">
-                                <li>Select one or more exams to add questions to</li>
-                                <li>Questions will be added to all selected exams</li>
-                                <li>Use search to filter exams by title or class</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Search -->
-                <div class="mb-4">
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="ri-search-line"></i>
-                        </span>
-                        <input type="text" class="form-control" id="search-exams-input" placeholder="Search exams by title, class, or subject...">
-                        <button class="btn btn-outline-secondary" type="button" id="clear-search-exams">
-                            <i class="ri-close-line"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Exams Grouped by Class -->
-                <div id="exams-by-class-container" style="max-height: 400px; overflow-y: auto;">
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading exams...</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Selected Exams Summary -->
-                <div class="selected-exams-summary mt-4 p-3 bg-light rounded" id="selected-exams-summary" style="display: none;">
-                    <h6 class="fw-bold mb-2">Selected Exams: <span id="selected-count">0</span></h6>
-                    <div id="selected-exams-list" class="small"></div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-1"></i> Cancel
-                </button>
-                <div class="form-check me-auto">
-                    <input class="form-check-input" type="checkbox" id="select-all-exams-checkbox">
-                    <label class="form-check-label" for="select-all-exams-checkbox">
-                        Select all
-                    </label>
-                </div>
-                <button type="button" class="btn btn-primary" id="proceed-to-question-form-btn" disabled>
-                    <i class="ri-arrow-right-line me-1"></i> Proceed with <span id="selected-exam-count">0</span> Exam(s)
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Question Form Modal -->
-<div class="modal fade" id="questionFormModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><span id="modal-title-text">Add</span> Question
-                    <span id="selected-exam-title"></span>
-                    <span id="multiple-exams-badge" class="badge bg-info ms-2" style="display: none;">Multiple Exams</span>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body">
-                <!-- Exam Selection Info -->
-                <div id="exam-selection-info" class="alert alert-info mb-4">
-                    <div class="d-flex align-items-start">
-                        <i class="ri-information-line fs-4 me-2"></i>
-                        <div>
-                            <div id="single-exam-info" style="display: none;">
-                                <strong>Exam:</strong> <span id="exam-title-text"></span><br>
-                                <strong>Class:</strong> <span id="exam-class-text"></span><br>
-                                <strong>Subject:</strong> <span id="exam-subject-text"></span>
-                            </div>
-                            <div id="multiple-exams-info" style="display: none;">
-                                <strong>Selected Exams:</strong> <span id="selected-exams-count"></span> exams<br>
-                                <small class="text-muted">This question will be added to all selected exams.</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Question Form -->
-                <form id="question-form" enctype="multipart/form-data">
-                    @csrf
-                    <div id="method-field"></div>
-                    <input type="hidden" name="question_id" id="question_id_field">
-                    <div id="selected-exams-field"></div>
-
-                    <div class="mb-3">
-                        <label for="question_text" class="form-label required">Question Text</label>
-                        <div id="question-text-editor" style="min-height: 150px;"></div>
-                        <textarea name="question_text" id="question_text" style="display: none;" required></textarea>
-                        <div class="form-text">Enter the main question text here.</div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="type" class="form-label required">Question Type</label>
-                            <select name="type" id="type" class="form-control question-type" required>
-                                <option value="" disabled selected>Select a type</option>
-                                <option value="mcq">Multiple Choice (MCQ)</option>
-                                <option value="true_false">True/False</option>
-                                <option value="short_answer">Short Answer</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="marks" class="form-label required">Marks</label>
-                            <input type="number" name="marks" id="marks" class="form-control" value="1" min="0.1" step="0.1" required>
-                        </div>
-                    </div>
-
-                    <!-- Question Type Options -->
-                    <div id="question-options-container">
-                        <!-- Options will be dynamically loaded based on type -->
-                    </div>
-
-                    <!-- Image Upload -->
-                    <div class="mb-3">
-                        <label for="image" class="form-label">Upload Image (Optional)</label>
-                        <input type="file" name="image" id="image" class="form-control" accept="image/*" />
-                        <div id="image-preview" class="mt-3" style="display: none;">
-                            <img id="preview-img" src="#" alt="Image Preview" style="max-width: 200px; max-height: 200px;" class="img-thumbnail">
-                            <button type="button" class="btn btn-sm btn-danger ms-2" id="remove-image">
-                                <i class="ri-close-line"></i> Remove
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Reusable Option -->
-                    <div class="mb-4">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="is_reusable" id="is_reusable" value="1">
-                            <label class="form-check-label" for="is_reusable">
-                                <strong>Mark as reusable question</strong>
-                                <div class="form-text">This question can be reused in other exams</div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Error Display -->
-                    <div class="alert alert-danger d-none" id="form-errors">
-                        <ul id="error-list" class="mb-0"></ul>
-                    </div>
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-1"></i> Cancel
-                </button>
-                <button type="button" class="btn btn-secondary" id="change-exam-selection">
-                    <i class="ri-arrow-left-line me-1"></i> Change Exams
-                </button>
-                <button type="button" class="btn btn-success" id="save-and-add-another-btn" style="display: none;">
-                    <i class="ri-add-circle-line me-1"></i> Save & Add Another
-                </button>
-                <button type="submit" class="btn btn-primary" id="save-question-btn" form="question-form">
-                    <i class="ri-save-line me-1"></i> Save Question
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- MCQ Options Template -->
-<template id="mcq-options-template">
-    <div class="mcq-options">
-        <h6 class="fw-bold mb-3">Multiple Choice Options (Select at least 2)</h6>
-        <div class="alert alert-warning">
-            <i class="ri-alert-line me-2"></i> You must select one correct option
-        </div>
-        <div class="options-fields">
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">A:</label>
-                    <input type="text" name="options[a][option_text]" class="form-control me-3" placeholder="Enter option A..." required />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="a" required />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">B:</label>
-                    <input type="text" name="options[b][option_text]" class="form-control me-3" placeholder="Enter option B..." required />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="b" />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">C:</label>
-                    <input type="text" name="options[c][option_text]" class="form-control me-3" placeholder="Enter option C..." />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="c" />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">D:</label>
-                    <input type="text" name="options[d][option_text]" class="form-control me-3" placeholder="Enter option D..." />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="d" />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">E:</label>
-                    <input type="text" name="options[e][option_text]" class="form-control me-3" placeholder="Enter option E..." />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="e" />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
-
-<!-- True/False Options Template -->
-<template id="tf-options-template">
-    <div class="tf-options">
-        <h6 class="fw-bold mb-3">True/False Options</h6>
-        <div class="alert alert-warning">
-            <i class="ri-alert-line me-2"></i> Select the correct answer
-        </div>
-        <div class="options-fields">
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <input type="hidden" name="options[true][option_text]" value="True">
-                    <label class="fw-semibold me-3">True</label>
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="true" required />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <input type="hidden" name="options[false][option_text]" value="False">
-                    <label class="fw-semibold me-3">False</label>
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="false" />
-                        <label class="form-check-label">Correct</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
-
-<!-- Short Answer Options Template -->
-<template id="sa-options-template">
-    <div class="sa-options">
-        <h6 class="fw-bold mb-3">Correct Answer</h6>
-        <div class="mb-3">
-            <div id="short-answer-editor" style="min-height: 100px;"></div>
-            <textarea name="options[answer][option_text]" id="short_answer_text" style="display: none;" required></textarea>
-        </div>
-    </div>
-</template>
-
-<!-- Import Modal -->
-<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{{ route('questions.import') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title">Import Questions</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Select Exam</label>
-                        <select name="exam_id" class="form-control" required>
-                            <option value="">Select Exam</option>
-                            @foreach($exams as $exam)
-                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Upload File</label>
-                        <input type="file" name="file" class="form-control" accept=".csv,.xlsx,.xls" required>
-                        <div class="form-text">
-                            Supported formats: CSV, Excel (.xlsx, .xls)<br>
-                            <a href="{{ asset('templates/questions_import_template.xlsx') }}" download class="btn btn-sm btn-outline-primary">
-                                <i class="ri-download-line me-1"></i> Download Template
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="alert alert-info">
-                        <h6><i class="ri-information-line me-2"></i>File Format Instructions:</h6>
-                        <ul class="mb-0">
-                            <li><strong>Column A:</strong> Question Text (Required)</li>
-                            <li><strong>Column B:</strong> Type (mcq/true_false/short_answer)</li>
-                            <li><strong>Column C:</strong> Correct Answer</li>
-                            <li><strong>Column D-H:</strong> Options A-E (for MCQ)</li>
-                            <li><strong>Column I:</strong> Marks (default: 1)</li>
-                            <li><strong>Column J:</strong> Reusable (true/false)</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Import Questions</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Move to Exam Modal -->
-<div class="modal fade" id="moveExamModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="move-exam-form">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title">Move Questions to Another Exam</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="selected-questions" name="question_ids">
-                    <div class="mb-3">
-                        <label class="form-label">Select Target Exam</label>
-                        <select name="data[exam_id]" class="form-control" required id="target-exam-select">
-                            <option value="">Select Exam</option>
-                            @foreach($exams as $exam)
-                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="alert alert-warning">
-                        <i class="ri-alert-line me-2"></i>
-                        This will move <span id="move-count">0</span> selected question(s) to the target exam.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Move Questions</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Reusable Questions Modal -->
-<div class="modal fade" id="reusableQuestionsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Reusable Questions Bank</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" id="search-reusable" placeholder="Search reusable questions...">
-                    </div>
-                    <div class="col-md-6">
-                        <select class="form-control" id="reusable-exam-filter">
-                            <option value="">Filter by Exam</option>
-                            @foreach($exams as $exam)
-                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div id="reusable-questions-list" style="max-height: 400px; overflow-y: auto;">
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="add-reusable-questions" disabled>
-                    <i class="ri-add-line me-1"></i> Add Selected to Exam
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- View Question Modal -->
-<div class="modal fade" id="viewQuestionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Question Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="view-question-content">
-                <!-- Content will be loaded via AJAX -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Quick Duplicate Modal -->
-<div class="modal fade" id="duplicateModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Duplicate Question</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Select Target Exam</label>
-                    <select class="form-control" id="duplicate-target-exam">
-                        <option value="">Select Exam</option>
-                        @foreach($exams as $exam)
-                            <option value="{{ $exam->id }}">{{ $exam->title }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Number of Copies</label>
-                    <input type="number" class="form-control" id="duplicate-count" value="1" min="1" max="10">
-                </div>
-                <input type="hidden" id="duplicate-question-id">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirm-duplicate">Duplicate</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Include all modals -->
+@include('questions.partials.exam_selection_modal')
+@include('questions.partials.question_form_modal')
+@include('questions.partials.import_modal')
+@include('questions.partials.move_exam_modal')
+@include('questions.partials.reusable_questions_modal')
+@include('questions.partials.view_question_modal')
+@include('questions.partials.duplicate_modal')
 
 <!-- Include Quill.js CSS -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -1259,6 +800,14 @@ $(document).ready(function() {
 
                 if (response && response.success) {
                     if (response.exams && response.exams.length > 0) {
+                        // Debug the data
+                        console.log('First exam data:', response.exams[0]);
+
+                        // Check if subjects are loaded
+                        response.exams.forEach((exam, index) => {
+                            console.log(`Exam ${index}: ${exam.title} - Subject: ${exam.subject}`);
+                        });
+
                         renderExamsByClass(response.exams);
                     } else {
                         console.warn('No exams found for this user');
@@ -1340,6 +889,9 @@ $(document).ready(function() {
             `;
 
             examsByClass[className].forEach(function(exam) {
+                // Handle subject display - check if subject exists and is not empty
+                const subjectText = exam.subject && exam.subject !== 'No Subject' ? exam.subject : '<span class="text-warning">No Subject</span>';
+
                 html += `
                     <div class="col-md-6 mb-3">
                         <div class="card exam-card h-100">
@@ -1357,7 +909,8 @@ $(document).ready(function() {
                                             <div>
                                                 <strong class="d-block mb-1">${exam.title}</strong>
                                                 <small class="text-muted d-block mb-1">
-                                                    <i class="ri-book-open-line me-1"></i>${exam.subject || 'No Subject'}
+                                                    <i class="ri-book-open-line me-1"></i>
+                                                    ${subjectText}
                                                 </small>
                                             </div>
                                             <div class="mt-2">
@@ -1544,7 +1097,12 @@ $(document).ready(function() {
             $('#selected-exam-title').text(exam.title);
             $('#exam-title-text').text(exam.title);
             $('#exam-class-text').text(exam.class);
-            $('#exam-subject-text').text(exam.subject);
+            // Handle subject display
+            if (exam.subject && exam.subject !== 'No Subject') {
+                $('#exam-subject-text').text(exam.subject);
+            } else {
+                $('#exam-subject-text').html('<span class="text-warning">No Subject</span>');
+            }
         } else if (selectedExams.length > 1 && !isEditMode) {
             $('#single-exam-info').hide();
             $('#multiple-exams-info').show();
