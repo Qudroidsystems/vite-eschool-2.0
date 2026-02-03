@@ -492,6 +492,15 @@ class ExamController extends Controller
                     ->with('schoolclass')
                     ->firstOrFail();
 
+        // Get total number of questions and total marks for this exam
+        $examTotal = DB::table('questions')
+            ->where('exam_id', $examId)
+            ->select(
+                DB::raw('COUNT(*) as total_questions'),
+                DB::raw('SUM(COALESCE(marks, 1.0)) as total_marks')
+            )
+            ->first();
+
         $classId = $request->query('class_id');
 
         $query = DB::table('exam_attempts')
@@ -508,6 +517,25 @@ class ExamController extends Controller
             $query->where('studentRegistration.schoolclassid', $classId);
         }
 
+        // Get correct answers count and attempted questions with marks
+        $subQuery = DB::table('answers')
+            ->join('options', function($join) {
+                $join->on('answers.option_id', '=', 'options.id')
+                     ->where('options.is_correct', '=', 1);
+            })
+            ->join('questions', 'answers.question_id', '=', 'questions.id')
+            ->where('answers.exam_id', $examId)
+            ->groupBy('answers.user_id')
+            ->select(
+                'answers.user_id',
+                DB::raw('COUNT(*) as correct_count'),
+                DB::raw('SUM(COALESCE(questions.marks, 1.0)) as marks_earned')
+            );
+
+        $query->leftJoinSub($subQuery, 'correct_answers', function($join) {
+            $join->on('exam_attempts.student_id', '=', 'correct_answers.user_id');
+        });
+
         $query->select(
             'studentRegistration.id',
             'studentRegistration.firstname',
@@ -517,11 +545,28 @@ class ExamController extends Controller
             'results.score',
             'results.total_marks',
             'exam_attempts.status as attempt_status',
+            DB::raw('COALESCE(correct_answers.correct_count, 0) as correct_count'),
+            DB::raw('COALESCE(correct_answers.marks_earned, 0) as marks_earned'),
             DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions')
         )
         ->orderBy('studentRegistration.lastname');
 
         $students = $query->paginate(15)->appends(['class_id' => $classId]);
+
+        // Update each student with proper calculations
+        foreach ($students as $student) {
+            // If results exist, use them, otherwise calculate from answers
+            if ($student->score === null && $student->attempt_status === 'completed') {
+                $student->score = $student->marks_earned ?? 0;
+                $student->total_marks = $examTotal->total_marks ?? 0;
+            }
+
+            // Calculate missed questions
+            $student->missed = $examTotal->total_questions - ($student->attempted_questions ?? 0);
+
+            // Calculate incorrect answers
+            $student->incorrect = ($student->attempted_questions ?? 0) - ($student->correct_count ?? 0);
+        }
 
         $assignedClasses = Schoolclass::whereIn('id',
             Exam::where('title', $exam->title)
@@ -532,13 +577,19 @@ class ExamController extends Controller
                 ->pluck('schoolclass_id')
         )->get(['id as schoolclassID', 'schoolclass', 'arm']);
 
+        // Pass exam totals to view
+        $examTotals = [
+            'total_questions' => $examTotal->total_questions ?? 0,
+            'total_marks' => $examTotal->total_marks ?? 0
+        ];
+
         if ($request->ajax()) {
             return response()->json($students);
         }
 
         $pagetitle = 'Students who Attempted: ' . $exam->title;
 
-        return view('exam.students', compact('pagetitle', 'exam', 'students', 'assignedClasses', 'classId'));
+        return view('exam.students', compact('pagetitle', 'exam', 'students', 'assignedClasses', 'classId', 'examTotals'));
     }
 
     public function deleteStudentAttempt($examId, $studentId)
@@ -597,6 +648,7 @@ class ExamController extends Controller
             ->where('exam_id', $examId)
             ->first();
 
+        // Get questions with marks and correct answers
         $questionAnswers = DB::table('questions')
             ->leftJoin('answers', function($join) use ($examId, $studentId) {
                 $join->on('questions.id', '=', 'answers.question_id')
@@ -614,20 +666,46 @@ class ExamController extends Controller
                 'questions.question_text',
                 'questions.image',
                 'questions.type',
+                'questions.marks',
                 'student_opt.option_text as student_answer',
+                'student_opt.is_correct as student_is_correct',
                 'correct_opt.option_text as correct_answer',
                 'answers.id as answer_id',
                 DB::raw('CASE
                     WHEN answers.id IS NULL THEN "Not Attempted"
-                    ELSE CASE WHEN student_opt.is_correct = 1 THEN "Yes" ELSE "No" END
-                END as marked_correct')
+                    ELSE CASE WHEN student_opt.is_correct = 1 THEN "Correct" ELSE "Incorrect" END
+                END as status'),
+                DB::raw('CASE
+                    WHEN answers.id IS NULL THEN 0
+                    ELSE CASE WHEN student_opt.is_correct = 1 THEN COALESCE(questions.marks, 1.0) ELSE 0 END
+                END as marks_earned')
             )
             ->orderBy('questions.id')
             ->get();
 
+        // Calculate totals
+        $totalQuestions = $questionAnswers->count();
+        $attempted = $questionAnswers->whereNotNull('answer_id')->count();
+        $correct = $questionAnswers->where('student_is_correct', true)->count();
+        $totalMarks = $questionAnswers->sum(function($qa) {
+            return (float)($qa->marks ?? 1.0);
+        });
+        $marksEarned = $questionAnswers->sum('marks_earned');
+
         $pagetitle = 'Exam Answers: ' . $student->firstname . ' ' . $student->lastname . ' - ' . $exam->title;
 
-        return view('exam.student-answers', compact('pagetitle', 'exam', 'student', 'questionAnswers', 'result'));
+        return view('exam.student-answers', compact(
+            'pagetitle',
+            'exam',
+            'student',
+            'questionAnswers',
+            'result',
+            'totalQuestions',
+            'attempted',
+            'correct',
+            'totalMarks',
+            'marksEarned'
+        ));
     }
 
     public function generateQuestionPaperPdf(Exam $exam, $studentId)
@@ -746,7 +824,8 @@ class ExamController extends Controller
             $questionStats[] = [
                 'text' => Str::limit($question->question_text, 60),
                 'correct_rate' => $correctRate,
-                'attempted' => $attemptedCount
+                'attempted' => $attemptedCount,
+                'marks' => $question->marks ?? 1.0
             ];
         }
 

@@ -27,6 +27,10 @@
                             <div class="flex-grow-1">
                                 <h5 class="card-title mb-0">Students <span class="badge bg-dark-subtle text-dark ms-1" id="students-count">{{ $students->total() }}</span></h5>
                             </div>
+                            <div>
+                                <span class="text-muted me-2">Total Questions: <strong>{{ $examTotals['total_questions'] ?? 0 }}</strong></span>
+                                <span class="text-muted">Total Marks: <strong>{{ number_format($examTotals['total_marks'] ?? 0, 1) }}</strong></span>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -37,17 +41,28 @@
                                             <th class="min-w-125px">Photo</th>
                                             <th class="min-w-125px">Student Name</th>
                                             <th class="min-w-125px">Admission No</th>
-                                            <th class="min-w-125px">No of Questions</th>
+                                            <th class="min-w-125px">Total Questions</th>
                                             <th class="min-w-125px">Attempted</th>
                                             <th class="min-w-125px">Correct</th>
-                                            <th class="min-w-125px">Missed</th>
-                                            <th class="min-w-125px">Total Score</th>
+                                            <th class="min-w-125px">Incorrect</th>
+                                            <th class="min-w-125px">Not Attempted</th>
+                                            <th class="min-w-125px">Score (Marks)</th>
                                             <th class="min-w-100px">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="students-tbody">
                                         @php $i = ($students->currentPage() - 1) * $students->perPage() @endphp
                                         @forelse ($students as $student)
+                                            @php
+                                                $totalQuestions = $examTotals['total_questions'] ?? 0;
+                                                $totalMarks = $examTotals['total_marks'] ?? 0;
+                                                $attempted = $student->attempted_questions ?? 0;
+                                                $correct = $student->correct_count ?? 0;
+                                                $incorrect = $student->incorrect ?? 0;
+                                                $notAttempted = $totalQuestions - $attempted;
+                                                $score = $student->score ?? 0;
+                                                $studentTotalMarks = $student->total_marks ?? $totalMarks;
+                                            @endphp
                                             <tr data-student-id="{{ $student->id }}">
                                                 <td class="sn-number">{{ ++$i }}</td>
                                                 <td>
@@ -62,35 +77,47 @@
                                                     @if($student->attempt_status === 'in_progress')
                                                         <span class="badge bg-warning text-dark">In Progress</span>
                                                     @else
-                                                        {{ $student->total_marks ?? 0 }}
+                                                        {{ $totalQuestions }}
                                                     @endif
                                                 </td>
                                                 <td>
                                                     @if($student->attempt_status === 'in_progress')
                                                         <span class="badge bg-warning text-dark">In Progress</span>
                                                     @else
-                                                        {{ $student->attempted_questions ?? 0 }}
+                                                        {{ $attempted }}
                                                     @endif
                                                 </td>
                                                 <td>
                                                     @if($student->attempt_status === 'in_progress')
                                                         <span class="badge bg-warning text-dark">In Progress</span>
                                                     @else
-                                                        {{ $student->score ?? 0 }}
+                                                        <span class="badge bg-success">{{ $correct }}</span>
                                                     @endif
                                                 </td>
                                                 <td>
                                                     @if($student->attempt_status === 'in_progress')
                                                         <span class="badge bg-warning text-dark">In Progress</span>
                                                     @else
-                                                        {{ ($student->attempted_questions ?? 0) - ($student->score ?? 0) }}
+                                                        <span class="badge bg-danger">{{ $incorrect }}</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if($student->attempt_status === 'in_progress')
+                                                        <span class="badge bg-warning text-dark">In Progress</span>
+                                                    @else
+                                                        <span class="badge bg-secondary">{{ $notAttempted }}</span>
                                                     @endif
                                                 </td>
                                                 <td>
                                                     @if($student->attempt_status === 'in_progress')
                                                         <span class="badge bg-info">Ongoing</span>
                                                     @else
-                                                        <span class="badge bg-success">{{ $student->score ?? 0 }} / {{ $student->total_marks ?? 0 }}</span>
+                                                        <span class="badge bg-primary">
+                                                            {{ number_format($score, 1) }} / {{ number_format($studentTotalMarks, 1) }}
+                                                            @if($studentTotalMarks > 0)
+                                                                ({{ number_format(($score/$studentTotalMarks)*100, 1) }}%)
+                                                            @endif
+                                                        </span>
                                                     @endif
                                                 </td>
                                                 <td>
@@ -120,7 +147,7 @@
                                             </tr>
                                         @empty
                                             <tr class="empty-row">
-                                                <td colspan="10" class="text-center">No students found</td>
+                                                <td colspan="11" class="text-center">No students found</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -165,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const examId = this.dataset.examId;
             const studentId = this.dataset.studentId;
             const studentName = this.dataset.studentName;
-            const deleteUrl = this.dataset.deleteUrl; // Using the pre-generated URL
+            const deleteUrl = this.dataset.deleteUrl;
             const row = this.closest('tr');
             const isInProgress = row.querySelector('.badge.bg-warning') !== null;
 
@@ -173,7 +200,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? `Are you sure you want to delete ${studentName}'s ongoing exam attempt? This will stop the exam and allow a retake.`
                 : `Are you sure you want to delete ${studentName}'s exam attempt? This will allow them to retake the exam.`;
 
-            // SweetAlert confirmation
             Swal.fire({
                 title: 'Are you sure?',
                 text: confirmMsg,
@@ -185,7 +211,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 cancelButtonText: 'Cancel'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Show loading state
                     Swal.fire({
                         title: 'Deleting...',
                         text: 'Please wait',
@@ -196,7 +221,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
 
-                    // Using the pre-generated URL from data attribute
                     fetch(deleteUrl, {
                         method: 'DELETE',
                         headers: {
@@ -216,22 +240,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .then(data => {
                         if (data.success) {
-                            // Remove the row from the table
                             row.remove();
-
-                            // Update the total count badge
                             updateCountBadge();
-
-                            // Update pagination text
                             updatePaginationText();
-
-                            // Update serial numbers
                             updateSerialNumbers();
-
-                            // Check if table is empty
                             checkEmptyTable();
 
-                            // Show success message
                             Swal.fire({
                                 title: 'Deleted!',
                                 text: data.message,
@@ -298,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const tbody = document.getElementById('students-tbody');
         const rows = tbody.querySelectorAll('tr:not(.empty-row)');
         if (rows.length === 0) {
-            tbody.innerHTML = '<tr class="empty-row"><td colspan="10" class="text-center">No students found</td></tr>';
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="11" class="text-center">No students found</td></tr>';
         }
     }
 });
