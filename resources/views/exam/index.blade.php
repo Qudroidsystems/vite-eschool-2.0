@@ -151,7 +151,7 @@
                                 <div class="row mt-3 align-items-center" id="pagination-element">
                                     <div class="col-sm">
                                         <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $exams->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $exams->total() }}</span> Results
+                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $exam->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $exams->total() }}</span> Results
                                         </div>
                                     </div>
                                     <div class="col-sm-auto mt-3 mt-sm-0">
@@ -251,13 +251,7 @@
                                     <label class="form-label required">Select Subject</label>
                                     <select name="subject_id" id="addSubject" class="form-control" required>
                                         <option value="" selected>Select Subject</option>
-                                        @foreach ($mysubjects as $subject)
-                                            <option value="{{ $subject->subject_id }}"
-                                                data-termid="{{ $subject->termid }}"
-                                                data-sessionid="{{ $subject->sessionid }}">
-                                                {{ $subject->subject_name }} ({{ $subject->subject_code }}) - {{ $subject->term_name }} {{ $subject->session_name }} - {{ $subject->class_name }} {{ $subject->arm_name ? '(' . $subject->arm_name . ')' : '' }}
-                                            </option>
-                                        @endforeach
+                                        {{-- Options will be loaded dynamically via JavaScript --}}
                                     </select>
                                 </div>
 
@@ -348,13 +342,7 @@
                                     <label class="form-label required">Select Subject</label>
                                     <select name="subject_id" id="edit-subject_id" class="form-control" required>
                                         <option value="" selected>Select Subject</option>
-                                        @foreach ($mysubjects as $subject)
-                                            <option value="{{ $subject->subject_id }}"
-                                                data-termid="{{ $subject->termid }}"
-                                                data-sessionid="{{ $subject->sessionid }}">
-                                                {{ $subject->subject_name }} ({{ $subject->subject_code }}) - {{ $subject->term_name }} {{ $subject->session_name }} - {{ $subject->class_name }} {{ $subject->arm_name ? '(' . $subject->arm_name . ')' : '' }}
-                                            </option>
-                                        @endforeach
+                                        {{-- Options will be loaded dynamically via JavaScript --}}
                                     </select>
                                 </div>
 
@@ -470,16 +458,17 @@ function initModalFiltering() {
     const addSubject = document.getElementById('addSubject');
 
     if (addTerm && addSession && addSubject) {
+        // When term or session changes, fetch subjects dynamically
         addTerm.addEventListener('change', function() {
-            filterSubjects(this.value, addSession.value, addSubject);
+            fetchFilteredSubjects(this.value, addSession.value, 'add');
         });
 
         addSession.addEventListener('change', function() {
-            filterSubjects(addTerm.value, this.value, addSubject);
+            fetchFilteredSubjects(addTerm.value, this.value, 'add');
         });
 
-        // Initialize filtering
-        filterSubjects('', '', addSubject);
+        // Load all subjects initially
+        fetchFilteredSubjects('', '', 'add');
     }
 
     // Subject change listener for add modal
@@ -495,33 +484,56 @@ function initModalFiltering() {
     }
 }
 
-function filterSubjects(termId, sessionId, subjectSelect) {
-    const allOptions = subjectSelect.querySelectorAll('option');
+// Function to fetch subjects based on term and session
+function fetchFilteredSubjects(termId, sessionId, mode = 'add') {
+    const subjectSelect = document.getElementById(mode === 'add' ? 'addSubject' : 'edit-subject_id');
+    const subjectContainer = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
 
-    allOptions.forEach(option => {
-        if (option.value === '') {
-            option.style.display = '';
-            return;
+    // Show loading
+    subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
+    document.getElementById(subjectContainer).innerHTML = '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (termId) params.append('term_id', termId);
+    if (sessionId) params.append('session_id', sessionId);
+
+    fetch(`/exams/filtered-subjects?${params.toString()}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
         }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        console.log('Filtered subjects response:', data);
+        if (data.subjects && data.subjects.length > 0) {
+            let options = '<option value="" selected>Select Subject</option>';
 
-        const optionTermId = option.getAttribute('data-termid');
-        const optionSessionId = option.getAttribute('data-sessionid');
+            data.subjects.forEach(subject => {
+                options += `<option value="${subject.id}"
+                    data-termid="${subject.termid}"
+                    data-sessionid="${subject.sessionid}">
+                    ${subject.display_text}
+                </option>`;
+            });
 
-        // Show option if it matches both selected term and session (if provided)
-        const showOption = (!termId || optionTermId == termId) &&
-                          (!sessionId || optionSessionId == sessionId);
-
-        option.style.display = showOption ? '' : 'none';
-        option.disabled = !showOption;
+            subjectSelect.innerHTML = options;
+        } else {
+            subjectSelect.innerHTML = '<option value="">No subjects found for selected term/session</option>';
+            document.getElementById(subjectContainer).innerHTML =
+                '<p class="text-muted text-center mb-0">No subjects available for the selected term/session</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching subjects:', error);
+        subjectSelect.innerHTML = '<option value="">Error loading subjects</option>';
+        document.getElementById(subjectContainer).innerHTML =
+            '<p class="text-danger text-center mb-0">Error loading subjects. Please try again.</p>';
     });
-
-    // Reset selection if current selection is hidden
-    if (subjectSelect.value && subjectSelect.selectedOptions[0].style.display === 'none') {
-        subjectSelect.value = '';
-        const containerId = subjectSelect.id === 'addSubject' ? 'addClassContainer' : 'editClassContainer';
-        document.getElementById(containerId).innerHTML =
-            '<p class="text-muted text-center mb-0">Select a subject first...</p>';
-    }
 }
 
 function loadClassesForSubject(subjectId, mode = 'add') {
@@ -654,24 +666,26 @@ function populateEditForm(data) {
     document.getElementById('edit-session').value = data.sessionid || '';
     document.getElementById('edit-publishStatus').checked = exam.is_published == 1;
 
-    // Subject selection
-    const subjectSelect = document.getElementById('edit-subject_id');
-    subjectSelect.value = data.subject_id || '';
-
-    // Apply filtering based on selected term and session
-    filterSubjects(data.termid, data.sessionid, subjectSelect);
-
-    // Load classes for this subject with pre-selected classes
+    // Load subjects for the selected term and session
     setTimeout(() => {
-        if (data.subject_id) {
-            console.log('Loading classes for subject:', data.subject_id, 'with selected IDs:', data.schoolclass_ids);
-            loadClassesForEditWithSelection(data.subject_id, data.schoolclass_ids || []);
-        } else {
-            console.error('No subject_id provided in edit data');
-            document.getElementById('editClassContainer').innerHTML =
-                '<p class="text-danger text-center mb-0">Error: No subject selected</p>';
-        }
-    }, 200);
+        const termId = data.termid || '';
+        const sessionId = data.sessionid || '';
+        fetchFilteredSubjects(termId, sessionId, 'edit');
+
+        // Wait for subjects to load, then select the correct one
+        setTimeout(() => {
+            const subjectSelect = document.getElementById('edit-subject_id');
+            if (subjectSelect && data.subject_id) {
+                subjectSelect.value = data.subject_id;
+
+                // Now load classes for this subject
+                if (data.subject_id) {
+                    console.log('Loading classes for subject:', data.subject_id, 'with selected IDs:', data.schoolclass_ids);
+                    loadClassesForEditWithSelection(data.subject_id, data.schoolclass_ids || []);
+                }
+            }
+        }, 500);
+    }, 100);
 }
 
 function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {

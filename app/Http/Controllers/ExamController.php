@@ -53,24 +53,15 @@ class ExamController extends Controller
         $terms = Schoolterm::all();
         $sessions = Schoolsession::all();
 
-        // FIXED: Get all subjects for the teacher - Using proper joins
-        $mysubjects = SubjectTeacher::where('subjectteacher.staffid', $user->id)
-            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-            ->leftJoin('subjectclass', function($join) {
-                $join->on('subjectclass.subjectteacherid', '=', 'subjectteacher.id')
-                     ->whereNotNull('subjectclass.schoolclassid');
-            })
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
-            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+        // Load all subjects initially for the dropdown (will be filtered by JS)
+        $mysubjects = SubjectTeacher::where('staffid', $user->id)
+            ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+            ->join('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+            ->join('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
             ->select([
                 'subject.id as subject_id',
                 'subject.subject as subject_name',
                 'subject.subject_code',
-                'schoolclass.schoolclass as class_name',
-                'schoolclass.id as class_id',
-                'schoolarm.arm as arm_name',
                 'schoolterm.term as term_name',
                 'schoolterm.id as term_id',
                 'schoolsession.session as session_name',
@@ -82,14 +73,7 @@ class ExamController extends Controller
             ->get()
             ->unique('subject_id')
             ->sortBy('subject_name')
-            ->values()
-            ->map(function($item) {
-                // If class_name is null, provide a default value
-                if (empty($item->class_name)) {
-                    $item->class_name = 'All Classes';
-                }
-                return $item;
-            });
+            ->values();
 
         $myclass = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
             ->select(
@@ -361,15 +345,9 @@ class ExamController extends Controller
         $user = auth()->user();
 
         $query = SubjectTeacher::where('subjectteacher.staffid', $user->id)
-            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-            ->leftJoin('subjectclass', function($join) {
-                $join->on('subjectclass.subjectteacherid', '=', 'subjectteacher.id')
-                     ->whereNotNull('subjectclass.schoolclassid');
-            })
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
-            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid');
+            ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+            ->join('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+            ->join('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid');
 
         if ($request->filled('term_id')) {
             $query->where('subjectteacher.termid', $request->term_id);
@@ -379,17 +357,10 @@ class ExamController extends Controller
             $query->where('subjectteacher.sessionid', $request->session_id);
         }
 
-        if ($request->filled('class_id')) {
-            $query->where('schoolclass.id', $request->class_id);
-        }
-
         $subjects = $query->select([
                 'subject.id as subject_id',
                 'subject.subject as subject_name',
                 'subject.subject_code',
-                'schoolclass.schoolclass as class_name',
-                'schoolclass.id as class_id',
-                'schoolarm.arm as arm_name',
                 'schoolterm.term as term_name',
                 'schoolterm.id as term_id',
                 'schoolsession.session as session_name',
@@ -409,22 +380,11 @@ class ExamController extends Controller
                     $item->session_name
                 );
 
-                // Add class info if available
-                if ($item->class_name) {
-                    $displayText .= sprintf(' - %s %s',
-                        $item->class_name,
-                        $item->arm_name ? '(' . $item->arm_name . ')' : ''
-                    );
-                }
-
                 return [
                     'id' => $item->subject_id,
                     'display_text' => $displayText,
                     'subject' => $item->subject_name,
                     'subjectcode' => $item->subject_code,
-                    'schoolclass' => $item->class_name ?: 'All Classes',
-                    'class_id' => $item->class_id,
-                    'arm' => $item->arm_name,
                     'term' => $item->term_name,
                     'session' => $item->session_name,
                     'termid' => $item->termid,
