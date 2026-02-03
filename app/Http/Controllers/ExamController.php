@@ -634,79 +634,112 @@ class ExamController extends Controller
         }
     }
 
-    public function showStudentAnswers($examId, $studentId)
-    {
-        $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
+   public function showStudentAnswers($examId, $studentId)
+{
+    $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
 
-        $student = DB::table('studentRegistration')
-            ->where('id', $studentId)
-            ->select('id', 'firstname', 'lastname', 'admissionNo')
-            ->firstOrFail();
+    $student = DB::table('studentRegistration')
+        ->where('id', $studentId)
+        ->select('id', 'firstname', 'lastname', 'admissionNo')
+        ->firstOrFail();
 
-        $result = DB::table('results')
-            ->where('user_id', $studentId)
-            ->where('exam_id', $examId)
-            ->first();
+    $result = DB::table('results')
+        ->where('user_id', $studentId)
+        ->where('exam_id', $examId)
+        ->first();
 
-        // Get questions with marks and correct answers
-        $questionAnswers = DB::table('questions')
-            ->leftJoin('answers', function($join) use ($examId, $studentId) {
-                $join->on('questions.id', '=', 'answers.question_id')
-                     ->where('answers.exam_id', '=', $examId)
-                     ->where('answers.user_id', '=', $studentId);
-            })
-            ->leftJoin('options as student_opt', 'answers.option_id', '=', 'student_opt.id')
-            ->leftJoin('options as correct_opt', function($join) {
-                $join->on('correct_opt.question_id', '=', 'questions.id')
-                     ->where('correct_opt.is_correct', '=', 1);
-            })
-            ->where('questions.exam_id', $examId)
-            ->select(
-                'questions.id',
-                'questions.question_text',
-                'questions.image',
-                'questions.type',
-                'questions.marks',
-                'student_opt.option_text as student_answer',
-                'student_opt.is_correct as student_is_correct',
-                'correct_opt.option_text as correct_answer',
-                'answers.id as answer_id',
-                DB::raw('CASE
-                    WHEN answers.id IS NULL THEN "Not Attempted"
-                    ELSE CASE WHEN student_opt.is_correct = 1 THEN "Correct" ELSE "Incorrect" END
-                END as status'),
-                DB::raw('CASE
-                    WHEN answers.id IS NULL THEN 0
-                    ELSE CASE WHEN student_opt.is_correct = 1 THEN COALESCE(questions.marks, 1.0) ELSE 0 END
-                END as marks_earned')
-            )
-            ->orderBy('questions.id')
-            ->get();
+    // Get questions with marks and correct answers
+    $questionAnswers = DB::table('questions')
+        ->leftJoin('answers', function($join) use ($examId, $studentId) {
+            $join->on('questions.id', '=', 'answers.question_id')
+                 ->where('answers.exam_id', '=', $examId)
+                 ->where('answers.user_id', '=', $studentId);
+        })
+        ->leftJoin('options as student_opt', 'answers.option_id', '=', 'student_opt.id')
+        ->leftJoin('options as correct_opt', function($join) {
+            $join->on('correct_opt.question_id', '=', 'questions.id')
+                 ->where('correct_opt.is_correct', '=', 1);
+        })
+        ->where('questions.exam_id', $examId)
+        ->select(
+            'questions.id',
+            'questions.question_text',
+            'questions.image',
+            'questions.type',
+            'questions.marks',
+            'student_opt.option_text as student_option_answer',
+            'student_opt.is_correct as student_is_correct',
+            'answers.answer_text as student_answer_text', // For short answer and true/false
+            'correct_opt.option_text as correct_option_answer',
+            'answers.id as answer_id',
+            DB::raw('CASE
+                WHEN answers.id IS NULL THEN "Not Attempted"
+                ELSE CASE
+                    WHEN questions.type = "short_answer" THEN
+                        CASE WHEN LOWER(TRIM(answers.answer_text)) = LOWER(TRIM(correct_opt.option_text)) THEN "Correct" ELSE "Incorrect" END
+                    WHEN questions.type = "true_false" THEN
+                        CASE WHEN student_opt.is_correct = 1 THEN "Correct" ELSE "Incorrect" END
+                    ELSE
+                        CASE WHEN student_opt.is_correct = 1 THEN "Correct" ELSE "Incorrect" END
+                END
+            END as status'),
+            DB::raw('CASE
+                WHEN answers.id IS NULL THEN 0
+                ELSE CASE
+                    WHEN questions.type = "short_answer" THEN
+                        CASE WHEN LOWER(TRIM(answers.answer_text)) = LOWER(TRIM(correct_opt.option_text)) THEN COALESCE(questions.marks, 1.0) ELSE 0 END
+                    WHEN questions.type = "true_false" THEN
+                        CASE WHEN student_opt.is_correct = 1 THEN COALESCE(questions.marks, 1.0) ELSE 0 END
+                    ELSE
+                        CASE WHEN student_opt.is_correct = 1 THEN COALESCE(questions.marks, 1.0) ELSE 0 END
+                END
+            END as marks_earned')
+        )
+        ->orderBy('questions.id')
+        ->get();
 
-        // Calculate totals
-        $totalQuestions = $questionAnswers->count();
-        $attempted = $questionAnswers->whereNotNull('answer_id')->count();
-        $correct = $questionAnswers->where('student_is_correct', true)->count();
-        $totalMarks = $questionAnswers->sum(function($qa) {
-            return (float)($qa->marks ?? 1.0);
-        });
-        $marksEarned = $questionAnswers->sum('marks_earned');
-
-        $pagetitle = 'Exam Answers: ' . $student->firstname . ' ' . $student->lastname . ' - ' . $exam->title;
-
-        return view('exam.student-answers', compact(
-            'pagetitle',
-            'exam',
-            'student',
-            'questionAnswers',
-            'result',
-            'totalQuestions',
-            'attempted',
-            'correct',
-            'totalMarks',
-            'marksEarned'
-        ));
+    // Process each answer to display properly based on type
+    foreach ($questionAnswers as $qa) {
+        // Determine what to show as student answer based on question type
+        if ($qa->type === 'short_answer') {
+            // For short answer, show the answer_text from answers table
+            $qa->student_answer = $qa->student_answer_text ?? 'Not Attempted';
+            $qa->correct_answer = $qa->correct_option_answer ?? '-';
+        } elseif ($qa->type === 'true_false') {
+            // For true/false, show True/False from option_text
+            $qa->student_answer = $qa->student_option_answer ?? 'Not Attempted';
+            $qa->correct_answer = $qa->correct_option_answer ?? '-';
+        } else {
+            // For MCQ, show the selected option
+            $qa->student_answer = $qa->student_option_answer ?? 'Not Attempted';
+            $qa->correct_answer = $qa->correct_option_answer ?? '-';
+        }
     }
+
+    // Calculate totals
+    $totalQuestions = $questionAnswers->count();
+    $attempted = $questionAnswers->whereNotNull('answer_id')->count();
+    $correct = $questionAnswers->where('status', 'Correct')->count();
+    $totalMarks = $questionAnswers->sum(function($qa) {
+        return (float)($qa->marks ?? 1.0);
+    });
+    $marksEarned = $questionAnswers->sum('marks_earned');
+
+    $pagetitle = 'Exam Answers: ' . $student->firstname . ' ' . $student->lastname . ' - ' . $exam->title;
+
+    return view('exam.student-answers', compact(
+        'pagetitle',
+        'exam',
+        'student',
+        'questionAnswers',
+        'result',
+        'totalQuestions',
+        'attempted',
+        'correct',
+        'totalMarks',
+        'marksEarned'
+    ));
+}
 
     public function generateQuestionPaperPdf(Exam $exam, $studentId)
     {
