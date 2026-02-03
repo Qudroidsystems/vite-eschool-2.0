@@ -310,13 +310,13 @@
 </div>
 
 <!-- Include all modals -->
-@include('questions.partials.exam_selection_modal')
-@include('questions.partials.question_form_modal')
-@include('questions.partials.import_modal')
-@include('questions.partials.move_exam_modal')
-@include('questions.partials.reusable_questions_modal')
-@include('questions.partials.view_question_modal')
-@include('questions.partials.duplicate_modal')
+@include('question.partials.exam_selection_modal')
+@include('question.partials.question_form_modal')
+@include('question.partials.import_modal')
+@include('question.partials.move_exam_modal')
+@include('question.partials.reusable_questions_modal')
+@include('question.partials.view_question_modal')
+@include('question.partials.duplicate_modal')
 
 <!-- Include Quill.js CSS -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
