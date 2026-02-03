@@ -485,59 +485,51 @@ class ExamController extends Controller
         }
     }
 
-  public function showStudents(Request $request, $examId)
-{
-    $exam = Exam::where('id', $examId)
-                ->where('staffId', auth()->user()->id)
-                ->with('schoolclass')
-                ->firstOrFail();
+    public function showStudents(Request $request, $examId)
+    {
+        $exam = Exam::where('id', $examId)
+                    ->where('staffId', auth()->user()->id)
+                    ->with('schoolclass')
+                    ->firstOrFail();
 
-    // Get total number of questions and total marks for this exam
-    $examTotal = DB::table('questions')
-        ->where('exam_id', $examId)
-        ->select(
-            DB::raw('COUNT(*) as total_questions'),
-            DB::raw('SUM(COALESCE(marks, 1.0)) as total_marks')
-        )
-        ->first();
+        // Get total number of questions and total marks for this exam
+        $examTotal = DB::table('questions')
+            ->where('exam_id', $examId)
+            ->select(
+                DB::raw('COUNT(*) as total_questions'),
+                DB::raw('SUM(COALESCE(marks, 1.0)) as total_marks')
+            )
+            ->first();
 
-    $classId = $request->query('class_id');
+        $classId = $request->query('class_id');
 
-    // Main query - simplified approach
-    $query = DB::table('exam_attempts')
-        ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
-        ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-        ->leftJoin('results', function ($join) use ($examId) {
-            $join->on('exam_attempts.student_id', '=', 'results.user_id')
-                 ->where('results.exam_id', '=', $examId);
-        })
-        ->where('exam_attempts.exam_id', $examId)
-        ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
+        // Main query
+        $query = DB::table('exam_attempts')
+            ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
+            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+            ->leftJoin('results', function ($join) use ($examId) {
+                $join->on('exam_attempts.student_id', '=', 'results.user_id')
+                     ->where('results.exam_id', '=', $examId);
+            })
+            ->where('exam_attempts.exam_id', $examId)
+            ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
 
-    if ($classId) {
-        $query->where('studentRegistration.schoolclassid', $classId);
-    }
+        if ($classId) {
+            $query->where('studentRegistration.schoolclassid', $classId);
+        }
 
-    $query->select(
-        'studentRegistration.id',
-        'studentRegistration.firstname',
-        'studentRegistration.lastname',
-        'studentRegistration.admissionNo',
-        'studentpicture.picture as picture',
-        'results.score',
-        'results.total_marks',
-        'exam_attempts.status as attempt_status'
-    );
+        $query->select(
+            'studentRegistration.id',
+            'studentRegistration.firstname',
+            'studentRegistration.lastname',
+            'studentRegistration.admissionNo',
+            'studentpicture.picture as picture',
+            'results.score',
+            'results.total_marks',
+            'exam_attempts.status as attempt_status'
+        );
 
-    $students = $query->orderBy('studentRegistration.lastname')->paginate(15);
-
-    // Now manually calculate the answer statistics for each student
-    foreach ($students as $student) {
-        // Get all answers for this student
-        $answers = Answer::where('exam_id', $examId)
-                         ->where('user_id', $student->id)
-                         ->with(['question', 'option'])
-                         ->get();
+        $students = $query->orderBy('studentRegistration.lastname')->paginate(15);
 
         // Get correct options for all questions in this exam
         $correctOptions = DB::table('options')
@@ -548,84 +540,136 @@ class ExamController extends Controller
             ->get()
             ->keyBy('question_id');
 
-        $attempted = 0;
-        $correctCount = 0;
-        $marksEarned = 0;
+        // Get all questions with their marks and types
+        $questions = DB::table('questions')
+            ->where('exam_id', $examId)
+            ->select('id', 'marks', 'type')
+            ->get()
+            ->keyBy('id');
 
-        foreach ($answers as $answer) {
-            $attempted++;
+        // Now calculate for each student
+        foreach ($students as $student) {
+            // Skip calculation for in_progress attempts
+            if ($student->attempt_status === 'in_progress') {
+                $student->attempted_questions = 0;
+                $student->correct_count = 0;
+                $student->marks_earned = 0;
+                $student->incorrect = 0;
+                $student->score = 0;
+                continue;
+            }
 
-            $questionMarks = (float) ($answer->question->marks ?? 1.0);
-            $correctOption = $correctOptions->get($answer->question_id);
+            // Get all answers for this student
+            $answers = Answer::where('exam_id', $examId)
+                            ->where('user_id', $student->id)
+                            ->with(['option'])
+                            ->get();
 
-            if ($answer->question->type === 'short_answer') {
-                // For short answers, compare short_answer field with correct option text
-                $studentAnswer = trim(strip_tags($answer->short_answer ?? ''));
-                $correctAnswer = trim(strip_tags($correctOption->option_text ?? ''));
+            $attempted = 0;
+            $correctCount = 0;
+            $marksEarned = 0;
 
-                if (!empty($studentAnswer) && !empty($correctAnswer)) {
-                    // Normalize for comparison
-                    $normalizedStudent = strtolower(preg_replace('/\s+/', ' ', $studentAnswer));
-                    $normalizedCorrect = strtolower(preg_replace('/\s+/', ' ', $correctAnswer));
+            foreach ($answers as $answer) {
+                $attempted++;
 
-                    if ($normalizedStudent === $normalizedCorrect) {
+                $question = $questions->get($answer->question_id);
+                $questionMarks = (float) ($question->marks ?? 1.0);
+                $correctOption = $correctOptions->get($answer->question_id);
+
+                if ($question && $question->type === 'short_answer') {
+                    // For short answers, use consistent normalization
+                    $studentAnswer = trim(strip_tags($answer->short_answer ?? ''));
+                    $correctAnswer = trim(strip_tags($correctOption->option_text ?? ''));
+
+                    if (!empty($studentAnswer) && !empty($correctAnswer)) {
+                        // Normalize for comparison
+                        $normalizedStudent = $this->normalizeTextForComparison($studentAnswer);
+                        $normalizedCorrect = $this->normalizeTextForComparison($correctAnswer);
+
+                        if ($normalizedStudent === $normalizedCorrect) {
+                            $correctCount++;
+                            $marksEarned += $questionMarks;
+                        }
+                    }
+                } else {
+                    // For MCQ/TrueFalse
+                    if ($answer->option && $answer->option->is_correct) {
                         $correctCount++;
                         $marksEarned += $questionMarks;
                     }
                 }
-            } else {
-                // For MCQ/TrueFalse
-                if ($answer->option && $answer->option->is_correct) {
-                    $correctCount++;
-                    $marksEarned += $questionMarks;
-                }
+            }
+
+            // Add calculated fields to student object
+            $student->attempted_questions = $attempted;
+            $student->correct_count = $correctCount;
+            $student->marks_earned = $marksEarned;
+            $student->incorrect = $attempted - $correctCount;
+
+            // Use calculated marks_earned for score
+            $student->score = $marksEarned;
+            $student->total_marks = $examTotal->total_marks ?? 0;
+
+            // Update results table if student has completed the exam
+            if ($student->attempt_status === 'completed') {
+                DB::table('results')
+                    ->updateOrInsert(
+                        [
+                            'user_id' => $student->id,
+                            'exam_id' => $examId
+                        ],
+                        [
+                            'score' => $marksEarned,
+                            'total_marks' => $examTotal->total_marks ?? 0,
+                            'percentage' => ($examTotal->total_marks ?? 0) > 0 ?
+                                ($marksEarned / ($examTotal->total_marks ?? 1)) * 100 : 0,
+                            'updated_at' => now()
+                        ]
+                    );
             }
         }
 
-        // Add calculated fields to student object
-        $student->attempted_questions = $attempted;
-        $student->correct_count = $correctCount;
-        $student->marks_earned = $marksEarned;
-        $student->missed = ($examTotal->total_questions ?? 0) - $attempted;
-        $student->incorrect = $attempted - $correctCount;
+        $assignedClasses = Schoolclass::whereIn('id',
+            Exam::where('title', $exam->title)
+                ->where('staffId', $exam->staffId)
+                ->where('subject_id', $exam->subject_id)
+                ->where('termid', $exam->termid)
+                ->where('session', $exam->session)
+                ->pluck('schoolclass_id')
+        )->get(['id as schoolclassID', 'schoolclass', 'arm']);
 
-        // If results don't exist but exam is completed, update score
-        if (!$student->score && $student->attempt_status === 'completed') {
-            $student->score = $marksEarned;
-            $student->total_marks = $examTotal->total_marks ?? 0;
+        // Pass exam totals to view
+        $examTotals = [
+            'total_questions' => $examTotal->total_questions ?? 0,
+            'total_marks' => $examTotal->total_marks ?? 0
+        ];
+
+        if ($request->ajax()) {
+            return response()->json($students);
         }
+
+        $pagetitle = 'Students who Attempted: ' . $exam->title;
+
+        return view('exam.students', compact(
+            'pagetitle',
+            'exam',
+            'students',
+            'assignedClasses',
+            'classId',
+            'examTotals'
+        ));
     }
 
-    $assignedClasses = Schoolclass::whereIn('id',
-        Exam::where('title', $exam->title)
-            ->where('staffId', $exam->staffId)
-            ->where('subject_id', $exam->subject_id)
-            ->where('termid', $exam->termid)
-            ->where('session', $exam->session)
-            ->pluck('schoolclass_id')
-    )->get(['id as schoolclassID', 'schoolclass', 'arm']);
-
-    // Pass exam totals to view
-    $examTotals = [
-        'total_questions' => $examTotal->total_questions ?? 0,
-        'total_marks' => $examTotal->total_marks ?? 0
-    ];
-
-    if ($request->ajax()) {
-        return response()->json($students);
+    // Helper method for consistent text normalization
+    private function normalizeTextForComparison($text)
+    {
+        $text = trim($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/\s+/', ' ', $text); // Replace multiple spaces with single space
+        $text = strtolower($text);
+        $text = preg_replace('/[^\p{L}\p{N}\s]/u', '', $text); // Remove punctuation
+        return $text;
     }
-
-    $pagetitle = 'Students who Attempted: ' . $exam->title;
-
-    return view('exam.students', compact(
-        'pagetitle',
-        'exam',
-        'students',
-        'assignedClasses',
-        'classId',
-        'examTotals'
-    ));
-}
 
     public function deleteStudentAttempt($examId, $studentId)
     {
@@ -727,7 +771,7 @@ class ExamController extends Controller
                 $attempted++;
 
                 if ($question->type === 'short_answer') {
-                    // FIXED: Use short_answer column instead of answer_text
+                    // Use short_answer column
                     $studentAnswerText = $answer->short_answer ?? '';
 
                     if (!empty($studentAnswerText) && $correctOption) {
@@ -737,32 +781,12 @@ class ExamController extends Controller
                         // Clean the correct answer
                         $cleanCorrectAnswer = strip_tags($correctOption->option_text);
 
-                        // Helper function to normalize text for comparison
-                        $normalizeText = function($text) {
-                            $text = trim($text);
-                            $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                            $text = preg_replace('/\s+/', ' ', $text); // Replace multiple spaces with single space
-                            $text = strtolower($text);
-                            $text = preg_replace('/[^\p{L}\p{N}\s]/u', '', $text); // Remove punctuation
-                            return $text;
-                        };
-
-                        $normalizedStudent = $normalizeText($studentAnswerText);
-                        $normalizedCorrect = $normalizeText($cleanCorrectAnswer);
+                        // Use the same normalization as showStudents
+                        $normalizedStudent = $this->normalizeTextForComparison($studentAnswerText);
+                        $normalizedCorrect = $this->normalizeTextForComparison($cleanCorrectAnswer);
 
                         // Compare normalized text
                         $isCorrect = $normalizedStudent === $normalizedCorrect;
-
-                        // Debug logging
-                        \Log::info('Short answer comparison:', [
-                            'question_id' => $question->id,
-                            'question_type' => $question->type,
-                            'student_answer' => $studentAnswerText,
-                            'correct_answer' => $cleanCorrectAnswer,
-                            'normalized_student' => $normalizedStudent,
-                            'normalized_correct' => $normalizedCorrect,
-                            'is_correct' => $isCorrect
-                        ]);
                     }
                 } elseif ($question->type === 'true_false') {
                     // For true/false, get the selected option

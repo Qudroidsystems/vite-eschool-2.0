@@ -33,6 +33,24 @@
                             </div>
                         </div>
                         <div class="card-body">
+                            @if($assignedClasses->count() > 1)
+                            <div class="mb-3">
+                                <label class="form-label">Filter by Class:</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{{ route('exams.students', $exam->id) }}"
+                                       class="btn btn-sm {{ !$classId ? 'btn-primary' : 'btn-outline-primary' }}">
+                                        All Classes ({{ $assignedClasses->count() }})
+                                    </a>
+                                    @foreach($assignedClasses as $class)
+                                        <a href="{{ route('exams.students', ['exam' => $exam->id, 'class_id' => $class->schoolclassID]) }}"
+                                           class="btn btn-sm {{ $classId == $class->schoolclassID ? 'btn-primary' : 'btn-outline-primary' }}">
+                                            {{ $class->schoolclass }}{{ $class->arm ? ' - ' . $class->arm : '' }}
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
+
                             <div class="table-responsive">
                                 <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0">
                                     <thead>
@@ -60,7 +78,8 @@
                                                 $correct = $student->correct_count ?? 0;
                                                 $incorrect = $student->incorrect ?? 0;
                                                 $notAttempted = $totalQuestions - $attempted;
-                                                $score = $student->score ?? 0;
+                                                // Use marks_earned if available, otherwise use score
+                                                $score = $student->marks_earned ?? $student->score ?? 0;
                                                 $studentTotalMarks = $student->total_marks ?? $totalMarks;
                                             @endphp
                                             <tr data-student-id="{{ $student->id }}">
