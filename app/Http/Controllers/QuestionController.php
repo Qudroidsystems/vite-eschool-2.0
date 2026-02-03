@@ -378,47 +378,45 @@ class QuestionController extends Controller
         return response()->json(['success' => true]);
     }
 
-    /**
-     * Get exams for selection
-     */
-    public function getExamsForSelection(Request $request)
-    {
-        $user = Auth::user();
+   // In QuestionController.php - update the getExamsForSelection method
+public function getExamsForSelection(Request $request)
+{
+    $user = Auth::user();
 
-        \Log::info('Getting exams for user: ' . $user->id);
+    \Log::info('Getting exams for user: ' . $user->id);
 
-        $exams = Exam::with(['schoolclass.armRelation', 'subject', 'questions'])
-            ->where('staffId', $user->id)
-            ->orderBy('title')
-            ->get()
-            ->map(function($exam) {
-                \Log::info('Exam ID: ' . $exam->id . ', Subject: ' . ($exam->subject ? $exam->subject->subject : 'null'));
+    $exams = Exam::with(['schoolclass.armRelation', 'subject', 'questions'])
+        ->where('staffId', $user->id)
+        ->orderBy('title')
+        ->get()
+        ->map(function($exam) {
+            \Log::info('Exam ID: ' . $exam->id . ', Subject: ' . ($exam->subject ? $exam->subject->subject : 'null'));
 
-                return [
-                    'id' => $exam->id,
-                    'title' => $exam->title,
-                    'subject' => $exam->subject ? $exam->subject->name : 'No Subject',
-                    'subject_id' => $exam->subject_id,
-                    'class_name' => $exam->schoolclass ?
-                        $exam->schoolclass->schoolclass .
-                        ($exam->schoolclass->armRelation ? ' (' . $exam->schoolclass->armRelation->arm . ')' : '') :
-                        'No Class',
-                    'question_count' => $exam->questions->count(),
-                    'marks' => $exam->questions->sum('marks')
-                ];
-            });
+            return [
+                'id' => $exam->id,
+                'title' => $exam->title,
+                'subject' => $exam->subject ? $exam->subject->subject : 'No Subject', // FIXED THIS LINE
+                'subject_id' => $exam->subject_id,
+                'class_name' => $exam->schoolclass ?
+                    $exam->schoolclass->schoolclass .
+                    ($exam->schoolclass->armRelation ? ' (' . $exam->schoolclass->armRelation->arm . ')' : '') :
+                    'No Class',
+                'question_count' => $exam->questions->count(),
+                'marks' => $exam->questions->sum('marks')
+            ];
+        });
 
-        \Log::info('Returning ' . $exams->count() . ' exams');
+    \Log::info('Returning ' . $exams->count() . ' exams');
 
-        return response()->json([
-            'success' => true,
-            'exams' => $exams,
-            'debug' => [
-                'user_id' => $user->id,
-                'exam_count' => $exams->count()
-            ]
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'exams' => $exams,
+        'debug' => [
+            'user_id' => $user->id,
+            'exam_count' => $exams->count()
+        ]
+    ]);
+}
 
     /**
      * Import questions from Excel/CSV
