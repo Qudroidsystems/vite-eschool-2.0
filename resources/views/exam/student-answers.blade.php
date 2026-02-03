@@ -72,6 +72,15 @@
         border-radius: 8px;
         padding: 0.75rem;
         word-break: break-word;
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .answer-content {
+        width: 100%;
     }
 
     .correct-badge {
@@ -163,29 +172,29 @@
     }
 
     .table-scroll-container table {
-        min-width: 1200px; /* Ensure table is wide enough to scroll */
+        min-width: 1200px;
     }
 
     .table-scroll-container th,
     .table-scroll-container td {
-        min-width: 150px; /* Minimum width for each column to prevent squishing */
-        white-space: normal; /* Allow wrapping in cells */
+        min-width: 150px;
+        white-space: normal;
         word-break: break-word;
     }
 
     .table-scroll-container th:first-child,
     .table-scroll-container td:first-child {
-        min-width: 75px; /* Smaller for SN */
+        min-width: 75px;
     }
 
     .table-scroll-container th:nth-child(2),
     .table-scroll-container td:nth-child(2) {
-        min-width: 250px; /* Adjusted for better fit with truncation */
+        min-width: 250px;
     }
 
     .table-scroll-container th:nth-child(3),
     .table-scroll-container td:nth-child(3) {
-        min-width: 150px; /* For Image */
+        min-width: 150px;
         text-align: center;
     }
 
@@ -235,6 +244,76 @@
         font-size: 0.75rem;
         font-weight: 600;
         display: inline-block;
+    }
+
+    .student-answer-text {
+        font-weight: 600;
+        color: #1f2937;
+        word-break: break-word;
+        text-align: center;
+    }
+
+    .correct-answer-text {
+        font-weight: 600;
+        color: #059669;
+        word-break: break-word;
+        text-align: center;
+    }
+
+    .not-attempted-text {
+        color: #6b7280;
+        font-style: italic;
+    }
+
+    /* Question HTML content styling */
+    .question-html img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .question-html table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+
+    .question-html table, .question-html th, .question-html td {
+        border: 1px solid #ddd;
+        padding: 0.5rem;
+    }
+
+    .question-html ul, .question-html ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .question-html li {
+        margin-bottom: 0.25rem;
+    }
+
+    /* Status colors */
+    .border-success {
+        border: 2px solid #10b981 !important;
+    }
+
+    .border-danger {
+        border: 2px solid #ef4444 !important;
+    }
+
+    .border-warning {
+        border: 2px solid #f59e0b !important;
+    }
+
+    .bg-success {
+        background-color: #10b981 !important;
+    }
+
+    .bg-danger {
+        background-color: #ef4444 !important;
+    }
+
+    .bg-warning {
+        background-color: #f59e0b !important;
     }
 </style>
 
@@ -394,13 +473,31 @@
                                                     @endif
                                                 </td>
                                                 <td>
-                                                    <div class="answer-cell @if($qa->status == 'Correct') border-success border-1 @elseif($qa->status == 'Incorrect') border-danger border-1 @endif">
-                                                        <strong>{{ $qa->student_answer ?? 'Not Attempted' }}</strong>
+                                                    <div class="answer-cell @if($qa->status == 'Correct') border-success border-1 @elseif($qa->status == 'Incorrect') border-danger border-1 @else border-warning border-1 @endif">
+                                                        <div class="answer-content">
+                                                            @if($qa->student_answer && $qa->student_answer !== 'Not Attempted')
+                                                                <div class="student-answer-text">
+                                                                    {{ $qa->student_answer }}
+                                                                </div>
+                                                            @else
+                                                                <div class="not-attempted-text">
+                                                                    Not Attempted
+                                                                </div>
+                                                            @endif
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <div class="answer-cell bg-success bg-opacity-10 text-success fw-semibold border-success border-1">
-                                                        {{ $qa->correct_answer ?? '-' }}
+                                                    <div class="answer-cell bg-success bg-opacity-10 border-success border-1">
+                                                        <div class="answer-content">
+                                                            @if($qa->correct_answer && !empty(trim($qa->correct_answer)))
+                                                                <div class="correct-answer-text">
+                                                                    {{ $qa->correct_answer }}
+                                                                </div>
+                                                            @else
+                                                                <span class="text-muted">-</span>
+                                                            @endif
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -475,6 +572,11 @@
             </div>
             <div class="modal-body p-4">
                 <div class="question-html-full">{!! $qa->question_text !!}</div>
+                @if($qa->image)
+                <div class="mt-3">
+                    <img src="{{ asset('storage/' . $qa->image) }}" alt="Question Image" class="img-fluid rounded">
+                </div>
+                @endif
             </div>
         </div>
     </div>

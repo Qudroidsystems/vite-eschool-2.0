@@ -634,12 +634,15 @@ class ExamController extends Controller
         }
     }
 
-   public function showStudentAnswers($examId, $studentId)
+
+
+
+    public function showStudentAnswers($examId, $studentId)
 {
     $exam = Exam::where('id', $examId)
                 ->where('staffId', auth()->user()->id)
                 ->with(['questions.options' => function($query) {
-                    $query->select('id', 'question_id', 'option_text', 'is_correct');
+                    $query->select('id', 'question_id', 'option_text', 'is_correct', 'label');
                 }])
                 ->firstOrFail();
 
@@ -675,32 +678,72 @@ class ExamController extends Controller
         // Determine if answer is correct
         $isCorrect = false;
         $studentAnswerText = '';
-        $correctAnswerText = $correctOption ? $correctOption->option_text : '';
+        $correctAnswerText = '';
+
+        // Get correct answer text based on question type
+        if ($correctOption) {
+            if ($question->type === 'true_false') {
+                // For true/false, use the label (true/false) but display as True/False
+                $correctAnswerText = ucfirst($correctOption->label);
+            } else {
+                // For MCQ and short answer, use option_text
+                $correctAnswerText = $correctOption->option_text;
+            }
+        }
 
         if ($answer) {
             $attempted++;
 
             if ($question->type === 'short_answer') {
-                // For short answer, compare answer_text with correct option
+                // For short answer, get answer_text
                 $studentAnswerText = $answer->answer_text ?? '';
-                if ($correctOption && strtolower(trim($studentAnswerText)) === strtolower(trim($correctAnswerText))) {
-                    $isCorrect = true;
+                if (!empty($studentAnswerText) && $correctOption) {
+                    // Strip HTML tags for display
+                    $studentAnswerText = strip_tags($studentAnswerText);
+                    // Compare with correct answer (case-insensitive, trimmed)
+                    $isCorrect = strtolower(trim($studentAnswerText)) === strtolower(trim($correctOption->option_text));
                 }
             } elseif ($question->type === 'true_false') {
-                // For true/false, check if selected option is correct
-                $studentAnswerText = $answer->option ? $answer->option->option_text : '';
-                if ($answer->option && $answer->option->is_correct) {
-                    $isCorrect = true;
+                // For true/false, get the selected option
+                if ($answer->option) {
+                    $studentAnswerText = ucfirst($answer->option->label);
+                    $isCorrect = $answer->option->is_correct;
+                } else {
+                    // If option not found, check answer_text
+                    $studentAnswerText = $answer->answer_text ?? '';
+                    if (!empty($studentAnswerText) && $correctOption) {
+                        $studentAnswerText = ucfirst(strtolower(trim($studentAnswerText)));
+                        $isCorrect = $studentAnswerText === ucfirst($correctOption->label);
+                    }
                 }
             } else {
-                // For MCQ, check if selected option is correct
-                $studentAnswerText = $answer->option ? $answer->option->option_text : '';
-                if ($answer->option && $answer->option->is_correct) {
-                    $isCorrect = true;
+                // For MCQ, get the selected option
+                if ($answer->option) {
+                    $studentAnswerText = $answer->option->option_text;
+                    $isCorrect = $answer->option->is_correct;
+                } else {
+                    // If option not found, check answer_text
+                    $studentAnswerText = $answer->answer_text ?? '';
+                    if (!empty($studentAnswerText) && $correctOption) {
+                        $isCorrect = strtolower(trim($studentAnswerText)) === strtolower(trim($correctOption->option_text));
+                    }
                 }
             }
         } else {
             $studentAnswerText = 'Not Attempted';
+        }
+
+        // Clean up the student answer text
+        if ($studentAnswerText !== 'Not Attempted') {
+            $studentAnswerText = strip_tags($studentAnswerText);
+            if (empty(trim($studentAnswerText))) {
+                $studentAnswerText = 'Not Attempted';
+            }
+        }
+
+        // Clean up the correct answer text
+        if (!empty($correctAnswerText)) {
+            $correctAnswerText = strip_tags($correctAnswerText);
         }
 
         // Calculate marks
@@ -743,6 +786,8 @@ class ExamController extends Controller
         'marksEarned'
     ));
 }
+
+
 
     public function generateQuestionPaperPdf(Exam $exam, $studentId)
     {
