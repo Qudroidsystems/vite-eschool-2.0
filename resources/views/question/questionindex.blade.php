@@ -444,7 +444,30 @@
     color: #dc3545;
 }
 </style>
+<style>
+/* Add to your existing styles */
+#question-text-editor {
+    min-height: 150px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+}
 
+.ql-toolbar {
+    border-top-left-radius: 0.375rem !important;
+    border-top-right-radius: 0.375rem !important;
+}
+
+.ql-container {
+    border-bottom-left-radius: 0.375rem !important;
+    border-bottom-right-radius: 0.375rem !important;
+    font-size: 16px;
+}
+
+/* Debug styles */
+.debug-border {
+    border: 2px solid red !important;
+}
+</style>
 <!-- Include required libraries -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1239,17 +1262,17 @@ $(document).ready(function() {
 
     // Initialize Quill editor for question text
     function initializeQuestionTextEditor(initialContent = null) {
-        // Destroy existing editor if it exists
-        if (questionTextEditor) {
-            questionTextEditor = null;
-            $('#question-text-editor').empty();
-        }
+        console.log('Initializing Quill editor with content:', initialContent);
 
         // Check if editor container exists
-        if ($('#question-text-editor').length === 0) {
+        const editorContainer = document.getElementById('question-text-editor');
+        if (!editorContainer) {
             console.error('Quill editor container not found!');
             return;
         }
+
+        // Clear the container first
+        editorContainer.innerHTML = '';
 
         // Initialize new editor
         questionTextEditor = new Quill('#question-text-editor', {
@@ -1274,8 +1297,9 @@ $(document).ready(function() {
 
         // Set initial content if provided
         if (initialContent) {
-            console.log('Setting initial content for Quill editor:', initialContent);
+            console.log('Setting initial content for Quill editor');
             questionTextEditor.root.innerHTML = initialContent;
+            $('#question_text').val(initialContent);
         }
 
         // Update hidden textarea with editor content
@@ -1283,22 +1307,20 @@ $(document).ready(function() {
             $('#question_text').val(questionTextEditor.root.innerHTML);
         });
 
-        console.log('Quill editor initialized');
+        console.log('Quill editor initialized successfully');
     }
 
     // Initialize Quill editor for short answer
     function initializeShortAnswerEditor() {
-        // Destroy existing editor if it exists
-        if (shortAnswerEditor) {
-            shortAnswerEditor = null;
-            $('#short-answer-editor').empty();
-        }
-
         // Check if editor container exists
-        if ($('#short-answer-editor').length === 0) {
+        const editorContainer = document.getElementById('short-answer-editor');
+        if (!editorContainer) {
             console.error('Short answer editor container not found!');
             return;
         }
+
+        // Clear the container first
+        editorContainer.innerHTML = '';
 
         // Initialize new editor
         shortAnswerEditor = new Quill('#short-answer-editor', {
@@ -1713,15 +1735,12 @@ $(document).ready(function() {
     // Edit question (load into modal) - FIXED VERSION
     $(document).on('click', '.edit-question', function() {
         const questionId = $(this).data('id');
-        const examId = $(this).data('exam-id');
+        console.log('EDITING QUESTION ID:', questionId);
 
-        console.log('Editing question:', questionId, 'for exam:', examId);
-
-        // Show the modal first with loading state
+        // Show the modal first (empty)
         $('#questionFormModal').modal('show');
 
-        // Show loading in the modal
-        $('#question-form').addClass('loading');
+        // Show loading state
         $('#question-options-container').html(`
             <div class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
@@ -1736,12 +1755,9 @@ $(document).ready(function() {
             url: '{{ url("questions") }}/' + questionId + '/edit',
             method: 'GET',
             success: function(response) {
-                console.log('Edit response:', response);
+                console.log('EDIT RESPONSE:', response);
 
                 if (response.success) {
-                    // Remove loading class
-                    $('#question-form').removeClass('loading');
-
                     // Populate the modal with question data
                     populateEditForm(response);
                 } else {
@@ -1759,7 +1775,7 @@ $(document).ready(function() {
 
     // Function to populate edit form - FIXED VERSION
     function populateEditForm(data) {
-        console.log('Populating edit form with:', data);
+        console.log('POPULATING EDIT FORM WITH DATA:', data);
 
         // Clear form
         $('#question-form')[0].reset();
@@ -1792,8 +1808,21 @@ $(document).ready(function() {
         $('#marks').val(data.question.marks);
         $('#is_reusable').prop('checked', data.question.is_reusable);
 
-        // IMPORTANT: Initialize the Quill editor WITH the content
-        initializeQuestionTextEditor(data.question.question_text);
+        // DEBUG: Check if we have question text
+        console.log('QUESTION TEXT TO SET:', data.question.question_text);
+        console.log('Quill container exists:', $('#question-text-editor').length > 0);
+
+        // Initialize Quill editor WITH the content
+        // Wait for modal to be fully shown
+        $('#questionFormModal').on('shown.bs.modal', function() {
+            console.log('Modal fully shown, initializing Quill...');
+            initializeQuestionTextEditor(data.question.question_text);
+
+            // Load question type options with existing data
+            setTimeout(() => {
+                loadQuestionTypeOptions(data.question.type, data.options);
+            }, 100);
+        });
 
         // Set image preview if exists
         if (data.question.image) {
@@ -1803,10 +1832,15 @@ $(document).ready(function() {
             $('#image-preview').hide();
         }
 
-        // Load question type options with existing data (after a small delay)
-        setTimeout(() => {
-            loadQuestionTypeOptions(data.question.type, data.options);
-        }, 100);
+        // One-time handler for modal shown event
+        $('#questionFormModal').off('shown.bs.modal').on('shown.bs.modal', function() {
+            console.log('Modal shown callback triggered');
+            initializeQuestionTextEditor(data.question.question_text);
+
+            setTimeout(() => {
+                loadQuestionTypeOptions(data.question.type, data.options);
+            }, 100);
+        });
     }
 
     // Duplicate question (quick)
