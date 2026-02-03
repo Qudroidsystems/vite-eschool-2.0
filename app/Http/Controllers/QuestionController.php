@@ -561,116 +561,116 @@ public function update(Request $request, Question $question)
         ]);
     }
 
-    public function update(Request $request, Question $question)
-    {
-        $type = $question->type; // Use model's fixed type
+    // public function update(Request $request, Question $question)
+    // {
+    //     $type = $question->type; // Use model's fixed type
 
-        $rules = [
-            'question_text' => 'required|string',
-            'correct_option' => [
-                'required',
-                function ($attribute, $value, $fail) use ($type) {
-                    if ($type === 'mcq' && !in_array($value, ['a', 'b', 'c', 'd', 'e'])) {
-                        $fail("The selected correct option for MCQ must be one of A, B, C, D, or E. Received: '$value'");
-                    } elseif ($type === 'true_false' && !in_array($value, ['true', 'false'])) {
-                        $fail("The selected correct option for True/False must be True or False. Received: '$value'");
-                    } elseif ($type === 'short_answer' && $value !== 'answer') {
-                        $fail("The selected correct option for Short Answer must be 'answer'. Received: '$value'");
-                    }
-                },
-            ],
-            'exam_id' => 'required|exists:exams,id',
-            'marks' => 'nullable|numeric|min:0.1',
-            'is_reusable' => 'nullable|boolean',
-        ];
+    //     $rules = [
+    //         'question_text' => 'required|string',
+    //         'correct_option' => [
+    //             'required',
+    //             function ($attribute, $value, $fail) use ($type) {
+    //                 if ($type === 'mcq' && !in_array($value, ['a', 'b', 'c', 'd', 'e'])) {
+    //                     $fail("The selected correct option for MCQ must be one of A, B, C, D, or E. Received: '$value'");
+    //                 } elseif ($type === 'true_false' && !in_array($value, ['true', 'false'])) {
+    //                     $fail("The selected correct option for True/False must be True or False. Received: '$value'");
+    //                 } elseif ($type === 'short_answer' && $value !== 'answer') {
+    //                     $fail("The selected correct option for Short Answer must be 'answer'. Received: '$value'");
+    //                 }
+    //             },
+    //         ],
+    //         'exam_id' => 'required|exists:exams,id',
+    //         'marks' => 'nullable|numeric|min:0.1',
+    //         'is_reusable' => 'nullable|boolean',
+    //     ];
 
-        if ($type === 'mcq') {
-            $rules['options'] = 'required|array';
-            $rules['options.*.option_text'] = 'nullable|string';
-        } elseif ($type === 'short_answer') {
-            $rules['options.answer.option_text'] = 'required|string';
-        }
+    //     if ($type === 'mcq') {
+    //         $rules['options'] = 'required|array';
+    //         $rules['options.*.option_text'] = 'nullable|string';
+    //     } elseif ($type === 'short_answer') {
+    //         $rules['options.answer.option_text'] = 'required|string';
+    //     }
 
-        $validator = Validator::make($request->all(), $rules);
+    //     $validator = Validator::make($request->all(), $rules);
 
-        // Extra check for MCQ: at least 2 non-empty options
-        if ($type === 'mcq') {
-            $nonEmptyOptions = 0;
-            if (isset($request->options)) {
-                foreach ($request->options as $option) {
-                    if (!empty(trim($option['option_text'] ?? ''))) {
-                        $nonEmptyOptions++;
-                    }
-                }
-            }
-            if ($nonEmptyOptions < 2) {
-                $validator->errors()->add('options', 'At least 2 options must be filled for MCQ');
-            }
-        }
+    //     // Extra check for MCQ: at least 2 non-empty options
+    //     if ($type === 'mcq') {
+    //         $nonEmptyOptions = 0;
+    //         if (isset($request->options)) {
+    //             foreach ($request->options as $option) {
+    //                 if (!empty(trim($option['option_text'] ?? ''))) {
+    //                     $nonEmptyOptions++;
+    //                 }
+    //             }
+    //         }
+    //         if ($nonEmptyOptions < 2) {
+    //             $validator->errors()->add('options', 'At least 2 options must be filled for MCQ');
+    //         }
+    //     }
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()->all()
-            ]);
-        }
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'errors' => $validator->errors()->all()
+    //         ]);
+    //     }
 
-        $validated = $validator->validated();
+    //     $validated = $validator->validated();
 
-        // Update question (no type change)
-        $question->update([
-            'question_text' => $validated['question_text'],
-            'exam_id' => $validated['exam_id'],
-            'marks' => $validated['marks'] ?? $question->marks,
-            'is_reusable' => $validated['is_reusable'] ?? $question->is_reusable,
-        ]);
+    //     // Update question (no type change)
+    //     $question->update([
+    //         'question_text' => $validated['question_text'],
+    //         'exam_id' => $validated['exam_id'],
+    //         'marks' => $validated['marks'] ?? $question->marks,
+    //         'is_reusable' => $validated['is_reusable'] ?? $question->is_reusable,
+    //     ]);
 
-        // Handle image upload
-        if ($request->hasFile('image')) {
-            if ($question->image) {
-                Storage::disk('public')->delete($question->image);
-            }
-            $question->update([
-                'image' => $request->file('image')->store('question_images', 'public')
-            ]);
-        } elseif ($request->has('remove_image')) {
-            if ($question->image) {
-                Storage::disk('public')->delete($question->image);
-            }
-            $question->update(['image' => null]);
-        }
+    //     // Handle image upload
+    //     if ($request->hasFile('image')) {
+    //         if ($question->image) {
+    //             Storage::disk('public')->delete($question->image);
+    //         }
+    //         $question->update([
+    //             'image' => $request->file('image')->store('question_images', 'public')
+    //         ]);
+    //     } elseif ($request->has('remove_image')) {
+    //         if ($question->image) {
+    //             Storage::disk('public')->delete($question->image);
+    //         }
+    //         $question->update(['image' => null]);
+    //     }
 
-        // Update options
-        $question->options()->delete();
+    //     // Update options
+    //     $question->options()->delete();
 
-        if ($type === 'mcq') {
-            foreach ($request->options as $key => $option) {
-                if (!empty(trim($option['option_text'] ?? ''))) {
-                    $question->options()->create([
-                        'option_text' => $option['option_text'],
-                        'is_correct' => $request->correct_option === $key,
-                        'label' => $key,
-                    ]);
-                }
-            }
-        } elseif ($type === 'true_false') {
-            $question->options()->createMany([
-                ['option_text' => 'True', 'is_correct' => $request->correct_option === 'true', 'label' => 'true'],
-                ['option_text' => 'False', 'is_correct' => $request->correct_option === 'false', 'label' => 'false']
-            ]);
-        } elseif ($type === 'short_answer') {
-            $question->options()->create([
-                'option_text' => $request->input('options.answer.option_text'),
-                'is_correct' => true,
-                'label' => 'answer',
-            ]);
-        }
+    //     if ($type === 'mcq') {
+    //         foreach ($request->options as $key => $option) {
+    //             if (!empty(trim($option['option_text'] ?? ''))) {
+    //                 $question->options()->create([
+    //                     'option_text' => $option['option_text'],
+    //                     'is_correct' => $request->correct_option === $key,
+    //                     'label' => $key,
+    //                 ]);
+    //             }
+    //         }
+    //     } elseif ($type === 'true_false') {
+    //         $question->options()->createMany([
+    //             ['option_text' => 'True', 'is_correct' => $request->correct_option === 'true', 'label' => 'true'],
+    //             ['option_text' => 'False', 'is_correct' => $request->correct_option === 'false', 'label' => 'false']
+    //         ]);
+    //     } elseif ($type === 'short_answer') {
+    //         $question->options()->create([
+    //             'option_text' => $request->input('options.answer.option_text'),
+    //             'is_correct' => true,
+    //             'label' => 'answer',
+    //         ]);
+    //     }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Question updated successfully'
-        ]);
-    }
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Question updated successfully'
+    //     ]);
+    // }
 
     public function destroy(Question $question)
     {
