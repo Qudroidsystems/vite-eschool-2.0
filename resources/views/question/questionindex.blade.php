@@ -310,7 +310,6 @@
 </div>
 
 <!-- Include all modals -->
-@include('question.partials.exam_selection_modal')
 @include('question.partials.question_form_modal')
 @include('question.partials.import_modal')
 @include('question.partials.move_exam_modal')
@@ -800,14 +799,6 @@ $(document).ready(function() {
 
                 if (response && response.success) {
                     if (response.exams && response.exams.length > 0) {
-                        // Debug the data
-                        console.log('First exam data:', response.exams[0]);
-
-                        // Check if subjects are loaded
-                        response.exams.forEach((exam, index) => {
-                            console.log(`Exam ${index}: ${exam.title} - Subject: ${exam.subject}`);
-                        });
-
                         renderExamsByClass(response.exams);
                     } else {
                         console.warn('No exams found for this user');
@@ -889,7 +880,7 @@ $(document).ready(function() {
             `;
 
             examsByClass[className].forEach(function(exam) {
-                // Handle subject display - check if subject exists and is not empty
+                // Handle subject display
                 const subjectText = exam.subject && exam.subject !== 'No Subject' ? exam.subject : '<span class="text-warning">No Subject</span>';
 
                 html += `
@@ -1097,7 +1088,6 @@ $(document).ready(function() {
             $('#selected-exam-title').text(exam.title);
             $('#exam-title-text').text(exam.title);
             $('#exam-class-text').text(exam.class);
-            // Handle subject display
             if (exam.subject && exam.subject !== 'No Subject') {
                 $('#exam-subject-text').text(exam.subject);
             } else {
@@ -1136,6 +1126,62 @@ $(document).ready(function() {
         initializeQuestionTextEditor();
     }
 
+    // Initialize Quill editor for question text
+    function initializeQuestionTextEditor() {
+        if (questionTextEditor) {
+            questionTextEditor = null;
+            $('#question-text-editor').empty();
+        }
+
+        questionTextEditor = new Quill('#question-text-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'script': 'sub'}, { 'script': 'super' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    [{ 'direction': 'rtl' }],
+                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'font': [] }],
+                    [{ 'align': [] }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Enter your question here...'
+        });
+
+        questionTextEditor.on('text-change', function() {
+            $('#question_text').val(questionTextEditor.root.innerHTML);
+        });
+    }
+
+    // Initialize Quill editor for short answer
+    function initializeShortAnswerEditor() {
+        if (shortAnswerEditor) {
+            shortAnswerEditor = null;
+            $('#short-answer-editor').empty();
+        }
+
+        shortAnswerEditor = new Quill('#short-answer-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Enter the correct answer...'
+        });
+
+        shortAnswerEditor.on('text-change', function() {
+            $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
+        });
+    }
+
     // Function to load question type options
     function loadQuestionTypeOptions(type, options = null) {
         console.log('Loading question type options for:', type, 'with options:', options);
@@ -1159,6 +1205,11 @@ $(document).ready(function() {
             const content = template.content.cloneNode(true);
             $('#question-options-container').append(content);
 
+            // Initialize short answer editor if needed
+            if (type === 'short_answer') {
+                initializeShortAnswerEditor();
+            }
+
             // Populate options if provided (for edit mode)
             if (options && type === 'mcq') {
                 populateMCQOptions(options);
@@ -1166,15 +1217,6 @@ $(document).ready(function() {
                 populateTrueFalseOptions(options);
             } else if (options && type === 'short_answer') {
                 populateShortAnswerOptions(options);
-            }
-
-            // Initialize specific options
-            if (type === 'short_answer') {
-                initializeShortAnswerEditor();
-                if (options && options[0]) {
-                    shortAnswerEditor.root.innerHTML = options[0].option_text;
-                    $('#short_answer_text').val(options[0].option_text);
-                }
             }
         }
     }
@@ -1220,8 +1262,12 @@ $(document).ready(function() {
             }
         });
 
+        console.log('True/False correct option found:', correctOption);
+
         // Check the correct radio button
-        $(`input[name="correct_option"][value="${correctOption}"]`).prop('checked', true);
+        if (correctOption) {
+            $(`input[name="correct_option"][value="${correctOption}"]`).prop('checked', true);
+        }
     }
 
     // Function to populate Short Answer options
@@ -1240,66 +1286,91 @@ $(document).ready(function() {
         }
     }
 
-    // Initialize Quill editor for question text
-    function initializeQuestionTextEditor() {
-        // Destroy existing editor if it exists
-        if (questionTextEditor) {
-            questionTextEditor = null;
-            $('#question-text-editor').empty();
+    // Validate question form
+    function validateQuestionForm() {
+        const type = $('#type').val();
+        let isValid = true;
+        const errors = [];
+
+        // Check question text
+        if (!questionTextEditor || questionTextEditor.getText().trim() === '') {
+            errors.push('Question text is required');
+            isValid = false;
         }
 
-        // Initialize new editor
-        questionTextEditor = new Quill('#question-text-editor', {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    [{ 'script': 'sub'}, { 'script': 'super' }],
-                    [{ 'indent': '-1'}, { 'indent': '+1' }],
-                    [{ 'direction': 'rtl' }],
-                    [{ 'size': ['small', false, 'large', 'huge'] }],
-                    [{ 'color': [] }, { 'background': [] }],
-                    [{ 'font': [] }],
-                    [{ 'align': [] }],
-                    ['clean']
-                ]
-            },
-            placeholder: 'Enter your question here...'
-        });
+        // Check type
+        if (!type) {
+            errors.push('Please select a question type');
+            isValid = false;
+        }
 
-        // Update hidden textarea with editor content
-        questionTextEditor.on('text-change', function() {
-            $('#question_text').val(questionTextEditor.root.innerHTML);
-        });
+        // Check type-specific validation
+        if (type === 'mcq') {
+            const filledOptions = $('input[name^="options["][name$="][option_text]"]').filter(function() {
+                return $(this).val().trim() !== '';
+            }).length;
+
+            const correctSelected = $('input[name="correct_option"]:checked').length;
+
+            if (filledOptions < 2) {
+                errors.push('At least 2 MCQ options must be filled');
+                isValid = false;
+            }
+            if (correctSelected === 0) {
+                errors.push('Please select a correct option for MCQ');
+                isValid = false;
+            }
+        } else if (type === 'true_false') {
+            const correctSelected = $('input[name="correct_option"]:checked').length;
+            if (correctSelected === 0) {
+                errors.push('Please select correct answer for True/False');
+                isValid = false;
+            }
+        } else if (type === 'short_answer') {
+            // Check if answer editor has content
+            if (!shortAnswerEditor || shortAnswerEditor.getText().trim() === '') {
+                errors.push('Correct answer is required for Short Answer');
+                isValid = false;
+            } else {
+                // Update the hidden textarea
+                $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
+            }
+
+            // Ensure correct_option is set for short answer
+            if ($('input[name="correct_option"][value="answer"]').length === 0) {
+                $('<div style="display: none;">' +
+                  '<input type="radio" name="correct_option" value="answer" checked />' +
+                  '</div>').appendTo('#question-options-container');
+            }
+        }
+
+        // Check marks
+        const marks = $('#marks').val();
+        if (!marks || parseFloat(marks) <= 0) {
+            errors.push('Marks must be greater than 0');
+            isValid = false;
+        }
+
+        if (!isValid) {
+            showFormErrors(errors);
+        }
+
+        return isValid;
     }
 
-    // Initialize Quill editor for short answer
-    function initializeShortAnswerEditor() {
-        // Destroy existing editor if it exists
-        if (shortAnswerEditor) {
-            shortAnswerEditor = null;
-            $('#short-answer-editor').empty();
-        }
+    // Show form errors
+    function showFormErrors(errors) {
+        const errorList = $('#error-list');
+        errorList.empty();
 
-        // Initialize new editor
-        shortAnswerEditor = new Quill('#short-answer-editor', {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['clean']
-                ]
-            },
-            placeholder: 'Enter the correct answer...'
+        errors.forEach(error => {
+            errorList.append(`<li>${error}</li>`);
         });
 
-        // Update hidden textarea with editor content
-        shortAnswerEditor.on('text-change', function() {
-            $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
-        });
+        $('#form-errors').removeClass('d-none');
+        $('html, body').animate({
+            scrollTop: $('#form-errors').offset().top - 100
+        }, 500);
     }
 
     // Handle question type change
@@ -1342,11 +1413,13 @@ $(document).ready(function() {
 
         const questionId = $('#question_id_field').val();
         const isEditMode = !!questionId;
+        const type = $('#type').val();
         const url = isEditMode ?
             '{{ url("questions") }}/' + questionId :
             '{{ route("questions.store") }}';
 
         console.log('Submitting question form to:', url);
+        console.log('Type:', type);
         console.log('Edit mode:', isEditMode);
 
         // Update hidden textareas with editor content
@@ -1354,8 +1427,14 @@ $(document).ready(function() {
             $('#question_text').val(questionTextEditor.root.innerHTML);
         }
 
-        if (shortAnswerEditor) {
+        if (type === 'short_answer' && shortAnswerEditor) {
             $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
+            console.log('Short answer text:', shortAnswerEditor.root.innerHTML);
+        }
+
+        // For short answer, ensure correct_option is set
+        if (type === 'short_answer') {
+            $('input[name="correct_option"][value="answer"]').prop('checked', true);
         }
 
         // Validate form
@@ -1368,7 +1447,11 @@ $(document).ready(function() {
             formData.append('_method', 'PUT');
         }
 
-        console.log('Form data:', Object.fromEntries(formData));
+        // Log form data for debugging
+        console.log('Form data entries:');
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
+        }
 
         $('#save-question-btn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
         $('#form-errors').addClass('d-none');
@@ -1412,12 +1495,14 @@ $(document).ready(function() {
     $('#save-and-add-another-btn').click(function() {
         console.log('Save & Add Another clicked');
 
+        const type = $('#type').val();
+
         // Update hidden textareas with editor content
         if (questionTextEditor) {
             $('#question_text').val(questionTextEditor.root.innerHTML);
         }
 
-        if (shortAnswerEditor) {
+        if (type === 'short_answer' && shortAnswerEditor) {
             $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
         }
 
@@ -1505,82 +1590,6 @@ $(document).ready(function() {
         if (questionTextEditor) {
             questionTextEditor.focus();
         }
-    }
-
-    // Validate question form
-    function validateQuestionForm() {
-        const type = $('#type').val();
-        let isValid = true;
-        const errors = [];
-
-        // Check question text
-        if (!questionTextEditor || questionTextEditor.getText().trim() === '') {
-            errors.push('Question text is required');
-            isValid = false;
-        }
-
-        // Check type
-        if (!type) {
-            errors.push('Please select a question type');
-            isValid = false;
-        }
-
-        // Check type-specific validation
-        if (type === 'mcq') {
-            const filledOptions = $('input[name^="options["][name$="][option_text]"]').filter(function() {
-                return $(this).val().trim() !== '';
-            }).length;
-
-            const correctSelected = $('.is-correct:checked').length;
-
-            if (filledOptions < 2) {
-                errors.push('At least 2 MCQ options must be filled');
-                isValid = false;
-            }
-            if (correctSelected === 0) {
-                errors.push('Please select a correct option for MCQ');
-                isValid = false;
-            }
-        } else if (type === 'true_false') {
-            const correctSelected = $('.is-correct:checked').length;
-            if (correctSelected === 0) {
-                errors.push('Please select correct answer for True/False');
-                isValid = false;
-            }
-        } else if (type === 'short_answer') {
-            if (!shortAnswerEditor || shortAnswerEditor.getText().trim() === '') {
-                errors.push('Correct answer is required for Short Answer');
-                isValid = false;
-            }
-        }
-
-        // Check marks
-        const marks = $('#marks').val();
-        if (!marks || parseFloat(marks) <= 0) {
-            errors.push('Marks must be greater than 0');
-            isValid = false;
-        }
-
-        if (!isValid) {
-            showFormErrors(errors);
-        }
-
-        return isValid;
-    }
-
-    // Show form errors
-    function showFormErrors(errors) {
-        const errorList = $('#error-list');
-        errorList.empty();
-
-        errors.forEach(error => {
-            errorList.append(`<li>${error}</li>`);
-        });
-
-        $('#form-errors').removeClass('d-none');
-        $('html, body').animate({
-            scrollTop: $('#form-errors').offset().top - 100
-        }, 500);
     }
 
     // View question details

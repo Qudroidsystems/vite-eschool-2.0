@@ -2,7 +2,7 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Question to
+                <h5 class="modal-title"><span id="modal-title-text">Add</span> Question to
                     <span id="selected-exam-title"></span>
                     <span id="multiple-exams-badge" class="badge bg-info ms-2" style="display: none;">Multiple Exams</span>
                 </h5>
@@ -103,6 +103,9 @@
                 <button type="submit" class="btn btn-primary" id="save-question-btn" form="question-form">
                     <i class="ri-save-line me-1"></i> Save Question
                 </button>
+                <button type="button" class="btn btn-success" id="save-and-add-another-btn">
+                    <i class="ri-add-line me-1"></i> Save & Add Another
+                </button>
             </div>
         </div>
     </div>
@@ -122,7 +125,7 @@
                     <input type="text" name="options[a][option_text]" class="form-control me-3" placeholder="Enter option A..." required />
                     <div class="form-check">
                         <input class="form-check-input is-correct" type="radio" name="correct_option" value="a" required />
-                        <label class="form-check-label">Correct</label>
+                        <label class="form-check-label">Correct Answer</label>
                     </div>
                 </div>
             </div>
@@ -132,7 +135,7 @@
                     <input type="text" name="options[b][option_text]" class="form-control me-3" placeholder="Enter option B..." required />
                     <div class="form-check">
                         <input class="form-check-input is-correct" type="radio" name="correct_option" value="b" />
-                        <label class="form-check-label">Correct</label>
+                        <label class="form-check-label">Correct Answer</label>
                     </div>
                 </div>
             </div>
@@ -142,7 +145,7 @@
                     <input type="text" name="options[c][option_text]" class="form-control me-3" placeholder="Enter option C..." />
                     <div class="form-check">
                         <input class="form-check-input is-correct" type="radio" name="correct_option" value="c" />
-                        <label class="form-check-label">Correct</label>
+                        <label class="form-check-label">Correct Answer</label>
                     </div>
                 </div>
             </div>
@@ -152,7 +155,7 @@
                     <input type="text" name="options[d][option_text]" class="form-control me-3" placeholder="Enter option D..." />
                     <div class="form-check">
                         <input class="form-check-input is-correct" type="radio" name="correct_option" value="d" />
-                        <label class="form-check-label">Correct</label>
+                        <label class="form-check-label">Correct Answer</label>
                     </div>
                 </div>
             </div>
@@ -162,7 +165,7 @@
                     <input type="text" name="options[e][option_text]" class="form-control me-3" placeholder="Enter option E..." />
                     <div class="form-check">
                         <input class="form-check-input is-correct" type="radio" name="correct_option" value="e" />
-                        <label class="form-check-label">Correct</label>
+                        <label class="form-check-label">Correct Answer</label>
                     </div>
                 </div>
             </div>
@@ -184,7 +187,7 @@
                     <label class="fw-semibold me-3">True</label>
                     <div class="form-check">
                         <input class="form-check-input is-correct" type="radio" name="correct_option" value="true" required />
-                        <label class="form-check-label">Correct</label>
+                        <label class="form-check-label">Correct Answer</label>
                     </div>
                 </div>
             </div>
@@ -194,7 +197,7 @@
                     <label class="fw-semibold me-3">False</label>
                     <div class="form-check">
                         <input class="form-check-input is-correct" type="radio" name="correct_option" value="false" />
-                        <label class="form-check-label">Correct</label>
+                        <label class="form-check-label">Correct Answer</label>
                     </div>
                 </div>
             </div>
@@ -206,9 +209,17 @@
 <template id="sa-options-template">
     <div class="sa-options">
         <h6 class="fw-bold mb-3">Correct Answer</h6>
+        <div class="alert alert-warning">
+            <i class="ri-alert-line me-2"></i> Enter the correct answer for this short answer question
+        </div>
         <div class="mb-3">
             <div id="short-answer-editor" style="min-height: 100px;"></div>
             <textarea name="options[answer][option_text]" id="short_answer_text" style="display: none;" required></textarea>
+
+            <!-- Hidden radio button for short answer (always checked) -->
+            <div style="display: none;">
+                <input type="radio" name="correct_option" value="answer" checked />
+            </div>
         </div>
     </div>
 </template>

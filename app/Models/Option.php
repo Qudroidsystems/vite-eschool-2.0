@@ -10,7 +10,7 @@ class Option extends Model
     use HasFactory;
 
     protected $fillable = [
-        'question_id', // Assuming this exists
+        'question_id', 
         'option_text',
         'is_correct',
         'label', // Add this
