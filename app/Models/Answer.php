@@ -14,7 +14,8 @@ class Answer extends Model
         'exam_id',
         'question_id',
         'option_id',
-        'short_answer',
+        'short_answer', // Use short_answer for short answer text
+        'is_correct',
     ];
 
     /**
@@ -34,11 +35,11 @@ class Answer extends Model
     }
 
     /**
-     * Relationship to the User model (assuming Student is a User).
+     * Relationship to the User model.
      */
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'id'); // Adjust to StudentRegistration if needed
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
     /**
@@ -50,13 +51,29 @@ class Answer extends Model
     }
 
     /**
-     * Get the answer text (handles both option and short_answer).
+     * Get the answer text (handles both option-based and short answers).
      */
     public function getAnswerTextAttribute()
     {
-        if ($this->option_id) {
-            return $this->option ? $this->option->option_text : null;
+        if ($this->option_id && $this->option) {
+            return $this->option->option_text;
         }
         return $this->short_answer;
+    }
+
+    /**
+     * Check if this is a short answer type.
+     */
+    public function isShortAnswer()
+    {
+        return !is_null($this->short_answer);
+    }
+
+    /**
+     * Check if this is an option-based answer.
+     */
+    public function isOptionAnswer()
+    {
+        return !is_null($this->option_id);
     }
 }

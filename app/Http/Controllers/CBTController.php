@@ -279,7 +279,7 @@ class CBTController extends Controller
                 'exam_id'               => 'required|exists:exams,id',
                 'answers'               => 'required|array|min:1',
                 'answers.*.question_id' => 'required|integer|exists:questions,id',
-                'answers.*.answer'      => 'nullable|string|max:255',
+                'answers.*.answer'      => 'nullable|string|max:1000',
                 'answers.*.notes'       => 'nullable|string|max:1000',
             ]);
 
@@ -315,7 +315,7 @@ class CBTController extends Controller
                 'status'   => 'completed'
             ]);
 
-            // Calculate marks based on actual question marks
+            // Calculate marks
             $totalMarks = 0;
             $score = 0;
             $attempted = 0;
@@ -323,71 +323,125 @@ class CBTController extends Controller
             foreach ($data['answers'] as $submittedAnswer) {
                 $question = $exam->questions->firstWhere('id', $submittedAnswer['question_id']);
                 if ($question) {
-                    // Add question marks to total - ensure we use float
+                    Log::info('Processing answer', [
+                        'question_id' => $question->id,
+                        'question_type' => $question->type,
+                        'student_answer' => $submittedAnswer['answer'] ?? null,
+                        'question_marks' => $question->marks,
+                    ]);
+
+                    // Add question marks to total
                     $questionMarks = (float) ($question->marks ?? 1.0);
                     $totalMarks += $questionMarks;
 
-                    if (!empty(trim($submittedAnswer['answer'] ?? ''))) {
+                    $studentAnswer = trim($submittedAnswer['answer'] ?? '');
+
+                    if (!empty($studentAnswer)) {
                         $attempted++;
 
-                        // Find if the answer is correct
+                        // Initialize variables
                         $isCorrect = false;
-                        $studentAnswer = trim($submittedAnswer['answer']);
+                        $optionId = null;
+                        $shortAnswerText = null;
 
                         if ($question->type === 'short_answer') {
-                            // For short answer, check if answer matches correct option text (case-insensitive, trimmed)
+                            // For short answer questions
+                            $shortAnswerText = $studentAnswer;
+
+                            // Find correct option for comparison
                             $correctOption = $question->options->where('is_correct', true)->first();
                             if ($correctOption) {
                                 $correctAnswer = trim($correctOption->option_text);
+
+                                Log::info('Short answer comparison', [
+                                    'student_answer' => $studentAnswer,
+                                    'correct_answer' => $correctAnswer,
+                                    'type' => $question->type
+                                ]);
+
+                                // Case-insensitive comparison
                                 if (strtolower($studentAnswer) === strtolower($correctAnswer)) {
                                     $isCorrect = true;
+                                } else {
+                                    // Optional: Allow partial matches
+                                    similar_text(strtolower($studentAnswer), strtolower($correctAnswer), $percent);
+                                    if ($percent >= 80) { // 80% similarity threshold
+                                        $isCorrect = true;
+                                    }
                                 }
                             }
+                            // For short answer, option_id remains null
                         } else {
-                            // For MCQ and True/False, check if option exists and is correct
-                            $selectedOption = $question->options->firstWhere('option_text', $studentAnswer);
-                            if ($selectedOption && $selectedOption->is_correct) {
-                                $isCorrect = true;
+                            // For MCQ and True/False questions
+                            $shortAnswerText = null;
+
+                            // Find the selected option
+                            $selectedOption = $question->options->first(function($option) use ($studentAnswer) {
+                                return trim($option->option_text) === $studentAnswer;
+                            });
+
+                            if ($selectedOption) {
+                                $optionId = $selectedOption->id;
+                                $isCorrect = $selectedOption->is_correct;
                             }
                         }
 
-                        // Find the option_id for the answer
-                        $optionId = null;
-                        if ($question->type !== 'short_answer') {
-                            $option = $question->options->firstWhere('option_text', $studentAnswer);
-                            $optionId = $option ? $option->id : null;
-                        }
+                        Log::info('Creating answer record', [
+                            'question_id' => $question->id,
+                            'question_type' => $question->type,
+                            'option_id' => $optionId,
+                            'short_answer' => $shortAnswerText,
+                            'is_correct' => $isCorrect
+                        ]);
 
+                        // Create answer record
                         Answer::create([
-                            'user_id'     => $student,
-                            'exam_id'     => $data['exam_id'],
-                            'question_id' => $submittedAnswer['question_id'],
-                            'option_id'   => $optionId,
-                            'answer_text' => $studentAnswer,
-                            'is_correct'  => $isCorrect
+                            'user_id'       => $student,
+                            'exam_id'       => $data['exam_id'],
+                            'question_id'   => $submittedAnswer['question_id'],
+                            'option_id'     => $optionId, // null for short answers
+                            'short_answer'  => $shortAnswerText, // Store short answer text here
+                            'is_correct'    => $isCorrect
                         ]);
 
                         if ($isCorrect) {
-                            $score += $questionMarks; // Add the question's marks as float
+                            $score += $questionMarks;
                         }
                     }
                 }
             }
 
-            Result::create([
-                'user_id'     => $student,
-                'exam_id'     => $data['exam_id'],
-                'score'       => $score,
-                'total_marks' => $totalMarks,
-            ]);
+            // Create or update result
+            Result::updateOrCreate(
+                [
+                    'user_id' => $student,
+                    'exam_id' => $data['exam_id'],
+                ],
+                [
+                    'score'           => $score,
+                    'total_marks'     => $totalMarks,
+                    'percentage'      => $totalMarks > 0 ? ($score / $totalMarks) * 100 : 0,
+                    'attempted'       => $attempted,
+                    'total_questions' => $exam->questions->count(),
+                ]
+            );
 
             Log::info('Result saved', [
                 'score'       => $score,
                 'total_marks' => $totalMarks,
+                'percentage'  => $totalMarks > 0 ? ($score / $totalMarks) * 100 : 0,
                 'attempted'   => $attempted
             ]);
 
-            return response()->json(['success' => true, 'message' => 'Exam submitted successfully']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Exam submitted successfully',
+                'score'   => $score,
+                'total_marks' => $totalMarks,
+                'percentage' => $totalMarks > 0 ? round(($score / $totalMarks) * 100, 2) : 0,
+                'attempted' => $attempted,
+                'total_questions' => $exam->questions->count()
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Submission failed', [
