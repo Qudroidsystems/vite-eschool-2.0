@@ -101,6 +101,12 @@
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     }
 
+    .marks-badge.bg-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    /* MCQ Options */
     .option-card {
         background: white;
         border: 2px solid #e5e7eb;
@@ -165,6 +171,77 @@
     .option-card.selected .option-letter {
         background: white;
         color: #667eea;
+    }
+
+    /* True/False Options */
+    .true-false-container {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .true-false-btn {
+        flex: 1;
+        padding: 1.5rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        background: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .true-false-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .true-false-btn.selected {
+        transform: scale(1.02);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .true-false-btn.true.selected {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-color: #10b981;
+        color: white;
+    }
+
+    .true-false-btn.false.selected {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border-color: #ef4444;
+        color: white;
+    }
+
+    /* Short Answer Input */
+    .short-answer-container {
+        margin-top: 1.5rem;
+    }
+
+    .short-answer-input {
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        font-size: 1.1rem;
+        width: 100%;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .short-answer-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+
+    .short-answer-input.answered {
+        background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+        border-color: #667eea;
     }
 
     .nav-button {
@@ -327,6 +404,19 @@
     .submit-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 25px rgba(239, 68, 68, 0.4);
+    }
+
+    .question-type-badge {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-left: 0.5rem;
     }
 
     @keyframes fadeIn {
@@ -558,6 +648,10 @@
                                     <span class="question-number-badge">
                                         <i class="ri-question-line"></i>
                                         Question <span id="currentQuestionNum">1</span>
+                                        <span id="questionTypeBadge" class="question-type-badge" style="display: none;">
+                                            <i class="ri-checkbox-blank-circle-fill" style="font-size: 0.5rem;"></i>
+                                            <span id="questionTypeText"></span>
+                                        </span>
                                     </span>
                                 </div>
 
@@ -568,7 +662,7 @@
                                             <div id="questionText" class="question-text" style="font-size: 1.1rem; line-height: 1.8;"></div>
                                         </div>
                                         <div class="ms-3">
-                                            <span class="badge bg-primary marks-badge" id="questionMarksBadge" style="font-size: 0.9rem; padding: 0.5rem 1rem; display: none;">
+                                            <span class="badge bg-primary marks-badge" id="questionMarksBadge" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
                                                 <i class="ri-star-line me-1"></i>
                                                 <span id="questionMarks">0</span> Marks
                                             </span>
@@ -594,9 +688,9 @@
                                     </div>
                                 </div>
 
-                                <!-- Options -->
+                                <!-- Options Container - Will be populated based on question type -->
                                 <div id="optionsContainer" class="mt-4">
-                                    <!-- Options will be loaded here -->
+                                    <!-- Options will be loaded here based on question type -->
                                 </div>
                             </div>
 
@@ -704,7 +798,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const duration = {{ $exam->duration ?? 0 }} * 60; // e.g., 10 mins = 600s
+    const duration = {{ $exam->duration ?? 0 }} * 60;
     let timeLeft = duration;
     const timerElement = document.getElementById('examTimer');
     let timer;
@@ -715,18 +809,14 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Invalid duration');
         timerElement.textContent = 'Timer Error';
     } else {
-        // NEW: Timestamp-based resume to fix shortages
         const startTimeStr = localStorage.getItem('examStartTime');
         if (startTimeStr !== null) {
             const startTime = parseInt(startTimeStr, 10);
             const now = Date.now();
             const elapsedMs = now - startTime;
             const elapsedSeconds = Math.floor(elapsedMs / 1000);
-            console.log(`Elapsed since start: ${elapsedSeconds}s`);
 
             if (elapsedSeconds >= duration) {
-                // Exam expired—clear and auto-submit
-                console.warn('Exam time expired on resume');
                 localStorage.removeItem('examStartTime');
                 localStorage.removeItem('examTimeLeft');
                 localStorage.removeItem('examAnswers');
@@ -738,22 +828,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     timer: 3000,
                     showConfirmButton: false
                 }).then(() => submitExam(true));
-                return; // Don't start timer
+                return;
             } else {
-                // Valid resume: Use calculated remaining
                 timeLeft = duration - elapsedSeconds;
-                console.log(`Resumed with calculated ${timeLeft}s remaining (ignored stale savedTime)`);
-                // Clear old savedTime to avoid confusion
                 localStorage.removeItem('examTimeLeft');
             }
         } else {
-            // Fresh start: Set timestamp
             const now = Date.now();
             localStorage.setItem('examStartTime', now.toString());
-            console.log(`New exam started at ${now}`);
         }
 
-        // Start timer from calculated timeLeft
         timer = setInterval(() => {
             const hours = Math.floor(timeLeft / 3600);
             const minutes = Math.floor((timeLeft % 3600) / 60);
@@ -765,7 +849,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 timerElement.classList.add('pulse-animation');
             }
 
-            // Save current timeLeft (for fallback, but timestamp is primary)
             localStorage.setItem('examTimeLeft', timeLeft);
 
             if (timeLeft <= 0) {
@@ -791,7 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('totalQuestions').textContent = questions.length;
 
     let currentQuestion = 0;
-    let answers = new Array(questions.length).fill(null);
+    let answers = new Array(questions.length).fill('');
     let notes = new Array(questions.length).fill('');
     let currentFontSize = 16;
     let currentZoom = 1;
@@ -914,23 +997,60 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('currentQuestionNum2').textContent = index + 1;
         document.getElementById('questionText').innerHTML = question.text;
 
-        // Display marks for the question
+        // Display question type badge
+        const typeBadge = document.getElementById('questionTypeBadge');
+        const typeText = document.getElementById('questionTypeText');
+        if (question.type) {
+            typeBadge.style.display = 'inline-flex';
+            let typeLabel = '';
+            let iconClass = '';
+
+            switch(question.type) {
+                case 'mcq':
+                    typeLabel = 'MCQ';
+                    iconClass = 'ri-checkbox-multiple-line';
+                    break;
+                case 'true_false':
+                    typeLabel = 'True/False';
+                    iconClass = 'ri-toggle-line';
+                    break;
+                case 'short_answer':
+                    typeLabel = 'Short Answer';
+                    iconClass = 'ri-edit-line';
+                    break;
+                default:
+                    typeLabel = question.type;
+                    iconClass = 'ri-question-line';
+            }
+
+            typeText.textContent = typeLabel;
+            // Update icon
+            const icon = typeBadge.querySelector('i');
+            icon.className = iconClass + ' me-1';
+        } else {
+            typeBadge.style.display = 'none';
+        }
+
+        // Display marks for the question - ALWAYS show marks
         const marksBadge = document.getElementById('questionMarksBadge');
         const marksText = document.getElementById('questionMarks');
-        if (question.marks) {
-            marksText.textContent = question.marks;
-            marksBadge.style.display = 'flex';
 
-            // Color code based on marks value
-            if (question.marks >= 5) {
-                marksBadge.className = 'badge bg-danger marks-badge';
-            } else if (question.marks >= 3) {
-                marksBadge.className = 'badge bg-warning marks-badge';
-            } else {
-                marksBadge.className = 'badge bg-primary marks-badge';
-            }
+        // Get marks, default to 1 if not set
+        const marks = parseFloat(question.marks) || 1;
+        marksText.textContent = marks.toFixed(1); // Show with 1 decimal place
+
+        // Always show the marks badge
+        marksBadge.style.display = 'flex';
+
+        // Color code based on marks value
+        if (marks >= 5) {
+            marksBadge.className = 'badge bg-danger marks-badge';
+        } else if (marks >= 3) {
+            marksBadge.className = 'badge bg-warning marks-badge';
+        } else if (marks > 1) {
+            marksBadge.className = 'badge bg-primary marks-badge';
         } else {
-            marksBadge.style.display = 'none';
+            marksBadge.className = 'badge bg-success marks-badge'; // 1 mark = success color
         }
 
         // Save notes from previous question
@@ -958,41 +1078,23 @@ document.addEventListener('DOMContentLoaded', function() {
             imageContainer.style.display = 'none';
         }
 
-        // Load options with modern design
+        // Load options based on question type
         const optionsContainer = document.getElementById('optionsContainer');
         optionsContainer.innerHTML = '';
-        const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-        question.options.forEach((option, i) => {
-            const div = document.createElement('div');
-            div.className = `option-card ${answers[index] === option ? 'selected' : ''}`;
-            div.innerHTML = `
-                <label class="d-flex align-items-center w-100 cursor-pointer m-0">
-                    <span class="option-letter">${optionLetters[i]}</span>
-                    <input class="form-check-input question-option d-none"
-                           type="radio"
-                           name="answer"
-                           value="${option}"
-                           data-question-id="${question.id}"
-                           ${answers[index] === option ? 'checked' : ''}>
-                    <span class="form-check-label flex-grow-1">${option}</span>
-                </label>
-            `;
-
-            div.addEventListener('click', function() {
-                document.querySelectorAll('.option-card').forEach(card => {
-                    card.classList.remove('selected');
-                });
-                this.classList.add('selected');
-                const input = this.querySelector('input');
-                input.checked = true;
-                answers[currentQuestion] = input.value;
-                localStorage.setItem('examAnswers', JSON.stringify(answers));
-                updateNavigation();
-            });
-
-            optionsContainer.appendChild(div);
-        });
+        switch(question.type) {
+            case 'mcq':
+                loadMCQOptions(question, index);
+                break;
+            case 'true_false':
+                loadTrueFalseOptions(question, index);
+                break;
+            case 'short_answer':
+                loadShortAnswerInput(question, index);
+                break;
+            default:
+                optionsContainer.innerHTML = '<div class="alert alert-warning">Unknown question type</div>';
+        }
 
         document.getElementById('questionNotes').value = notes[index] || '';
         currentQuestion = index;
@@ -1000,14 +1102,109 @@ document.addEventListener('DOMContentLoaded', function() {
         updateNavigation();
     }
 
+    function loadMCQOptions(question, index) {
+        const optionsContainer = document.getElementById('optionsContainer');
+        const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+        question.options.forEach((option, i) => {
+            if (option.text) {
+                const div = document.createElement('div');
+                div.className = `option-card ${answers[index] === option.text ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <label class="d-flex align-items-center w-100 cursor-pointer m-0">
+                        <span class="option-letter">${optionLetters[i]}</span>
+                        <input class="form-check-input question-option d-none"
+                               type="radio"
+                               name="answer"
+                               value="${option.text}"
+                               data-question-id="${question.id}"
+                               ${answers[index] === option.text ? 'checked' : ''}>
+                        <span class="form-check-label flex-grow-1">${option.text}</span>
+                    </label>
+                `;
+
+                div.addEventListener('click', function() {
+                    document.querySelectorAll('.option-card').forEach(card => {
+                        card.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    const input = this.querySelector('input');
+                    input.checked = true;
+                    answers[currentQuestion] = input.value;
+                    localStorage.setItem('examAnswers', JSON.stringify(answers));
+                    updateNavigation();
+                });
+
+                optionsContainer.appendChild(div);
+            }
+        });
+    }
+
+    function loadTrueFalseOptions(question, index) {
+        const optionsContainer = document.getElementById('optionsContainer');
+        optionsContainer.innerHTML = `
+            <div class="true-false-container">
+                <button class="true-false-btn true ${answers[index] === 'True' ? 'selected' : ''}" data-value="True">
+                    <i class="ri-check-line"></i> True
+                </button>
+                <button class="true-false-btn false ${answers[index] === 'False' ? 'selected' : ''}" data-value="False">
+                    <i class="ri-close-line"></i> False
+                </button>
+            </div>
+        `;
+
+        // Add event listeners for True/False buttons
+        document.querySelectorAll('.true-false-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.true-false-btn').forEach(b => {
+                    b.classList.remove('selected');
+                });
+                this.classList.add('selected');
+                answers[currentQuestion] = this.dataset.value;
+                localStorage.setItem('examAnswers', JSON.stringify(answers));
+                updateNavigation();
+            });
+        });
+    }
+
+    function loadShortAnswerInput(question, index) {
+        const optionsContainer = document.getElementById('optionsContainer');
+        optionsContainer.innerHTML = `
+            <div class="short-answer-container">
+                <input type="text"
+                       class="form-control short-answer-input ${answers[index] ? 'answered' : ''}"
+                       placeholder="Type your answer here..."
+                       value="${answers[index] || ''}">
+            </div>
+        `;
+
+        const input = optionsContainer.querySelector('.short-answer-input');
+        input.addEventListener('input', function() {
+            if (this.value.trim()) {
+                this.classList.add('answered');
+                answers[currentQuestion] = this.value;
+            } else {
+                this.classList.remove('answered');
+                answers[currentQuestion] = '';
+            }
+            localStorage.setItem('examAnswers', JSON.stringify(answers));
+            updateNavigation();
+        });
+
+        // Also save on blur
+        input.addEventListener('blur', function() {
+            localStorage.setItem('examAnswers', JSON.stringify(answers));
+        });
+    }
+
     function calculateMarksAttempted() {
         let marks = 0;
         questions.forEach((question, index) => {
-            if (answers[index]) {
-                marks += question.marks || 0;
+            if (answers[index] && answers[index].trim() !== '') {
+                marks += parseFloat(question.marks) || 1;
             }
         });
-        return marks;
+        return marks.toFixed(1);
     }
 
     function updateNavigation() {
@@ -1019,14 +1216,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         questions.forEach((question, index) => {
             const btn = document.createElement('button');
-            btn.className = `question-nav-btn ${answers[index] ? 'answered' : 'unanswered'} ${index === currentQuestion ? 'active' : ''}`;
+            btn.className = `question-nav-btn ${answers[index] && answers[index].trim() !== '' ? 'answered' : 'unanswered'} ${index === currentQuestion ? 'active' : ''}`;
 
             // Add marks indicator for questions with high marks
-            if (question.marks && question.marks >= 3) {
+            const questionMarks = parseFloat(question.marks) || 1;
+            if (questionMarks >= 3) {
                 btn.classList.add('with-marks');
                 const marksIndicator = document.createElement('span');
                 marksIndicator.className = 'marks-indicator';
-                marksIndicator.textContent = question.marks;
+                marksIndicator.textContent = questionMarks;
                 btn.appendChild(marksIndicator);
             }
 
@@ -1034,15 +1232,15 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.onclick = () => loadQuestion(index);
             navigator.appendChild(btn);
 
-            if (answers[index]) {
+            if (answers[index] && answers[index].trim() !== '') {
                 answeredCount++;
-                marksAttempted += question.marks || 0;
+                marksAttempted += questionMarks;
             }
         });
 
         document.getElementById('answeredCount').textContent = answeredCount;
         document.getElementById('unansweredCount').textContent = questions.length - answeredCount;
-        document.getElementById('marksAttempted').textContent = marksAttempted;
+        document.getElementById('marksAttempted').textContent = marksAttempted.toFixed(1);
 
         // Update navigation buttons
         document.getElementById('prevQuestion').disabled = currentQuestion === 0;
@@ -1110,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', function() {
             exam_id: {{ $exam->id }},
             answers: questions.map((q, index) => ({
                 question_id: q.id,
-                answer: answers[index],
+                answer: answers[index] || '',
                 notes: notes[index] || null
             }))
         };
@@ -1200,7 +1398,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.addEventListener('online', () => {
         if (timeLeft > 0) {
-            // Re-init timer on online (uses timestamp, so accurate)
             timer = setInterval(() => {
                 const hours = Math.floor(timeLeft / 3600);
                 const minutes = Math.floor((timeLeft % 3600) / 60);
@@ -1246,12 +1443,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (currentQuestion < questions.length - 1) loadQuestion(currentQuestion + 1);
         }
         else if (/^[1-9]$/.test(e.key)) {
-            const optionIndex = parseInt(e.key) - 1;
-            const options = document.querySelectorAll('.question-option');
-            if (optionIndex < options.length) {
-                const optionCard = options[optionIndex].closest('.option-card');
-                if (optionCard) {
-                    optionCard.click();
+            const question = questions[currentQuestion];
+            if (question.type === 'mcq') {
+                const optionIndex = parseInt(e.key) - 1;
+                const options = document.querySelectorAll('.question-option');
+                if (optionIndex < options.length) {
+                    const optionCard = options[optionIndex].closest('.option-card');
+                    if (optionCard) {
+                        optionCard.click();
+                    }
                 }
             }
         }

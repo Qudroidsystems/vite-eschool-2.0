@@ -198,19 +198,29 @@ class CBTController extends Controller
                 'status'     => 'in_progress'
             ]);
 
-            // Include marks in questions data
+            // Include marks and type in questions data
             $questions = $exam->questions->map(function ($question) {
+                // Get the correct option for True/False and Short Answer
+                $correctOption = $question->options->where('is_correct', true)->first();
+
                 return [
                     'id'        => $question->id,
                     'text'      => $question->question_text,
-                    'options'   => $question->options->pluck('option_text')->toArray(),
+                    'type'      => $question->type,
+                    'options'   => $question->options->map(function($option) {
+                        return [
+                            'id' => $option->id,
+                            'text' => $option->option_text,
+                            'is_correct' => $option->is_correct
+                        ];
+                    })->toArray(),
+                    'correct_answer' => $correctOption ? $correctOption->option_text : '',
                     'image_url' => $question->image ? asset('storage/' . $question->image) : null,
-                    'marks'     => $question->marks,
-                    'type'      => $question->type
+                    'marks'     => (float) ($question->marks ?? 1.0), // Use float value with default 1.0
                 ];
             })->toArray();
 
-            // Calculate total marks
+            // Calculate total marks - ensure we're using float values
             $totalExamMarks = $exam->questions->sum('marks');
 
             $studentReg = DB::table('studentRegistration')
@@ -313,22 +323,52 @@ class CBTController extends Controller
             foreach ($data['answers'] as $submittedAnswer) {
                 $question = $exam->questions->firstWhere('id', $submittedAnswer['question_id']);
                 if ($question) {
-                    // Add question marks to total
-                    $totalMarks += $question->marks;
+                    // Add question marks to total - ensure we use float
+                    $questionMarks = (float) ($question->marks ?? 1.0);
+                    $totalMarks += $questionMarks;
 
                     if (!empty(trim($submittedAnswer['answer'] ?? ''))) {
                         $attempted++;
-                        $selectedOption = $question->options->firstWhere('option_text', $submittedAnswer['answer']);
-                        if ($selectedOption) {
-                            Answer::create([
-                                'user_id'     => $student,
-                                'exam_id'     => $data['exam_id'],
-                                'question_id' => $submittedAnswer['question_id'],
-                                'option_id'   => $selectedOption->id,
-                            ]);
-                            if ($selectedOption->is_correct) {
-                                $score += $question->marks; // Add the question's marks
+
+                        // Find if the answer is correct
+                        $isCorrect = false;
+                        $studentAnswer = trim($submittedAnswer['answer']);
+
+                        if ($question->type === 'short_answer') {
+                            // For short answer, check if answer matches correct option text (case-insensitive, trimmed)
+                            $correctOption = $question->options->where('is_correct', true)->first();
+                            if ($correctOption) {
+                                $correctAnswer = trim($correctOption->option_text);
+                                if (strtolower($studentAnswer) === strtolower($correctAnswer)) {
+                                    $isCorrect = true;
+                                }
                             }
+                        } else {
+                            // For MCQ and True/False, check if option exists and is correct
+                            $selectedOption = $question->options->firstWhere('option_text', $studentAnswer);
+                            if ($selectedOption && $selectedOption->is_correct) {
+                                $isCorrect = true;
+                            }
+                        }
+
+                        // Find the option_id for the answer
+                        $optionId = null;
+                        if ($question->type !== 'short_answer') {
+                            $option = $question->options->firstWhere('option_text', $studentAnswer);
+                            $optionId = $option ? $option->id : null;
+                        }
+
+                        Answer::create([
+                            'user_id'     => $student,
+                            'exam_id'     => $data['exam_id'],
+                            'question_id' => $submittedAnswer['question_id'],
+                            'option_id'   => $optionId,
+                            'answer_text' => $studentAnswer,
+                            'is_correct'  => $isCorrect
+                        ]);
+
+                        if ($isCorrect) {
+                            $score += $questionMarks; // Add the question's marks as float
                         }
                     }
                 }
