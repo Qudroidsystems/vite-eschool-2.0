@@ -636,7 +636,12 @@ class ExamController extends Controller
 
    public function showStudentAnswers($examId, $studentId)
 {
-    $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();
+    $exam = Exam::where('id', $examId)
+                ->where('staffId', auth()->user()->id)
+                ->with(['questions.options' => function($query) {
+                    $query->select('id', 'question_id', 'option_text', 'is_correct');
+                }])
+                ->firstOrFail();
 
     $student = DB::table('studentRegistration')
         ->where('id', $studentId)
@@ -648,82 +653,80 @@ class ExamController extends Controller
         ->where('exam_id', $examId)
         ->first();
 
-    // Get questions with marks and correct answers
-    $questionAnswers = DB::table('questions')
-        ->leftJoin('answers', function($join) use ($examId, $studentId) {
-            $join->on('questions.id', '=', 'answers.question_id')
-                 ->where('answers.exam_id', '=', $examId)
-                 ->where('answers.user_id', '=', $studentId);
-        })
-        ->leftJoin('options as student_opt', 'answers.option_id', '=', 'student_opt.id')
-        ->leftJoin('options as correct_opt', function($join) {
-            $join->on('correct_opt.question_id', '=', 'questions.id')
-                 ->where('correct_opt.is_correct', '=', 1);
-        })
-        ->where('questions.exam_id', $examId)
-        ->select(
-            'questions.id',
-            'questions.question_text',
-            'questions.image',
-            'questions.type',
-            'questions.marks',
-            'student_opt.option_text as student_option_answer',
-            'student_opt.is_correct as student_is_correct',
-            'answers.answer_text as student_answer_text', // For short answer and true/false
-            'correct_opt.option_text as correct_option_answer',
-            'answers.id as answer_id',
-            DB::raw('CASE
-                WHEN answers.id IS NULL THEN "Not Attempted"
-                ELSE CASE
-                    WHEN questions.type = "short_answer" THEN
-                        CASE WHEN LOWER(TRIM(answers.answer_text)) = LOWER(TRIM(correct_opt.option_text)) THEN "Correct" ELSE "Incorrect" END
-                    WHEN questions.type = "true_false" THEN
-                        CASE WHEN student_opt.is_correct = 1 THEN "Correct" ELSE "Incorrect" END
-                    ELSE
-                        CASE WHEN student_opt.is_correct = 1 THEN "Correct" ELSE "Incorrect" END
-                END
-            END as status'),
-            DB::raw('CASE
-                WHEN answers.id IS NULL THEN 0
-                ELSE CASE
-                    WHEN questions.type = "short_answer" THEN
-                        CASE WHEN LOWER(TRIM(answers.answer_text)) = LOWER(TRIM(correct_opt.option_text)) THEN COALESCE(questions.marks, 1.0) ELSE 0 END
-                    WHEN questions.type = "true_false" THEN
-                        CASE WHEN student_opt.is_correct = 1 THEN COALESCE(questions.marks, 1.0) ELSE 0 END
-                    ELSE
-                        CASE WHEN student_opt.is_correct = 1 THEN COALESCE(questions.marks, 1.0) ELSE 0 END
-                END
-            END as marks_earned')
-        )
-        ->orderBy('questions.id')
-        ->get();
+    // Get all answers for this student and exam
+    $answers = Answer::where('exam_id', $examId)
+                     ->where('user_id', $studentId)
+                     ->with('option')
+                     ->get()
+                     ->keyBy('question_id');
 
-    // Process each answer to display properly based on type
-    foreach ($questionAnswers as $qa) {
-        // Determine what to show as student answer based on question type
-        if ($qa->type === 'short_answer') {
-            // For short answer, show the answer_text from answers table
-            $qa->student_answer = $qa->student_answer_text ?? 'Not Attempted';
-            $qa->correct_answer = $qa->correct_option_answer ?? '-';
-        } elseif ($qa->type === 'true_false') {
-            // For true/false, show True/False from option_text
-            $qa->student_answer = $qa->student_option_answer ?? 'Not Attempted';
-            $qa->correct_answer = $qa->correct_option_answer ?? '-';
+    $questionAnswers = [];
+    $totalMarks = 0;
+    $marksEarned = 0;
+    $attempted = 0;
+    $correct = 0;
+
+    foreach ($exam->questions as $question) {
+        $answer = $answers->get($question->id);
+
+        // Get correct option for this question
+        $correctOption = $question->options->where('is_correct', true)->first();
+
+        // Determine if answer is correct
+        $isCorrect = false;
+        $studentAnswerText = '';
+        $correctAnswerText = $correctOption ? $correctOption->option_text : '';
+
+        if ($answer) {
+            $attempted++;
+
+            if ($question->type === 'short_answer') {
+                // For short answer, compare answer_text with correct option
+                $studentAnswerText = $answer->answer_text ?? '';
+                if ($correctOption && strtolower(trim($studentAnswerText)) === strtolower(trim($correctAnswerText))) {
+                    $isCorrect = true;
+                }
+            } elseif ($question->type === 'true_false') {
+                // For true/false, check if selected option is correct
+                $studentAnswerText = $answer->option ? $answer->option->option_text : '';
+                if ($answer->option && $answer->option->is_correct) {
+                    $isCorrect = true;
+                }
+            } else {
+                // For MCQ, check if selected option is correct
+                $studentAnswerText = $answer->option ? $answer->option->option_text : '';
+                if ($answer->option && $answer->option->is_correct) {
+                    $isCorrect = true;
+                }
+            }
         } else {
-            // For MCQ, show the selected option
-            $qa->student_answer = $qa->student_option_answer ?? 'Not Attempted';
-            $qa->correct_answer = $qa->correct_option_answer ?? '-';
+            $studentAnswerText = 'Not Attempted';
         }
+
+        // Calculate marks
+        $questionMarks = (float)($question->marks ?? 1.0);
+        $totalMarks += $questionMarks;
+
+        if ($isCorrect) {
+            $correct++;
+            $marksEarned += $questionMarks;
+        }
+
+        $questionAnswers[] = (object)[
+            'id' => $question->id,
+            'question_text' => $question->question_text,
+            'image' => $question->image,
+            'type' => $question->type,
+            'marks' => $questionMarks,
+            'student_answer' => $studentAnswerText,
+            'correct_answer' => $correctAnswerText,
+            'answer_id' => $answer ? $answer->id : null,
+            'status' => $answer ? ($isCorrect ? 'Correct' : 'Incorrect') : 'Not Attempted',
+            'marks_earned' => $isCorrect ? $questionMarks : 0,
+        ];
     }
 
-    // Calculate totals
-    $totalQuestions = $questionAnswers->count();
-    $attempted = $questionAnswers->whereNotNull('answer_id')->count();
-    $correct = $questionAnswers->where('status', 'Correct')->count();
-    $totalMarks = $questionAnswers->sum(function($qa) {
-        return (float)($qa->marks ?? 1.0);
-    });
-    $marksEarned = $questionAnswers->sum('marks_earned');
+    $totalQuestions = count($questionAnswers);
 
     $pagetitle = 'Exam Answers: ' . $student->firstname . ' ' . $student->lastname . ' - ' . $exam->title;
 
