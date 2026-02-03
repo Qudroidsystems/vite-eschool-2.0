@@ -252,10 +252,10 @@
                                     <select name="subject_id" id="addSubject" class="form-control" required>
                                         <option value="" selected>Select Subject</option>
                                         @foreach ($mysubjects as $subject)
-                                            <option value="{{ $subject->id }}"
+                                            <option value="{{ $subject->subject_id }}"
                                                 data-termid="{{ $subject->termid }}"
                                                 data-sessionid="{{ $subject->sessionid }}">
-                                                {{ $subject->subject }} ({{ $subject->subjectcode }}) - {{ $subject->term }} {{ $subject->session }} - {{ $subject->schoolclass }} {{ $subject->arm ? '(' . $subject->arm . ')' : '' }}
+                                                {{ $subject->subject_name }} ({{ $subject->subject_code }}) - {{ $subject->term_name }} {{ $subject->session_name }} - {{ $subject->class_name }} {{ $subject->arm_name ? '(' . $subject->arm_name . ')' : '' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -349,10 +349,10 @@
                                     <select name="subject_id" id="edit-subject_id" class="form-control" required>
                                         <option value="" selected>Select Subject</option>
                                         @foreach ($mysubjects as $subject)
-                                            <option value="{{ $subject->id }}"
+                                            <option value="{{ $subject->subject_id }}"
                                                 data-termid="{{ $subject->termid }}"
                                                 data-sessionid="{{ $subject->sessionid }}">
-                                                {{ $subject->subject }} ({{ $subject->subjectcode }}) - {{ $subject->term }} {{ $subject->session }} - {{ $subject->schoolclass }} {{ $subject->arm ? '(' . $subject->arm . ')' : '' }}
+                                                {{ $subject->subject_name }} ({{ $subject->subject_code }}) - {{ $subject->term_name }} {{ $subject->session_name }} - {{ $subject->class_name }} {{ $subject->arm_name ? '(' . $subject->arm_name . ')' : '' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -524,13 +524,13 @@ function filterSubjects(termId, sessionId, subjectSelect) {
     }
 }
 
-function loadClassesForSubject(subjectTeacherId, mode = 'add') {
+function loadClassesForSubject(subjectId, mode = 'add') {
     const containerId = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
     const container = document.getElementById(containerId);
 
     container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
 
-    fetch(`/exams/subject-classes/${subjectTeacherId}`, {
+    fetch(`/exams/subject-classes/${subjectId}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
@@ -674,14 +674,14 @@ function populateEditForm(data) {
     }, 200);
 }
 
-function loadClassesForEditWithSelection(subjectTeacherId, selectedClassIds = []) {
-    console.log('Loading classes for edit - Subject ID:', subjectTeacherId, 'Selected Class IDs:', selectedClassIds);
+function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
+    console.log('Loading classes for edit - Subject ID:', subjectId, 'Selected Class IDs:', selectedClassIds);
 
     const container = document.getElementById('editClassContainer');
 
     container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
 
-    fetch(`/exams/subject-classes/${subjectTeacherId}`, {
+    fetch(`/exams/subject-classes/${subjectId}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
@@ -897,7 +897,7 @@ function submitEditForm() {
     submitBtn.disabled = true;
 
     fetch(`/exams/${examId}`, {
-        method: 'POST', // Use POST with _method override
+        method: 'POST',
         body: formData,
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -914,7 +914,7 @@ function submitEditForm() {
             Swal.fire({
                 icon: 'success',
                 title: 'Success!',
-                text: data.message || 'Exam updated successfully!',
+                text: data.message || 'Exam updated successfully! Questions have been preserved.',
                 timer: 2000,
                 showConfirmButton: false
             }).then(() => {
@@ -957,7 +957,7 @@ function submitEditForm() {
 function deleteExam(examId) {
     Swal.fire({
         title: 'Are you sure?',
-        text: "You won't be able to revert this!",
+        text: "This will delete the exam and all associated questions!",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -1041,7 +1041,7 @@ function deleteMultiple() {
 
     Swal.fire({
         title: `Delete ${ids.length} exam(s)?`,
-        text: "This action cannot be undone!",
+        text: "This will delete all exams and their associated questions!",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',

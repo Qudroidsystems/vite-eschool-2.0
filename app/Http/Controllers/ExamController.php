@@ -37,7 +37,7 @@ class ExamController extends Controller
                 $query->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
                       ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm');
             }, 'subject'])
-            ->withCount('questions')  // Add this to count questions
+            ->withCount('questions')
             ->where('staffId', $user->id);
 
         if ($request->filled('search')) {
@@ -53,29 +53,31 @@ class ExamController extends Controller
         $terms = Schoolterm::all();
         $sessions = Schoolsession::all();
 
-        // Get all subjects for the teacher
+        // Get all subjects for the teacher - FIXED to get subject.id
         $mysubjects = SubjectTeacher::where('staffid', $user->id)
-            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-            ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
+            ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+            ->join('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
+            ->join('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
             ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+            ->join('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+            ->join('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
             ->select([
-                'subjectteacher.id as id',
-                'subject.subject as subject',
-                'subject.subject_code as subjectcode',
-                'schoolclass.schoolclass as schoolclass',
+                'subject.id as subject_id',
+                'subject.subject as subject_name',
+                'subject.subject_code',
+                'schoolclass.schoolclass as class_name',
                 'schoolclass.id as class_id',
-                'schoolarm.arm as arm',
-                'subjectteacher.termid as termid',
-                'subjectteacher.sessionid as sessionid',
-                'schoolterm.term as term',
-                'schoolsession.session as session'
+                'schoolarm.arm as arm_name',
+                'schoolterm.term as term_name',
+                'schoolterm.id as term_id',
+                'schoolsession.session as session_name',
+                'schoolsession.id as session_id',
+                'subjectteacher.termid',
+                'subjectteacher.sessionid'
             ])
             ->get()
-            ->unique('id')
-            ->sortBy('subject')
+            ->unique('subject_id')
+            ->sortBy('subject_name')
             ->values();
 
         $myclass = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
@@ -104,9 +106,9 @@ class ExamController extends Controller
             'duration'        => 'required|integer|min:1',
             'start_time'      => 'required|date',
             'end_time'        => 'required|date|after:start_time',
-            'termid'          => 'required|integer',
-            'session'         => 'required|integer',
-            'subject_id'      => 'required|integer',
+            'termid'          => 'required|integer|exists:schoolterm,id',
+            'session'         => 'required|integer|exists:schoolsession,id',
+            'subject_id'      => 'required|integer|exists:subject,id',
             'schoolclass_ids' => 'required|array|min:1',
             'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
             'is_published'    => 'boolean|nullable',
@@ -134,7 +136,6 @@ class ExamController extends Controller
 
     public function show($id)
     {
-        // Not implemented - use showStudents instead
         abort(404);
     }
 
@@ -142,7 +143,7 @@ class ExamController extends Controller
     {
         $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
-        // Get all exams in the same group (same title, subject, term, session)
+        // Get all exams in the same group
         $groupExams = Exam::where('staffId', $exam->staffId)
             ->where('title', $exam->title)
             ->where('subject_id', $exam->subject_id)
@@ -183,9 +184,9 @@ class ExamController extends Controller
             'duration'        => 'required|integer|min:1',
             'start_time'      => 'required|date',
             'end_time'        => 'required|date|after:start_time',
-            'termid'          => 'required|integer',
-            'session'         => 'required|integer',
-            'subject_id'      => 'required|integer',
+            'termid'          => 'required|integer|exists:schoolterm,id',
+            'session'         => 'required|integer|exists:schoolsession,id',
+            'subject_id'      => 'required|integer|exists:subject,id',
             'schoolclass_ids' => 'required|array|min:1',
             'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
             'is_published'    => 'boolean|nullable',
@@ -196,36 +197,112 @@ class ExamController extends Controller
 
         \Log::info('Validated data:', $validated);
 
-        // Delete all exams in the group
-        $deletedCount = Exam::where('staffId', $exam->staffId)
+        // Get all exams in the group
+        $groupExams = Exam::where('staffId', $exam->staffId)
             ->where('title', $exam->title)
             ->where('subject_id', $exam->subject_id)
             ->where('termid', $exam->termid)
             ->where('session', $exam->session)
-            ->delete();
+            ->get();
 
-        \Log::info("Deleted {$deletedCount} exams from group");
+        // Get exam IDs in the group
+        $groupExamIds = $groupExams->pluck('id')->toArray();
+
+        // Get questions for all exams in the group
+        $questionIds = Question::whereIn('exam_id', $groupExamIds)->pluck('id')->toArray();
+
+        \Log::info('Group exam IDs:', $groupExamIds);
+        \Log::info('Question IDs to preserve:', $questionIds);
 
         // Create new exams for each selected class
         $createdCount = 0;
-        foreach ($validated['schoolclass_ids'] as $classId) {
-            $examData = [
-                'staffId' => $validated['staffId'],
-                'title' => $validated['title'],
-                'description' => $validated['description'],
-                'duration' => $validated['duration'],
-                'start_time' => $validated['start_time'],
-                'end_time' => $validated['end_time'],
-                'termid' => $validated['termid'],
-                'session' => $validated['session'],
-                'subject_id' => $validated['subject_id'],
-                'schoolclass_id' => $classId,
-                'is_published' => $validated['is_published']
-            ];
+        $newExamIds = [];
 
-            Exam::create($examData);
-            $createdCount++;
-            \Log::info("Created exam for class {$classId}");
+        foreach ($validated['schoolclass_ids'] as $classId) {
+            // Check if an exam already exists for this class in the group
+            $existingExam = $groupExams->where('schoolclass_id', $classId)->first();
+
+            if ($existingExam) {
+                // Update existing exam
+                $existingExam->update([
+                    'title' => $validated['title'],
+                    'description' => $validated['description'],
+                    'duration' => $validated['duration'],
+                    'start_time' => $validated['start_time'],
+                    'end_time' => $validated['end_time'],
+                    'termid' => $validated['termid'],
+                    'session' => $validated['session'],
+                    'subject_id' => $validated['subject_id'],
+                    'is_published' => $validated['is_published']
+                ]);
+                $newExamIds[] = $existingExam->id;
+                $createdCount++;
+                \Log::info("Updated existing exam for class {$classId}");
+            } else {
+                // Create new exam for this class
+                $newExam = Exam::create([
+                    'staffId' => $validated['staffId'],
+                    'title' => $validated['title'],
+                    'description' => $validated['description'],
+                    'duration' => $validated['duration'],
+                    'start_time' => $validated['start_time'],
+                    'end_time' => $validated['end_time'],
+                    'termid' => $validated['termid'],
+                    'session' => $validated['session'],
+                    'subject_id' => $validated['subject_id'],
+                    'schoolclass_id' => $classId,
+                    'is_published' => $validated['is_published']
+                ]);
+                $newExamIds[] = $newExam->id;
+                $createdCount++;
+                \Log::info("Created new exam for class {$classId}");
+            }
+        }
+
+        // If there are existing questions, copy them to new exams
+        if (!empty($questionIds) && !empty($newExamIds)) {
+            foreach ($newExamIds as $newExamId) {
+                foreach ($questionIds as $questionId) {
+                    // Check if this question exists for this exam already
+                    $existingQuestion = Question::where('exam_id', $newExamId)
+                        ->where('id', $questionId)
+                        ->first();
+
+                    if (!$existingQuestion) {
+                        // Get the original question
+                        $originalQuestion = Question::find($questionId);
+
+                        // Duplicate the question for the new exam
+                        $newQuestion = $originalQuestion->replicate();
+                        $newQuestion->exam_id = $newExamId;
+                        $newQuestion->save();
+
+                        // Duplicate options if they exist
+                        if ($originalQuestion->options()->exists()) {
+                            foreach ($originalQuestion->options as $option) {
+                                $newOption = $option->replicate();
+                                $newOption->question_id = $newQuestion->id;
+                                $newOption->save();
+                            }
+                        }
+                    }
+                }
+            }
+            \Log::info("Copied questions to new exams");
+        }
+
+        // Delete exams for classes that are no longer selected
+        $classesToDelete = $groupExams->whereNotIn('schoolclass_id', $validated['schoolclass_ids']);
+
+        foreach ($classesToDelete as $examToDelete) {
+            // Only delete if the exam has no attempts
+            $hasAttempts = ExamAttempt::where('exam_id', $examToDelete->id)->exists();
+            if (!$hasAttempts) {
+                $examToDelete->delete();
+                \Log::info("Deleted exam for removed class {$examToDelete->schoolclass_id}");
+            } else {
+                \Log::info("Skipped deletion of exam {$examToDelete->id} because it has attempts");
+            }
         }
 
         $message = "Exam updated successfully for {$createdCount} class" . ($createdCount > 1 ? 'es' : '.') . ".";
@@ -273,12 +350,12 @@ class ExamController extends Controller
         $user = auth()->user();
 
         $query = SubjectTeacher::where('staffid', $user->id)
-            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-            ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
+            ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+            ->join('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
+            ->join('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
             ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid');
+            ->join('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+            ->join('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid');
 
         if ($request->filled('term_id')) {
             $query->where('subjectteacher.termid', $request->term_id);
@@ -293,40 +370,42 @@ class ExamController extends Controller
         }
 
         $subjects = $query->select([
-                'subjectteacher.id as id',
-                'subject.subject as subject',
-                'subject.subject_code as subjectcode',
-                'schoolclass.schoolclass as schoolclass',
+                'subject.id as subject_id',
+                'subject.subject as subject_name',
+                'subject.subject_code',
+                'schoolclass.schoolclass as class_name',
                 'schoolclass.id as class_id',
-                'schoolarm.arm as arm',
-                'subjectteacher.termid as termid',
-                'subjectteacher.sessionid as sessionid',
-                'schoolterm.term as term',
-                'schoolsession.session as session'
+                'schoolarm.arm as arm_name',
+                'schoolterm.term as term_name',
+                'schoolterm.id as term_id',
+                'schoolsession.session as session_name',
+                'schoolsession.id as session_id',
+                'subjectteacher.termid',
+                'subjectteacher.sessionid'
             ])
             ->get()
-            ->unique('id')
-            ->sortBy('subject')
+            ->unique('subject_id')
+            ->sortBy('subject_name')
             ->map(function($item) {
                 $displayText = sprintf('%s (%s) - %s %s - %s %s',
-                    $item->subject,
-                    $item->subjectcode,
-                    $item->term,
-                    $item->session,
-                    $item->schoolclass,
-                    $item->arm ? '(' . $item->arm . ')' : ''
+                    $item->subject_name,
+                    $item->subject_code,
+                    $item->term_name,
+                    $item->session_name,
+                    $item->class_name,
+                    $item->arm_name ? '(' . $item->arm_name . ')' : ''
                 );
 
                 return [
-                    'id' => $item->id,
+                    'id' => $item->subject_id,
                     'display_text' => $displayText,
-                    'subject' => $item->subject,
-                    'subjectcode' => $item->subjectcode,
-                    'schoolclass' => $item->schoolclass,
+                    'subject' => $item->subject_name,
+                    'subjectcode' => $item->subject_code,
+                    'schoolclass' => $item->class_name,
                     'class_id' => $item->class_id,
-                    'arm' => $item->arm,
-                    'term' => $item->term,
-                    'session' => $item->session,
+                    'arm' => $item->arm_name,
+                    'term' => $item->term_name,
+                    'session' => $item->session_name,
                     'termid' => $item->termid,
                     'sessionid' => $item->sessionid
                 ];
@@ -336,25 +415,23 @@ class ExamController extends Controller
         return response()->json(['subjects' => $subjects]);
     }
 
-    public function getClassesForSubject($subjectTeacherId)
+    public function getClassesForSubject($subjectId)
     {
         $user = auth()->user();
 
-        // Verify the subject belongs to the teacher
-        $subjectTeacher = SubjectTeacher::where('id', $subjectTeacherId)
-            ->where('staffid', $user->id)
-            ->firstOrFail();
-
-        // Get all classes for this subject teacher
-        $classes = DB::table('subjectclass')
+        // Get classes where the teacher teaches this subject
+        $classes = DB::table('subjectteacher')
+            ->join('subjectclass', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
             ->join('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
             ->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
-            ->where('subjectclass.subjectteacherid', $subjectTeacherId)
+            ->where('subjectteacher.staffid', $user->id)
+            ->where('subjectteacher.subjectid', $subjectId)
             ->select(
                 'schoolclass.id',
                 'schoolclass.schoolclass',
                 'schoolarm.arm'
             )
+            ->distinct()
             ->get();
 
         return response()->json([
