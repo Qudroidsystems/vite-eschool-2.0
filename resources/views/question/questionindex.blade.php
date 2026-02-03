@@ -309,14 +309,473 @@
     </div>
 </div>
 
-<!-- Include all modals -->
-@include('question.partials.exam_selection_modal')
-@include('question.partials.question_form_modal')
-@include('question.partials.import_modal')
-@include('question.partials.move_exam_modal')
-@include('question.partials.reusable_questions_modal')
-@include('question.partials.view_question_modal')
-@include('question.partials.duplicate_modal')
+<!-- Exam Selection Modal -->
+<div class="modal fade" id="examSelectionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Exams for Questions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="ri-information-line fs-4 me-2"></i>
+                        <div>
+                            <strong>Instructions:</strong>
+                            <ul class="mb-0">
+                                <li>Select one or more exams to add questions to</li>
+                                <li>Questions will be added to all selected exams</li>
+                                <li>Use search to filter exams by title or class</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="mb-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="ri-search-line"></i>
+                        </span>
+                        <input type="text" class="form-control" id="search-exams-input" placeholder="Search exams by title, class, or subject...">
+                        <button class="btn btn-outline-secondary" type="button" id="clear-search-exams">
+                            <i class="ri-close-line"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Exams Grouped by Class -->
+                <div id="exams-by-class-container" style="max-height: 400px; overflow-y: auto;">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading exams...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Exams Summary -->
+                <div class="selected-exams-summary mt-4 p-3 bg-light rounded" id="selected-exams-summary" style="display: none;">
+                    <h6 class="fw-bold mb-2">Selected Exams: <span id="selected-count">0</span></h6>
+                    <div id="selected-exams-list" class="small"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i> Cancel
+                </button>
+                <div class="form-check me-auto">
+                    <input class="form-check-input" type="checkbox" id="select-all-exams-checkbox">
+                    <label class="form-check-label" for="select-all-exams-checkbox">
+                        Select all
+                    </label>
+                </div>
+                <button type="button" class="btn btn-primary" id="proceed-to-question-form-btn" disabled>
+                    <i class="ri-arrow-right-line me-1"></i> Proceed with <span id="selected-exam-count">0</span> Exam(s)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Question Form Modal -->
+<div class="modal fade" id="questionFormModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><span id="modal-title-text">Add</span> Question
+                    <span id="selected-exam-title"></span>
+                    <span id="multiple-exams-badge" class="badge bg-info ms-2" style="display: none;">Multiple Exams</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Exam Selection Info -->
+                <div id="exam-selection-info" class="alert alert-info mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="ri-information-line fs-4 me-2"></i>
+                        <div>
+                            <div id="single-exam-info" style="display: none;">
+                                <strong>Exam:</strong> <span id="exam-title-text"></span><br>
+                                <strong>Class:</strong> <span id="exam-class-text"></span><br>
+                                <strong>Subject:</strong> <span id="exam-subject-text"></span>
+                            </div>
+                            <div id="multiple-exams-info" style="display: none;">
+                                <strong>Selected Exams:</strong> <span id="selected-exams-count"></span> exams<br>
+                                <small class="text-muted">This question will be added to all selected exams.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question Form -->
+                <form id="question-form" enctype="multipart/form-data">
+                    @csrf
+                    <div id="method-field"></div>
+                    <input type="hidden" name="question_id" id="question_id_field">
+                    <div id="selected-exams-field"></div>
+
+                    <div class="mb-3">
+                        <label for="question_text" class="form-label required">Question Text</label>
+                        <div id="question-text-editor" style="min-height: 150px;"></div>
+                        <textarea name="question_text" id="question_text" style="display: none;" required></textarea>
+                        <div class="form-text">Enter the main question text here.</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="type" class="form-label required">Question Type</label>
+                            <select name="type" id="type" class="form-control question-type" required>
+                                <option value="" disabled selected>Select a type</option>
+                                <option value="mcq">Multiple Choice (MCQ)</option>
+                                <option value="true_false">True/False</option>
+                                <option value="short_answer">Short Answer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="marks" class="form-label required">Marks</label>
+                            <input type="number" name="marks" id="marks" class="form-control" value="1" min="0.1" step="0.1" required>
+                        </div>
+                    </div>
+
+                    <!-- Question Type Options -->
+                    <div id="question-options-container">
+                        <!-- Options will be dynamically loaded based on type -->
+                    </div>
+
+                    <!-- Image Upload -->
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Upload Image (Optional)</label>
+                        <input type="file" name="image" id="image" class="form-control" accept="image/*" />
+                        <div id="image-preview" class="mt-3" style="display: none;">
+                            <img id="preview-img" src="#" alt="Image Preview" style="max-width: 200px; max-height: 200px;" class="img-thumbnail">
+                            <button type="button" class="btn btn-sm btn-danger ms-2" id="remove-image">
+                                <i class="ri-close-line"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Reusable Option -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_reusable" id="is_reusable" value="1">
+                            <label class="form-check-label" for="is_reusable">
+                                <strong>Mark as reusable question</strong>
+                                <div class="form-text">This question can be reused in other exams</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div class="alert alert-danger d-none" id="form-errors">
+                        <ul id="error-list" class="mb-0"></ul>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-secondary" id="change-exam-selection">
+                    <i class="ri-arrow-left-line me-1"></i> Change Exams
+                </button>
+                <button type="button" class="btn btn-success" id="save-and-add-another-btn" style="display: none;">
+                    <i class="ri-add-circle-line me-1"></i> Save & Add Another
+                </button>
+                <button type="submit" class="btn btn-primary" id="save-question-btn" form="question-form">
+                    <i class="ri-save-line me-1"></i> Save Question
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MCQ Options Template -->
+<template id="mcq-options-template">
+    <div class="mcq-options">
+        <h6 class="fw-bold mb-3">Multiple Choice Options (Select at least 2)</h6>
+        <div class="alert alert-warning">
+            <i class="ri-alert-line me-2"></i> You must select one correct option
+        </div>
+        <div class="options-fields">
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">A:</label>
+                    <input type="text" name="options[a][option_text]" class="form-control me-3" placeholder="Enter option A..." required />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="a" required />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">B:</label>
+                    <input type="text" name="options[b][option_text]" class="form-control me-3" placeholder="Enter option B..." required />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="b" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">C:</label>
+                    <input type="text" name="options[c][option_text]" class="form-control me-3" placeholder="Enter option C..." />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="c" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">D:</label>
+                    <input type="text" name="options[d][option_text]" class="form-control me-3" placeholder="Enter option D..." />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="d" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">E:</label>
+                    <input type="text" name="options[e][option_text]" class="form-control me-3" placeholder="Enter option E..." />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="e" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- True/False Options Template -->
+<template id="tf-options-template">
+    <div class="tf-options">
+        <h6 class="fw-bold mb-3">True/False Options</h6>
+        <div class="alert alert-warning">
+            <i class="ri-alert-line me-2"></i> Select the correct answer
+        </div>
+        <div class="options-fields">
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <input type="hidden" name="options[true][option_text]" value="True">
+                    <label class="fw-semibold me-3">True</label>
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="true" required />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <input type="hidden" name="options[false][option_text]" value="False">
+                    <label class="fw-semibold me-3">False</label>
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="false" />
+                        <label class="form-check-label">Correct</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Short Answer Options Template -->
+<template id="sa-options-template">
+    <div class="sa-options">
+        <h6 class="fw-bold mb-3">Correct Answer</h6>
+        <div class="mb-3">
+            <div id="short-answer-editor" style="min-height: 100px;"></div>
+            <textarea name="options[answer][option_text]" id="short_answer_text" style="display: none;" required></textarea>
+        </div>
+    </div>
+</template>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('questions.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Questions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Exam</label>
+                        <select name="exam_id" class="form-control" required>
+                            <option value="">Select Exam</option>
+                            @foreach($exams as $exam)
+                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Upload File</label>
+                        <input type="file" name="file" class="form-control" accept=".csv,.xlsx,.xls" required>
+                        <div class="form-text">
+                            Supported formats: CSV, Excel (.xlsx, .xls)<br>
+                            <a href="{{ asset('templates/questions_import_template.xlsx') }}" download class="btn btn-sm btn-outline-primary">
+                                <i class="ri-download-line me-1"></i> Download Template
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="ri-information-line me-2"></i>File Format Instructions:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Column A:</strong> Question Text (Required)</li>
+                            <li><strong>Column B:</strong> Type (mcq/true_false/short_answer)</li>
+                            <li><strong>Column C:</strong> Correct Answer</li>
+                            <li><strong>Column D-H:</strong> Options A-E (for MCQ)</li>
+                            <li><strong>Column I:</strong> Marks (default: 1)</li>
+                            <li><strong>Column J:</strong> Reusable (true/false)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Import Questions</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Move to Exam Modal -->
+<div class="modal fade" id="moveExamModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="move-exam-form">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Move Questions to Another Exam</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="selected-questions" name="question_ids">
+                    <div class="mb-3">
+                        <label class="form-label">Select Target Exam</label>
+                        <select name="data[exam_id]" class="form-control" required id="target-exam-select">
+                            <option value="">Select Exam</option>
+                            @foreach($exams as $exam)
+                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="ri-alert-line me-2"></i>
+                        This will move <span id="move-count">0</span> selected question(s) to the target exam.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Move Questions</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reusable Questions Modal -->
+<div class="modal fade" id="reusableQuestionsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reusable Questions Bank</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="search-reusable" placeholder="Search reusable questions...">
+                    </div>
+                    <div class="col-md-6">
+                        <select class="form-control" id="reusable-exam-filter">
+                            <option value="">Filter by Exam</option>
+                            @foreach($exams as $exam)
+                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div id="reusable-questions-list" style="max-height: 400px; overflow-y: auto;">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="add-reusable-questions" disabled>
+                    <i class="ri-add-line me-1"></i> Add Selected to Exam
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Question Modal -->
+<div class="modal fade" id="viewQuestionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Question Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="view-question-content">
+                <!-- Content will be loaded via AJAX -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Duplicate Modal -->
+<div class="modal fade" id="duplicateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Duplicate Question</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Target Exam</label>
+                    <select class="form-control" id="duplicate-target-exam">
+                        <option value="">Select Exam</option>
+                        @foreach($exams as $exam)
+                            <option value="{{ $exam->id }}">{{ $exam->title }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Number of Copies</label>
+                    <input type="number" class="form-control" id="duplicate-count" value="1" min="1" max="10">
+                </div>
+                <input type="hidden" id="duplicate-question-id">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-duplicate">Duplicate</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Include Quill.js CSS -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -1046,13 +1505,13 @@ $(document).ready(function() {
         $('#examSelectionModal').modal('hide');
 
         // Prepare and show question form modal
-        prepareQuestionFormModal();
+        prepareQuestionFormModal(false);
         $('#questionFormModal').modal('show');
     });
 
     // Function to prepare the question form modal
-    function prepareQuestionFormModal() {
-        console.log('Preparing question form modal with exams:', selectedExams);
+    function prepareQuestionFormModal(isEditMode = false) {
+        console.log('Preparing question form modal with exams:', selectedExams, 'Edit mode:', isEditMode);
 
         // Clear previous form
         $('#question-form')[0].reset();
@@ -1066,8 +1525,17 @@ $(document).ready(function() {
         $('#image-preview').hide();
         $('#preview-img').attr('src', '#');
 
+        // Set modal title
+        if (isEditMode) {
+            $('#modal-title-text').text('Edit');
+            $('#save-and-add-another-btn').hide();
+        } else {
+            $('#modal-title-text').text('Add');
+            $('#save-and-add-another-btn').show();
+        }
+
         // Set modal title and info
-        if (selectedExams.length === 1) {
+        if (selectedExams.length === 1 && !isEditMode) {
             $('#single-exam-info').show();
             $('#multiple-exams-info').hide();
             $('#multiple-exams-badge').hide();
@@ -1077,29 +1545,31 @@ $(document).ready(function() {
             $('#exam-title-text').text(exam.title);
             $('#exam-class-text').text(exam.class);
             $('#exam-subject-text').text(exam.subject);
-        } else {
+        } else if (selectedExams.length > 1 && !isEditMode) {
             $('#single-exam-info').hide();
             $('#multiple-exams-info').show();
             $('#multiple-exams-badge').show();
 
             $('#selected-exam-title').text('Multiple Exams');
             $('#selected-exams-count').text(selectedExams.length);
-        }
-
-        // Add hidden fields for selected exams
-        if (selectedExams.length === 1) {
-            $('#selected-exams-field').append(`<input type="hidden" name="exam_id" value="${selectedExams[0].id}">`);
         } else {
-            selectedExams.forEach(exam => {
-                $('#selected-exams-field').append(`<input type="hidden" name="exam_ids[]" value="${exam.id}">`);
-            });
+            // Edit mode or no exams selected
+            $('#single-exam-info').hide();
+            $('#multiple-exams-info').hide();
+            $('#multiple-exams-badge').hide();
+            $('#selected-exam-title').text('');
         }
 
-        // Set form action and method
-        $('#method-field').html(`
-            <input type="hidden" name="_method" value="POST">
-            <input type="hidden" name="_token" value="{{ csrf_token() }}">
-        `);
+        // Add hidden fields for selected exams (only for create mode)
+        if (!isEditMode) {
+            if (selectedExams.length === 1) {
+                $('#selected-exams-field').append(`<input type="hidden" name="exam_id" value="${selectedExams[0].id}">`);
+            } else {
+                selectedExams.forEach(exam => {
+                    $('#selected-exams-field').append(`<input type="hidden" name="exam_ids[]" value="${exam.id}">`);
+                });
+            }
+        }
 
         // Load default question type options (MCQ)
         loadQuestionTypeOptions('mcq');
@@ -1109,8 +1579,8 @@ $(document).ready(function() {
     }
 
     // Function to load question type options
-    function loadQuestionTypeOptions(type) {
-        console.log('Loading question type options for:', type);
+    function loadQuestionTypeOptions(type, options = null) {
+        console.log('Loading question type options for:', type, 'with options:', options);
         $('#question-options-container').empty();
 
         let templateId = '';
@@ -1131,10 +1601,84 @@ $(document).ready(function() {
             const content = template.content.cloneNode(true);
             $('#question-options-container').append(content);
 
+            // Populate options if provided (for edit mode)
+            if (options && type === 'mcq') {
+                populateMCQOptions(options);
+            } else if (options && type === 'true_false') {
+                populateTrueFalseOptions(options);
+            } else if (options && type === 'short_answer') {
+                populateShortAnswerOptions(options);
+            }
+
             // Initialize specific options
             if (type === 'short_answer') {
                 initializeShortAnswerEditor();
+                if (options && options[0]) {
+                    shortAnswerEditor.root.innerHTML = options[0].option_text;
+                    $('#short_answer_text').val(options[0].option_text);
+                }
             }
+        }
+    }
+
+    // Function to populate MCQ options
+    function populateMCQOptions(options) {
+        console.log('Populating MCQ options:', options);
+
+        // Find correct option
+        let correctOption = '';
+        options.forEach(option => {
+            if (option.is_correct) {
+                correctOption = option.label;
+            }
+        });
+
+        // Populate each option field
+        options.forEach(option => {
+            const label = option.label;
+            const fieldName = label.toLowerCase();
+            const $optionField = $(`input[name="options[${fieldName}][option_text]"]`);
+
+            if ($optionField.length) {
+                $optionField.val(option.option_text);
+            }
+
+            // Check the correct option radio button
+            if (option.is_correct) {
+                $(`input[name="correct_option"][value="${fieldName}"]`).prop('checked', true);
+            }
+        });
+    }
+
+    // Function to populate True/False options
+    function populateTrueFalseOptions(options) {
+        console.log('Populating True/False options:', options);
+
+        // Find correct option
+        let correctOption = '';
+        options.forEach(option => {
+            if (option.is_correct) {
+                correctOption = option.label;
+            }
+        });
+
+        // Check the correct radio button
+        $(`input[name="correct_option"][value="${correctOption}"]`).prop('checked', true);
+    }
+
+    // Function to populate Short Answer options
+    function populateShortAnswerOptions(options) {
+        console.log('Populating Short Answer options:', options);
+
+        if (options && options[0]) {
+            // The answer is stored in option_text for short answer
+            if (shortAnswerEditor) {
+                shortAnswerEditor.root.innerHTML = options[0].option_text;
+                $('#short_answer_text').val(options[0].option_text);
+            }
+
+            // Check the correct option (should always be 'answer' for short answer)
+            $('input[name="correct_option"][value="answer"]').prop('checked', true);
         }
     }
 
@@ -1237,7 +1781,15 @@ $(document).ready(function() {
     // Handle form submission
     $('#question-form').submit(function(e) {
         e.preventDefault();
-        console.log('Submitting question form');
+
+        const questionId = $('#question_id_field').val();
+        const isEditMode = !!questionId;
+        const url = isEditMode ?
+            '{{ url("questions") }}/' + questionId :
+            '{{ route("questions.store") }}';
+
+        console.log('Submitting question form to:', url);
+        console.log('Edit mode:', isEditMode);
 
         // Update hidden textareas with editor content
         if (questionTextEditor) {
@@ -1254,9 +1806,10 @@ $(document).ready(function() {
         }
 
         const formData = new FormData(this);
-        const url = '{{ route("questions.store") }}';
+        if (isEditMode) {
+            formData.append('_method', 'PUT');
+        }
 
-        console.log('Submitting to:', url);
         console.log('Form data:', Object.fromEntries(formData));
 
         $('#save-question-btn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
@@ -1271,7 +1824,7 @@ $(document).ready(function() {
             success: function(response) {
                 console.log('Success response:', response);
                 if (response.success) {
-                    showSuccess('Question added successfully!');
+                    showSuccess(isEditMode ? 'Question updated successfully!' : 'Question added successfully!');
                     $('#questionFormModal').modal('hide');
 
                     // Reload page after a delay
@@ -1578,6 +2131,101 @@ $(document).ready(function() {
         });
     });
 
+    // Edit question (load into modal)
+    $(document).on('click', '.edit-question', function() {
+        const questionId = $(this).data('id');
+        const examId = $(this).data('exam-id');
+
+        console.log('Editing question:', questionId, 'for exam:', examId);
+
+        // Show loading in the question form modal
+        $('#question-options-container').html(`
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading question data...</p>
+            </div>
+        `);
+
+        // Load question data via AJAX
+        $.get('{{ url("questions") }}/' + questionId + '/edit', function(response) {
+            console.log('Edit response:', response);
+
+            if (response.success) {
+                // Set selected exam for edit mode
+                selectedExams = [{
+                    id: response.exam_id,
+                    title: 'Loading...',
+                    class: 'Loading...',
+                    subject: 'Loading...'
+                }];
+
+                // Populate the modal with question data
+                populateEditForm(response);
+                $('#questionFormModal').modal('show');
+            } else {
+                showError('Failed to load question data');
+            }
+        }).fail(function(xhr, status, error) {
+            console.error('Edit error:', error);
+            showError('Failed to load question data');
+        });
+    });
+
+    // Function to populate edit form
+    function populateEditForm(data) {
+        console.log('Populating edit form with:', data);
+
+        // Clear form
+        $('#question-form')[0].reset();
+        $('#method-field').html('');
+        $('#question_id_field').val('');
+        $('#selected-exams-field').empty();
+        $('#form-errors').addClass('d-none').find('#error-list').empty();
+
+        // Set modal title
+        $('#modal-title-text').text('Edit');
+        $('#selected-exam-title').text('');
+        $('#multiple-exams-badge').hide();
+        $('#save-and-add-another-btn').hide();
+
+        // Hide exam selection info in edit mode
+        $('#exam-selection-info').hide();
+
+        // Set up form for update
+        $('#method-field').html(`
+            <input type="hidden" name="_method" value="PUT">
+            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+        `);
+        $('#question_id_field').val(data.question.id);
+
+        // Add exam_id field
+        $('#selected-exams-field').append(`<input type="hidden" name="exam_id" value="${data.exam_id}">`);
+
+        // Populate basic fields
+        $('#type').val(data.question.type);
+        $('#marks').val(data.question.marks);
+        $('#is_reusable').prop('checked', data.question.is_reusable);
+
+        // Set question text in editor
+        if (questionTextEditor) {
+            questionTextEditor.root.innerHTML = data.question.question_text;
+            $('#question_text').val(data.question.question_text);
+        }
+
+        // Set image preview if exists
+        if (data.question.image) {
+            $('#preview-img').attr('src', '{{ asset('storage/') }}/' + data.question.image);
+            $('#image-preview').show();
+        } else {
+            $('#image-preview').hide();
+        }
+
+        // Load question type options with existing data
+        loadQuestionTypeOptions(data.question.type, data.options);
+    }
+
     // Duplicate question (quick)
     $(document).on('click', '.duplicate-question', function() {
         const questionId = $(this).data('id');
@@ -1846,14 +2494,6 @@ $(document).ready(function() {
                 });
             }
         });
-    });
-
-    // Edit question (redirect to edit page)
-    $(document).on('click', '.edit-question', function() {
-        const questionId = $(this).data('id');
-        const examId = $(this).data('exam-id');
-        console.log('Editing question:', questionId, 'for exam:', examId);
-        window.location.href = '{{ url("questions") }}/' + questionId + '/edit?exam_id=' + examId;
     });
 
     // Initialize on page load

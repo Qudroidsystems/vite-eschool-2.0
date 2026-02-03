@@ -392,7 +392,7 @@ class QuestionController extends Controller
             ->orderBy('title')
             ->get()
             ->map(function($exam) {
-                \Log::info('Exam ID: ' . $exam->id . ', Subject: ' . ($exam->subject ? $exam->subject->name : 'null'));
+                \Log::info('Exam ID: ' . $exam->id . ', Subject: ' . ($exam->subject ? $exam->subject->subject : 'null'));
 
                 return [
                     'id' => $exam->id,
