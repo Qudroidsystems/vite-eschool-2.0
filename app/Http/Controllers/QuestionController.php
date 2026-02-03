@@ -380,7 +380,7 @@ class QuestionController extends Controller
 
    // In QuestionController.php - update the getExamsForSelection method
 public function getExamsForSelection(Request $request)
-{
+ {
     $user = Auth::user();
 
     \Log::info('Getting exams for user: ' . $user->id);
@@ -395,7 +395,7 @@ public function getExamsForSelection(Request $request)
             return [
                 'id' => $exam->id,
                 'title' => $exam->title,
-                'subject' => $exam->subject ? $exam->subject->subject : 'No Subject', // FIXED THIS LINE
+                'subject' => $exam->subject ? $exam->subject->subject : 'No Subject', // CHANGED: subject->subject not subject->name
                 'subject_id' => $exam->subject_id,
                 'class_name' => $exam->schoolclass ?
                     $exam->schoolclass->schoolclass .
@@ -417,7 +417,6 @@ public function getExamsForSelection(Request $request)
         ]
     ]);
 }
-
     /**
      * Import questions from Excel/CSV
      */
