@@ -80,135 +80,439 @@ class QuestionController extends Controller
     /**
      * Store a newly created question
      */
+    // public function store(Request $request)
+    // {
+    //     \Log::info('Storing new question', $request->all());
+
+    //     // Handle multiple exam_ids or single exam_id
+    //     if ($request->has('exam_ids') && is_array($request->exam_ids)) {
+    //         // Multiple exams selected
+    //         $examIds = $request->exam_ids;
+    //     } else {
+    //         // Single exam selected
+    //         $examIds = [$request->exam_id];
+    //     }
+
+    //     // Validate exam IDs
+    //     foreach ($examIds as $examId) {
+    //         if (!Exam::where('id', $examId)->where('staffId', Auth::id())->exists()) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'errors' => ['Invalid exam selected']
+    //             ], 422);
+    //         }
+    //     }
+
+    //     $rules = [
+    //         'question_text' => 'required|string',
+    //         'type' => 'required|in:mcq,true_false,short_answer',
+    //         'image' => 'nullable|image|max:2048',
+    //         'correct_option' => 'required',
+    //         'marks' => 'nullable|numeric|min:0.1',
+    //         'is_reusable' => 'nullable|boolean',
+    //     ];
+
+    //     // Add type-specific validation
+    //     if ($request->type === 'mcq') {
+    //         $rules['options'] = 'required|array';
+    //     } elseif ($request->type === 'short_answer') {
+    //         $rules['options.answer.option_text'] = 'required|string';
+    //     }
+
+    //     \Log::info('Validation rules:', $rules);
+
+    //     $validated = $request->validate($rules);
+
+    //     \Log::info('Validated data:', $validated);
+
+    //     $createdQuestions = [];
+    //     $imagePath = "";
+
+    //     // Handle image upload (only once for all exams)
+    //     if ($request->hasFile('image')) {
+    //         $imagePath = $request->file('image')->store('question_images', 'public');
+    //     }
+
+    //     // Create question for each selected exam
+    //     foreach ($examIds as $examId) {
+    //         // Get next order number for this exam
+    //         $order = Question::where('exam_id', $examId)->max('order') + 1;
+
+    //         // Create question
+    //         $question = Question::create([
+    //             'exam_id' => $examId,
+    //             'question_text' => $validated['question_text'],
+    //             'type' => $validated['type'],
+    //             'image' => $imagePath,
+    //             'marks' => $validated['marks'] ?? 1,
+    //             'order' => $order,
+    //             'is_reusable' => $validated['is_reusable'] ?? false,
+    //         ]);
+
+    //         $createdQuestions[] = $question;
+
+    //         // Create options based on type
+    //         if ($validated['type'] === 'mcq') {
+    //             $filledOptions = 0;
+
+    //             // Process MCQ options
+    //             foreach ($request->options as $key => $option) {
+    //                 if (isset($option['option_text']) && !empty(trim($option['option_text']))) {
+    //                     $question->options()->create([
+    //                         'option_text' => $option['option_text'],
+    //                         'is_correct' => $validated['correct_option'] === $key,
+    //                         'label' => $key,
+    //                     ]);
+    //                     $filledOptions++;
+    //                 }
+    //             }
+
+    //             if ($filledOptions < 2) {
+    //                 // Clean up on failure
+    //                 foreach ($createdQuestions as $q) {
+    //                     $q->options()->delete();
+    //                     $q->delete();
+    //                 }
+    //                 if ($imagePath) Storage::disk('public')->delete($imagePath);
+
+    //                 return response()->json([
+    //                     'success' => false,
+    //                     'errors' => ['At least 2 options must be filled for MCQ']
+    //                 ]);
+    //             }
+    //         } elseif ($validated['type'] === 'true_false') {
+    //             $question->options()->create([
+    //                 'option_text' => 'True',
+    //                 'is_correct' => $validated['correct_option'] === 'true',
+    //                 'label' => 'true',
+    //             ]);
+    //             $question->options()->create([
+    //                 'option_text' => 'False',
+    //                 'is_correct' => $validated['correct_option'] === 'false',
+    //                 'label' => 'false',
+    //             ]);
+    //         } elseif ($validated['type'] === 'short_answer') {
+    //             $question->options()->create([
+    //                 'option_text' => $validated['options']['answer']['option_text'],
+    //                 'is_correct' => true,
+    //                 'label' => 'answer',
+    //             ]);
+    //         }
+    //     }
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => count($examIds) > 1 ?
+    //             'Question added to ' . count($examIds) . ' exams successfully' :
+    //             'Question added successfully',
+    //         'question_count' => count($createdQuestions),
+    //         'exam_ids' => $examIds
+    //     ]);
+    // }
+
+
+
     public function store(Request $request)
-    {
-        \Log::info('Storing new question', $request->all());
+{
+    \Log::info('=== STORING NEW QUESTION ===');
+    \Log::info('Request type: ' . $request->type);
+    \Log::info('Correct option: ' . $request->correct_option);
+    \Log::info('Options array:', $request->options ?? []);
+    \Log::info('All request data:', $request->all());
 
-        // Handle multiple exam_ids or single exam_id
-        if ($request->has('exam_ids') && is_array($request->exam_ids)) {
-            // Multiple exams selected
-            $examIds = $request->exam_ids;
-        } else {
-            // Single exam selected
-            $examIds = [$request->exam_id];
+    // Handle multiple exam_ids or single exam_id
+    if ($request->has('exam_ids') && is_array($request->exam_ids)) {
+        $examIds = $request->exam_ids;
+    } else {
+        $examIds = [$request->exam_id];
+    }
+
+    // Validate exam IDs
+    foreach ($examIds as $examId) {
+        if (!Exam::where('id', $examId)->where('staffId', Auth::id())->exists()) {
+            return response()->json([
+                'success' => false,
+                'errors' => ['Invalid exam selected']
+            ], 422);
         }
+    }
 
-        // Validate exam IDs
-        foreach ($examIds as $examId) {
-            if (!Exam::where('id', $examId)->where('staffId', Auth::id())->exists()) {
+    $rules = [
+        'question_text' => 'required|string',
+        'type' => 'required|in:mcq,true_false,short_answer',
+        'image' => 'nullable|image|max:2048',
+        'correct_option' => 'required',
+        'marks' => 'nullable|numeric|min:0.1',
+        'is_reusable' => 'nullable|boolean',
+    ];
+
+    // Add type-specific validation
+    if ($request->type === 'mcq') {
+        $rules['options'] = 'required|array';
+    } elseif ($request->type === 'short_answer') {
+        $rules['options.answer.option_text'] = 'required|string';
+    }
+
+    \Log::info('Validation rules:', $rules);
+    $validated = $request->validate($rules);
+    \Log::info('Validated data:', $validated);
+
+    $createdQuestions = [];
+    $imagePath = "";
+
+    // Handle image upload
+    if ($request->hasFile('image')) {
+        $imagePath = $request->file('image')->store('question_images', 'public');
+    }
+
+    // Create question for each selected exam
+    foreach ($examIds as $examId) {
+        $order = Question::where('exam_id', $examId)->max('order') + 1;
+
+        $question = Question::create([
+            'exam_id' => $examId,
+            'question_text' => $validated['question_text'],
+            'type' => $validated['type'],
+            'image' => $imagePath,
+            'marks' => $validated['marks'] ?? 1,
+            'order' => $order,
+            'is_reusable' => $validated['is_reusable'] ?? false,
+        ]);
+
+        $createdQuestions[] = $question;
+
+        // Create options based on type
+        if ($validated['type'] === 'mcq') {
+            \Log::info('Creating MCQ options');
+            $filledOptions = 0;
+
+            foreach ($request->options as $key => $option) {
+                if (isset($option['option_text']) && !empty(trim($option['option_text']))) {
+                    $question->options()->create([
+                        'option_text' => $option['option_text'],
+                        'is_correct' => $validated['correct_option'] === $key,
+                        'label' => $key,
+                    ]);
+                    $filledOptions++;
+                }
+            }
+
+            if ($filledOptions < 2) {
+                foreach ($createdQuestions as $q) {
+                    $q->options()->delete();
+                    $q->delete();
+                }
+                if ($imagePath) Storage::disk('public')->delete($imagePath);
+
                 return response()->json([
                     'success' => false,
-                    'errors' => ['Invalid exam selected']
-                ], 422);
+                    'errors' => ['At least 2 options must be filled for MCQ']
+                ]);
             }
-        }
 
-        $rules = [
-            'question_text' => 'required|string',
-            'type' => 'required|in:mcq,true_false,short_answer',
-            'image' => 'nullable|image|max:2048',
-            'correct_option' => 'required',
-            'marks' => 'nullable|numeric|min:0.1',
-            'is_reusable' => 'nullable|boolean',
-        ];
-
-        // Add type-specific validation
-        if ($request->type === 'mcq') {
-            $rules['options'] = 'required|array';
-        } elseif ($request->type === 'short_answer') {
-            $rules['options.answer.option_text'] = 'required|string';
-        }
-
-        \Log::info('Validation rules:', $rules);
-
-        $validated = $request->validate($rules);
-
-        \Log::info('Validated data:', $validated);
-
-        $createdQuestions = [];
-        $imagePath = "";
-
-        // Handle image upload (only once for all exams)
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('question_images', 'public');
-        }
-
-        // Create question for each selected exam
-        foreach ($examIds as $examId) {
-            // Get next order number for this exam
-            $order = Question::where('exam_id', $examId)->max('order') + 1;
-
-            // Create question
-            $question = Question::create([
-                'exam_id' => $examId,
-                'question_text' => $validated['question_text'],
-                'type' => $validated['type'],
-                'image' => $imagePath,
-                'marks' => $validated['marks'] ?? 1,
-                'order' => $order,
-                'is_reusable' => $validated['is_reusable'] ?? false,
+        } elseif ($validated['type'] === 'true_false') {
+            \Log::info('Creating True/False options');
+            $question->options()->create([
+                'option_text' => 'True',
+                'is_correct' => $validated['correct_option'] === 'true',
+                'label' => 'true',
+            ]);
+            $question->options()->create([
+                'option_text' => 'False',
+                'is_correct' => $validated['correct_option'] === 'false',
+                'label' => 'false',
             ]);
 
-            $createdQuestions[] = $question;
+        } elseif ($validated['type'] === 'short_answer') {
+            \Log::info('Creating Short Answer option');
+            \Log::info('Short answer data:', $request->options['answer'] ?? []);
 
-            // Create options based on type
-            if ($validated['type'] === 'mcq') {
-                $filledOptions = 0;
+            $answerText = $validated['options']['answer']['option_text'] ?? '';
+            if (empty($answerText) && isset($request->short_answer_text)) {
+                $answerText = $request->short_answer_text;
+            }
 
-                // Process MCQ options
-                foreach ($request->options as $key => $option) {
-                    if (isset($option['option_text']) && !empty(trim($option['option_text']))) {
-                        $question->options()->create([
-                            'option_text' => $option['option_text'],
-                            'is_correct' => $validated['correct_option'] === $key,
-                            'label' => $key,
-                        ]);
-                        $filledOptions++;
-                    }
-                }
+            \Log::info('Short answer text to save:', ['answer' => $answerText]);
 
-                if ($filledOptions < 2) {
-                    // Clean up on failure
-                    foreach ($createdQuestions as $q) {
-                        $q->options()->delete();
-                        $q->delete();
-                    }
-                    if ($imagePath) Storage::disk('public')->delete($imagePath);
-
-                    return response()->json([
-                        'success' => false,
-                        'errors' => ['At least 2 options must be filled for MCQ']
-                    ]);
-                }
-            } elseif ($validated['type'] === 'true_false') {
+            if (!empty($answerText)) {
                 $question->options()->create([
-                    'option_text' => 'True',
-                    'is_correct' => $validated['correct_option'] === 'true',
-                    'label' => 'true',
-                ]);
-                $question->options()->create([
-                    'option_text' => 'False',
-                    'is_correct' => $validated['correct_option'] === 'false',
-                    'label' => 'false',
-                ]);
-            } elseif ($validated['type'] === 'short_answer') {
-                $question->options()->create([
-                    'option_text' => $validated['options']['answer']['option_text'],
+                    'option_text' => $answerText,
                     'is_correct' => true,
                     'label' => 'answer',
                 ]);
+            } else {
+                \Log::error('No short answer text found!');
+                return response()->json([
+                    'success' => false,
+                    'errors' => ['Short answer text is required']
+                ]);
             }
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => count($examIds) > 1 ?
-                'Question added to ' . count($examIds) . ' exams successfully' :
-                'Question added successfully',
-            'question_count' => count($createdQuestions),
-            'exam_ids' => $examIds
+        \Log::info('Question created with options:', [
+            'question_id' => $question->id,
+            'type' => $question->type,
+            'options_count' => $question->options()->count()
         ]);
     }
+
+    return response()->json([
+        'success' => true,
+        'message' => count($examIds) > 1 ?
+            'Question added to ' . count($examIds) . ' exams successfully' :
+            'Question added successfully',
+        'question_count' => count($createdQuestions),
+        'exam_ids' => $examIds
+    ]);
+}
+
+public function update(Request $request, Question $question)
+{
+    \Log::info('=== UPDATING QUESTION ===');
+    \Log::info('Question ID: ' . $question->id);
+    \Log::info('Question Type: ' . $question->type);
+    \Log::info('Request data:', $request->all());
+
+    $type = $question->type;
+
+    $rules = [
+        'question_text' => 'required|string',
+        'correct_option' => [
+            'required',
+            function ($attribute, $value, $fail) use ($type) {
+                if ($type === 'mcq' && !in_array($value, ['a', 'b', 'c', 'd', 'e'])) {
+                    $fail("The selected correct option for MCQ must be one of A, B, C, D, or E. Received: '$value'");
+                } elseif ($type === 'true_false' && !in_array($value, ['true', 'false'])) {
+                    $fail("The selected correct option for True/False must be True or False. Received: '$value'");
+                } elseif ($type === 'short_answer' && $value !== 'answer') {
+                    $fail("The selected correct option for Short Answer must be 'answer'. Received: '$value'");
+                }
+            },
+        ],
+        'exam_id' => 'required|exists:exams,id',
+        'marks' => 'nullable|numeric|min:0.1',
+        'is_reusable' => 'nullable|boolean',
+    ];
+
+    if ($type === 'mcq') {
+        $rules['options'] = 'required|array';
+        $rules['options.*.option_text'] = 'nullable|string';
+    } elseif ($type === 'short_answer') {
+        if ($request->has('options.answer.option_text')) {
+            $rules['options.answer.option_text'] = 'required|string';
+        } elseif ($request->has('short_answer_text')) {
+            $rules['short_answer_text'] = 'required|string';
+        }
+    }
+
+    $validator = Validator::make($request->all(), $rules);
+
+    // Extra check for MCQ: at least 2 non-empty options
+    if ($type === 'mcq') {
+        $nonEmptyOptions = 0;
+        if (isset($request->options)) {
+            foreach ($request->options as $option) {
+                if (!empty(trim($option['option_text'] ?? ''))) {
+                    $nonEmptyOptions++;
+                }
+            }
+        }
+        if ($nonEmptyOptions < 2) {
+            $validator->errors()->add('options', 'At least 2 options must be filled for MCQ');
+        }
+    }
+
+    if ($validator->fails()) {
+        \Log::error('Validation failed:', $validator->errors()->all());
+        return response()->json([
+            'success' => false,
+            'errors' => $validator->errors()->all()
+        ]);
+    }
+
+    $validated = $validator->validated();
+
+    // Update question
+    $question->update([
+        'question_text' => $validated['question_text'],
+        'exam_id' => $validated['exam_id'],
+        'marks' => $validated['marks'] ?? $question->marks,
+        'is_reusable' => $validated['is_reusable'] ?? $question->is_reusable,
+    ]);
+
+    // Handle image upload
+    if ($request->hasFile('image')) {
+        if ($question->image) {
+            Storage::disk('public')->delete($question->image);
+        }
+        $question->update([
+            'image' => $request->file('image')->store('question_images', 'public')
+        ]);
+    } elseif ($request->has('remove_image')) {
+        if ($question->image) {
+            Storage::disk('public')->delete($question->image);
+        }
+        $question->update(['image' => null]);
+    }
+
+    // Update options - DELETE OLD ONES FIRST
+    $question->options()->delete();
+
+    \Log::info('Creating new options for type: ' . $type);
+
+    if ($type === 'mcq') {
+        foreach ($request->options as $key => $option) {
+            if (!empty(trim($option['option_text'] ?? ''))) {
+                $question->options()->create([
+                    'option_text' => $option['option_text'],
+                    'is_correct' => $request->correct_option === $key,
+                    'label' => $key,
+                ]);
+            }
+        }
+    } elseif ($type === 'true_false') {
+        $question->options()->createMany([
+            ['option_text' => 'True', 'is_correct' => $request->correct_option === 'true', 'label' => 'true'],
+            ['option_text' => 'False', 'is_correct' => $request->correct_option === 'false', 'label' => 'false']
+        ]);
+    } elseif ($type === 'short_answer') {
+        // Get answer from multiple possible sources
+        $answerText = '';
+        if (isset($validated['options']['answer']['option_text'])) {
+            $answerText = $validated['options']['answer']['option_text'];
+        } elseif ($request->has('short_answer_text')) {
+            $answerText = $request->input('short_answer_text');
+        }
+
+        \Log::info('Short answer text for update:', ['answer' => $answerText]);
+
+        if (!empty($answerText)) {
+            $question->options()->create([
+                'option_text' => $answerText,
+                'is_correct' => true,
+                'label' => 'answer',
+            ]);
+        } else {
+            \Log::error('No short answer text found for update!');
+            return response()->json([
+                'success' => false,
+                'errors' => ['Short answer text is required']
+            ]);
+        }
+    }
+
+    \Log::info('Options created:', [
+        'count' => $question->options()->count(),
+        'options' => $question->options->toArray()
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Question updated successfully'
+    ]);
+}
+
+
 
     public function showDetails(Question $question)
     {
