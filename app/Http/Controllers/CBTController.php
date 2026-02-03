@@ -340,7 +340,6 @@ class CBTController extends Controller
                         $attempted++;
 
                         // Initialize variables
-                        $isCorrect = false;
                         $optionId = null;
                         $shortAnswerText = null;
 
@@ -348,7 +347,7 @@ class CBTController extends Controller
                             // For short answer questions
                             $shortAnswerText = $studentAnswer;
 
-                            // Find correct option for comparison
+                            // Find correct option for comparison and scoring
                             $correctOption = $question->options->where('is_correct', true)->first();
                             if ($correctOption) {
                                 $correctAnswer = trim($correctOption->option_text);
@@ -359,14 +358,14 @@ class CBTController extends Controller
                                     'type' => $question->type
                                 ]);
 
-                                // Case-insensitive comparison
+                                // Case-insensitive comparison for scoring
                                 if (strtolower($studentAnswer) === strtolower($correctAnswer)) {
-                                    $isCorrect = true;
+                                    $score += $questionMarks;
                                 } else {
                                     // Optional: Allow partial matches
                                     similar_text(strtolower($studentAnswer), strtolower($correctAnswer), $percent);
                                     if ($percent >= 80) { // 80% similarity threshold
-                                        $isCorrect = true;
+                                        $score += $questionMarks;
                                     }
                                 }
                             }
@@ -382,7 +381,9 @@ class CBTController extends Controller
 
                             if ($selectedOption) {
                                 $optionId = $selectedOption->id;
-                                $isCorrect = $selectedOption->is_correct;
+                                if ($selectedOption->is_correct) {
+                                    $score += $questionMarks;
+                                }
                             }
                         }
 
@@ -391,7 +392,8 @@ class CBTController extends Controller
                             'question_type' => $question->type,
                             'option_id' => $optionId,
                             'short_answer' => $shortAnswerText,
-                            'is_correct' => $isCorrect
+                            'question_marks' => $questionMarks,
+                            'score_added' => $score
                         ]);
 
                         // Create answer record
@@ -401,12 +403,7 @@ class CBTController extends Controller
                             'question_id'   => $submittedAnswer['question_id'],
                             'option_id'     => $optionId, // null for short answers
                             'short_answer'  => $shortAnswerText, // Store short answer text here
-                            'is_correct'    => $isCorrect
                         ]);
-
-                        if ($isCorrect) {
-                            $score += $questionMarks;
-                        }
                     }
                 }
             }

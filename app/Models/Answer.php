@@ -15,7 +15,7 @@ class Answer extends Model
         'question_id',
         'option_id',
         'short_answer', // Use short_answer for short answer text
-        'is_correct',
+     
     ];
 
     /**
