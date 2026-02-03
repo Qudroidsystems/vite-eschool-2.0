@@ -1238,11 +1238,17 @@ $(document).ready(function() {
     }
 
     // Initialize Quill editor for question text
-    function initializeQuestionTextEditor() {
+    function initializeQuestionTextEditor(initialContent = null) {
         // Destroy existing editor if it exists
         if (questionTextEditor) {
             questionTextEditor = null;
             $('#question-text-editor').empty();
+        }
+
+        // Check if editor container exists
+        if ($('#question-text-editor').length === 0) {
+            console.error('Quill editor container not found!');
+            return;
         }
 
         // Initialize new editor
@@ -1266,10 +1272,18 @@ $(document).ready(function() {
             placeholder: 'Enter your question here...'
         });
 
+        // Set initial content if provided
+        if (initialContent) {
+            console.log('Setting initial content for Quill editor:', initialContent);
+            questionTextEditor.root.innerHTML = initialContent;
+        }
+
         // Update hidden textarea with editor content
         questionTextEditor.on('text-change', function() {
             $('#question_text').val(questionTextEditor.root.innerHTML);
         });
+
+        console.log('Quill editor initialized');
     }
 
     // Initialize Quill editor for short answer
@@ -1278,6 +1292,12 @@ $(document).ready(function() {
         if (shortAnswerEditor) {
             shortAnswerEditor = null;
             $('#short-answer-editor').empty();
+        }
+
+        // Check if editor container exists
+        if ($('#short-answer-editor').length === 0) {
+            console.error('Short answer editor container not found!');
+            return;
         }
 
         // Initialize new editor
@@ -1690,14 +1710,18 @@ $(document).ready(function() {
         });
     });
 
-    // Edit question (load into modal)
+    // Edit question (load into modal) - FIXED VERSION
     $(document).on('click', '.edit-question', function() {
         const questionId = $(this).data('id');
         const examId = $(this).data('exam-id');
 
         console.log('Editing question:', questionId, 'for exam:', examId);
 
-        // Show loading in the question form modal
+        // Show the modal first with loading state
+        $('#questionFormModal').modal('show');
+
+        // Show loading in the modal
+        $('#question-form').addClass('loading');
         $('#question-options-container').html(`
             <div class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
@@ -1708,31 +1732,32 @@ $(document).ready(function() {
         `);
 
         // Load question data via AJAX
-        $.get('{{ url("questions") }}/' + questionId + '/edit', function(response) {
-            console.log('Edit response:', response);
+        $.ajax({
+            url: '{{ url("questions") }}/' + questionId + '/edit',
+            method: 'GET',
+            success: function(response) {
+                console.log('Edit response:', response);
 
-            if (response.success) {
-                // Set selected exam for edit mode
-                selectedExams = [{
-                    id: response.exam_id,
-                    title: 'Loading...',
-                    class: 'Loading...',
-                    subject: 'Loading...'
-                }];
+                if (response.success) {
+                    // Remove loading class
+                    $('#question-form').removeClass('loading');
 
-                // Populate the modal with question data
-                populateEditForm(response);
-                $('#questionFormModal').modal('show');
-            } else {
+                    // Populate the modal with question data
+                    populateEditForm(response);
+                } else {
+                    showError('Failed to load question data');
+                    $('#questionFormModal').modal('hide');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Edit error:', error);
                 showError('Failed to load question data');
+                $('#questionFormModal').modal('hide');
             }
-        }).fail(function(xhr, status, error) {
-            console.error('Edit error:', error);
-            showError('Failed to load question data');
         });
     });
 
-    // Function to populate edit form
+    // Function to populate edit form - FIXED VERSION
     function populateEditForm(data) {
         console.log('Populating edit form with:', data);
 
@@ -1767,11 +1792,8 @@ $(document).ready(function() {
         $('#marks').val(data.question.marks);
         $('#is_reusable').prop('checked', data.question.is_reusable);
 
-        // Set question text in editor
-        if (questionTextEditor) {
-            questionTextEditor.root.innerHTML = data.question.question_text;
-            $('#question_text').val(data.question.question_text);
-        }
+        // IMPORTANT: Initialize the Quill editor WITH the content
+        initializeQuestionTextEditor(data.question.question_text);
 
         // Set image preview if exists
         if (data.question.image) {
@@ -1781,8 +1803,10 @@ $(document).ready(function() {
             $('#image-preview').hide();
         }
 
-        // Load question type options with existing data
-        loadQuestionTypeOptions(data.question.type, data.options);
+        // Load question type options with existing data (after a small delay)
+        setTimeout(() => {
+            loadQuestionTypeOptions(data.question.type, data.options);
+        }, 100);
     }
 
     // Duplicate question (quick)
