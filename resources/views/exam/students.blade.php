@@ -42,9 +42,23 @@
                                         All Classes ({{ $assignedClasses->count() }})
                                     </a>
                                     @foreach($assignedClasses as $class)
+                                        @php
+                                            // Get the arm name properly
+                                            $armName = '';
+                                            if ($class->arm) {
+                                                // If arm is numeric, it's likely an ID - get the arm name from schoolarm table
+                                                if (is_numeric($class->arm)) {
+                                                    $armRecord = DB::table('schoolarm')->where('id', $class->arm)->first();
+                                                    $armName = $armRecord ? ' - ' . $armRecord->arm : '';
+                                                } else {
+                                                    // If arm is already a string, use it directly
+                                                    $armName = ' - ' . $class->arm;
+                                                }
+                                            }
+                                        @endphp
                                         <a href="{{ route('exams.students', ['exam' => $exam->id, 'class_id' => $class->schoolclassID]) }}"
                                            class="btn btn-sm {{ $classId == $class->schoolclassID ? 'btn-primary' : 'btn-outline-primary' }}">
-                                            {{ $class->schoolclass }}{{ $class->arm ? ' - ' . $class->arm : '' }}
+                                            {{ $class->schoolclass }}{{ $armName }}
                                         </a>
                                     @endforeach
                                 </div>
@@ -69,109 +83,129 @@
                                         </tr>
                                     </thead>
                                     <tbody id="students-tbody">
-                                        @php $i = ($students->currentPage() - 1) * $students->perPage() @endphp
+                                        @php
+                                            $i = ($students->currentPage() - 1) * $students->perPage();
+                                            $hasStudents = false;
+                                        @endphp
                                         @forelse ($students as $student)
-                                            @php
-                                                $totalQuestions = $examTotals['total_questions'] ?? 0;
-                                                $totalMarks = $examTotals['total_marks'] ?? 0;
-                                                $attempted = $student->attempted_questions ?? 0;
-                                                $correct = $student->correct_count ?? 0;
-                                                $incorrect = $student->incorrect ?? 0;
-                                                $notAttempted = $totalQuestions - $attempted;
-                                                // Use marks_earned if available, otherwise use score
-                                                $score = $student->marks_earned ?? $student->score ?? 0;
-                                                $studentTotalMarks = $student->total_marks ?? $totalMarks;
-                                            @endphp
-                                            <tr data-student-id="{{ $student->id }}">
-                                                <td class="sn-number">{{ ++$i }}</td>
-                                                <td>
-                                                    <img src="{{ $student->picture ? asset('storage/student_avatars/' . basename($student->picture)) : asset('storage/student_avatars/unnamed.jpg') }}"
-                                                         alt="{{ $student->lastname }} {{ $student->firstname }}"
-                                                         class="rounded-circle avatar-xs"
-                                                         onerror="this.src='{{ asset('storage/student_avatars/unnamed.jpg') }}';">
-                                                </td>
-                                                <td>{{ $student->lastname }} {{ $student->firstname }}</td>
-                                                <td>{{ $student->admissionNo }}</td>
-                                                <td>
-                                                    @if($student->attempt_status === 'in_progress')
-                                                        <span class="badge bg-warning text-dark">In Progress</span>
-                                                    @else
-                                                        {{ $totalQuestions }}
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($student->attempt_status === 'in_progress')
-                                                        <span class="badge bg-warning text-dark">In Progress</span>
-                                                    @else
-                                                        {{ $attempted }}
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($student->attempt_status === 'in_progress')
-                                                        <span class="badge bg-warning text-dark">In Progress</span>
-                                                    @else
-                                                        <span class="badge bg-success">{{ $correct }}</span>
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($student->attempt_status === 'in_progress')
-                                                        <span class="badge bg-warning text-dark">In Progress</span>
-                                                    @else
-                                                        <span class="badge bg-danger">{{ $incorrect }}</span>
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($student->attempt_status === 'in_progress')
-                                                        <span class="badge bg-warning text-dark">In Progress</span>
-                                                    @else
-                                                        <span class="badge bg-secondary">{{ $notAttempted }}</span>
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($student->attempt_status === 'in_progress')
-                                                        <span class="badge bg-info">Ongoing</span>
-                                                    @else
-                                                        <span class="badge bg-primary">
-                                                            {{ number_format($score, 1) }} / {{ number_format($studentTotalMarks, 1) }}
-                                                            @if($studentTotalMarks > 0)
-                                                                ({{ number_format(($score/$studentTotalMarks)*100, 1) }}%)
-                                                            @endif
-                                                        </span>
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group" role="group">
-                                                        @if($student->attempt_status === 'completed')
-                                                            <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}"
-                                                               class="btn btn-subtle-info btn-icon btn-sm"
-                                                               data-bs-toggle="tooltip"
-                                                               data-bs-placement="top"
-                                                               title="View Answers">
-                                                                <i class="ph-eye"></i>
-                                                            </a>
+                                            @if($student) {{-- Check if student is not null (after filtering) --}}
+                                                @php
+                                                    $totalQuestions = $examTotals['total_questions'] ?? 0;
+                                                    $totalMarks = $examTotals['total_marks'] ?? 0;
+                                                    $attempted = $student->attempted_questions ?? 0;
+                                                    $correct = $student->correct_count ?? 0;
+                                                    $incorrect = $student->incorrect ?? 0;
+                                                    $notAttempted = $totalQuestions - $attempted;
+                                                    // Use marks_earned if available, otherwise use score
+                                                    $score = $student->marks_earned ?? $student->score ?? 0;
+                                                    $studentTotalMarks = $student->total_marks ?? $totalMarks;
+                                                    $hasStudents = true;
+                                                @endphp
+                                                <tr data-student-id="{{ $student->id }}">
+                                                    <td class="sn-number">{{ ++$i }}</td>
+                                                    <td>
+                                                        <img src="{{ $student->picture ? asset('storage/student_avatars/' . basename($student->picture)) : asset('storage/student_avatars/unnamed.jpg') }}"
+                                                             alt="{{ $student->lastname }} {{ $student->firstname }}"
+                                                             class="rounded-circle avatar-xs"
+                                                             onerror="this.src='{{ asset('storage/student_avatars/unnamed.jpg') }}';">
+                                                    </td>
+                                                    <td>{{ $student->lastname }} {{ $student->firstname }}</td>
+                                                    <td>{{ $student->admissionNo }}</td>
+                                                    <td>
+                                                        @if($student->attempt_status === 'in_progress')
+                                                            <span class="badge bg-warning text-dark">In Progress</span>
+                                                        @else
+                                                            {{ $totalQuestions }}
                                                         @endif
-                                                        <button type="button"
-                                                                class="btn btn-subtle-danger btn-icon btn-sm delete-attempt"
-                                                                data-bs-toggle="tooltip"
-                                                                data-bs-placement="top"
-                                                                title="Delete Attempt (allows retake)"
-                                                                data-exam-id="{{ $exam->id }}"
-                                                                data-student-id="{{ $student->id }}"
-                                                                data-student-name="{{ $student->lastname }} {{ $student->firstname }}"
-                                                                data-delete-url="{{ route('exams.student.attempt.delete', ['exam' => $exam->id, 'student' => $student->id]) }}">
-                                                            <i class="ph-trash-simple"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                    <td>
+                                                        @if($student->attempt_status === 'in_progress')
+                                                            <span class="badge bg-warning text-dark">In Progress</span>
+                                                        @else
+                                                            {{ $attempted }}
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($student->attempt_status === 'in_progress')
+                                                            <span class="badge bg-warning text-dark">In Progress</span>
+                                                        @else
+                                                            <span class="badge bg-success">{{ $correct }}</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($student->attempt_status === 'in_progress')
+                                                            <span class="badge bg-warning text-dark">In Progress</span>
+                                                        @else
+                                                            <span class="badge bg-danger">{{ $incorrect }}</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($student->attempt_status === 'in_progress')
+                                                            <span class="badge bg-warning text-dark">In Progress</span>
+                                                        @else
+                                                            <span class="badge bg-secondary">{{ $notAttempted }}</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($student->attempt_status === 'in_progress')
+                                                            <span class="badge bg-info">Ongoing</span>
+                                                        @else
+                                                            <span class="badge bg-primary">
+                                                                {{ number_format($score, 1) }} / {{ number_format($studentTotalMarks, 1) }}
+                                                                @if($studentTotalMarks > 0)
+                                                                    ({{ number_format(($score/$studentTotalMarks)*100, 1) }}%)
+                                                                @endif
+                                                            </span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            @if($student->attempt_status === 'completed')
+                                                                <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}"
+                                                                   class="btn btn-subtle-info btn-icon btn-sm"
+                                                                   data-bs-toggle="tooltip"
+                                                                   data-bs-placement="top"
+                                                                   title="View Answers">
+                                                                    <i class="ph-eye"></i>
+                                                                </a>
+                                                            @endif
+                                                            <button type="button"
+                                                                    class="btn btn-subtle-danger btn-icon btn-sm delete-attempt"
+                                                                    data-bs-toggle="tooltip"
+                                                                    data-bs-placement="top"
+                                                                    title="Delete Attempt (allows retake)"
+                                                                    data-exam-id="{{ $exam->id }}"
+                                                                    data-student-id="{{ $student->id }}"
+                                                                    data-student-name="{{ $student->lastname }} {{ $student->firstname }}"
+                                                                    data-delete-url="{{ route('exams.student.attempt.delete', ['exam' => $exam->id, 'student' => $student->id]) }}">
+                                                                <i class="ph-trash-simple"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endif
                                         @empty
                                             <tr class="empty-row">
                                                 <td colspan="11" class="text-center">No students found</td>
                                             </tr>
                                         @endforelse
+
+                                        {{-- Additional check for filtered results --}}
+                                        @if(!$hasStudents && $students->count() > 0)
+                                            <tr class="empty-row">
+                                                <td colspan="11" class="text-center">
+                                                    No students found in the selected class
+                                                    <br>
+                                                    <small class="text-muted">Try selecting a different class or view all classes</small>
+                                                </td>
+                                            </tr>
+                                        @endif
                                     </tbody>
                                 </table>
                             </div>
+
+                            {{-- Only show pagination if we have actual students --}}
+                            @if($hasStudents)
                             <div class="row mt-3 align-items-center">
                                 <div class="col-sm">
                                     <div class="text-muted text-center text-sm-start" id="pagination-text">
@@ -184,6 +218,7 @@
                                     </div>
                                 </div>
                             </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -332,6 +367,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const rows = tbody.querySelectorAll('tr:not(.empty-row)');
         if (rows.length === 0) {
             tbody.innerHTML = '<tr class="empty-row"><td colspan="11" class="text-center">No students found</td></tr>';
+
+            // Hide pagination if table is empty
+            const paginationContainer = document.querySelector('.pagination-wrap');
+            const paginationText = document.getElementById('pagination-text');
+            if (paginationContainer) paginationContainer.style.display = 'none';
+            if (paginationText) paginationText.style.display = 'none';
         }
     }
 });
