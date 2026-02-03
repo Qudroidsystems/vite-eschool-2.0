@@ -485,112 +485,157 @@ class ExamController extends Controller
         }
     }
 
-    public function showStudents(Request $request, $examId)
-    {
-        $exam = Exam::where('id', $examId)
-                    ->where('staffId', auth()->user()->id)
-                    ->with('schoolclass')
-                    ->firstOrFail();
+public function showStudents(Request $request, $examId)
+{
+    $exam = Exam::where('id', $examId)
+                ->where('staffId', auth()->user()->id)
+                ->with('schoolclass')
+                ->firstOrFail();
 
-        // Get total number of questions and total marks for this exam
-        $examTotal = DB::table('questions')
-            ->where('exam_id', $examId)
-            ->select(
-                DB::raw('COUNT(*) as total_questions'),
-                DB::raw('SUM(COALESCE(marks, 1.0)) as total_marks')
-            )
-            ->first();
-
-        $classId = $request->query('class_id');
-
-        $query = DB::table('exam_attempts')
-            ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
-            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-            ->leftJoin('results', function ($join) use ($examId) {
-                $join->on('exam_attempts.student_id', '=', 'results.user_id')
-                     ->where('results.exam_id', '=', $examId);
-            })
-            ->where('exam_attempts.exam_id', $examId)
-            ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
-
-        if ($classId) {
-            $query->where('studentRegistration.schoolclassid', $classId);
-        }
-
-        // Get correct answers count and attempted questions with marks
-        $subQuery = DB::table('answers')
-            ->join('options', function($join) {
-                $join->on('answers.option_id', '=', 'options.id')
-                     ->where('options.is_correct', '=', 1);
-            })
-            ->join('questions', 'answers.question_id', '=', 'questions.id')
-            ->where('answers.exam_id', $examId)
-            ->groupBy('answers.user_id')
-            ->select(
-                'answers.user_id',
-                DB::raw('COUNT(*) as correct_count'),
-                DB::raw('SUM(COALESCE(questions.marks, 1.0)) as marks_earned')
-            );
-
-        $query->leftJoinSub($subQuery, 'correct_answers', function($join) {
-            $join->on('exam_attempts.student_id', '=', 'correct_answers.user_id');
-        });
-
-        $query->select(
-            'studentRegistration.id',
-            'studentRegistration.firstname',
-            'studentRegistration.lastname',
-            'studentRegistration.admissionNo',
-            'studentpicture.picture as picture',
-            'results.score',
-            'results.total_marks',
-            'exam_attempts.status as attempt_status',
-            DB::raw('COALESCE(correct_answers.correct_count, 0) as correct_count'),
-            DB::raw('COALESCE(correct_answers.marks_earned, 0) as marks_earned'),
-            DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions')
+    // Get total number of questions and total marks for this exam
+    $examTotal = DB::table('questions')
+        ->where('exam_id', $examId)
+        ->select(
+            DB::raw('COUNT(*) as total_questions'),
+            DB::raw('SUM(COALESCE(marks, 1.0)) as total_marks')
         )
-        ->orderBy('studentRegistration.lastname');
+        ->first();
 
-        $students = $query->paginate(15)->appends(['class_id' => $classId]);
+    $classId = $request->query('class_id');
 
-        // Update each student with proper calculations
-        foreach ($students as $student) {
-            // If results exist, use them, otherwise calculate from answers
-            if ($student->score === null && $student->attempt_status === 'completed') {
-                $student->score = $student->marks_earned ?? 0;
-                $student->total_marks = $examTotal->total_marks ?? 0;
-            }
+    $query = DB::table('exam_attempts')
+        ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
+        ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+        ->leftJoin('results', function ($join) use ($examId) {
+            $join->on('exam_attempts.student_id', '=', 'results.user_id')
+                 ->where('results.exam_id', '=', $examId);
+        })
+        ->where('exam_attempts.exam_id', $examId)
+        ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
 
-            // Calculate missed questions
-            $student->missed = $examTotal->total_questions - ($student->attempted_questions ?? 0);
-
-            // Calculate incorrect answers
-            $student->incorrect = ($student->attempted_questions ?? 0) - ($student->correct_count ?? 0);
-        }
-
-        $assignedClasses = Schoolclass::whereIn('id',
-            Exam::where('title', $exam->title)
-                ->where('staffId', $exam->staffId)
-                ->where('subject_id', $exam->subject_id)
-                ->where('termid', $exam->termid)
-                ->where('session', $exam->session)
-                ->pluck('schoolclass_id')
-        )->get(['id as schoolclassID', 'schoolclass', 'arm']);
-
-        // Pass exam totals to view
-        $examTotals = [
-            'total_questions' => $examTotal->total_questions ?? 0,
-            'total_marks' => $examTotal->total_marks ?? 0
-        ];
-
-        if ($request->ajax()) {
-            return response()->json($students);
-        }
-
-        $pagetitle = 'Students who Attempted: ' . $exam->title;
-
-        return view('exam.students', compact('pagetitle', 'exam', 'students', 'assignedClasses', 'classId', 'examTotals'));
+    if ($classId) {
+        $query->where('studentRegistration.schoolclassid', $classId);
     }
+
+    // Get attempted questions count (all types)
+    $attemptedSubQuery = DB::table('answers')
+        ->where('answers.exam_id', $examId)
+        ->groupBy('answers.user_id')
+        ->select(
+            'answers.user_id',
+            DB::raw('COUNT(*) as attempted_count')
+        );
+
+    // Get correct answers count - FIXED to include short answers
+    $correctSubQuery = DB::table('answers')
+        ->leftJoin('questions', 'answers.question_id', '=', 'questions.id')
+        ->leftJoin('options', function($join) {
+            $join->on('answers.option_id', '=', 'options.id')
+                 ->where('options.is_correct', '=', 1);
+        })
+        ->where('answers.exam_id', $examId)
+        ->groupBy('answers.user_id')
+        ->select(
+            'answers.user_id',
+            DB::raw('COUNT(*) as total_answered'),
+            DB::raw('SUM(CASE
+                WHEN questions.type = "short_answer" THEN
+                    CASE
+                        WHEN LOWER(TRIM(answers.short_answer)) = LOWER(TRIM((SELECT option_text FROM options WHERE question_id = questions.id AND is_correct = 1 LIMIT 1))) THEN 1
+                        ELSE 0
+                    END
+                WHEN answers.option_id IS NOT NULL AND options.is_correct = 1 THEN 1
+                ELSE 0
+            END) as correct_count'),
+            DB::raw('SUM(CASE
+                WHEN questions.type = "short_answer" THEN
+                    CASE
+                        WHEN LOWER(TRIM(answers.short_answer)) = LOWER(TRIM((SELECT option_text FROM options WHERE question_id = questions.id AND is_correct = 1 LIMIT 1))) THEN COALESCE(questions.marks, 1.0)
+                        ELSE 0
+                    END
+                WHEN answers.option_id IS NOT NULL AND options.is_correct = 1 THEN COALESCE(questions.marks, 1.0)
+                ELSE 0
+            END) as marks_earned')
+        );
+
+    $query->leftJoinSub($attemptedSubQuery, 'attempted_answers', function($join) {
+        $join->on('exam_attempts.student_id', '=', 'attempted_answers.user_id');
+    });
+
+    $query->leftJoinSub($correctSubQuery, 'correct_answers', function($join) {
+        $join->on('exam_attempts.student_id', '=', 'correct_answers.user_id');
+    });
+
+    $query->select(
+        'studentRegistration.id',
+        'studentRegistration.firstname',
+        'studentRegistration.lastname',
+        'studentRegistration.admissionNo',
+        'studentpicture.picture as picture',
+        'results.score',
+        'results.total_marks',
+        'exam_attempts.status as attempt_status',
+        'exam_attempts.start_time',
+        'exam_attempts.end_time',
+        DB::raw('COALESCE(attempted_answers.attempted_count, 0) as attempted_questions'),
+        DB::raw('COALESCE(correct_answers.correct_count, 0) as correct_count'),
+        DB::raw('COALESCE(correct_answers.marks_earned, 0) as marks_earned'),
+        DB::raw('COALESCE(correct_answers.total_answered, 0) as total_answered')
+    )
+    ->orderBy('studentRegistration.lastname');
+
+    $students = $query->paginate(15)->appends(['class_id' => $classId]);
+
+    // Update each student with proper calculations
+    foreach ($students as $student) {
+        // If results exist, use them, otherwise calculate from answers
+        if ($student->score === null && $student->attempt_status === 'completed') {
+            $student->score = $student->marks_earned ?? 0;
+            $student->total_marks = $examTotal->total_marks ?? 0;
+        }
+
+        // Calculate missed questions
+        $student->missed = $examTotal->total_questions - ($student->attempted_questions ?? 0);
+
+        // Calculate incorrect answers
+        $student->incorrect = ($student->attempted_questions ?? 0) - ($student->correct_count ?? 0);
+
+        // Ensure total marks is set
+        if (empty($student->total_marks)) {
+            $student->total_marks = $examTotal->total_marks ?? 0;
+        }
+    }
+
+    $assignedClasses = Schoolclass::whereIn('id',
+        Exam::where('title', $exam->title)
+            ->where('staffId', $exam->staffId)
+            ->where('subject_id', $exam->subject_id)
+            ->where('termid', $exam->termid)
+            ->where('session', $exam->session)
+            ->pluck('schoolclass_id')
+    )->get(['id as schoolclassID', 'schoolclass', 'arm']);
+
+    // Pass exam totals to view
+    $examTotals = [
+        'total_questions' => $examTotal->total_questions ?? 0,
+        'total_marks' => $examTotal->total_marks ?? 0
+    ];
+
+    if ($request->ajax()) {
+        return response()->json($students);
+    }
+
+    $pagetitle = 'Students who Attempted: ' . $exam->title;
+
+    return view('exam.students', compact(
+        'pagetitle',
+        'exam',
+        'students',
+        'assignedClasses',
+        'classId',
+        'examTotals'
+    ));
+}
 
     public function deleteStudentAttempt($examId, $studentId)
     {
