@@ -503,6 +503,7 @@ class ExamController extends Controller
 
     $classId = $request->query('class_id');
 
+    // Main query - simplified approach
     $query = DB::table('exam_attempts')
         ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
         ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
@@ -517,63 +518,6 @@ class ExamController extends Controller
         $query->where('studentRegistration.schoolclassid', $classId);
     }
 
-    // Subquery for option-based correct answers (MCQ/TrueFalse)
-    $optionCorrectSubQuery = DB::table('answers')
-        ->join('options', function($join) {
-            $join->on('answers.option_id', '=', 'options.id')
-                 ->where('options.is_correct', '=', 1);
-        })
-        ->join('questions', 'answers.question_id', '=', 'questions.id')
-        ->where('answers.exam_id', $examId)
-        ->groupBy('answers.user_id')
-        ->select(
-            'answers.user_id',
-            DB::raw('COUNT(*) as correct_count'),
-            DB::raw('SUM(COALESCE(questions.marks, 1.0)) as marks_earned')
-        );
-
-    // Subquery for short answer correct answers
-    $shortAnswerSubQuery = DB::table('answers')
-        ->join('questions', 'answers.question_id', '=', 'questions.id')
-        ->join('options', function($join) {
-            $join->on('questions.id', '=', 'options.question_id')
-                 ->where('options.is_correct', '=', 1);
-        })
-        ->where('answers.exam_id', $examId)
-        ->where('answers.short_answer', '!=', '')
-        ->whereNotNull('answers.short_answer')
-        ->where(function($query) {
-            // Function to normalize text similar to what we use in showStudentAnswers
-            $query->whereRaw('LOWER(TRIM(answers.short_answer)) = LOWER(TRIM(options.option_text))')
-                  ->orWhereRaw('TRIM(answers.short_answer) = TRIM(options.option_text)');
-        })
-        ->groupBy('answers.user_id')
-        ->select(
-            'answers.user_id',
-            DB::raw('COUNT(*) as short_answer_correct_count'),
-            DB::raw('SUM(COALESCE(questions.marks, 1.0)) as short_answer_marks_earned')
-        );
-
-    // Combine both subqueries
-    $combinedSubQuery = DB::table('answers')
-        ->leftJoinSub($optionCorrectSubQuery, 'option_correct', 'answers.user_id', '=', 'option_correct.user_id')
-        ->leftJoinSub($shortAnswerSubQuery, 'short_answer_correct', 'answers.user_id', '=', 'short_answer_correct.user_id')
-        ->where('answers.exam_id', $examId)
-        ->groupBy('answers.user_id')
-        ->select(
-            'answers.user_id',
-            DB::raw('COALESCE(option_correct.correct_count, 0) as option_correct_count'),
-            DB::raw('COALESCE(option_correct.marks_earned, 0) as option_marks_earned'),
-            DB::raw('COALESCE(short_answer_correct.short_answer_correct_count, 0) as short_answer_correct_count'),
-            DB::raw('COALESCE(short_answer_correct.short_answer_marks_earned, 0) as short_answer_marks_earned'),
-            DB::raw('(COALESCE(option_correct.correct_count, 0) + COALESCE(short_answer_correct.short_answer_correct_count, 0)) as total_correct_count'),
-            DB::raw('(COALESCE(option_correct.marks_earned, 0) + COALESCE(short_answer_correct.short_answer_marks_earned, 0)) as total_marks_earned')
-        );
-
-    $query->leftJoinSub($combinedSubQuery, 'correct_answers', function($join) {
-        $join->on('exam_attempts.student_id', '=', 'correct_answers.user_id');
-    });
-
     $query->select(
         'studentRegistration.id',
         'studentRegistration.firstname',
@@ -582,39 +526,74 @@ class ExamController extends Controller
         'studentpicture.picture as picture',
         'results.score',
         'results.total_marks',
-        'exam_attempts.status as attempt_status',
-        DB::raw('COALESCE(correct_answers.total_correct_count, 0) as correct_count'),
-        DB::raw('COALESCE(correct_answers.total_marks_earned, 0) as marks_earned'),
-        DB::raw('(SELECT COUNT(*) FROM answers WHERE answers.user_id = studentRegistration.id AND answers.exam_id = ' . $examId . ') as attempted_questions'),
-        DB::raw('COALESCE(correct_answers.option_correct_count, 0) as option_correct_count'),
-        DB::raw('COALESCE(correct_answers.short_answer_correct_count, 0) as short_answer_correct_count')
-    )
-    ->orderBy('studentRegistration.lastname');
+        'exam_attempts.status as attempt_status'
+    );
 
-    $students = $query->paginate(15)->appends(['class_id' => $classId]);
+    $students = $query->orderBy('studentRegistration.lastname')->paginate(15);
 
-    // Update each student with proper calculations
+    // Now manually calculate the answer statistics for each student
     foreach ($students as $student) {
-        // If results exist, use them, otherwise calculate from answers
-        if ($student->score === null && $student->attempt_status === 'completed') {
-            $student->score = $student->marks_earned ?? 0;
-            $student->total_marks = $examTotal->total_marks ?? 0;
+        // Get all answers for this student
+        $answers = Answer::where('exam_id', $examId)
+                         ->where('user_id', $student->id)
+                         ->with(['question', 'option'])
+                         ->get();
+
+        // Get correct options for all questions in this exam
+        $correctOptions = DB::table('options')
+            ->join('questions', 'options.question_id', '=', 'questions.id')
+            ->where('questions.exam_id', $examId)
+            ->where('options.is_correct', true)
+            ->select('options.id', 'options.question_id', 'options.option_text')
+            ->get()
+            ->keyBy('question_id');
+
+        $attempted = 0;
+        $correctCount = 0;
+        $marksEarned = 0;
+
+        foreach ($answers as $answer) {
+            $attempted++;
+
+            $questionMarks = (float) ($answer->question->marks ?? 1.0);
+            $correctOption = $correctOptions->get($answer->question_id);
+
+            if ($answer->question->type === 'short_answer') {
+                // For short answers, compare short_answer field with correct option text
+                $studentAnswer = trim(strip_tags($answer->short_answer ?? ''));
+                $correctAnswer = trim(strip_tags($correctOption->option_text ?? ''));
+
+                if (!empty($studentAnswer) && !empty($correctAnswer)) {
+                    // Normalize for comparison
+                    $normalizedStudent = strtolower(preg_replace('/\s+/', ' ', $studentAnswer));
+                    $normalizedCorrect = strtolower(preg_replace('/\s+/', ' ', $correctAnswer));
+
+                    if ($normalizedStudent === $normalizedCorrect) {
+                        $correctCount++;
+                        $marksEarned += $questionMarks;
+                    }
+                }
+            } else {
+                // For MCQ/TrueFalse
+                if ($answer->option && $answer->option->is_correct) {
+                    $correctCount++;
+                    $marksEarned += $questionMarks;
+                }
+            }
         }
 
-        // Calculate missed questions
-        $student->missed = $examTotal->total_questions - ($student->attempted_questions ?? 0);
+        // Add calculated fields to student object
+        $student->attempted_questions = $attempted;
+        $student->correct_count = $correctCount;
+        $student->marks_earned = $marksEarned;
+        $student->missed = ($examTotal->total_questions ?? 0) - $attempted;
+        $student->incorrect = $attempted - $correctCount;
 
-        // Calculate incorrect answers
-        $student->incorrect = ($student->attempted_questions ?? 0) - ($student->correct_count ?? 0);
-
-        // Debug info for short answers
-        \Log::info('Student answer stats:', [
-            'student_id' => $student->id,
-            'option_correct_count' => $student->option_correct_count,
-            'short_answer_correct_count' => $student->short_answer_correct_count,
-            'total_correct_count' => $student->correct_count,
-            'attempted_questions' => $student->attempted_questions
-        ]);
+        // If results don't exist but exam is completed, update score
+        if (!$student->score && $student->attempt_status === 'completed') {
+            $student->score = $marksEarned;
+            $student->total_marks = $examTotal->total_marks ?? 0;
+        }
     }
 
     $assignedClasses = Schoolclass::whereIn('id',
