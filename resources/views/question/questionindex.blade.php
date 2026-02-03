@@ -309,459 +309,14 @@
     </div>
 </div>
 
-<!-- Exam Selection Modal -->
-<div class="modal fade" id="examSelectionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Select Exam(s) for Question</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- Search Bar -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="search-box position-relative">
-                            <input type="text" class="form-control pe-5" id="search-exams-input" placeholder="Search exams by title, class, or subject...">
-                            <i class="ri-search-line search-icon position-absolute end-0 top-50 translate-middle-y me-3"></i>
-                            <button type="button" class="btn btn-sm btn-outline-secondary position-absolute end-0 top-50 translate-middle-y me-3 d-none" id="clear-search-exams">
-                                <i class="ri-close-line"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Select All Checkbox -->
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="select-all-exams-checkbox">
-                        <label class="form-check-label fw-bold" for="select-all-exams-checkbox">
-                            Select All Exams
-                        </label>
-                    </div>
-                    <div>
-                        <span class="badge bg-primary" id="selected-count">0</span> selected
-                    </div>
-                </div>
-
-                <!-- Exams List -->
-                <div id="exams-by-class-container" style="max-height: 500px; overflow-y: auto;">
-                    <!-- Exams will be loaded here dynamically -->
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading exams...</span>
-                        </div>
-                        <p class="mt-2">Loading exams list...</p>
-                    </div>
-                </div>
-
-                <!-- Selected Exams Summary -->
-                <div id="selected-exams-summary" class="mt-4 p-3 border rounded bg-light" style="display: none;">
-                    <h6 class="mb-2"><strong>Selected Exams:</strong> <span id="selected-exam-count">0</span> exam(s)</h6>
-                    <div id="selected-exams-list" class="d-flex flex-wrap gap-1"></div>
-                    <small class="text-muted">This question will be added to all selected exams.</small>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-1"></i> Cancel
-                </button>
-                <button type="button" class="btn btn-primary" id="proceed-to-question-form-btn" disabled>
-                    <i class="ri-arrow-right-line me-1"></i> Proceed to Question Form
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Question Form Modal -->
-<div class="modal fade" id="questionFormModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><span id="modal-title-text">Add</span> Question to
-                    <span id="selected-exam-title"></span>
-                    <span id="multiple-exams-badge" class="badge bg-info ms-2" style="display: none;">Multiple Exams</span>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body">
-                <!-- Exam Selection Info -->
-                <div id="exam-selection-info" class="alert alert-info mb-4">
-                    <div class="d-flex align-items-start">
-                        <i class="ri-information-line fs-4 me-2"></i>
-                        <div>
-                            <div id="single-exam-info" style="display: none;">
-                                <strong>Exam:</strong> <span id="exam-title-text"></span><br>
-                                <strong>Class:</strong> <span id="exam-class-text"></span><br>
-                                <strong>Subject:</strong> <span id="exam-subject-text"></span>
-                            </div>
-                            <div id="multiple-exams-info" style="display: none;">
-                                <strong>Selected Exams:</strong> <span id="selected-exams-count"></span> exams<br>
-                                <small class="text-muted">This question will be added to all selected exams.</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Question Form -->
-                <form id="question-form" enctype="multipart/form-data">
-                    @csrf
-                    <div id="method-field"></div>
-                    <input type="hidden" name="question_id" id="question_id_field">
-                    <div id="selected-exams-field"></div>
-
-                    <div class="mb-3">
-                        <label for="question_text" class="form-label required">Question Text</label>
-                        <div id="question-text-editor" style="min-height: 150px;"></div>
-                        <textarea name="question_text" id="question_text" style="display: none;" required></textarea>
-                        <div class="form-text">Enter the main question text here.</div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="type" class="form-label required">Question Type</label>
-                            <select name="type" id="type" class="form-control question-type" required>
-                                <option value="" disabled selected>Select a type</option>
-                                <option value="mcq">Multiple Choice (MCQ)</option>
-                                <option value="true_false">True/False</option>
-                                <option value="short_answer">Short Answer</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="marks" class="form-label required">Marks</label>
-                            <input type="number" name="marks" id="marks" class="form-control" value="1" min="0.1" step="0.1" required>
-                        </div>
-                    </div>
-
-                    <!-- Question Type Options -->
-                    <div id="question-options-container">
-                        <!-- Options will be dynamically loaded based on type -->
-                    </div>
-
-                    <!-- Image Upload -->
-                    <div class="mb-3">
-                        <label for="image" class="form-label">Upload Image (Optional)</label>
-                        <input type="file" name="image" id="image" class="form-control" accept="image/*" />
-                        <div id="image-preview" class="mt-3" style="display: none;">
-                            <img id="preview-img" src="#" alt="Image Preview" style="max-width: 200px; max-height: 200px;" class="img-thumbnail">
-                            <button type="button" class="btn btn-sm btn-danger ms-2" id="remove-image">
-                                <i class="ri-close-line"></i> Remove
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Reusable Option -->
-                    <div class="mb-4">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="is_reusable" id="is_reusable" value="1">
-                            <label class="form-check-label" for="is_reusable">
-                                <strong>Mark as reusable question</strong>
-                                <div class="form-text">This question can be reused in other exams</div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Error Display -->
-                    <div class="alert alert-danger d-none" id="form-errors">
-                        <ul id="error-list" class="mb-0"></ul>
-                    </div>
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-1"></i> Cancel
-                </button>
-                <button type="button" class="btn btn-secondary" id="change-exam-selection">
-                    <i class="ri-arrow-left-line me-1"></i> Change Exams
-                </button>
-                <button type="submit" class="btn btn-primary" id="save-question-btn" form="question-form">
-                    <i class="ri-save-line me-1"></i> Save Question
-                </button>
-                <button type="button" class="btn btn-success" id="save-and-add-another-btn">
-                    <i class="ri-add-line me-1"></i> Save & Add Another
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- MCQ Options Template -->
-<template id="mcq-options-template">
-    <div class="mcq-options">
-        <h6 class="fw-bold mb-3">Multiple Choice Options (Select at least 2)</h6>
-        <div class="alert alert-warning">
-            <i class="ri-alert-line me-2"></i> You must select one correct option
-        </div>
-        <div class="options-fields">
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">A:</label>
-                    <input type="text" name="options[a][option_text]" class="form-control me-3" placeholder="Enter option A..." required />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="a" required />
-                        <label class="form-check-label">Correct Answer</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">B:</label>
-                    <input type="text" name="options[b][option_text]" class="form-control me-3" placeholder="Enter option B..." required />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="b" />
-                        <label class="form-check-label">Correct Answer</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">C:</label>
-                    <input type="text" name="options[c][option_text]" class="form-control me-3" placeholder="Enter option C..." />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="c" />
-                        <label class="form-check-label">Correct Answer</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">D:</label>
-                    <input type="text" name="options[d][option_text]" class="form-control me-3" placeholder="Enter option D..." />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="d" />
-                        <label class="form-check-label">Correct Answer</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <label class="fw-semibold me-3">E:</label>
-                    <input type="text" name="options[e][option_text]" class="form-control me-3" placeholder="Enter option E..." />
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="e" />
-                        <label class="form-check-label">Correct Answer</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
-
-<!-- True/False Options Template -->
-<template id="tf-options-template">
-    <div class="tf-options">
-        <h6 class="fw-bold mb-3">True/False Options</h6>
-        <div class="alert alert-warning">
-            <i class="ri-alert-line me-2"></i> Select the correct answer
-        </div>
-        <div class="options-fields">
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <input type="hidden" name="options[true][option_text]" value="True">
-                    <label class="fw-semibold me-3">True</label>
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="true" required />
-                        <label class="form-check-label">Correct Answer</label>
-                    </div>
-                </div>
-            </div>
-            <div class="option-field mb-3">
-                <div class="d-flex align-items-center">
-                    <input type="hidden" name="options[false][option_text]" value="False">
-                    <label class="fw-semibold me-3">False</label>
-                    <div class="form-check">
-                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="false" />
-                        <label class="form-check-label">Correct Answer</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
-
-<!-- Short Answer Options Template -->
-<template id="sa-options-template">
-    <div class="sa-options">
-        <h6 class="fw-bold mb-3">Correct Answer</h6>
-        <div class="alert alert-warning">
-            <i class="ri-alert-line me-2"></i> Enter the correct answer for this short answer question
-        </div>
-        <div class="mb-3">
-            <div id="short-answer-editor" style="min-height: 100px;"></div>
-            <textarea name="options[answer][option_text]" id="short_answer_text" style="display: none;" required></textarea>
-
-            <!-- Hidden radio button for short answer (always checked) -->
-            <div style="display: none;">
-                <input type="radio" name="correct_option" value="answer" checked />
-            </div>
-        </div>
-    </div>
-</template>
-
-<!-- Import Modal -->
-<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Import Questions</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form action="{{ route('questions.import') }}" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <div class="mb-3">
-                        <label for="import-exam-id" class="form-label">Select Exam</label>
-                        <select name="exam_id" id="import-exam-id" class="form-control" required>
-                            <option value="">Select an exam</option>
-                            @foreach($exams as $exam)
-                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="import-file" class="form-label">Excel/CSV File</label>
-                        <input type="file" name="file" id="import-file" class="form-control" accept=".csv,.xlsx,.xls" required>
-                        <div class="form-text">
-                            Supported formats: CSV, Excel (.xlsx, .xls)<br>
-                            <a href="{{ asset('templates/questions_template.xlsx') }}" download>Download template</a>
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-light me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Import</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Move Exam Modal -->
-<div class="modal fade" id="moveExamModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Move Questions to Another Exam</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="ri-information-line me-2"></i>
-                    Moving <strong id="move-count">0</strong> selected question(s)
-                </div>
-                <form id="move-exam-form">
-                    @csrf
-                    <input type="hidden" name="selected_questions" id="selected-questions">
-                    <div class="mb-3">
-                        <label for="target-exam-select" class="form-label">Select Target Exam</label>
-                        <select name="target_exam_id" id="target-exam-select" class="form-control" required>
-                            <option value="">Select an exam</option>
-                            @foreach($exams as $exam)
-                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-light me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Move Questions</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Reusable Questions Modal -->
-<div class="modal fade" id="reusableQuestionsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Reusable Questions</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row mb-3">
-                    <div class="col-md-8">
-                        <div class="search-box">
-                            <input type="text" class="form-control" id="search-reusable" placeholder="Search reusable questions...">
-                            <i class="ri-search-line search-icon"></i>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <select class="form-control" id="reusable-exam-filter">
-                            <option value="">Filter by exam</option>
-                            @foreach($exams as $exam)
-                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div id="reusable-questions-list">
-                    <!-- Questions will be loaded here -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="add-reusable-questions" disabled>Add Selected to Exam</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- View Question Modal -->
-<div class="modal fade" id="viewQuestionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Question Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="view-question-content">
-                <!-- Content will be loaded dynamically -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Duplicate Modal -->
-<div class="modal fade" id="duplicateModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Duplicate Question</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="duplicate-form">
-                    <input type="hidden" id="duplicate-question-id">
-                    <div class="mb-3">
-                        <label for="duplicate-target-exam" class="form-label">Target Exam</label>
-                        <select id="duplicate-target-exam" class="form-control" required>
-                            <option value="">Select exam</option>
-                            @foreach($exams as $exam)
-                                <option value="{{ $exam->id }}">{{ $exam->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="duplicate-count" class="form-label">Number of Copies</label>
-                        <input type="number" id="duplicate-count" class="form-control" value="1" min="1" max="10">
-                    </div>
-                    <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-light me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="confirm-duplicate">Duplicate</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Include all modals -->
+@include('questions.partials.exam_selection_modal')
+@include('questions.partials.question_form_modal')
+@include('questions.partials.import_modal')
+@include('questions.partials.move_exam_modal')
+@include('questions.partials.reusable_questions_modal')
+@include('questions.partials.view_question_modal')
+@include('questions.partials.duplicate_modal')
 
 <!-- Include Quill.js CSS -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -897,45 +452,13 @@
 
 <script>
 $(document).ready(function() {
-    console.log('=== QUESTION MANAGEMENT PAGE LOADED ===');
-
-    // Debug: Check if elements exist
-    console.log('Debug check:');
-    console.log('1. Add question button exists:', $('#add-question-btn').length > 0);
-    console.log('2. Exam selection modal exists:', $('#examSelectionModal').length > 0);
-    console.log('3. Question form modal exists:', $('#questionFormModal').length > 0);
-    console.log('4. jQuery version:', $.fn.jquery);
-    console.log('5. Bootstrap modal exists:', typeof $.fn.modal === 'function');
+    console.log('Document ready - Question Management page loaded');
 
     let selectedQuestions = [];
     let currentDuplicateQuestionId = null;
     let selectedExams = [];
     let questionTextEditor = null;
     let shortAnswerEditor = null;
-
-    // FIX: Add question button click handler - ensure this is at the top
-    $(document).on('click', '#add-question-btn', function(e) {
-        console.log('=== ADD QUESTION BUTTON CLICKED ===');
-        e.preventDefault();
-        e.stopPropagation();
-
-        console.log('1. Showing exam selection modal...');
-
-        // First show the modal, then load content
-        $('#examSelectionModal').modal({
-            backdrop: 'static',
-            keyboard: false
-        });
-
-        console.log('2. Modal shown, loading exams...');
-
-        // Load exams after modal is shown
-        setTimeout(function() {
-            loadExamsForSelection();
-        }, 100);
-
-        return false;
-    });
 
     // Initialize Sortable for drag-drop
     if (document.getElementById('sortable-questions')) {
@@ -1236,6 +759,13 @@ $(document).ready(function() {
         }
     });
 
+    // Add question button
+    $('#add-question-btn').click(function() {
+        console.log('Add question button clicked');
+        loadExamsForSelection();
+        $('#examSelectionModal').modal('show');
+    });
+
     // Load exams grouped by class
     function loadExamsForSelection() {
         console.log('Loading exams for selection...');
@@ -1270,6 +800,14 @@ $(document).ready(function() {
 
                 if (response && response.success) {
                     if (response.exams && response.exams.length > 0) {
+                        // Debug the data
+                        console.log('First exam data:', response.exams[0]);
+
+                        // Check if subjects are loaded
+                        response.exams.forEach((exam, index) => {
+                            console.log(`Exam ${index}: ${exam.title} - Subject: ${exam.subject}`);
+                        });
+
                         renderExamsByClass(response.exams);
                     } else {
                         console.warn('No exams found for this user');
@@ -1351,7 +889,7 @@ $(document).ready(function() {
             `;
 
             examsByClass[className].forEach(function(exam) {
-                // Handle subject display
+                // Handle subject display - check if subject exists and is not empty
                 const subjectText = exam.subject && exam.subject !== 'No Subject' ? exam.subject : '<span class="text-warning">No Subject</span>';
 
                 html += `
@@ -1559,6 +1097,7 @@ $(document).ready(function() {
             $('#selected-exam-title').text(exam.title);
             $('#exam-title-text').text(exam.title);
             $('#exam-class-text').text(exam.class);
+            // Handle subject display
             if (exam.subject && exam.subject !== 'No Subject') {
                 $('#exam-subject-text').text(exam.subject);
             } else {
@@ -1597,62 +1136,6 @@ $(document).ready(function() {
         initializeQuestionTextEditor();
     }
 
-    // Initialize Quill editor for question text
-    function initializeQuestionTextEditor() {
-        if (questionTextEditor) {
-            questionTextEditor = null;
-            $('#question-text-editor').empty();
-        }
-
-        questionTextEditor = new Quill('#question-text-editor', {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    [{ 'script': 'sub'}, { 'script': 'super' }],
-                    [{ 'indent': '-1'}, { 'indent': '+1' }],
-                    [{ 'direction': 'rtl' }],
-                    [{ 'size': ['small', false, 'large', 'huge'] }],
-                    [{ 'color': [] }, { 'background': [] }],
-                    [{ 'font': [] }],
-                    [{ 'align': [] }],
-                    ['clean']
-                ]
-            },
-            placeholder: 'Enter your question here...'
-        });
-
-        questionTextEditor.on('text-change', function() {
-            $('#question_text').val(questionTextEditor.root.innerHTML);
-        });
-    }
-
-    // Initialize Quill editor for short answer
-    function initializeShortAnswerEditor() {
-        if (shortAnswerEditor) {
-            shortAnswerEditor = null;
-            $('#short-answer-editor').empty();
-        }
-
-        shortAnswerEditor = new Quill('#short-answer-editor', {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['clean']
-                ]
-            },
-            placeholder: 'Enter the correct answer...'
-        });
-
-        shortAnswerEditor.on('text-change', function() {
-            $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
-        });
-    }
-
     // Function to load question type options
     function loadQuestionTypeOptions(type, options = null) {
         console.log('Loading question type options for:', type, 'with options:', options);
@@ -1676,11 +1159,6 @@ $(document).ready(function() {
             const content = template.content.cloneNode(true);
             $('#question-options-container').append(content);
 
-            // Initialize short answer editor if needed
-            if (type === 'short_answer') {
-                initializeShortAnswerEditor();
-            }
-
             // Populate options if provided (for edit mode)
             if (options && type === 'mcq') {
                 populateMCQOptions(options);
@@ -1688,6 +1166,15 @@ $(document).ready(function() {
                 populateTrueFalseOptions(options);
             } else if (options && type === 'short_answer') {
                 populateShortAnswerOptions(options);
+            }
+
+            // Initialize specific options
+            if (type === 'short_answer') {
+                initializeShortAnswerEditor();
+                if (options && options[0]) {
+                    shortAnswerEditor.root.innerHTML = options[0].option_text;
+                    $('#short_answer_text').val(options[0].option_text);
+                }
             }
         }
     }
@@ -1733,12 +1220,8 @@ $(document).ready(function() {
             }
         });
 
-        console.log('True/False correct option found:', correctOption);
-
         // Check the correct radio button
-        if (correctOption) {
-            $(`input[name="correct_option"][value="${correctOption}"]`).prop('checked', true);
-        }
+        $(`input[name="correct_option"][value="${correctOption}"]`).prop('checked', true);
     }
 
     // Function to populate Short Answer options
@@ -1757,91 +1240,66 @@ $(document).ready(function() {
         }
     }
 
-    // Validate question form
-    function validateQuestionForm() {
-        const type = $('#type').val();
-        let isValid = true;
-        const errors = [];
-
-        // Check question text
-        if (!questionTextEditor || questionTextEditor.getText().trim() === '') {
-            errors.push('Question text is required');
-            isValid = false;
+    // Initialize Quill editor for question text
+    function initializeQuestionTextEditor() {
+        // Destroy existing editor if it exists
+        if (questionTextEditor) {
+            questionTextEditor = null;
+            $('#question-text-editor').empty();
         }
 
-        // Check type
-        if (!type) {
-            errors.push('Please select a question type');
-            isValid = false;
-        }
-
-        // Check type-specific validation
-        if (type === 'mcq') {
-            const filledOptions = $('input[name^="options["][name$="][option_text]"]').filter(function() {
-                return $(this).val().trim() !== '';
-            }).length;
-
-            const correctSelected = $('input[name="correct_option"]:checked').length;
-
-            if (filledOptions < 2) {
-                errors.push('At least 2 MCQ options must be filled');
-                isValid = false;
-            }
-            if (correctSelected === 0) {
-                errors.push('Please select a correct option for MCQ');
-                isValid = false;
-            }
-        } else if (type === 'true_false') {
-            const correctSelected = $('input[name="correct_option"]:checked').length;
-            if (correctSelected === 0) {
-                errors.push('Please select correct answer for True/False');
-                isValid = false;
-            }
-        } else if (type === 'short_answer') {
-            // Check if answer editor has content
-            if (!shortAnswerEditor || shortAnswerEditor.getText().trim() === '') {
-                errors.push('Correct answer is required for Short Answer');
-                isValid = false;
-            } else {
-                // Update the hidden textarea
-                $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
-            }
-
-            // Ensure correct_option is set for short answer
-            if ($('input[name="correct_option"][value="answer"]').length === 0) {
-                $('<div style="display: none;">' +
-                  '<input type="radio" name="correct_option" value="answer" checked />' +
-                  '</div>').appendTo('#question-options-container');
-            }
-        }
-
-        // Check marks
-        const marks = $('#marks').val();
-        if (!marks || parseFloat(marks) <= 0) {
-            errors.push('Marks must be greater than 0');
-            isValid = false;
-        }
-
-        if (!isValid) {
-            showFormErrors(errors);
-        }
-
-        return isValid;
-    }
-
-    // Show form errors
-    function showFormErrors(errors) {
-        const errorList = $('#error-list');
-        errorList.empty();
-
-        errors.forEach(error => {
-            errorList.append(`<li>${error}</li>`);
+        // Initialize new editor
+        questionTextEditor = new Quill('#question-text-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'script': 'sub'}, { 'script': 'super' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    [{ 'direction': 'rtl' }],
+                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'font': [] }],
+                    [{ 'align': [] }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Enter your question here...'
         });
 
-        $('#form-errors').removeClass('d-none');
-        $('html, body').animate({
-            scrollTop: $('#form-errors').offset().top - 100
-        }, 500);
+        // Update hidden textarea with editor content
+        questionTextEditor.on('text-change', function() {
+            $('#question_text').val(questionTextEditor.root.innerHTML);
+        });
+    }
+
+    // Initialize Quill editor for short answer
+    function initializeShortAnswerEditor() {
+        // Destroy existing editor if it exists
+        if (shortAnswerEditor) {
+            shortAnswerEditor = null;
+            $('#short-answer-editor').empty();
+        }
+
+        // Initialize new editor
+        shortAnswerEditor = new Quill('#short-answer-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Enter the correct answer...'
+        });
+
+        // Update hidden textarea with editor content
+        shortAnswerEditor.on('text-change', function() {
+            $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
+        });
     }
 
     // Handle question type change
@@ -1884,13 +1342,11 @@ $(document).ready(function() {
 
         const questionId = $('#question_id_field').val();
         const isEditMode = !!questionId;
-        const type = $('#type').val();
         const url = isEditMode ?
             '{{ url("questions") }}/' + questionId :
             '{{ route("questions.store") }}';
 
         console.log('Submitting question form to:', url);
-        console.log('Type:', type);
         console.log('Edit mode:', isEditMode);
 
         // Update hidden textareas with editor content
@@ -1898,14 +1354,8 @@ $(document).ready(function() {
             $('#question_text').val(questionTextEditor.root.innerHTML);
         }
 
-        if (type === 'short_answer' && shortAnswerEditor) {
+        if (shortAnswerEditor) {
             $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
-            console.log('Short answer text:', shortAnswerEditor.root.innerHTML);
-        }
-
-        // For short answer, ensure correct_option is set
-        if (type === 'short_answer') {
-            $('input[name="correct_option"][value="answer"]').prop('checked', true);
         }
 
         // Validate form
@@ -1918,11 +1368,7 @@ $(document).ready(function() {
             formData.append('_method', 'PUT');
         }
 
-        // Log form data for debugging
-        console.log('Form data entries:');
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
-        }
+        console.log('Form data:', Object.fromEntries(formData));
 
         $('#save-question-btn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
         $('#form-errors').addClass('d-none');
@@ -1966,14 +1412,12 @@ $(document).ready(function() {
     $('#save-and-add-another-btn').click(function() {
         console.log('Save & Add Another clicked');
 
-        const type = $('#type').val();
-
         // Update hidden textareas with editor content
         if (questionTextEditor) {
             $('#question_text').val(questionTextEditor.root.innerHTML);
         }
 
-        if (type === 'short_answer' && shortAnswerEditor) {
+        if (shortAnswerEditor) {
             $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
         }
 
@@ -2061,6 +1505,82 @@ $(document).ready(function() {
         if (questionTextEditor) {
             questionTextEditor.focus();
         }
+    }
+
+    // Validate question form
+    function validateQuestionForm() {
+        const type = $('#type').val();
+        let isValid = true;
+        const errors = [];
+
+        // Check question text
+        if (!questionTextEditor || questionTextEditor.getText().trim() === '') {
+            errors.push('Question text is required');
+            isValid = false;
+        }
+
+        // Check type
+        if (!type) {
+            errors.push('Please select a question type');
+            isValid = false;
+        }
+
+        // Check type-specific validation
+        if (type === 'mcq') {
+            const filledOptions = $('input[name^="options["][name$="][option_text]"]').filter(function() {
+                return $(this).val().trim() !== '';
+            }).length;
+
+            const correctSelected = $('.is-correct:checked').length;
+
+            if (filledOptions < 2) {
+                errors.push('At least 2 MCQ options must be filled');
+                isValid = false;
+            }
+            if (correctSelected === 0) {
+                errors.push('Please select a correct option for MCQ');
+                isValid = false;
+            }
+        } else if (type === 'true_false') {
+            const correctSelected = $('.is-correct:checked').length;
+            if (correctSelected === 0) {
+                errors.push('Please select correct answer for True/False');
+                isValid = false;
+            }
+        } else if (type === 'short_answer') {
+            if (!shortAnswerEditor || shortAnswerEditor.getText().trim() === '') {
+                errors.push('Correct answer is required for Short Answer');
+                isValid = false;
+            }
+        }
+
+        // Check marks
+        const marks = $('#marks').val();
+        if (!marks || parseFloat(marks) <= 0) {
+            errors.push('Marks must be greater than 0');
+            isValid = false;
+        }
+
+        if (!isValid) {
+            showFormErrors(errors);
+        }
+
+        return isValid;
+    }
+
+    // Show form errors
+    function showFormErrors(errors) {
+        const errorList = $('#error-list');
+        errorList.empty();
+
+        errors.forEach(error => {
+            errorList.append(`<li>${error}</li>`);
+        });
+
+        $('#form-errors').removeClass('d-none');
+        $('html, body').animate({
+            scrollTop: $('#form-errors').offset().top - 100
+        }, 500);
     }
 
     // View question details
