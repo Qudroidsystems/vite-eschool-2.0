@@ -166,7 +166,7 @@ class QuestionController extends Controller
                         $question->options()->create([
                             'option_text' => $option['option_text'],
                             'is_correct' => $validated['correct_option'] === $key,
-                            'label' => $key,
+                            'label' => $key, // 'a', 'b', 'c', 'd', 'e'
                         ]);
                         $filledOptions++;
                     }
@@ -193,6 +193,7 @@ class QuestionController extends Controller
                 }
             } elseif ($validated['type'] === 'true_false') {
                 \Log::info('Creating True/False options');
+                // Use full labels now that database is fixed
                 $question->options()->create([
                     'option_text' => 'True',
                     'is_correct' => $validated['correct_option'] === 'true',
