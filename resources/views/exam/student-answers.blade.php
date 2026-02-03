@@ -361,89 +361,75 @@
                                             <th class="min-w-150px">Status</th>
                                         </tr>
                                     </thead>
-                                   <tbody class="fw-semibold text-gray-600">
-    @php $i = 1 @endphp
-    @forelse ($questionAnswers as $qa)
-        <tr class="border-bottom">
-            <td class="fw-bold text-primary">{{ $i++ }}</td>
-            <td>
-                <div class="question-html" data-full-text="{!! addslashes($qa->question_text) !!}">
-                    {!! $qa->question_text !!}
-                    @if(strlen(strip_tags($qa->question_text)) > 200)
-                        <button class="view-more-btn" onclick="showFullQuestion({{ $qa->id }})">
-                            <i class="ri-eye-line me-1"></i>View More
-                        </button>
-                    @endif
-                </div>
-            </td>
-            <td>
-                <span class="type-badge">
-                    @if($qa->type === 'mcq')
-                        MCQ
-                    @elseif($qa->type === 'true_false')
-                        True/False
-                    @elseif($qa->type === 'short_answer')
-                        Short Answer
-                    @else
-                        {{ ucfirst($qa->type) }}
-                    @endif
-                </span>
-            </td>
-            <td>
-                <span class="marks-badge">
-                    {{ number_format($qa->marks ?? 1.0, 1) }}
-                </span>
-            </td>
-            <td>
-                @if($qa->image)
-                    <img src="{{ asset('storage/' . $qa->image) }}" class="img-fluid rounded question-preview" alt="Question Image" data-bs-toggle="modal" data-bs-target="#imageModal{{ $qa->id }}">
-                @else
-                    <span class="text-muted">-</span>
-                @endif
-            </td>
-            <td>
-                <div class="answer-cell @if($qa->status == 'Correct') border-success border-1 @elseif($qa->status == 'Incorrect') border-danger border-1 @endif">
-                    <strong>
-                        @if($qa->student_answer === 'Not Attempted')
-                            <span class="text-muted">Not Attempted</span>
-                        @else
-                            {{ $qa->student_answer }}
-                        @endif
-                    </strong>
-                </div>
-            </td>
-            <td>
-                <div class="answer-cell bg-success bg-opacity-10 text-success fw-semibold border-success border-1">
-                    {{ $qa->correct_answer ?? '-' }}
-                </div>
-            </td>
-            <td>
-                <span class="marks-earned-badge">
-                    {{ number_format($qa->marks_earned, 1) }}
-                </span>
-            </td>
-            <td>
-                @php
-                    $status = $qa->status;
-                    $badgeClass = $status == 'Correct' ? 'correct-badge' : ($status == 'Not Attempted' ? 'not-attempted-badge' : 'incorrect-badge');
-                    $icon = $status == 'Correct' ? 'ri-check-line' : ($status == 'Not Attempted' ? 'ri-time-line' : 'ri-close-line');
-                @endphp
-                <span class="{{ $badgeClass }}">
-                    <i class="{{ $icon }} me-1"></i>{{ $status }}
-                </span>
-            </td>
-        </tr>
-    @empty
-        <tr>
-            <td colspan="9" class="text-center py-4">
-                <div class="text-muted">
-                    <i class="ri-inbox-line fs-1 d-block mb-2"></i>
-                    No answers available
-                </div>
-            </td>
-        </tr>
-    @endforelse
-</tbody>
+                                    <tbody class="fw-semibold text-gray-600">
+                                        @php $i = 1 @endphp
+                                        @forelse ($questionAnswers as $qa)
+                                            <tr class="border-bottom">
+                                                <td class="fw-bold text-primary">{{ $i++ }}</td>
+                                                <td>
+                                                    <div class="question-html" data-full-text="{!! addslashes($qa->question_text) !!}">
+                                                        {!! $qa->question_text !!}
+                                                        @if(strlen(strip_tags($qa->question_text)) > 200)
+                                                            <button class="view-more-btn" onclick="showFullQuestion({{ $qa->id }})">
+                                                                <i class="ri-eye-line me-1"></i>View More
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="type-badge">
+                                                        {{ ucfirst(str_replace('_', ' ', $qa->type)) }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="marks-badge">
+                                                        {{ number_format($qa->marks ?? 1.0, 1) }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    @if($qa->image)
+                                                        <img src="{{ asset('storage/' . $qa->image) }}" class="img-fluid rounded question-preview" alt="Question Image" data-bs-toggle="modal" data-bs-target="#imageModal{{ $qa->id }}">
+                                                    @else
+                                                        <span class="text-muted">-</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    <div class="answer-cell @if($qa->status == 'Correct') border-success border-1 @elseif($qa->status == 'Incorrect') border-danger border-1 @endif">
+                                                        <strong>{{ $qa->student_answer ?? 'Not Attempted' }}</strong>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="answer-cell bg-success bg-opacity-10 text-success fw-semibold border-success border-1">
+                                                        {{ $qa->correct_answer ?? '-' }}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="marks-earned-badge">
+                                                        {{ number_format($qa->marks_earned, 1) }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    @php
+                                                        $status = $qa->status;
+                                                        $badgeClass = $status == 'Correct' ? 'correct-badge' : ($status == 'Not Attempted' ? 'not-attempted-badge' : 'incorrect-badge');
+                                                        $icon = $status == 'Correct' ? 'ri-check-line' : ($status == 'Not Attempted' ? 'ri-time-line' : 'ri-close-line');
+                                                    @endphp
+                                                    <span class="{{ $badgeClass }}">
+                                                        <i class="{{ $icon }} me-1"></i>{{ $status }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="9" class="text-center py-4">
+                                                    <div class="text-muted">
+                                                        <i class="ri-inbox-line fs-1 d-block mb-2"></i>
+                                                        No answers available
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
                                 </table>
                             </div>
                         </div>
