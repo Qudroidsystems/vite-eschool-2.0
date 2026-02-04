@@ -77,6 +77,33 @@ class QuestionController extends Controller
         return view('question.questionindex', compact('pagetitle', 'questions', 'exams', 'classes'));
     }
 
+
+    /**
+ * Display questions for a specific exam
+ */
+public function show($examId)
+{
+    $user = Auth::user();
+
+    // Check if user owns this exam
+    $exam = Exam::with(['schoolclass.armRelation', 'subject'])
+                ->where('id', $examId)
+                ->where('staffId', $user->id)
+                ->firstOrFail();
+
+    // Get questions for this exam with options
+    $questions = Question::with('options')
+                         ->where('exam_id', $examId)
+                         ->orderBy('order')
+                         ->get();
+
+    $pagetitle = 'Questions for: ' . $exam->title;
+
+    return view('question.show', compact('pagetitle', 'exam', 'questions'));
+}
+
+
+
     /**
      * Store a newly created question
      */

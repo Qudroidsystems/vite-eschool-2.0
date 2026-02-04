@@ -410,7 +410,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     // View students who attempted this exam + class filter support
     Route::get('exams/{exam}/students', [ExamController::class, 'showStudents'])
-        ->name('exams.showstudents');
+        ->name('exams.students');
 
     // Delete a student's attempt (allow retake)
     Route::delete('exams/{exam}/students/{student}/attempt', [ExamController::class, 'deleteStudentAttempt'])
