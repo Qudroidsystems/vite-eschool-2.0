@@ -12,7 +12,7 @@
                         <div class="page-title-right">
                             <ol class="breadcrumb m-0">
                                 <li class="breadcrumb-item"><a href="{{ route('exams.index') }}">Exams</a></li>
-                                <li class="breadcrumb-item active">List</li>
+                                <li class="breadcrumb-item active">Dashboard</li>
                             </ol>
                         </div>
                     </div>
@@ -20,18 +20,108 @@
             </div>
             <!-- End page title -->
 
+            <!-- Stats Cards -->
+            <div class="row">
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-primary-subtle text-primary rounded-2 fs-2">
+                                        <i class="ph-exam"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <p class="text-uppercase fw-medium text-muted mb-0">Total Exams</p>
+                                    <h4 class="fs-4 mb-0">{{ $exams->total() }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-success-subtle text-success rounded-2 fs-2">
+                                        <i class="ph-question"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <p class="text-uppercase fw-medium text-muted mb-0">Total Questions</p>
+                                    <h4 class="fs-4 mb-0">{{ $exams->sum('questions_count') }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-info-subtle text-info rounded-2 fs-2">
+                                        <i class="ph-graduation-cap"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <p class="text-uppercase fw-medium text-muted mb-0">Active Classes</p>
+                                    <h4 class="fs-4 mb-0">{{ $myclass->count() }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-warning-subtle text-warning rounded-2 fs-2">
+                                        <i class="ph-book-open"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <p class="text-uppercase fw-medium text-muted mb-0">Subjects</p>
+                                    <h4 class="fs-4 mb-0">{{ $mysubjects->count() }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="alert-container"></div>
 
             <div id="examsList">
+                <!-- Search and Action Bar -->
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="card">
                             <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-xxl-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
                                         <div class="search-box">
-                                            <input type="text" class="form-control search" placeholder="Search exams" value="{{ request('search', '') }}">
+                                            <input type="text" class="form-control search" placeholder="Search exams by title, description..." value="{{ request('search', '') }}">
                                             <i class="ri-search-line search-icon"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            @can('Delete exam')
+                                                <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">
+                                                    <i class="ri-delete-bin-2-line me-1"></i> Delete Selected
+                                                </button>
+                                            @endcan
+                                            @can('Create exam')
+                                                <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addExamModal">
+                                                    <i class="bi bi-plus-circle align-baseline me-1"></i> Create New Exam
+                                                </button>
+                                            @endcan
                                         </div>
                                     </div>
                                 </div>
@@ -40,152 +130,268 @@
                     </div>
                 </div>
 
+                <!-- Exams Table -->
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="card">
                             <div class="card-header d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h5 class="card-title mb-0">Exams <span class="badge bg-dark-subtle text-dark ms-1">{{ $exams->total() }}</span></h5>
+                                    <h5 class="card-title mb-0">Exams Management</h5>
+                                    <p class="text-muted mb-0 mt-1">Manage all your exams and assessments</p>
                                 </div>
                                 <div class="flex-shrink-0">
-                                    <div class="d-flex flex-wrap align-items-start gap-2">
-                                        @can('Delete exam')
-                                            <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
-                                        @endcan
-                                        @can('Create exam')
-                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addExamModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Create New Exam</button>
-                                        @endcan
-                                    </div>
+                                    <button class="btn btn-subtle-secondary btn-sm" onclick="window.print()">
+                                        <i class="ph-printer ph-sm me-1"></i> Print
+                                    </button>
                                 </div>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0" id="kt_exams_table">
-                                        <thead>
-                                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                                                <th class="w-10px pe-2">
-                                                    <div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-                                                        <input class="form-check-input" type="checkbox" id="checkAll" />
-                                                    </div>
-                                                </th>
-                                                <th class="min-w-125px">SN</th>
-                                                <th class="min-w-125px">Title</th>
-                                                <th class="min-w-125px">Description</th>
-                                                <th class="min-w-125px">Duration</th>
-                                                <th class="min-w-125px">Start Time</th>
-                                                <th class="min-w-125px">End Time</th>
-                                                <th class="min-w-125px">Questions</th>
-                                                <th class="min-w-150px">Assigned Class</th>
-                                                <th class="min-w-100px">View Students</th>
-                                                <th class="min-w-100px">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="fw-semibold text-gray-600 list form-check-all">
-                                            @php $i = ($exams->currentPage() - 1) * $exams->perPage() @endphp
-                                            @forelse ($exams as $exam)
-                                                @if($exam->id)
+                                @if($exams->count() > 0)
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0" id="examsTable">
+                                            <thead class="table-light">
                                                 <tr>
-                                                    <td class="id" data-id="{{ $exam->id }}">
-                                                        <div class="form-check form-check-sm form-check-custom form-check-solid">
-                                                            <input class="form-check-input" type="checkbox" name="chk_child" />
+                                                    <th class="text-center" style="width: 50px;">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="checkAll" />
                                                         </div>
-                                                    </td>
-                                                    <td class="sn">{{ ++$i }}</td>
-                                                    <td class="title">{{ $exam->title }}</td>
-                                                    <td class="description">{{ Str::limit($exam->description ?? '', 50) }}</td>
-                                                    <td class="duration">{{ $exam->duration }} mins</td>
-                                                    <td class="start_time">{{ $exam->start_time->format('M d, Y h:i A') }}</td>
-                                                    <td class="end_time">{{ $exam->end_time->format('M d, Y h:i A') }}</td>
-                                                    <td class="questions">
-                                                        <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-icon btn-sm">
-                                                            View Questions
-                                                            <span class="badge bg-danger rounded-pill ms-1">{{ $exam->questions_count ?? 0 }}</span>
-                                                        </a>
-                                                    </td>
-                                                    <td class="classes">
-                                                        @if($exam->schoolclass)
-                                                            <div>
-                                                                <span class="badge bg-primary-subtle text-primary">
-                                                                    {{ $exam->schoolclass->schoolclass }}
-                                                                    @if($exam->schoolclass->arm)
-                                                                        ({{ $exam->schoolclass->arm }})
-                                                                    @endif
-                                                                </span>
-                                                                <div class="mt-1">
-                                                                    <span class="badge bg-info-subtle text-info">
-                                                                        {{ $exam->questions_count ?? 0 }} question{{ ($exam->questions_count ?? 0) != 1 ? 's' : '' }}
-                                                                    </span>
+                                                    </th>
+                                                    <th class="text-center" style="width: 60px;">SN</th>
+                                                    <th>Exam Details</th>
+                                                    <th class="text-center" style="width: 120px;">Duration</th>
+                                                    <th class="text-center" style="width: 150px;">Schedule</th>
+                                                    <th class="text-center" style="width: 120px;">Term & Session</th>
+                                                    <th class="text-center" style="width: 120px;">Questions</th>
+                                                    <th class="text-center" style="width: 150px;">Class</th>
+                                                    <th class="text-center" style="width: 120px;">Status</th>
+                                                    <th class="text-center" style="width: 100px;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @php $i = ($exams->currentPage() - 1) * $exams->perPage() @endphp
+                                                @foreach($exams as $exam)
+                                                    @if($exam->id)
+                                                    <tr data-exam-id="{{ $exam->id }}">
+                                                        <td class="text-center">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input exam-checkbox" type="checkbox" name="chk_child" data-id="{{ $exam->id }}" />
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-primary rounded-pill p-2">
+                                                                <span class="fw-bold">{{ ++$i }}</span>
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <div class="d-flex align-items-start">
+                                                                <div class="flex-shrink-0 me-3">
+                                                                    <div class="avatar-sm">
+                                                                        <span class="avatar-title bg-primary-subtle text-primary rounded">
+                                                                            <i class="ph-exam ph-sm"></i>
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="flex-grow-1">
+                                                                    <h6 class="mb-1 exam-title">{{ $exam->title }}</h6>
+                                                                    <p class="text-muted mb-0 exam-description">
+                                                                        {{ Str::limit($exam->description ?? 'No description', 80) }}
+                                                                    </p>
+                                                                    <div class="mt-1">
+                                                                        <small class="text-muted">
+                                                                            <i class="ph-book-open-text ph-xs me-1"></i>
+                                                                            {{ $exam->subject->subject ?? 'No Subject' }}
+                                                                        </small>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        @else
-                                                            <span class="text-muted">No class assigned</span>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        <a href="{{ route('exams.students', $exam->id) }}" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
-                                                    </td>
-                                                    <td>
-                                                        <ul class="d-flex gap-2 list-unstyled mb-0">
-                                                            @can('Update exam')
-                                                                <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-exam-btn" data-id="{{ $exam->id }}"><i class="ph-pencil"></i></a>
-                                                                </li>
-                                                            @endcan
-                                                            @can('Delete exam')
-                                                                <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm delete-exam-btn" data-id="{{ $exam->id }}"><i class="ph-trash"></i></a>
-                                                                </li>
-                                                            @endcan
-                                                        </ul>
-                                                    </td>
-                                                </tr>
-                                                @endif
-                                            @empty
-                                                <tr>
-                                                    <td colspan="11" class="noresult text-center py-4">No exams found</td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="row mt-3 align-items-center" id="pagination-element">
-                                    <div class="col-sm">
-                                        <div class="text-muted text-center text-sm-start">
-                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to <span class="fw-semibold">{{ $exams->lastItem() ?? 0 }}</span> of <span class="fw-semibold">{{ $exams->total() }}</span> Results
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-auto mt-3 mt-sm-0">
-                                        <div class="pagination-wrap hstack gap-2 justify-content-center">
-                                            @if($exams->onFirstPage())
-                                                <span class="page-item pagination-prev disabled">
-                                                    <i class="mdi mdi-chevron-left align-middle"></i>
-                                                </span>
-                                            @else
-                                                <a class="page-item pagination-prev" href="{{ $exams->previousPageUrl() }}">
-                                                    <i class="mdi mdi-chevron-left align-middle"></i>
-                                                </a>
-                                            @endif
-
-                                            <ul class="pagination listjs-pagination mb-0">
-                                                @foreach ($exams->links()->elements[0] as $page => $url)
-                                                    <li class="page-item {{ $exams->currentPage() == $page ? 'active' : '' }}">
-                                                        <a class="page-link" href="{{ $url }}">{{ $page }}</a>
-                                                    </li>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <div class="d-flex flex-column align-items-center">
+                                                                <span class="badge bg-info-subtle text-info fs-6 px-3 py-2">
+                                                                    <i class="ph-clock ph-sm me-1"></i>{{ $exam->duration }} min
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="text-center">
+                                                                <div class="mb-1">
+                                                                    <small class="text-muted d-block">Start</small>
+                                                                    <span class="fw-medium">{{ $exam->start_time->format('M d, h:i A') }}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <small class="text-muted d-block">End</small>
+                                                                    <span class="fw-medium">{{ $exam->end_time->format('M d, h:i A') }}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            @php
+                                                                $term = $terms->firstWhere('id', $exam->termid);
+                                                                $session = $sessions->firstWhere('id', $exam->session);
+                                                            @endphp
+                                                            <div class="d-flex flex-column align-items-center">
+                                                                <span class="badge bg-primary-subtle text-primary mb-1">
+                                                                    {{ $term->term ?? 'N/A' }}
+                                                                </span>
+                                                                <span class="badge bg-success-subtle text-success">
+                                                                    {{ $session->session ?? 'N/A' }}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <a href="{{ route('questions.show', $exam->id) }}" class="btn btn-subtle-primary btn-sm w-100">
+                                                                <i class="ph-list-checks ph-sm me-1"></i>
+                                                                {{ $exam->questions_count ?? 0 }}
+                                                                <span class="ms-1">Q</span>
+                                                            </a>
+                                                        </td>
+                                                        <td>
+                                                            @if($exam->schoolclass)
+                                                                <div class="text-center">
+                                                                    <span class="badge bg-primary mb-1 d-block">
+                                                                        {{ $exam->schoolclass->schoolclass }}
+                                                                        @if($exam->schoolclass->arm)
+                                                                            ({{ $exam->schoolclass->arm }})
+                                                                        @endif
+                                                                    </span>
+                                                                    <small class="text-muted">
+                                                                        <i class="ph-users ph-xs me-1"></i>
+                                                                        View Students
+                                                                    </small>
+                                                                </div>
+                                                            @else
+                                                                <span class="text-muted">No class</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="text-center">
+                                                            @if($exam->is_published)
+                                                                <span class="badge bg-success">
+                                                                    <i class="ph-check-circle ph-xs me-1"></i>Published
+                                                                </span>
+                                                            @else
+                                                                <span class="badge bg-secondary">
+                                                                    <i class="ph-clock ph-xs me-1"></i>Draft
+                                                                </span>
+                                                            @endif
+                                                            <div class="mt-1">
+                                                                <small class="text-muted">
+                                                                    {{ $exam->created_at->diffForHumans() }}
+                                                                </small>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="d-flex justify-content-center gap-1">
+                                                                <a href="{{ route('exams.students', $exam->id) }}"
+                                                                   class="btn btn-subtle-info btn-icon btn-sm"
+                                                                   data-bs-toggle="tooltip"
+                                                                   data-bs-placement="top"
+                                                                   title="View Students">
+                                                                    <i class="ph-users"></i>
+                                                                </a>
+                                                                @can('Update exam')
+                                                                    <button class="btn btn-subtle-secondary btn-icon btn-sm edit-exam-btn"
+                                                                            data-id="{{ $exam->id }}"
+                                                                            data-bs-toggle="tooltip"
+                                                                            data-bs-placement="top"
+                                                                            title="Edit Exam">
+                                                                        <i class="ph-pencil"></i>
+                                                                    </button>
+                                                                @endcan
+                                                                @can('Delete exam')
+                                                                    <button class="btn btn-subtle-danger btn-icon btn-sm delete-exam-btn"
+                                                                            data-id="{{ $exam->id }}"
+                                                                            data-bs-toggle="tooltip"
+                                                                            data-bs-placement="top"
+                                                                            title="Delete Exam">
+                                                                        <i class="ph-trash"></i>
+                                                                    </button>
+                                                                @endcan
+                                                            </div>
+                                                            @if($exam->schoolclass)
+                                                                <div class="text-center mt-1">
+                                                                    <a href="{{ route('exams.students', $exam->id) }}" class="text-primary small">
+                                                                        <i class="ph-eye ph-xs me-1"></i>View Students
+                                                                    </a>
+                                                                </div>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                    @endif
                                                 @endforeach
-                                            </ul>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @else
+                                    <!-- Empty State -->
+                                    <div class="text-center py-5">
+                                        <div class="avatar-lg mx-auto mb-4">
+                                            <div class="avatar-title bg-primary-subtle text-primary rounded-circle display-5">
+                                                <i class="ph-exam ph-2x"></i>
+                                            </div>
+                                        </div>
+                                        <h4 class="mb-3">No Exams Found</h4>
+                                        <p class="text-muted mb-4">You haven't created any exams yet. Start by creating your first exam.</p>
+                                        @can('Create exam')
+                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addExamModal">
+                                                <i class="bi bi-plus-circle align-baseline me-1"></i> Create Your First Exam
+                                            </button>
+                                        @endcan
+                                    </div>
+                                @endif
 
-                                            @if($exams->hasMorePages())
-                                                <a class="page-item pagination-next" href="{{ $exams->nextPageUrl() }}">
-                                                    <i class="mdi mdi-chevron-right align-middle"></i>
-                                                </a>
-                                            @else
-                                                <span class="page-item pagination-next disabled">
-                                                    <i class="mdi mdi-chevron-right align-middle"></i>
-                                                </span>
-                                            @endif
+                                <!-- Pagination -->
+                                @if($exams->hasPages())
+                                <div class="row mt-4 align-items-center">
+                                    <div class="col-sm">
+                                        <div class="text-muted">
+                                            Showing <span class="fw-semibold">{{ $exams->firstItem() ?? 0 }}</span> to
+                                            <span class="fw-semibold">{{ $exams->lastItem() ?? 0 }}</span> of
+                                            <span class="fw-semibold">{{ $exams->total() }}</span> exams
                                         </div>
                                     </div>
+                                    <div class="col-sm-auto">
+                                        <nav aria-label="Page navigation">
+                                            <ul class="pagination pagination-separated pagination-sm mb-0">
+                                                @if($exams->onFirstPage())
+                                                    <li class="page-item disabled">
+                                                        <span class="page-link"><i class="mdi mdi-chevron-left"></i></span>
+                                                    </li>
+                                                @else
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="{{ $exams->previousPageUrl() }}">
+                                                            <i class="mdi mdi-chevron-left"></i>
+                                                        </a>
+                                                    </li>
+                                                @endif
+
+                                                @foreach ($exams->getUrlRange(1, $exams->lastPage()) as $page => $url)
+                                                    @if($page == $exams->currentPage())
+                                                        <li class="page-item active">
+                                                            <span class="page-link">{{ $page }}</span>
+                                                        </li>
+                                                    @else
+                                                        <li class="page-item">
+                                                            <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                                        </li>
+                                                    @endif
+                                                @endforeach
+
+                                                @if($exams->hasMorePages())
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="{{ $exams->nextPageUrl() }}">
+                                                            <i class="mdi mdi-chevron-right"></i>
+                                                        </a>
+                                                    </li>
+                                                @else
+                                                    <li class="page-item disabled">
+                                                        <span class="page-link"><i class="mdi mdi-chevron-right"></i></span>
+                                                    </li>
+                                                @endif
+                                            </ul>
+                                        </nav>
+                                    </div>
                                 </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -195,85 +401,151 @@
             <!-- Add Exam Modal -->
             @can('Create exam')
             <div id="addExamModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered mw-650px">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Create New Exam</h5>
+                            <h5 class="modal-title">
+                                <i class="ph-plus-circle ph-sm me-2"></i>Create New Exam
+                            </h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form id="add-exam-form" autocomplete="off">
                             @csrf
                             <div class="modal-body">
                                 <input type="hidden" name="staffId" value="{{ Auth::user()->id }}" required>
-                                <div class="mb-3">
-                                    <label class="form-label required">Exam Title</label>
-                                    <input type="text" name="title" class="form-control" placeholder="Enter exam title..." required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Description</label>
-                                    <textarea name="description" class="form-control" rows="3" placeholder="Enter exam description..."></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label required">Duration (minutes)</label>
-                                    <input type="number" name="duration" class="form-control" placeholder="Enter duration in minutes..." required min="1">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label required">Start Time</label>
-                                    <input type="datetime-local" name="start_time" class="form-control" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label required">End Time</label>
-                                    <input type="datetime-local" name="end_time" class="form-control" required>
-                                </div>
 
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Select Term</label>
-                                        <select name="termid" id="addTerm" class="form-control" required>
-                                            <option value="" selected>Select Term</option>
-                                            @foreach ($terms as $term)
-                                                <option value="{{ $term->id }}">{{ $term->term }}</option>
-                                            @endforeach
-                                        </select>
+                                <!-- Basic Information -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-info ph-sm me-2"></i>Basic Information</h6>
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Select Session</label>
-                                        <select name="session" id="addSession" class="form-control" required>
-                                            <option value="" selected>Select Session</option>
-                                            @foreach ($sessions as $schoolsession)
-                                                <option value="{{ $schoolsession->id }}">{{ $schoolsession->session }}</option>
-                                            @endforeach
-                                        </select>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label required">Exam Title</label>
+                                                <input type="text" name="title" class="form-control" placeholder="e.g., Mid-Term Mathematics Exam" required>
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label">Description</label>
+                                                <textarea name="description" class="form-control" rows="2" placeholder="Enter exam description..."></textarea>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label required">Select Subject</label>
-                                    <select name="subject_id" id="addSubject" class="form-control" required>
-                                        <option value="" selected>Select Subject</option>
-                                        {{-- Options will be loaded dynamically via JavaScript --}}
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label required">Select Classes</label>
-                                    <div id="addClassContainer" class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
-                                        <p class="text-muted text-center mb-0">Select a subject first...</p>
+                                <!-- Duration & Timing -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-clock ph-sm me-2"></i>Duration & Timing</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label required">Duration (minutes)</label>
+                                                <div class="input-group">
+                                                    <input type="number" name="duration" class="form-control" placeholder="60" required min="1">
+                                                    <span class="input-group-text">min</span>
+                                                </div>
+                                                <small class="text-muted">Total time allowed for the exam</small>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label required">Start Time</label>
+                                                <input type="datetime-local" name="start_time" class="form-control" required>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label required">End Time</label>
+                                                <input type="datetime-local" name="end_time" class="form-control" required>
+                                            </div>
+                                        </div>
+                                        <div class="alert alert-warning d-none" id="duration-alert">
+                                            <i class="ph-warning-circle ph-sm me-2"></i>
+                                            <span id="duration-alert-text"></span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="is_published" value="1" id="publishStatus">
-                                        <label class="form-check-label" for="publishStatus">Publish exam immediately</label>
+                                <!-- Academic Information -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-graduation-cap ph-sm me-2"></i>Academic Information</h6>
                                     </div>
-                                    <div class="text-muted fs-7 mt-1">If not checked, the exam will be saved as a draft.</div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label required">Select Term</label>
+                                                <select name="termid" id="addTerm" class="form-control" required>
+                                                    <option value="" selected>Select Term</option>
+                                                    @foreach ($terms as $term)
+                                                        <option value="{{ $term->id }}">{{ $term->term }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label required">Select Session</label>
+                                                <select name="session" id="addSession" class="form-control" required>
+                                                    <option value="" selected>Select Session</option>
+                                                    @foreach ($sessions as $schoolsession)
+                                                        <option value="{{ $schoolsession->id }}">{{ $schoolsession->session }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label required">Select Subject</label>
+                                                <select name="subject_id" id="addSubject" class="form-control" required>
+                                                    <option value="" selected>Select Subject</option>
+                                                    <!-- Options will be loaded dynamically -->
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                <!-- Class Assignment -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-users ph-sm me-2"></i>Class Assignment</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <label class="form-label required">Select Classes</label>
+                                        <div id="addClassContainer" class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                            <p class="text-muted text-center mb-0">
+                                                <i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes
+                                            </p>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">
+                                            <i class="ph-info ph-sm me-1"></i>Select one or more classes for this exam
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Publication Settings -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-globe ph-sm me-2"></i>Publication Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="is_published" value="1" id="publishStatus">
+                                            <label class="form-check-label" for="publishStatus">
+                                                <span class="fw-medium">Publish exam immediately</span>
+                                            </label>
+                                        </div>
+                                        <div class="text-muted mt-2">
+                                            <i class="ph-info ph-sm me-1"></i>
+                                            If not checked, the exam will be saved as a draft and won't be visible to students.
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="alert alert-danger d-none" id="add-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn btn-primary" id="add-btn">Submit</button>
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                                    <i class="ph-x ph-sm me-1"></i>Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="add-btn">
+                                    <i class="ph-check-circle ph-sm me-1"></i>Create Exam
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -284,10 +556,12 @@
             <!-- Edit Exam Modal -->
             @can('Update exam')
             <div id="editModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered mw-650px">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Edit Exam</h5>
+                            <h5 class="modal-title">
+                                <i class="ph-pencil ph-sm me-2"></i>Edit Exam
+                            </h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form id="edit-exam-form" autocomplete="off">
@@ -296,75 +570,131 @@
                             <input type="hidden" id="edit-id-field" name="id">
                             <div class="modal-body">
                                 <input type="hidden" name="staffId" value="{{ Auth::user()->id }}">
-                                <div class="mb-3">
-                                    <label class="form-label required">Exam Title</label>
-                                    <input type="text" name="title" id="edit-title" class="form-control" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Description</label>
-                                    <textarea name="description" id="edit-description" class="form-control" rows="3"></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label required">Duration (minutes)</label>
-                                    <input type="number" name="duration" id="edit-duration" class="form-control" required min="1">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label required">Start Time</label>
-                                    <input type="datetime-local" name="start_time" id="edit-start_time" class="form-control" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label required">End Time</label>
-                                    <input type="datetime-local" name="end_time" id="edit-end_time" class="form-control" required>
-                                </div>
 
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Select Term</label>
-                                        <select name="termid" id="edit-termid" class="form-control" required>
-                                            <option value="" selected>Select Term</option>
-                                            @foreach ($terms as $term)
-                                                <option value="{{ $term->id }}">{{ $term->term }}</option>
-                                            @endforeach
-                                        </select>
+                                <!-- Basic Information -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-info ph-sm me-2"></i>Basic Information</h6>
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label required">Select Session</label>
-                                        <select name="session" id="edit-session" class="form-control" required>
-                                            <option value="" selected>Select Session</option>
-                                            @foreach ($sessions as $schoolsession)
-                                                <option value="{{ $schoolsession->id }}">{{ $schoolsession->session }}</option>
-                                            @endforeach
-                                        </select>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label required">Exam Title</label>
+                                                <input type="text" name="title" id="edit-title" class="form-control" required>
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label">Description</label>
+                                                <textarea name="description" id="edit-description" class="form-control" rows="2"></textarea>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label required">Select Subject</label>
-                                    <select name="subject_id" id="edit-subject_id" class="form-control" required>
-                                        <option value="" selected>Select Subject</option>
-                                        {{-- Options will be loaded dynamically via JavaScript --}}
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label required">Select Classes</label>
-                                    <div id="editClassContainer" class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
-                                        <p class="text-muted text-center mb-0">Loading classes...</p>
+                                <!-- Duration & Timing -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-clock ph-sm me-2"></i>Duration & Timing</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label required">Duration (minutes)</label>
+                                                <div class="input-group">
+                                                    <input type="number" name="duration" id="edit-duration" class="form-control" required min="1">
+                                                    <span class="input-group-text">min</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label required">Start Time</label>
+                                                <input type="datetime-local" name="start_time" id="edit-start_time" class="form-control" required>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label required">End Time</label>
+                                                <input type="datetime-local" name="end_time" id="edit-end_time" class="form-control" required>
+                                            </div>
+                                        </div>
+                                        <div class="alert alert-warning d-none" id="edit-duration-alert">
+                                            <i class="ph-warning-circle ph-sm me-2"></i>
+                                            <span id="edit-duration-alert-text"></span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="is_published" id="edit-publishStatus" value="1">
-                                        <label class="form-check-label" for="edit-publishStatus">Publish exam immediately</label>
+                                <!-- Academic Information -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-graduation-cap ph-sm me-2"></i>Academic Information</h6>
                                     </div>
-                                    <div class="text-muted fs-7 mt-1">If not checked, the exam will be saved as a draft.</div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label required">Select Term</label>
+                                                <select name="termid" id="edit-termid" class="form-control" required>
+                                                    <option value="" selected>Select Term</option>
+                                                    @foreach ($terms as $term)
+                                                        <option value="{{ $term->id }}">{{ $term->term }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label required">Select Session</label>
+                                                <select name="session" id="edit-session" class="form-control" required>
+                                                    <option value="" selected>Select Session</option>
+                                                    @foreach ($sessions as $schoolsession)
+                                                        <option value="{{ $schoolsession->id }}">{{ $schoolsession->session }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label required">Select Subject</label>
+                                                <select name="subject_id" id="edit-subject_id" class="form-control" required>
+                                                    <option value="" selected>Select Subject</option>
+                                                    <!-- Options will be loaded dynamically -->
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                <!-- Class Assignment -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-users ph-sm me-2"></i>Class Assignment</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <label class="form-label required">Select Classes</label>
+                                        <div id="editClassContainer" class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                            <p class="text-muted text-center mb-0">
+                                                <i class="ph-circle-notch ph-sm spin me-1"></i>Loading classes...
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Publication Settings -->
+                                <div class="card border mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="ph-globe ph-sm me-2"></i>Publication Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="is_published" id="edit-publishStatus" value="1">
+                                            <label class="form-check-label" for="edit-publishStatus">
+                                                <span class="fw-medium">Publish exam immediately</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn btn-primary" id="update-btn">Update</button>
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                                    <i class="ph-x ph-sm me-1"></i>Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="update-btn">
+                                    <i class="ph-check-circle ph-sm me-1"></i>Update Exam
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -383,6 +713,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
     // Initialize modal filtering
     initModalFiltering();
 
@@ -392,7 +728,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const examId = e.target.closest('.edit-exam-btn').dataset.id;
             if (examId) {
-                console.log('Editing exam:', examId);
                 loadExamForEdit(examId);
             }
         }
@@ -401,20 +736,19 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const examId = e.target.closest('.delete-exam-btn').dataset.id;
             if (examId) {
-                console.log('Deleting exam:', examId);
                 deleteExam(examId);
             }
         }
 
         // Check all functionality
         if (e.target.id === 'checkAll') {
-            const checkboxes = document.querySelectorAll('input[name="chk_child"]');
+            const checkboxes = document.querySelectorAll('.exam-checkbox');
             checkboxes.forEach(cb => cb.checked = e.target.checked);
             toggleRemoveActions();
         }
 
         // Individual checkbox change
-        if (e.target.name === 'chk_child') {
+        if (e.target.classList.contains('exam-checkbox')) {
             toggleRemoveActions();
         }
     });
@@ -424,8 +758,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (addForm) {
         addForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log('Add form submitted');
             submitAddForm();
+        });
+
+        // Duration validation for add form
+        addForm.querySelectorAll('input[name="duration"], input[name="start_time"], input[name="end_time"]').forEach(input => {
+            input.addEventListener('change', validateDuration);
         });
     }
 
@@ -433,8 +771,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log('Edit form submitted');
             submitEditForm();
+        });
+
+        // Duration validation for edit form
+        editForm.querySelectorAll('input[name="duration"], input[name="start_time"], input[name="end_time"]').forEach(input => {
+            input.addEventListener('change', validateEditDuration);
         });
     }
 
@@ -458,7 +800,6 @@ function initModalFiltering() {
     const addSubject = document.getElementById('addSubject');
 
     if (addTerm && addSession && addSubject) {
-        // When term or session changes, fetch subjects dynamically
         addTerm.addEventListener('change', function() {
             fetchFilteredSubjects(this.value, addSession.value, 'add');
         });
@@ -478,10 +819,63 @@ function initModalFiltering() {
                 loadClassesForSubject(this.value, 'add');
             } else {
                 document.getElementById('addClassContainer').innerHTML =
-                    '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+                    '<p class="text-muted text-center mb-0"><i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes</p>';
             }
         });
     }
+}
+
+// Function to validate duration against start and end times
+function validateDuration() {
+    const form = document.getElementById('add-exam-form');
+    const duration = parseInt(form.querySelector('input[name="duration"]').value) || 0;
+    const startTime = form.querySelector('input[name="start_time"]').value;
+    const endTime = form.querySelector('input[name="end_time"]').value;
+
+    if (duration && startTime && endTime) {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const totalMinutes = Math.round((end - start) / (1000 * 60));
+
+        const alertDiv = document.getElementById('duration-alert');
+        const alertText = document.getElementById('duration-alert-text');
+
+        if (duration > totalMinutes) {
+            alertText.textContent = `Duration (${duration} minutes) exceeds the time between start and end (${totalMinutes} minutes). Please adjust the duration or extend the end time.`;
+            alertDiv.classList.remove('d-none');
+            return false;
+        } else {
+            alertDiv.classList.add('d-none');
+            return true;
+        }
+    }
+    return true;
+}
+
+function validateEditDuration() {
+    const form = document.getElementById('edit-exam-form');
+    const duration = parseInt(form.querySelector('input[name="duration"]').value) || 0;
+    const startTime = form.querySelector('input[name="start_time"]').value;
+    const endTime = form.querySelector('input[name="end_time"]').value;
+
+    if (duration && startTime && endTime) {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const totalMinutes = Math.round((end - start) / (1000 * 60));
+
+        const alertDiv = document.getElementById('edit-duration-alert');
+        const alertText = document.getElementById('edit-duration-alert-text');
+
+        if (duration > totalMinutes) {
+            alertText.textContent = `Duration (${duration} minutes) exceeds the time between start and end (${totalMinutes} minutes). Please adjust the duration or extend the end time.`;
+            alertDiv.classList.remove('d-none');
+            return false;
+        } else {
+            alertDiv.classList.add('d-none');
+            return true;
+        }
+    }
+    return true;
 }
 
 // Function to fetch subjects based on term and session
@@ -491,7 +885,8 @@ function fetchFilteredSubjects(termId, sessionId, mode = 'add') {
 
     // Show loading
     subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
-    document.getElementById(subjectContainer).innerHTML = '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+    document.getElementById(subjectContainer).innerHTML =
+        '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i>Loading subjects...</p>';
 
     // Build query parameters
     const params = new URLSearchParams();
@@ -509,7 +904,6 @@ function fetchFilteredSubjects(termId, sessionId, mode = 'add') {
         return response.json();
     })
     .then(data => {
-        console.log('Filtered subjects response:', data);
         if (data.subjects && data.subjects.length > 0) {
             let options = '<option value="" selected>Select Subject</option>';
 
@@ -540,7 +934,7 @@ function loadClassesForSubject(subjectId, mode = 'add') {
     const containerId = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
     const container = document.getElementById(containerId);
 
-    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
+    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i> Loading classes...</p>';
 
     fetch(`/exams/subject-classes/${subjectId}`, {
         headers: {
@@ -553,7 +947,6 @@ function loadClassesForSubject(subjectId, mode = 'add') {
         return response.json();
     })
     .then(data => {
-        console.log('Classes response for', mode, 'mode:', data);
         if (data.success && data.classes && data.classes.length > 0) {
             let html = '<div class="row">';
 
@@ -566,7 +959,8 @@ function loadClassesForSubject(subjectId, mode = 'add') {
                                    value="${cls.id}"
                                    id="class_${mode}_${cls.id}">
                             <label class="form-check-label" for="class_${mode}_${cls.id}">
-                                ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
+                                <span class="fw-medium">${cls.schoolclass}</span>
+                                ${cls.arm ? `<span class="text-muted">(${cls.arm})</span>` : ''}
                             </label>
                         </div>
                     </div>`;
@@ -602,14 +996,12 @@ function loadExamForEdit(examId) {
         }
     })
     .then(response => {
-        console.log('Edit response status:', response.status);
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
         return response.json();
     })
     .then(data => {
-        console.log('Edit response data for exam:', examId, data);
         if (data.success && data.exam) {
             populateEditForm(data);
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -632,7 +1024,6 @@ function loadExamForEdit(examId) {
 
 function populateEditForm(data) {
     const exam = data.exam;
-    console.log('Populating edit form with data:', data);
 
     // Basic fields
     document.getElementById('edit-id-field').value = exam.id;
@@ -642,22 +1033,12 @@ function populateEditForm(data) {
 
     // Date fields - format for datetime-local input
     if (exam.start_time) {
-        let startDate;
-        if (exam.start_time.includes('T')) {
-            startDate = new Date(exam.start_time);
-        } else {
-            startDate = new Date(exam.start_time.replace(' ', 'T'));
-        }
+        let startDate = new Date(exam.start_time);
         document.getElementById('edit-start_time').value = formatDateForInput(startDate);
     }
 
     if (exam.end_time) {
-        let endDate;
-        if (exam.end_time.includes('T')) {
-            endDate = new Date(exam.end_time);
-        } else {
-            endDate = new Date(exam.end_time.replace(' ', 'T'));
-        }
+        let endDate = new Date(exam.end_time);
         document.getElementById('edit-end_time').value = formatDateForInput(endDate);
     }
 
@@ -680,7 +1061,6 @@ function populateEditForm(data) {
 
                 // Now load classes for this subject
                 if (data.subject_id) {
-                    console.log('Loading classes for subject:', data.subject_id, 'with selected IDs:', data.schoolclass_ids);
                     loadClassesForEditWithSelection(data.subject_id, data.schoolclass_ids || []);
                 }
             }
@@ -689,11 +1069,9 @@ function populateEditForm(data) {
 }
 
 function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
-    console.log('Loading classes for edit - Subject ID:', subjectId, 'Selected Class IDs:', selectedClassIds);
-
     const container = document.getElementById('editClassContainer');
 
-    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ri-loader-2-line spin me-1"></i> Loading classes...</p>';
+    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i> Loading classes...</p>';
 
     fetch(`/exams/subject-classes/${subjectId}`, {
         headers: {
@@ -706,16 +1084,12 @@ function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
         return response.json();
     })
     .then(data => {
-        console.log('Edit classes response:', data);
         if (data.success && data.classes && data.classes.length > 0) {
             let html = '<div class="row">';
 
             data.classes.forEach(cls => {
-                // Check if this class ID is in the selectedClassIds array
                 const classId = parseInt(cls.id);
                 const isChecked = selectedClassIds.some(id => parseInt(id) === classId);
-
-                console.log(`Class ${cls.id} (${cls.schoolclass}) - Should be checked: ${isChecked}`);
 
                 html += `
                     <div class="col-md-6 mb-2">
@@ -727,7 +1101,8 @@ function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
                                    id="class_edit_${cls.id}"
                                    ${isChecked ? 'checked' : ''}>
                             <label class="form-check-label" for="class_edit_${cls.id}">
-                                ${cls.schoolclass} ${cls.arm ? '(' + cls.arm + ')' : ''}
+                                <span class="fw-medium">${cls.schoolclass}</span>
+                                ${cls.arm ? `<span class="text-muted">(${cls.arm})</span>` : ''}
                             </label>
                         </div>
                     </div>`;
@@ -738,17 +1113,10 @@ function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
 
             // Verify checkboxes are checked
             setTimeout(() => {
-                const checkboxes = container.querySelectorAll('.class-checkbox');
-                console.log(`Total checkboxes: ${checkboxes.length}`);
-                const checkedBoxes = container.querySelectorAll('.class-checkbox:checked');
-                console.log(`Checked boxes: ${checkedBoxes.length}`);
-
-                // Double-check each checkbox
                 selectedClassIds.forEach(classId => {
                     const checkbox = document.getElementById(`class_edit_${classId}`);
                     if (checkbox) {
                         checkbox.checked = true;
-                        console.log(`Manually checked checkbox for class ${classId}`);
                     }
                 });
             }, 100);
@@ -766,7 +1134,6 @@ function formatDateForInput(date) {
     if (!date || isNaN(date)) return '';
 
     try {
-        // Format to YYYY-MM-DDTHH:MM
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
@@ -785,6 +1152,17 @@ function submitAddForm() {
     const submitBtn = document.getElementById('add-btn');
     const originalText = submitBtn.textContent;
 
+    // Validate duration first
+    if (!validateDuration()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Duration',
+            text: 'Duration exceeds the time between start and end. Please adjust.',
+            timer: 3000
+        });
+        return;
+    }
+
     // Validate class selection
     const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
     if (classCheckboxes.length === 0) {
@@ -799,12 +1177,6 @@ function submitAddForm() {
 
     const formData = new FormData(form);
 
-    // Log form data for debugging
-    console.log('Add form data:');
-    for (let [key, value] of formData.entries()) {
-        console.log(key + ': ' + value);
-    }
-
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
     submitBtn.disabled = true;
 
@@ -816,11 +1188,9 @@ function submitAddForm() {
         }
     })
     .then(response => {
-        console.log('Add response status:', response.status);
         return response.json();
     })
     .then(data => {
-        console.log('Add response data:', data);
         if (data.success) {
             Swal.fire({
                 icon: 'success',
@@ -835,7 +1205,7 @@ function submitAddForm() {
 
                 // Reset class container
                 document.getElementById('addClassContainer').innerHTML =
-                    '<p class="text-muted text-center mb-0">Select a subject first...</p>';
+                    '<p class="text-muted text-center mb-0"><i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes</p>';
 
                 // Reload page
                 window.location.reload();
@@ -886,6 +1256,17 @@ function submitEditForm() {
         return;
     }
 
+    // Validate duration first
+    if (!validateEditDuration()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Duration',
+            text: 'Duration exceeds the time between start and end. Please adjust.',
+            timer: 3000
+        });
+        return;
+    }
+
     // Validate class selection
     const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
     if (classCheckboxes.length === 0) {
@@ -899,13 +1280,7 @@ function submitEditForm() {
     }
 
     const formData = new FormData(form);
-    formData.append('_method', 'PUT'); // Add method override for PUT
-
-    // Log form data for debugging
-    console.log('Edit form data for exam', examId, ':');
-    for (let [key, value] of formData.entries()) {
-        console.log(key + ': ' + value);
-    }
+    formData.append('_method', 'PUT');
 
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
     submitBtn.disabled = true;
@@ -919,23 +1294,19 @@ function submitEditForm() {
         }
     })
     .then(response => {
-        console.log('Update response status:', response.status);
         return response.json();
     })
     .then(data => {
-        console.log('Update response data:', data);
         if (data.success) {
             Swal.fire({
                 icon: 'success',
                 title: 'Success!',
-                text: data.message || 'Exam updated successfully! Questions have been preserved.',
+                text: data.message || 'Exam updated successfully!',
                 timer: 2000,
                 showConfirmButton: false
             }).then(() => {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
                 if (modal) modal.hide();
-
-                // Reload page
                 window.location.reload();
             });
         } else {
@@ -999,11 +1370,9 @@ function deleteExam(examId) {
                 }
             })
             .then(response => {
-                console.log('Delete response status:', response.status);
                 return response.json();
             })
             .then(data => {
-                console.log('Delete response data:', data);
                 Swal.close();
                 if (data.success) {
                     Swal.fire({
@@ -1038,7 +1407,7 @@ function deleteExam(examId) {
 }
 
 function deleteMultiple() {
-    const checkedBoxes = document.querySelectorAll('input[name="chk_child"]:checked');
+    const checkedBoxes = document.querySelectorAll('.exam-checkbox:checked');
     if (checkedBoxes.length === 0) {
         Swal.fire({
             icon: 'warning',
@@ -1050,12 +1419,12 @@ function deleteMultiple() {
     }
 
     const ids = Array.from(checkedBoxes)
-        .map(cb => cb.closest('td').dataset.id)
+        .map(cb => cb.dataset.id)
         .filter(id => id);
 
     Swal.fire({
         title: `Delete ${ids.length} exam(s)?`,
-        text: "This will delete all exams and their associated questions!",
+        text: "This will delete all selected exams and their associated questions!",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -1085,11 +1454,9 @@ function deleteMultiple() {
                 body: JSON.stringify({ ids: ids })
             })
             .then(response => {
-                console.log('Bulk delete response status:', response.status);
                 return response.json();
             })
             .then(data => {
-                console.log('Bulk delete response data:', data);
                 Swal.close();
                 if (data.success) {
                     Swal.fire({
@@ -1126,13 +1493,43 @@ function deleteMultiple() {
 function toggleRemoveActions() {
     const removeActions = document.getElementById('remove-actions');
     if (removeActions) {
-        const checkedBoxes = document.querySelectorAll('input[name="chk_child"]:checked');
+        const checkedBoxes = document.querySelectorAll('.exam-checkbox:checked');
         removeActions.classList.toggle('d-none', checkedBoxes.length === 0);
     }
 }
 </script>
 
 <style>
+.card-animate {
+    transition: transform 0.3s ease;
+}
+
+.card-animate:hover {
+    transform: translateY(-5px);
+}
+
+.avatar-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #74788d;
+}
+
 .spin {
     animation: spin 1s linear infinite;
 }
@@ -1140,10 +1537,6 @@ function toggleRemoveActions() {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-option[style*="display: none"] {
-    display: none !important;
 }
 
 .spinner-border {
@@ -1161,32 +1554,43 @@ option[style*="display: none"] {
     to { transform: rotate(360deg); }
 }
 
-/* Class badge styling */
-.classes .badge {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 14px;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
 }
 
-/* Adjust table cell width for class column */
-td.classes {
-    min-width: 150px;
-    max-width: 250px;
-}
+/* Print styles */
+@media print {
+    .card-header,
+    .btn,
+    #remove-actions,
+    .search-box,
+    .modal,
+    .pagination {
+        display: none !important;
+    }
 
-/* Question count badge styling */
-.questions .badge {
-    font-size: 0.7rem;
-    padding: 0.15rem 0.4rem;
-    margin-left: 4px;
-}
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
 
-/* Class badge container */
-.classes > div {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    th, td {
+        border: 1px solid #ddd !important;
+        padding: 8px !important;
+    }
 }
 </style>
 

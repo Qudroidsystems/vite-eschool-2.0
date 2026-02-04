@@ -32,11 +32,21 @@ class ExamController extends Controller
     {
         $user = auth()->user();
 
+        // First, get terms and sessions for dropdowns
+        $terms = Schoolterm::all();
+        $sessions = Schoolsession::all();
+
+        // Query exams with all necessary relationships including term and session
         $query = Exam::query()
-            ->with(['schoolclass' => function($query) {
-                $query->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
-                      ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm');
-            }, 'subject'])
+            ->with([
+                'schoolclass' => function($query) {
+                    $query->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
+                          ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm');
+                },
+                'subject:id,subject,subject_code',
+                'termRelation:id,term',  // Changed from 'term' to 'termRelation'
+                'sessionRelation:id,session'  // Changed from 'session' to 'sessionRelation'
+            ])
             ->withCount('questions')
             ->where('staffId', $user->id);
 
@@ -44,14 +54,19 @@ class ExamController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('subject', function($q) use ($search) {
+                      $q->where('subject', 'like', "%{$search}%");
+                  });
             });
         }
 
-        $exams = $query->orderBy('id', 'desc')->paginate(15);
+        // Apply sorting
+        $sort = $request->get('sort', 'id');
+        $order = $request->get('order', 'desc');
+        $query->orderBy($sort, $order);
 
-        $terms = Schoolterm::all();
-        $sessions = Schoolsession::all();
+        $exams = $query->paginate(15);
 
         // Load all subjects initially for the dropdown (will be filtered by JS)
         $mysubjects = SubjectTeacher::where('staffid', $user->id)
@@ -82,9 +97,26 @@ class ExamController extends Controller
                 'schoolarm.arm as arm_name'
             )->get();
 
+        // Calculate statistics for the dashboard
+        $totalExams = $exams->total();
+        $totalQuestions = $exams->sum('questions_count');
+        $totalClasses = $myclass->count();
+        $totalSubjects = $mysubjects->count();
+
         $pagetitle = 'Exams Management';
 
-        return view('exam.index', compact('pagetitle', 'exams', 'terms', 'sessions', 'mysubjects', 'myclass'));
+        return view('exam.index', compact(
+            'pagetitle',
+            'exams',
+            'terms',
+            'sessions',
+            'mysubjects',
+            'myclass',
+            'totalExams',
+            'totalQuestions',
+            'totalClasses',
+            'totalSubjects'
+        ));
     }
 
     public function create()
@@ -109,6 +141,20 @@ class ExamController extends Controller
                 'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
                 'is_published'    => 'boolean|nullable',
             ]);
+
+            // Validate duration against start and end times
+            $startTime = strtotime($validated['start_time']);
+            $endTime = strtotime($validated['end_time']);
+            $durationMinutes = $validated['duration'];
+            $totalMinutes = round(($endTime - $startTime) / 60);
+
+            if ($durationMinutes > $totalMinutes) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Duration ({$durationMinutes} minutes) exceeds the time between start and end ({$totalMinutes} minutes). Please adjust.",
+                    'errors' => ['duration' => 'Duration exceeds available time']
+                ], 422);
+            }
 
             $validated['is_published'] = $request->has('is_published');
 
@@ -152,7 +198,41 @@ class ExamController extends Controller
 
     public function show($id)
     {
-        abort(404);
+        // This method now shows questions for the exam
+        $user = Auth::user();
+
+        $exam = Exam::with([
+                'schoolclass' => function($query) {
+                    $query->leftJoin('schoolarm', 'schoolclass.arm', '=', 'schoolarm.id')
+                          ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm');
+                },
+                'subject:id,subject',
+                'termRelation:id,term',
+                'sessionRelation:id,session'
+            ])
+            ->where('id', $id)
+            ->where('staffId', $user->id)
+            ->firstOrFail();
+
+        // Get questions for this exam with options
+        $questions = Question::with('options')
+            ->where('exam_id', $id)
+            ->orderBy('order')
+            ->get();
+
+        // Get term and session for display
+        $term = Schoolterm::find($exam->termid);
+        $session = Schoolsession::find($exam->session);
+
+        $pagetitle = 'Questions for: ' . $exam->title;
+
+        return view('questions.show', compact(
+            'pagetitle',
+            'exam',
+            'questions',
+            'term',
+            'session'
+        ));
     }
 
     public function edit(string $id)
@@ -208,6 +288,20 @@ class ExamController extends Controller
                 'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
                 'is_published'    => 'boolean|nullable',
             ]);
+
+            // Validate duration against start and end times
+            $startTime = strtotime($validated['start_time']);
+            $endTime = strtotime($validated['end_time']);
+            $durationMinutes = $validated['duration'];
+            $totalMinutes = round(($endTime - $startTime) / 60);
+
+            if ($durationMinutes > $totalMinutes) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Duration ({$durationMinutes} minutes) exceeds the time between start and end ({$totalMinutes} minutes). Please adjust.",
+                    'errors' => ['duration' => 'Duration exceeds available time']
+                ], 422);
+            }
 
             $validated['is_published'] = $request->has('is_published');
             $validated['staffId'] = $exam->staffId;
@@ -485,212 +579,218 @@ class ExamController extends Controller
         }
     }
 
-
     public function showStudents(Request $request, $examId)
-{
-    $exam = Exam::where('id', $examId)
+    {
+        $exam = Exam::where('id', $examId)
                 ->where('staffId', auth()->user()->id)
-                ->with('schoolclass')
+                ->with(['schoolclass', 'termRelation:id,term', 'sessionRelation:id,session'])
                 ->firstOrFail();
 
-    // Get total number of questions and total marks for this exam
-    $examTotal = DB::table('questions')
-        ->where('exam_id', $examId)
-        ->select(
-            DB::raw('COUNT(*) as total_questions'),
-            DB::raw('SUM(COALESCE(marks, 1.0)) as total_marks')
-        )
-        ->first();
+        // Get total number of questions and total marks for this exam
+        $examTotal = DB::table('questions')
+            ->where('exam_id', $examId)
+            ->select(
+                DB::raw('COUNT(*) as total_questions'),
+                DB::raw('SUM(COALESCE(marks, 1.0)) as total_marks')
+            )
+            ->first();
 
-    $classId = $request->query('class_id');
+        $classId = $request->query('class_id');
 
-    // Main query - updated to join with studentclass table
-    $query = DB::table('exam_attempts')
-        ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
-        ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-        ->leftJoin('studentclass', function ($join) {
-            $join->on('studentRegistration.id', '=', 'studentclass.studentId')
-                 ->where('studentclass.sessionid', function ($q) {
-                     // Get current or most recent session
-                     $q->select('id')
-                       ->from('schoolsession')
-                       ->where('status', 'Current')
-                       ->orWhereRaw('id = (SELECT MAX(id) FROM schoolsession)')
-                       ->limit(1);
-                 })
-                 ->where('studentclass.termid', function ($q) {
-                     // Get current or most recent term
-                     $q->select('id')
-                       ->from('schoolterm')
-                       ->where('status', 'Current')
-                       ->orWhereRaw('id = (SELECT MAX(id) FROM schoolterm)')
-                       ->limit(1);
-                 });
-        })
-        ->leftJoin('results', function ($join) use ($examId) {
-            $join->on('exam_attempts.student_id', '=', 'results.user_id')
-                 ->where('results.exam_id', '=', $examId);
-        })
-        ->where('exam_attempts.exam_id', $examId)
-        ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
+        // Main query - updated to join with studentclass table
+        $query = DB::table('exam_attempts')
+            ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
+            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+            ->leftJoin('studentclass', function ($join) {
+                $join->on('studentRegistration.id', '=', 'studentclass.studentId')
+                     ->where('studentclass.sessionid', function ($q) {
+                         // Get current or most recent session
+                         $q->select('id')
+                           ->from('schoolsession')
+                           ->where('status', 'Current')
+                           ->orWhereRaw('id = (SELECT MAX(id) FROM schoolsession)')
+                           ->limit(1);
+                     })
+                     ->where('studentclass.termid', function ($q) {
+                         // Get current or most recent term
+                         $q->select('id')
+                           ->from('schoolterm')
+                           ->where('status', 'Current')
+                           ->orWhereRaw('id = (SELECT MAX(id) FROM schoolterm)')
+                           ->limit(1);
+                     });
+            })
+            ->leftJoin('results', function ($join) use ($examId) {
+                $join->on('exam_attempts.student_id', '=', 'results.user_id')
+                     ->where('results.exam_id', '=', $examId);
+            })
+            ->where('exam_attempts.exam_id', $examId)
+            ->whereIn('exam_attempts.status', ['completed', 'in_progress']);
 
-    // Apply class filter if specified
-    if ($classId) {
-        $query->where('studentclass.schoolclassid', $classId);
-    }
-
-    $query->select(
-        'studentRegistration.id',
-        'studentRegistration.firstname',
-        'studentRegistration.lastname',
-        'studentRegistration.admissionNo',
-        'studentpicture.picture as picture',
-        'results.score',
-        'results.total_marks',
-        'exam_attempts.status as attempt_status',
-        'studentclass.schoolclassid' // Include class ID for reference
-    );
-
-    $students = $query->orderBy('studentRegistration.lastname')->paginate(15);
-
-    // Get correct options for all questions in this exam
-    $correctOptions = DB::table('options')
-        ->join('questions', 'options.question_id', '=', 'questions.id')
-        ->where('questions.exam_id', $examId)
-        ->where('options.is_correct', true)
-        ->select('options.id', 'options.question_id', 'options.option_text')
-        ->get()
-        ->keyBy('question_id');
-
-    // Get all questions with their marks and types
-    $questions = DB::table('questions')
-        ->where('exam_id', $examId)
-        ->select('id', 'marks', 'type')
-        ->get()
-        ->keyBy('id');
-
-    // Now calculate for each student
-    foreach ($students as $student) {
-        // Skip calculation for in_progress attempts
-        if ($student->attempt_status === 'in_progress') {
-            $student->attempted_questions = 0;
-            $student->correct_count = 0;
-            $student->marks_earned = 0;
-            $student->incorrect = 0;
-            $student->score = 0;
-            continue;
+        // Apply class filter if specified
+        if ($classId) {
+            $query->where('studentclass.schoolclassid', $classId);
         }
 
-        // Get all answers for this student
-        $answers = Answer::where('exam_id', $examId)
-                        ->where('user_id', $student->id)
-                        ->with(['option'])
-                        ->get();
+        $query->select(
+            'studentRegistration.id',
+            'studentRegistration.firstname',
+            'studentRegistration.lastname',
+            'studentRegistration.admissionNo',
+            'studentpicture.picture as picture',
+            'results.score',
+            'results.total_marks',
+            'exam_attempts.status as attempt_status',
+            'studentclass.schoolclassid' // Include class ID for reference
+        );
 
-        $attempted = 0;
-        $correctCount = 0;
-        $marksEarned = 0;
+        $students = $query->orderBy('studentRegistration.lastname')->paginate(15);
 
-        foreach ($answers as $answer) {
-            $attempted++;
+        // Get correct options for all questions in this exam
+        $correctOptions = DB::table('options')
+            ->join('questions', 'options.question_id', '=', 'questions.id')
+            ->where('questions.exam_id', $examId)
+            ->where('options.is_correct', true)
+            ->select('options.id', 'options.question_id', 'options.option_text')
+            ->get()
+            ->keyBy('question_id');
 
-            $question = $questions->get($answer->question_id);
-            $questionMarks = (float) ($question->marks ?? 1.0);
-            $correctOption = $correctOptions->get($answer->question_id);
+        // Get all questions with their marks and types
+        $questions = DB::table('questions')
+            ->where('exam_id', $examId)
+            ->select('id', 'marks', 'type')
+            ->get()
+            ->keyBy('id');
 
-            if ($question && $question->type === 'short_answer') {
-                // For short answers, use consistent normalization
-                $studentAnswer = trim(strip_tags($answer->short_answer ?? ''));
-                $correctAnswer = trim(strip_tags($correctOption->option_text ?? ''));
+        // Now calculate for each student
+        foreach ($students as $student) {
+            // Skip calculation for in_progress attempts
+            if ($student->attempt_status === 'in_progress') {
+                $student->attempted_questions = 0;
+                $student->correct_count = 0;
+                $student->marks_earned = 0;
+                $student->incorrect = 0;
+                $student->score = 0;
+                continue;
+            }
 
-                if (!empty($studentAnswer) && !empty($correctAnswer)) {
-                    // Normalize for comparison
-                    $normalizedStudent = $this->normalizeTextForComparison($studentAnswer);
-                    $normalizedCorrect = $this->normalizeTextForComparison($correctAnswer);
+            // Get all answers for this student
+            $answers = Answer::where('exam_id', $examId)
+                            ->where('user_id', $student->id)
+                            ->with(['option'])
+                            ->get();
 
-                    if ($normalizedStudent === $normalizedCorrect) {
+            $attempted = 0;
+            $correctCount = 0;
+            $marksEarned = 0;
+
+            foreach ($answers as $answer) {
+                $attempted++;
+
+                $question = $questions->get($answer->question_id);
+                $questionMarks = (float) ($question->marks ?? 1.0);
+                $correctOption = $correctOptions->get($answer->question_id);
+
+                if ($question && $question->type === 'short_answer') {
+                    // For short answers, use consistent normalization
+                    $studentAnswer = trim(strip_tags($answer->short_answer ?? ''));
+                    $correctAnswer = trim(strip_tags($correctOption->option_text ?? ''));
+
+                    if (!empty($studentAnswer) && !empty($correctAnswer)) {
+                        // Normalize for comparison
+                        $normalizedStudent = $this->normalizeTextForComparison($studentAnswer);
+                        $normalizedCorrect = $this->normalizeTextForComparison($correctAnswer);
+
+                        if ($normalizedStudent === $normalizedCorrect) {
+                            $correctCount++;
+                            $marksEarned += $questionMarks;
+                        }
+                    }
+                } else {
+                    // For MCQ/TrueFalse
+                    if ($answer->option && $answer->option->is_correct) {
                         $correctCount++;
                         $marksEarned += $questionMarks;
                     }
                 }
-            } else {
-                // For MCQ/TrueFalse
-                if ($answer->option && $answer->option->is_correct) {
-                    $correctCount++;
-                    $marksEarned += $questionMarks;
-                }
+            }
+
+            // Add calculated fields to student object
+            $student->attempted_questions = $attempted;
+            $student->correct_count = $correctCount;
+            $student->marks_earned = $marksEarned;
+            $student->incorrect = $attempted - $correctCount;
+
+            // Use calculated marks_earned for score
+            $student->score = $marksEarned;
+            $student->total_marks = $examTotal->total_marks ?? 0;
+
+            // Update results table if student has completed the exam
+            if ($student->attempt_status === 'completed') {
+                DB::table('results')
+                    ->updateOrInsert(
+                        [
+                            'user_id' => $student->id,
+                            'exam_id' => $examId
+                        ],
+                        [
+                            'score' => $marksEarned,
+                            'total_marks' => $examTotal->total_marks ?? 0,
+                            'updated_at' => now()
+                        ]
+                    );
             }
         }
 
-        // Add calculated fields to student object
-        $student->attempted_questions = $attempted;
-        $student->correct_count = $correctCount;
-        $student->marks_earned = $marksEarned;
-        $student->incorrect = $attempted - $correctCount;
+        // Get assigned classes for the exam group
+        $assignedClasses = Schoolclass::whereIn('id',
+            Exam::where('title', $exam->title)
+                ->where('staffId', $exam->staffId)
+                ->where('subject_id', $exam->subject_id)
+                ->where('termid', $exam->termid)
+                ->where('session', $exam->session)
+                ->pluck('schoolclass_id')
+        )->get(['id as schoolclassID', 'schoolclass', 'arm']);
 
-        // Use calculated marks_earned for score
-        $student->score = $marksEarned;
-        $student->total_marks = $examTotal->total_marks ?? 0;
+        // Pass exam totals to view
+        $examTotals = [
+            'total_questions' => $examTotal->total_questions ?? 0,
+            'total_marks' => $examTotal->total_marks ?? 0
+        ];
 
-        // Update results table if student has completed the exam
-        if ($student->attempt_status === 'completed') {
-            DB::table('results')
-                ->updateOrInsert(
-                    [
-                        'user_id' => $student->id,
-                        'exam_id' => $examId
-                    ],
-                    [
-                        'score' => $marksEarned,
-                        'total_marks' => $examTotal->total_marks ?? 0,
-                        'updated_at' => now()
-                    ]
-                );
+        // Get term and session for display
+        $term = Schoolterm::find($exam->termid);
+        $session = Schoolsession::find($exam->session);
+
+        if ($request->ajax()) {
+            return response()->json($students);
         }
+
+        $pagetitle = 'Students who Attempted: ' . $exam->title;
+
+        return view('exam.students', compact(
+            'pagetitle',
+            'exam',
+            'students',
+            'assignedClasses',
+            'classId',
+            'examTotals',
+            'term',
+            'session'
+        ));
     }
 
-    // Get assigned classes for the exam group
-    $assignedClasses = Schoolclass::whereIn('id',
-        Exam::where('title', $exam->title)
-            ->where('staffId', $exam->staffId)
-            ->where('subject_id', $exam->subject_id)
-            ->where('termid', $exam->termid)
-            ->where('session', $exam->session)
-            ->pluck('schoolclass_id')
-    )->get(['id as schoolclassID', 'schoolclass', 'arm']);
-
-    // Pass exam totals to view
-    $examTotals = [
-        'total_questions' => $examTotal->total_questions ?? 0,
-        'total_marks' => $examTotal->total_marks ?? 0
-    ];
-
-    if ($request->ajax()) {
-        return response()->json($students);
+    // Helper method for consistent text normalization
+    private function normalizeTextForComparison($text)
+    {
+        $text = trim($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/\s+/', ' ', $text); // Replace multiple spaces with single space
+        $text = strtolower($text);
+        $text = preg_replace('/[^\p{L}\p{N}\s]/u', '', $text); // Remove punctuation
+        return $text;
     }
 
-    $pagetitle = 'Students who Attempted: ' . $exam->title;
-
-    return view('exam.students', compact(
-        'pagetitle',
-        'exam',
-        'students',
-        'assignedClasses',
-        'classId',
-        'examTotals'
-    ));
-}
-
-// Helper method for consistent text normalization
-private function normalizeTextForComparison($text)
-{
-    $text = trim($text);
-    $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    $text = preg_replace('/\s+/', ' ', $text); // Replace multiple spaces with single space
-    $text = strtolower($text);
-    $text = preg_replace('/[^\p{L}\p{N}\s]/u', '', $text); // Remove punctuation
-    return $text;
-}
     public function deleteStudentAttempt($examId, $studentId)
     {
         $exam = Exam::where('id', $examId)->where('staffId', auth()->user()->id)->firstOrFail();

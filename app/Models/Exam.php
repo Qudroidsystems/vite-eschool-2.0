@@ -71,4 +71,15 @@ class Exam extends Model
     {
         return $this->hasMany(Question::class);
     }
+
+    // In App\Models\Exam.php
+public function termRelation()
+{
+    return $this->belongsTo(Schoolterm::class, 'termid');
+}
+
+public function sessionRelation()
+{
+    return $this->belongsTo(Schoolsession::class, 'session');
+}
 }
