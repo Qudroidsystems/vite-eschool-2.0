@@ -122,7 +122,7 @@
                                                         @endif
                                                     </td>
                                                     <td>
-                                                        <a href="{{ route('exams.showstudents', $exam->id) }}" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
+                                                        <a href="{{ route('exams.students', $exam->id) }}" class="btn btn-subtle-info btn-icon btn-sm"><i class="ph-users"></i></a>
                                                     </td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
