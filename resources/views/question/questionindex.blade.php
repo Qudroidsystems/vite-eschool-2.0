@@ -41,7 +41,7 @@
                         <div class="card-body">
                             <div class="row g-3">
                                 <!-- Search Box -->
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="search-box">
                                         <input type="text" class="form-control search"
                                                placeholder="Search questions or options..."
@@ -51,20 +51,20 @@
                                 </div>
 
                                 <!-- Exam Filter -->
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <select class="form-control" id="exam-filter">
                                         <option value="">All Exams</option>
                                         @foreach($exams as $exam)
                                             <option value="{{ $exam->id }}"
                                                 {{ request('exam_id') == $exam->id ? 'selected' : '' }}>
-                                                {{ $exam->title }}
+                                                {{ Str::limit($exam->title, 25) }}
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
 
                                 <!-- Class Filter -->
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <select class="form-control" id="class-filter">
                                         <option value="">All Classes</option>
                                         @foreach($classes as $class)
@@ -87,6 +87,60 @@
                                         <option value="true_false" {{ request('type') == 'true_false' ? 'selected' : '' }}>True/False</option>
                                         <option value="short_answer" {{ request('type') == 'short_answer' ? 'selected' : '' }}>Short Answer</option>
                                     </select>
+                                </div>
+
+                                <!-- Date Range Filters -->
+                                <div class="col-md-3">
+                                    <div class="input-group">
+                                        <input type="date" class="form-control" id="date-from"
+                                               value="{{ request('date_from', '') }}"
+                                               placeholder="From Date">
+                                        <span class="input-group-text">to</span>
+                                        <input type="date" class="form-control" id="date-to"
+                                               value="{{ request('date_to', '') }}"
+                                               placeholder="To Date">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-2">
+                                <!-- Time Range Filters -->
+                                <div class="col-md-3">
+                                    <div class="input-group">
+                                        <input type="time" class="form-control" id="time-from"
+                                               value="{{ request('time_from', '') }}"
+                                               placeholder="From Time">
+                                        <span class="input-group-text">to</span>
+                                        <input type="time" class="form-control" id="time-to"
+                                               value="{{ request('time_to', '') }}"
+                                               placeholder="To Time">
+                                    </div>
+                                </div>
+
+                                <!-- Quick Date Filters -->
+                                <div class="col-md-3">
+                                    <select class="form-control" id="quick-date-filter">
+                                        <option value="">Quick Date Filter</option>
+                                        <option value="today">Today</option>
+                                        <option value="yesterday">Yesterday</option>
+                                        <option value="this_week">This Week</option>
+                                        <option value="last_week">Last Week</option>
+                                        <option value="this_month">This Month</option>
+                                        <option value="last_month">Last Month</option>
+                                        <option value="this_year">This Year</option>
+                                    </select>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="col-md-3">
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-primary" id="apply-filters-btn">
+                                            <i class="ri-filter-line me-1"></i> Apply Filters
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" id="clear-filters-btn">
+                                            <i class="ri-close-line me-1"></i> Clear
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -175,9 +229,10 @@
                                             <th width="80">#</th>
                                             <th>Question Text</th>
                                             <th width="120">Type</th>
-                                            <th>Exam</th>
-                                            <th>Class</th>
+                                            <th width="150">Exam</th>
+                                            <th width="100">Class</th>
                                             <th width="80">Marks</th>
+                                            <th width="120">Created At</th>
                                             <th width="100">Image</th>
                                             <th width="100">Reusable</th>
                                             <th width="180">Actions</th>
@@ -218,14 +273,14 @@
                                                 </td>
                                                 <td>
                                                     <a href="{{ route('questions.show', $question->exam_id) }}"
-                                                       class="text-primary">
-                                                        {{ Str::limit($question->exam->title, 30) }}
+                                                       class="text-primary" title="{{ $question->exam->title }}">
+                                                        {{ Str::limit($question->exam->title, 20) }}
                                                     </a>
                                                 </td>
                                                 <td>
                                                     @if($question->exam->schoolclass)
                                                         <span class="badge bg-secondary">
-                                                            {{ $question->exam->schoolclass->schoolclass }}
+                                                            {{ Str::limit($question->exam->schoolclass->schoolclass, 10) }}
                                                             @if($question->exam->schoolclass->armRelation)
                                                                 ({{ $question->exam->schoolclass->armRelation->arm }})
                                                             @endif
@@ -236,6 +291,12 @@
                                                 </td>
                                                 <td>
                                                     <span class="badge bg-primary">{{ $question->marks }}</span>
+                                                </td>
+                                                <td>
+                                                    <div class="small text-muted">
+                                                        <div>{{ $question->created_at->format('Y-m-d') }}</div>
+                                                        <div>{{ $question->created_at->format('h:i A') }}</div>
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     @if($question->image)
@@ -279,7 +340,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="10" class="text-center py-5">
+                                                <td colspan="11" class="text-center py-5">
                                                     <div class="text-muted">
                                                         <i class="ri-question-line display-4"></i>
                                                         <h5>No questions found</h5>
@@ -479,6 +540,12 @@
     color: #dc3545;
 }
 
+/* Filter Styles */
+.input-group-text {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
 /* Pagination Styles */
 #pagination-container .pagination {
     font-size: 0.875rem;
@@ -554,6 +621,17 @@
     border-bottom-left-radius: 0.375rem !important;
     border-bottom-right-radius: 0.375rem !important;
     font-size: 16px;
+}
+
+/* Date and time input styles */
+input[type="date"], input[type="time"] {
+    height: 38px;
+    font-size: 0.875rem;
+}
+
+/* Quick date filter */
+#quick-date-filter {
+    height: 38px;
 }
 </style>
 
@@ -640,7 +718,7 @@ $(document).ready(function() {
     function showLoading() {
         $('#questions-table tbody').html(`
             <tr>
-                <td colspan="10" class="text-center py-5">
+                <td colspan="11" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
@@ -663,7 +741,7 @@ $(document).ready(function() {
         };
     }
 
-    // Filter functionality
+    // Apply filters function
     function applyFilters() {
         console.log('Applying filters');
         const params = new URLSearchParams();
@@ -672,18 +750,108 @@ $(document).ready(function() {
         const classId = $('#class-filter').val();
         const type = $('#type-filter').val();
         const search = $('.search').val();
+        const dateFrom = $('#date-from').val();
+        const dateTo = $('#date-to').val();
+        const timeFrom = $('#time-from').val();
+        const timeTo = $('#time-to').val();
 
         if (examId) params.set('exam_id', examId);
         if (classId) params.set('class_id', classId);
         if (type) params.set('type', type);
         if (search) params.set('search', search);
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+        if (timeFrom) params.set('time_from', timeFrom);
+        if (timeTo) params.set('time_to', timeTo);
 
         console.log('Redirecting with params:', params.toString());
         window.location.href = '{{ route("questions.all") }}?' + params.toString();
     }
 
-    $('#exam-filter, #class-filter, #type-filter').change(applyFilters);
-    $('.search').on('keyup', debounce(applyFilters, 500));
+    // Apply filters on button click
+    $('#apply-filters-btn').click(function() {
+        applyFilters();
+    });
+
+    // Clear all filters
+    $('#clear-filters-btn').click(function() {
+        console.log('Clearing all filters');
+
+        // Clear all filter inputs
+        $('#exam-filter').val('');
+        $('#class-filter').val('');
+        $('#type-filter').val('');
+        $('.search').val('');
+        $('#date-from').val('');
+        $('#date-to').val('');
+        $('#time-from').val('');
+        $('#time-to').val('');
+        $('#quick-date-filter').val('');
+
+        // Reload page without filters
+        window.location.href = '{{ route("questions.all") }}';
+    });
+
+    // Quick date filter handler
+    $('#quick-date-filter').change(function() {
+        const quickFilter = $(this).val();
+        if (!quickFilter) return;
+
+        const today = new Date();
+        let dateFrom = '';
+        let dateTo = '';
+
+        switch(quickFilter) {
+            case 'today':
+                dateFrom = today.toISOString().split('T')[0];
+                dateTo = today.toISOString().split('T')[0];
+                break;
+            case 'yesterday':
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                dateFrom = yesterday.toISOString().split('T')[0];
+                dateTo = yesterday.toISOString().split('T')[0];
+                break;
+            case 'this_week':
+                const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
+                const lastDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 6));
+                dateFrom = firstDayOfWeek.toISOString().split('T')[0];
+                dateTo = lastDayOfWeek.toISOString().split('T')[0];
+                break;
+            case 'last_week':
+                const lastWeek = new Date(today);
+                lastWeek.setDate(today.getDate() - 7);
+                const firstDayLastWeek = new Date(lastWeek.setDate(lastWeek.getDate() - lastWeek.getDay()));
+                const lastDayLastWeek = new Date(lastWeek.setDate(lastWeek.getDate() - lastWeek.getDay() + 6));
+                dateFrom = firstDayLastWeek.toISOString().split('T')[0];
+                dateTo = lastDayLastWeek.toISOString().split('T')[0];
+                break;
+            case 'this_month':
+                const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                dateFrom = firstDayOfMonth.toISOString().split('T')[0];
+                dateTo = lastDayOfMonth.toISOString().split('T')[0];
+                break;
+            case 'last_month':
+                const firstDayOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const lastDayOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+                dateFrom = firstDayOfLastMonth.toISOString().split('T')[0];
+                dateTo = lastDayOfLastMonth.toISOString().split('T')[0];
+                break;
+            case 'this_year':
+                const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+                const lastDayOfYear = new Date(today.getFullYear(), 11, 31);
+                dateFrom = firstDayOfYear.toISOString().split('T')[0];
+                dateTo = lastDayOfYear.toISOString().split('T')[0];
+                break;
+        }
+
+        $('#date-from').val(dateFrom);
+        $('#date-to').val(dateTo);
+
+        // Apply filters automatically
+        applyFilters();
+    });
 
     // Bulk selection
     $('#select-all').change(function() {
@@ -854,7 +1022,7 @@ $(document).ready(function() {
                         if (response.success) {
                             showSuccess(response.message);
                             selectedQuestions.forEach(function(id) {
-                                const badge = $('tr[data-id="' + id + '"]').find('td:nth-child(9) .badge');
+                                const badge = $('tr[data-id="' + id + '"]').find('td:nth-child(10) .badge');
                                 badge.removeClass('bg-light text-dark').addClass('bg-success').text('Yes');
                             });
                             selectedQuestions = [];
@@ -1871,6 +2039,10 @@ $(document).ready(function() {
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Exam:</span>
                                     <span>${response.exam_title || 'Unknown Exam'}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Created:</span>
+                                    <span>${new Date(response.created_at || '').toLocaleString()}</span>
                                 </li>
                             </ul>
                         </div>

@@ -9,12 +9,8 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\QuestionsImport;
-use Barryvdh\DomPDF\Facade\Pdf;
-use PhpOffice\PhpWord\PhpWord;
-use PhpOffice\PhpWord\IOFactory;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class QuestionController extends Controller
 {
@@ -66,6 +62,28 @@ class QuestionController extends Controller
             });
         }
 
+        // Date filters
+        if ($request->filled('date_from')) {
+            $dateFrom = Carbon::parse($request->date_from)->startOfDay();
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if ($request->filled('date_to')) {
+            $dateTo = Carbon::parse($request->date_to)->endOfDay();
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        // Time filters
+        if ($request->filled('time_from')) {
+            $timeFrom = Carbon::parse($request->time_from)->format('H:i:s');
+            $query->whereTime('created_at', '>=', $timeFrom);
+        }
+
+        if ($request->filled('time_to')) {
+            $timeTo = Carbon::parse($request->time_to)->format('H:i:s');
+            $query->whereTime('created_at', '<=', $timeTo);
+        }
+
         $questions = $query->paginate(20);
 
         // Get exams and classes for filters
@@ -74,35 +92,44 @@ class QuestionController extends Controller
 
         $pagetitle = 'All Questions Management';
 
+        // Check if it's an AJAX request for pagination
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('question.partials.questions_table', compact('questions'))->render(),
+                'pagination' => view('question.partials.pagination', compact('questions'))->render(),
+                'count' => $questions->total(),
+                'mcq_count' => $questions->where('type', 'mcq')->count(),
+                'tf_count' => $questions->where('type', 'true_false')->count(),
+                'short_count' => $questions->where('type', 'short_answer')->count()
+            ]);
+        }
+
         return view('question.questionindex', compact('pagetitle', 'questions', 'exams', 'classes'));
     }
 
-
     /**
- * Display questions for a specific exam
- */
-public function show($examId)
-{
-    $user = Auth::user();
+     * Display questions for a specific exam
+     */
+    public function show($examId)
+    {
+        $user = Auth::user();
 
-    // Check if user owns this exam
-    $exam = Exam::with(['schoolclass.armRelation', 'subject'])
-                ->where('id', $examId)
-                ->where('staffId', $user->id)
-                ->firstOrFail();
+        // Check if user owns this exam
+        $exam = Exam::with(['schoolclass.armRelation', 'subject'])
+                    ->where('id', $examId)
+                    ->where('staffId', $user->id)
+                    ->firstOrFail();
 
-    // Get questions for this exam with options
-    $questions = Question::with('options')
-                         ->where('exam_id', $examId)
-                         ->orderBy('order')
-                         ->get();
+        // Get questions for this exam with options
+        $questions = Question::with('options')
+                             ->where('exam_id', $examId)
+                             ->orderBy('order')
+                             ->get();
 
-    $pagetitle = 'Questions for: ' . $exam->title;
+        $pagetitle = 'Questions for: ' . $exam->title;
 
-    return view('question.show', compact('pagetitle', 'exam', 'questions'));
-}
-
-
+        return view('question.show', compact('pagetitle', 'exam', 'questions'));
+    }
 
     /**
      * Store a newly created question
@@ -490,126 +517,6 @@ public function show($examId)
     }
 
     /**
-     * Import questions from Excel/CSV
-     */
-    public function import(Request $request)
-    {
-        $request->validate([
-            'exam_id' => 'required|exists:exams,id',
-            'file' => 'required|mimes:csv,xlsx,xls'
-        ]);
-
-        try {
-            Excel::import(new QuestionsImport($request->exam_id), $request->file('file'));
-
-            return redirect()->back()->with('success', 'Questions imported successfully!');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error importing questions: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Export questions to PDF
-     */
-    public function exportPdf(Request $request)
-    {
-        $questions = $this->getFilteredQuestions($request);
-
-        $pdf = Pdf::loadView('questions.export.pdf', compact('questions'));
-        return $pdf->download('questions-' . date('Y-m-d') . '.pdf');
-    }
-
-    /**
-     * Export questions to Word
-     */
-    public function exportWord(Request $request)
-    {
-        $questions = $this->getFilteredQuestions($request);
-
-        $phpWord = new PhpWord();
-        $section = $phpWord->addSection();
-
-        foreach ($questions as $index => $question) {
-            $section->addText(($index + 1) . ". " . strip_tags($question->question_text));
-
-            if ($question->type === 'mcq') {
-                $options = ['A', 'B', 'C', 'D', 'E'];
-                foreach ($question->options as $i => $option) {
-                    if ($option->option_text) {
-                        $section->addText("   {$options[$i]}. {$option->option_text}");
-                    }
-                }
-            }
-
-            $section->addText(" ");
-        }
-
-        $fileName = 'questions-' . date('Y-m-d') . '.docx';
-        $tempFile = tempnam(sys_get_temp_dir(), $fileName);
-
-        $objWriter = IOFactory::createWriter($phpWord, 'Word2007');
-        $objWriter->save($tempFile);
-
-        return response()->download($tempFile, $fileName)->deleteFileAfterSend(true);
-    }
-
-    /**
-     * Duplicate a question
-     */
-    public function duplicate(Request $request, Question $question)
-    {
-        try {
-            $newQuestion = $question->replicate();
-            $newQuestion->exam_id = $request->input('target_exam_id', $question->exam_id);
-            $newQuestion->order = Question::where('exam_id', $newQuestion->exam_id)->max('order') + 1;
-            $newQuestion->push();
-
-            // Duplicate options
-            foreach ($question->options as $option) {
-                $newOption = $option->replicate();
-                $newOption->question_id = $newQuestion->id;
-                $newOption->save();
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Question duplicated successfully',
-                'question' => $newQuestion
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error duplicating question: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Reorder questions via drag-drop
-     */
-    public function reorder(Request $request)
-    {
-        $request->validate([
-            'exam_id' => 'required|exists:exams,id',
-            'questions' => 'required|array',
-            'questions.*.id' => 'required|exists:questions,id',
-            'questions.*.order' => 'required|integer'
-        ]);
-
-        try {
-            foreach ($request->questions as $item) {
-                Question::where('id', $item['id'])
-                    ->where('exam_id', $request->exam_id)
-                    ->update(['order' => $item['order']]);
-            }
-
-            return response()->json(['success' => true, 'message' => 'Questions reordered successfully']);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Error reordering questions'], 500);
-        }
-    }
-
-    /**
      * Bulk operations (delete, change type, etc.)
      */
     public function bulkUpdate(Request $request)
@@ -692,33 +599,5 @@ public function show($examId)
             });
 
         return response()->json(['questions' => $questions]);
-    }
-
-    /**
-     * Helper method to get filtered questions
-     */
-    private function getFilteredQuestions(Request $request)
-    {
-        $user = Auth::user();
-
-        $query = Question::query()
-            ->with(['exam.schoolclass.armRelation', 'options'])
-            ->whereHas('exam', function($q) use ($user) {
-                $q->where('staffId', $user->id);
-            })
-            ->orderBy('exam_id')
-            ->orderBy('order');
-
-        if ($request->filled('exam_id')) {
-            $query->where('exam_id', $request->exam_id);
-        }
-
-        if ($request->filled('class_id')) {
-            $query->whereHas('exam', function($q) use ($request) {
-                $q->where('schoolclass_id', $request->class_id);
-            });
-        }
-
-        return $query->get();
     }
 }
