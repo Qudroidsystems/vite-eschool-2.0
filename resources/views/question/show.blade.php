@@ -445,7 +445,7 @@
                                     <h4 class="mb-3">No Questions Found</h4>
                                     <p class="text-muted mb-4">This exam doesn't have any questions yet. Start by adding some questions.</p>
                                     <div class="d-flex gap-2 justify-content-center">
-                                        <a href="{{ route('questions.create') }}" class="btn btn-primary">
+                                        <a href="{{ route('questions.all') }}" class="btn btn-primary">
                                             <i class="ph-plus-circle me-2"></i> Add New Question
                                         </a>
                                         <a href="{{ route('exams.index') }}" class="btn btn-subtle-secondary">
