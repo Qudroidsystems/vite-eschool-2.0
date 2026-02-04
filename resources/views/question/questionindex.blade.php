@@ -292,11 +292,45 @@
                                 </table>
                             </div>
 
-                            <!-- Pagination -->
+                            <!-- AJAX Pagination -->
                             @if($questions->hasPages())
                                 <div class="row mt-3">
                                     <div class="col-12">
-                                        {{ $questions->links() }}
+                                        <nav aria-label="Page navigation" id="pagination-container">
+                                            <ul class="pagination justify-content-center mb-0">
+                                                <!-- Previous Page Link -->
+                                                <li class="page-item {{ $questions->onFirstPage() ? 'disabled' : '' }}">
+                                                    <a class="page-link" href="{{ $questions->previousPageUrl() }}"
+                                                       data-page="{{ $questions->currentPage() - 1 }}"
+                                                       aria-label="Previous">
+                                                        <span aria-hidden="true">&laquo;</span>
+                                                    </a>
+                                                </li>
+
+                                                <!-- Page Numbers -->
+                                                @foreach ($questions->getUrlRange(1, $questions->lastPage()) as $page => $url)
+                                                    @if($page == $questions->currentPage())
+                                                        <li class="page-item active" aria-current="page">
+                                                            <span class="page-link">{{ $page }}</span>
+                                                        </li>
+                                                    @else
+                                                        <li class="page-item">
+                                                            <a class="page-link" href="{{ $url }}"
+                                                               data-page="{{ $page }}">{{ $page }}</a>
+                                                        </li>
+                                                    @endif
+                                                @endforeach
+
+                                                <!-- Next Page Link -->
+                                                <li class="page-item {{ !$questions->hasMorePages() ? 'disabled' : '' }}">
+                                                    <a class="page-link" href="{{ $questions->nextPageUrl() }}"
+                                                       data-page="{{ $questions->currentPage() + 1 }}"
+                                                       aria-label="Next">
+                                                        <span aria-hidden="true">&raquo;</span>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </nav>
                                     </div>
                                 </div>
                             @endif
@@ -320,6 +354,7 @@
 
 <!-- Include Quill.js CSS -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
 <style>
 .handle {
     cursor: move;
@@ -443,6 +478,83 @@
     content: " *";
     color: #dc3545;
 }
+
+/* Pagination Styles */
+#pagination-container .pagination {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+}
+
+#pagination-container .page-item {
+    margin: 0 2px;
+}
+
+#pagination-container .page-link {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    color: #0d6efd;
+    transition: all 0.2s;
+    min-width: 2.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+#pagination-container .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    text-decoration: none;
+}
+
+#pagination-container .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+#pagination-container .page-item.disabled .page-link {
+    color: #6c757d;
+    pointer-events: none;
+    background-color: #fff;
+    border-color: #dee2e6;
+}
+
+#pagination-container .page-link:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    outline: 0;
+}
+
+/* Compact pagination for mobile */
+@media (max-width: 576px) {
+    #pagination-container .page-link {
+        padding: 0.25rem 0.5rem;
+        min-width: 2rem;
+        font-size: 0.75rem;
+    }
+
+    #pagination-container .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+/* Editor styles */
+#question-text-editor {
+    min-height: 150px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+}
+
+.ql-toolbar {
+    border-top-left-radius: 0.375rem !important;
+    border-top-right-radius: 0.375rem !important;
+}
+
+.ql-container {
+    border-bottom-left-radius: 0.375rem !important;
+    border-bottom-right-radius: 0.375rem !important;
+    font-size: 16px;
+}
 </style>
 
 <!-- Include required libraries -->
@@ -522,6 +634,20 @@ $(document).ready(function() {
             text: message,
             confirmButtonText: 'OK'
         });
+    }
+
+    // Helper function to show loading state
+    function showLoading() {
+        $('#questions-table tbody').html(`
+            <tr>
+                <td colspan="10" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading questions...</p>
+                </td>
+            </tr>
+        `);
     }
 
     // Debounce function for search
@@ -998,17 +1124,19 @@ $(document).ready(function() {
         $('#select-all-exams-checkbox').prop('checked', totalExams > 0 && checkedCount === totalExams);
     }
 
-    // Search exams
+    // Search exams - FIXED VERSION
     $('#search-exams-input').on('keyup', debounce(function() {
-        const searchTerm = $(this).val().toLowerCase();
+        const searchTerm = $(this).val().toLowerCase().trim();
         console.log('Searching exams for:', searchTerm);
 
         if (!searchTerm) {
             $('.class-group').show();
             $('.exam-card').parent().show();
+            $('#no-results-message').remove();
             return;
         }
 
+        // Show/hide based on search
         $('.class-group').each(function() {
             const classGroup = $(this);
             const className = classGroup.find('h6').text().toLowerCase();
@@ -1019,7 +1147,9 @@ $(document).ready(function() {
                 const examTitle = card.find('strong').text().toLowerCase();
                 const examSubject = card.find('.text-muted').text().toLowerCase();
 
-                if (examTitle.includes(searchTerm) || examSubject.includes(searchTerm) || className.includes(searchTerm)) {
+                if (examTitle.includes(searchTerm) ||
+                    examSubject.includes(searchTerm) ||
+                    className.includes(searchTerm)) {
                     card.parent().show();
                     hasVisibleExams = true;
                 } else {
@@ -1033,6 +1163,20 @@ $(document).ready(function() {
                 classGroup.hide();
             }
         });
+
+        // Show message if no results
+        const visibleCards = $('.exam-card:visible').length;
+        if (visibleCards === 0) {
+            $('#no-results-message').remove();
+            $('#exams-by-class-container').append(`
+                <div class="alert alert-info mt-3" id="no-results-message">
+                    <i class="ri-search-line me-2"></i>
+                    No exams found matching "<strong>${searchTerm}</strong>"
+                </div>
+            `);
+        } else {
+            $('#no-results-message').remove();
+        }
     }, 300));
 
     $('#clear-search-exams').click(function() {
@@ -1040,6 +1184,7 @@ $(document).ready(function() {
         $('#search-exams-input').val('');
         $('.class-group').show();
         $('.exam-card').parent().show();
+        $('#no-results-message').remove();
     });
 
     // Proceed to question form modal
@@ -1603,6 +1748,81 @@ $(document).ready(function() {
         }, 500);
     }
 
+    // AJAX Pagination
+    $(document).on('click', '#pagination-container .page-link', function(e) {
+        e.preventDefault();
+
+        const url = $(this).attr('href');
+        if (!url || url === '#') return;
+
+        const page = $(this).data('page');
+
+        console.log('Loading page:', page, 'via URL:', url);
+
+        // Show loading state
+        showLoading();
+
+        // Get current filter parameters
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', page);
+
+        // Remove 'page' from params for the base URL
+        const baseUrl = window.location.pathname;
+
+        // Load via AJAX
+        $.ajax({
+            url: baseUrl + '?' + params.toString(),
+            method: 'GET',
+            success: function(response) {
+                console.log('Pagination response received');
+
+                // Extract just the table and pagination from the response
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = response;
+
+                // Update table body
+                const newTableBody = tempDiv.querySelector('#questions-table tbody');
+                if (newTableBody) {
+                    $('#questions-table tbody').html(newTableBody.innerHTML);
+                }
+
+                // Update pagination
+                const newPagination = tempDiv.querySelector('#pagination-container');
+                if (newPagination) {
+                    $('#pagination-container').html(newPagination.innerHTML);
+                }
+
+                // Update count badges in header
+                const newHeader = tempDiv.querySelector('.card-header');
+                if (newHeader) {
+                    $('.card-header h5').html(newHeader.querySelector('h5').innerHTML);
+                    $('.card-header .badge').remove();
+                    $(newHeader.querySelectorAll('.badge')).each(function() {
+                        $('.card-header').append(this);
+                    });
+                }
+
+                // Reinitialize any event handlers
+                updateBulkButtons();
+
+                // Scroll to top of table
+                $('html, body').animate({
+                    scrollTop: $('#questions-table').offset().top - 100
+                }, 500);
+            },
+            error: function(xhr, status, error) {
+                console.error('Pagination error:', error);
+                showError('Failed to load page');
+                location.href = url; // Fallback to regular page load
+            }
+        });
+    });
+
+    // Prevent default behavior for pagination links
+    $(document).on('click', '#pagination-container a[href="#"]', function(e) {
+        e.preventDefault();
+    });
+
     // View question details
     $(document).on('click', '.view-question', function() {
         const questionId = $(this).data('id');
@@ -2096,28 +2316,4 @@ $(document).ready(function() {
     console.log('Page initialization complete');
 });
 </script>
-<style>
-/* Add to your existing styles */
-#question-text-editor {
-    min-height: 150px;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-}
-
-.ql-toolbar {
-    border-top-left-radius: 0.375rem !important;
-    border-top-right-radius: 0.375rem !important;
-}
-
-.ql-container {
-    border-bottom-left-radius: 0.375rem !important;
-    border-bottom-right-radius: 0.375rem !important;
-    font-size: 16px;
-}
-
-/* Debug styles */
-.debug-border {
-    border: 2px solid red !important;
-}
-</style>
 @endsection
