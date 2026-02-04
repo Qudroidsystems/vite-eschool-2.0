@@ -3,6 +3,7 @@
         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
             <th class="min-w-125px">SN</th>
             <th class="min-w-125px">Title</th>
+            <th class="min-w-125px">Subject</th>
             <th class="min-w-125px">Description</th>
             <th class="min-w-125px">Duration</th>
             <th class="min-w-125px">Start Time</th>
@@ -44,10 +45,13 @@
             <tr>
                 <td>{{ $i++ }}</td>
                 <td>{{ $exam->title ?? '—' }}</td>
+                <td>
+                    {{ $exam->subject->subject ?? 'No Subject' }}
+                </td>
                 <td>{{ \Illuminate\Support\Str::limit($exam->description ?? '', 50) }}</td>
                 <td>{{ $exam->duration ?? '—' }} mins</td>
-                <td>{{ $exam->start_time ?? 'N/A' }}</td>
-                <td>{{ $exam->end_time ?? 'N/A' }}</td>
+                <td>{{ $exam->start_time ? \Carbon\Carbon::parse($exam->start_time)->format('Y-m-d h:i A') : 'N/A' }}</td>
+                <td>{{ $exam->end_time ? \Carbon\Carbon::parse($exam->end_time)->format('Y-m-d h:i A') : 'N/A' }}</td>
                 <td>
                     @if ($hasAttempted)
                         <span class="badge bg-info-subtle text-info">Completed</span>
@@ -70,6 +74,8 @@
                         @else
                             <span class="text-muted">N/A</span>
                         @endcan
+                    @elseif ($status === 'Upcoming')
+                        <span class="text-muted">Starts: {{ $exam->start_time ? \Carbon\Carbon::parse($exam->start_time)->diffForHumans() : 'N/A' }}</span>
                     @else
                         <span class="text-muted">N/A</span>
                     @endif
@@ -77,8 +83,15 @@
             </tr>
         @empty
             <tr>
-                <td colspan="8" class="text-center py-4 text-muted">
-                    No exams available for the selected term and session.
+                <td colspan="9" class="text-center py-4 text-muted">
+                    @if ($selectedTermId && $selectedSessionId)
+                        No exams available for your registered subjects in the selected term and session.
+                        @if ($totalreg > 0 && $reg == 0)
+                            <br><small class="text-warning">You have not registered for any subjects yet.</small>
+                        @endif
+                    @else
+                        Please select term and session to view exams.
+                    @endif
                 </td>
             </tr>
         @endforelse

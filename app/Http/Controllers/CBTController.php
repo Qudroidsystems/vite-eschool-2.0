@@ -101,20 +101,38 @@ class CBTController extends Controller
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
                 ->count();
 
-            $registeredSubjects = DB::table('student_subject_register_record')
+            // Get the student's registered subject IDs (from subject table, not subjectteacher)
+            $registeredSubjectIds = DB::table('student_subject_register_record')
                 ->where('student_subject_register_record.studentId', $studentId)
                 ->leftJoin('subjectclass', 'subjectclass.id', '=', 'student_subject_register_record.subjectclassid')
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('schoolsession', 'schoolsession.id', '=', 'student_subject_register_record.session')
                 ->join('subject', 'subject.id', '=', 'subjectteacher.subjectid')
-                ->pluck('subjectteacher.id')
+                ->pluck('subject.id') // Get subject IDs, not subjectteacher IDs
+                ->unique()
                 ->toArray();
 
-            $examsQuery = DB::table('exams')
-                ->whereIn('subject_id', $registeredSubjects ?: [0])
-                ->where('schoolclass_id', $studentClassData->class_id)
+            // Debug: Log the registered subjects
+            \Log::info('Registered Subject IDs for student', [
+                'student_id' => $studentId,
+                'registered_subjects' => $registeredSubjectIds,
+                'class_id' => $studentClassData->class_id,
+                'term_id' => $selectedTermId,
+                'session_id' => $selectedSessionId
+            ]);
+
+            // Fetch exams based on the student's class, term, session, and registered subjects
+            $examsQuery = Exam::where('schoolclass_id', $studentClassData->class_id)
                 ->where('termid', $selectedTermId)
                 ->where('session', $selectedSessionId);
+
+            // If student has registered subjects, filter by them
+            if (!empty($registeredSubjectIds)) {
+                $examsQuery->whereIn('subject_id', $registeredSubjectIds);
+            } else {
+                // If no subjects registered, show no exams
+                $examsQuery->whereRaw('1=0'); // Force no results
+            }
 
             if ($search !== '') {
                 $examsQuery->where(function ($q) use ($search) {
@@ -125,8 +143,16 @@ class CBTController extends Controller
 
             $exams = $examsQuery
                 ->select('id', 'title', 'subject_id', 'description', 'duration', 'start_time', 'end_time')
+                ->with(['subject:id,subject']) // Load subject name
                 ->paginate(15)
                 ->appends($request->query());
+
+            // Debug: Log the exams found
+            \Log::info('Exams found for student', [
+                'student_id' => $studentId,
+                'exams_count' => $exams->count(),
+                'exams' => $exams->pluck('id')->toArray()
+            ]);
 
             $examIds = $exams->pluck('id')->toArray();
 
