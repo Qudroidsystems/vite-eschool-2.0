@@ -483,76 +483,8 @@
     </div>
 </div>
 
-@endsection
 
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Toggle between grid and table view
-    const toggleViewBtn = document.getElementById('toggleViewBtn');
-    const gridView = document.getElementById('gridView');
-    const tableView = document.getElementById('tableView');
 
-    if (toggleViewBtn) {
-        toggleViewBtn.addEventListener('click', function() {
-            if (gridView.classList.contains('d-none')) {
-                // Show Grid View
-                gridView.classList.remove('d-none');
-                tableView.classList.add('d-none');
-                toggleViewBtn.innerHTML = '<i class="ph-list ph-sm me-1"></i> Switch to Table View';
-            } else {
-                // Show Table View
-                gridView.classList.add('d-none');
-                tableView.classList.remove('d-none');
-                toggleViewBtn.innerHTML = '<i class="ph-grid-four ph-sm me-1"></i> Switch to Card View';
-            }
-        });
-    }
-
-    // Image Modal
-    const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
-    const modalImage = document.getElementById('modalImage');
-    const downloadLink = document.getElementById('downloadImage');
-
-    document.querySelectorAll('.view-image-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const imageUrl = this.getAttribute('data-image');
-            modalImage.src = imageUrl;
-            downloadLink.href = imageUrl;
-            imageModal.show();
-        });
-    });
-
-    // Add animation to cards on hover
-    document.querySelectorAll('.question-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
-            this.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
-            this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
-        });
-
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '';
-        });
-    });
-
-    // Print functionality
-    const printBtn = document.createElement('button');
-    printBtn.className = 'btn btn-subtle-info btn-sm';
-    printBtn.innerHTML = '<i class="ph-printer ph-sm me-1"></i> Print Questions';
-    printBtn.addEventListener('click', function() {
-        window.print();
-    });
-
-    if (document.querySelector('.card-header .flex-shrink-0 .d-flex')) {
-        document.querySelector('.card-header .flex-shrink-0 .d-flex').appendChild(printBtn);
-    }
-});
-</script>
-@endpush
-
-@push('styles')
 <style>
 .question-card {
     transition: all 0.3s ease;
@@ -639,4 +571,69 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 </style>
-@endpush
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle between grid and table view
+    const toggleViewBtn = document.getElementById('toggleViewBtn');
+    const gridView = document.getElementById('gridView');
+    const tableView = document.getElementById('tableView');
+
+    if (toggleViewBtn) {
+        toggleViewBtn.addEventListener('click', function() {
+            if (gridView.classList.contains('d-none')) {
+                // Show Grid View
+                gridView.classList.remove('d-none');
+                tableView.classList.add('d-none');
+                toggleViewBtn.innerHTML = '<i class="ph-list ph-sm me-1"></i> Switch to Table View';
+            } else {
+                // Show Table View
+                gridView.classList.add('d-none');
+                tableView.classList.remove('d-none');
+                toggleViewBtn.innerHTML = '<i class="ph-grid-four ph-sm me-1"></i> Switch to Card View';
+            }
+        });
+    }
+
+    // Image Modal
+    const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+    const modalImage = document.getElementById('modalImage');
+    const downloadLink = document.getElementById('downloadImage');
+
+    document.querySelectorAll('.view-image-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const imageUrl = this.getAttribute('data-image');
+            modalImage.src = imageUrl;
+            downloadLink.href = imageUrl;
+            imageModal.show();
+        });
+    });
+
+    // Add animation to cards on hover
+    document.querySelectorAll('.question-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
+            this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
+        });
+
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+    });
+
+    // Print functionality
+    const printBtn = document.createElement('button');
+    printBtn.className = 'btn btn-subtle-info btn-sm';
+    printBtn.innerHTML = '<i class="ph-printer ph-sm me-1"></i> Print Questions';
+    printBtn.addEventListener('click', function() {
+        window.print();
+    });
+
+    if (document.querySelector('.card-header .flex-shrink-0 .d-flex')) {
+        document.querySelector('.card-header .flex-shrink-0 .d-flex').appendChild(printBtn);
+    }
+});
+</script>
+@endsection
