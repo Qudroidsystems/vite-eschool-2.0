@@ -762,6 +762,11 @@ use Spatie\Permission\Models\Role;
                                             <i class="bi bi-plus-circle align-baseline me-1"></i> Add Student
                                         </button>
                                     @endcan
+
+                                      <!-- Print/Export Report Button -->
+                                    <button type="button" class="btn btn-soft-success" data-bs-toggle="modal" data-bs-target="#printStudentReportModal">
+                                        <i class="ri-printer-line align-bottom me-1"></i> Print / Export Report
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -862,6 +867,286 @@ use Spatie\Permission\Models\Role;
                 </div>
             </div>
         </div>
+
+
+    <!-- ================================================= -->
+    <!--        PRINT / EXPORT REPORT MODAL               -->
+    <!-- ================================================= -->
+<!-- Print/Export Report Modal -->
+<div class="modal fade" id="printStudentReportModal" tabindex="-1" aria-labelledby="printStudentReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-soft-success">
+                <h5 class="modal-title" id="printStudentReportModalLabel">
+                    <i class="ri-printer-line me-2"></i> Generate Student Report
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="printReportForm">
+                    <!-- Filters Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Class</label>
+                            <select class="form-select" name="class_id">
+                                <option value="">— All Classes —</option>
+                                @foreach ($schoolclasses as $class)
+                                    <option value="{{ $class->id }}">{{ $class->class_display }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="">— All —</option>
+                                <option value="1">Old Students</option>
+                                <option value="2">New Students</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Term and Session Filters -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Term</label>
+                            <select class="form-select" name="term_id">
+                                <option value="">— All Terms —</option>
+                                @foreach ($schoolterms as $term)
+                                    <option value="{{ $term->id }}">{{ $term->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Session</label>
+                            <select class="form-select" name="session_id">
+                                <option value="">— All Sessions —</option>
+                                @foreach ($schoolsessions as $session)
+                                    <option value="{{ $session->id }}">{{ $session->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Column Selection with Drag & Drop -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="ri-draggable me-1"></i> Select & Arrange Columns (Drag to reorder)
+                        </label>
+                        <div class="row g-3" id="columnsContainer">
+                            <input type="hidden" name="columns_order" id="columnsOrderInput" value="">
+                            @php
+                                $availableColumns = [
+                                    'photo'          => 'Photo',
+                                    'admissionNo'    => 'Admission No',
+                                    'lastname'       => 'Last Name',
+                                    'firstname'      => 'First Name',
+                                    'othername'      => 'Other Name',
+                                    'gender'         => 'Gender',
+                                    'dateofbirth'    => 'Date of Birth',
+                                    'age'            => 'Age',
+                                    'class'          => 'Class / Arm',
+                                    'status'         => 'Student Status',
+                                    'admission_date' => 'Admission Date',
+                                    'phone_number'   => 'Phone Number',
+                                    'state'          => 'State of Origin',
+                                    'local'          => 'LGA',
+                                    'religion'       => 'Religion',
+                                    'blood_group'    => 'Blood Group',
+                                    'father_name'    => "Father's Name",
+                                    'mother_name'    => "Mother's Name",
+                                    'guardian_phone' => 'Guardian Phone',
+                                    'term'           => 'Term',
+                                    'session'        => 'Session',
+                                ];
+                            @endphp
+                            @foreach ($availableColumns as $key => $label)
+                                <div class="col-md-4 col-sm-6">
+                                    <div class="form-check border rounded p-2 mb-2 bg-light draggable-item" data-column="{{ $key }}">
+                                        <div class="d-flex align-items-center">
+                                            <span class="drag-handle me-2 cursor-move">
+                                                <i class="ri-draggable"></i>
+                                            </span>
+                                            <input class="form-check-input column-checkbox" type="checkbox" name="columns[]" value="{{ $key }}" id="col_{{ $key }}"
+                                                {{ in_array($key, ['admissionNo','lastname','firstname','class','gender']) ? 'checked' : '' }}>
+                                            <label class="form-check-label w-100 cursor-move" for="col_{{ $key }}">
+                                                {{ $label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <small class="text-muted">Drag columns to arrange their order in the report</small>
+                    </div>
+
+                    <!-- Report Header Options -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="ri-file-info-line me-2"></i> Report Header Options</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="include_header" id="includeHeader" checked>
+                                        <label class="form-check-label" for="includeHeader">
+                                            <i class="ri-building-line me-1"></i> Include School Header
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="include_logo" id="includeLogo" checked>
+                                        <label class="form-check-label" for="includeLogo">
+                                            <i class="ri-image-line me-1"></i> Include School Logo
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="orientation" class="form-label">Page Orientation</label>
+                                        <select class="form-select" name="orientation" id="orientation">
+                                            <option value="portrait">Portrait</option>
+                                            <option value="landscape">Landscape</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Format -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Export Format</label>
+                        <div class="d-flex gap-3 flex-wrap">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="format" id="format_pdf" value="pdf" checked>
+                                <label class="form-check-label" for="format_pdf">
+                                    <i class="ri-file-pdf-2-line text-danger me-1"></i> PDF
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="format" id="format_excel" value="excel">
+                                <label class="form-check-label" for="format_excel">
+                                    <i class="ri-file-excel-2-line text-success me-1"></i> Excel
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="alert alert-info small mb-0">
+                        <div class="d-flex align-items-center">
+                            <i class="ri-information-fill me-2"></i>
+                            <div>
+                                <strong>Preview:</strong>
+                                <span id="columnOrderPreview">admissionNo, lastname, firstname, class, gender</span>
+                                <br>
+                                <small>Only students matching the selected filters will be included.</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="generateReportBtn">
+                    <i class="ri-printer-line me-1"></i> Generate & Download
+                </button>
+                <!-- Debug button - remove in production -->
+                <button type="button" class="btn btn-warning btn-sm d-none" onclick="debugColumnOrdering()" id="debugBtn">
+                    <i class="ri-bug-line me-1"></i> Debug
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+  /* Drag and Drop Styles */
+.cursor-move {
+    cursor: move !important;
+}
+
+.drag-handle {
+    cursor: move;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+}
+
+.drag-handle:hover {
+    opacity: 1;
+}
+
+.draggable-item {
+    user-select: none;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.draggable-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+    background-color: #f8f9fa !important;
+}
+
+.draggable-item.drag-over {
+    background-color: #e9ecef !important;
+    border-color: #405189 !important;
+}
+
+/* Sortable.js specific classes */
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #f8f9fa !important;
+    transform: rotate(2deg);
+}
+
+.sortable-chosen {
+    background-color: #405189 !important;
+    color: white !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transform: scale(1.02);
+    z-index: 1000;
+}
+
+.sortable-chosen .form-check-label {
+    color: white !important;
+}
+
+.sortable-chosen .drag-handle {
+    color: white !important;
+}
+
+.sortable-drag {
+    opacity: 0.8;
+}
+
+#columnsContainer {
+    min-height: 200px;
+}
+
+/* Preview styling */
+#columnOrderPreview {
+    font-weight: 500;
+    color: #405189;
+    background-color: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 2px;
+}
+</style>
+
         <!-- Add Student Modal -->
         <div id="addStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
             <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -1270,15 +1555,15 @@ use Spatie\Permission\Models\Role;
                                         <div class="card-body">
                                             <div class="mb-3">
                                                 <label for="last_school" class="form-label">Last School Attended</label>
-                                                <input type="text" id="last_school" name="last_school" class="form-control" placeholder="Previous school name" required>
+                                                <input type="text" id="last_school" name="last_school" class="form-control" placeholder="Previous school name">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="last_class" class="form-label">Last Class Attended</label>
-                                                <input type="text" id="last_class" name="last_class" class="form-control" placeholder="e.g., JSS 2" required>
+                                                <input type="text" id="last_class" name="last_class" class="form-control" placeholder="e.g., JSS 2">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="reason_for_leaving" class="form-label">Reason for Leaving</label>
-                                                <textarea id="reason_for_leaving" name="reason_for_leaving" class="form-control" rows="2" placeholder="Reason for leaving previous school" required></textarea>
+                                                <textarea id="reason_for_leaving" name="reason_for_leaving" class="form-control" rows="2" placeholder="Reason for leaving previous school"></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -1711,16 +1996,16 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                         <div class="card-body">
                                             <div class="mb-3">
-                                                <label for="editLastSchool" class="form-label">Last School Attended</label>
+                                                <label for="editLastSchool" class="form-label">Last School Attended<span class="text-danger">*</span></label>
                                                 <input type="text" id="editLastSchool" name="last_school" class="form-control" placeholder="Previous school name" required>
                                             </div>
                                             <div class="mb-3">
-                                                <label for="editLastClass" class="form-label">Last Class Attended</label>
+                                                <label for="editLastClass" class="form-label">Last Class Attended<span class="text-danger">*</span></label>
                                                 <input type="text" id="editLastClass" name="last_class" class="form-control" placeholder="e.g., JSS 2" required>
                                             </div>
                                             <div class="mb-3">
-                                                <label for="editReasonForLeaving" class="form-label">Reason for Leaving</label>
-                                                <textarea id="editReasonForLeaving" name="reason_for_leaving" class="form-control" rows="2" placeholder="Reason for leaving previous school"></textarea>
+                                                <label for="editReasonForLeaving" class="form-label">Reason for Leaving<span class="text-danger">*</span></label>
+                                                <textarea id="editReasonForLeaving" name="reason_for_leaving" class="form-control" rows="2" placeholder="Reason for leaving previous school" required></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -2025,9 +2310,46 @@ use Spatie\Permission\Models\Role;
 
 <script>
 
+// ============================================================================
+// GLOBAL VARIABLES AND INITIALIZATION
+// ============================================================================
+
+let allStudents = [];
+const itemsPerPage = 100;
+const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
+let columnSortable = null;
+
+// Ensure Axios and CSRF token
+function ensureAxios() {
+    if (typeof axios === 'undefined') {
+        console.error('Error: Axios is not defined');
+        Swal.fire({
+            title: "Error!",
+            text: "Axios library is missing",
+            icon: "error",
+            customClass: { confirmButton: "btn btn-primary" },
+            buttonsStyling: false
+        });
+        return false;
+    }
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (!csrfToken) {
+        console.error('Error: CSRF token not found');
+        Swal.fire({
+            title: "Error!",
+            text: "CSRF token is missing",
+            icon: "error",
+            customClass: { confirmButton: "btn btn-primary" },
+            buttonsStyling: false
+        });
+        return false;
+    }
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+    return true;
+}
 
 // ============================================================================
-// FIXED VERSION - Student Management JavaScript
+// ADMISSION NUMBER FUNCTIONS
 // ============================================================================
 
 // Initialize admission number on page load
@@ -2150,181 +2472,18 @@ window.toggleAdmissionInput = function(prefix = '') {
     }
 };
 
-// Add event listeners for year selection
-document.getElementById('admissionYear')?.addEventListener('change', () => updateAdmissionNumber());
-document.getElementById('editAdmissionYear')?.addEventListener('change', () => updateAdmissionNumber('edit'));
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
-// Ensure Axios and CSRF token
-function ensureAxios() {
-    if (typeof axios === 'undefined') {
-        console.error('Error: Axios is not defined');
-        Swal.fire({
-            title: "Error!",
-            text: "Axios library is missing",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
-        return false;
-    }
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-    if (!csrfToken) {
-        console.error('Error: CSRF token not found');
-        Swal.fire({
-            title: "Error!",
-            text: "CSRF token is missing",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
-        return false;
-    }
-    axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
-    return true;
-}
-
-let allStudents = [];
-const itemsPerPage = 100;
-const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
-
-// FIXED: Generate placeholder image as data URL to avoid network issues
-function generatePlaceholderImage(text = 'PHOTO') {
-    const canvas = document.createElement('canvas');
-    canvas.width = 150;
-    canvas.height = 150;
-    const ctx = canvas.getContext('2d');
-
-    // Background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 150, 150);
-    gradient.addColorStop(0, '#6366f1');
-    gradient.addColorStop(1, '#8b5cf6');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 150, 150);
-
-    // Text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 75, 75);
-
-    return canvas.toDataURL();
-}
-
-// FIXED: Get initials properly
+// Get student initials
 function getStudentInitials(firstName, lastName) {
     const firstInitial = firstName && firstName.length > 0 ? firstName.charAt(0).toUpperCase() : '';
     const lastInitial = lastName && lastName.length > 0 ? lastName.charAt(0).toUpperCase() : '';
     return (firstInitial + lastInitial) || '??';
 }
 
-// ============================================================================
-// STATE AND LGA MANAGEMENT FUNCTIONS
-// ============================================================================
-
-// Nigerian states data
-const nigerianStates = [
-    { name: "Abia", lgAs: ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
-    { name: "Adamawa", lgAs: ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
-    { name: "Akwa Ibom", lgAs: ["Abak", "Eastern Obolo", "Eket", "Esit Eket", "Essien Udim", "Etim Ekpo", "Etinan", "Ibeno", "Ibesikpo Asutan", "Ibiono-Ibom", "Ika", "Ikono", "Ikot Abasi", "Ikot Ekpene", "Ini", "Itu", "Mbo", "Mkpat-Enin", "Nsit-Atai", "Nsit-Ibom", "Nsit-Ubium", "Obot Akara", "Okobo", "Onna", "Oron", "Oruk Anam", "Udung-Uko", "Ukanafun", "Uruan", "Urue-Offong/Oruko", "Uyo"] },
-    { name: "Anambra", lgAs: ["Aguata", "Anambra East", "Anambra West", "Anaocha", "Awka North", "Awka South", "Ayamelum", "Dunukofia", "Ekwusigo", "Idemili North", "Idemili South", "Ihiala", "Njikoka", "Nnewi North", "Nnewi South", "Ogbaru", "Onitsha North", "Onitsha South", "Orumba North", "Orumba South", "Oyi"] },
-    { name: "Bauchi", lgAs: ["Alkaleri", "Bauchi", "Bogoro", "Damban", "Darazo", "Dass", "Gamawa", "Ganjuwa", "Giade", "Itas/Gadau", "Jama'are", "Katagum", "Kirfi", "Misau", "Ningi", "Shira", "Tafawa Balewa", "Toro", "Warji", "Zaki"] },
-    { name: "Bayelsa", lgAs: ["Brass", "Ekeremor", "Kolokuma/Opokuma", "Nembe", "Ogbia", "Sagbama", "Southern Ijaw", "Yenagoa"] },
-    { name: "Benue", lgAs: ["Ado", "Agatu", "Apa", "Buruku", "Gboko", "Guma", "Gwer East", "Gwer West", "Katsina-Ala", "Konshisha", "Kwande", "Logo", "Makurdi", "Obi", "Ogbadibo", "Ohimini", "Oju", "Okpokwu", "Oturkpo", "Tarka", "Ukum", "Ushongo", "Vandeikya"] },
-    { name: "Borno", lgAs: ["Abadam", "Askira/Uba", "Bama", "Bayo", "Biu", "Chibok", "Damboa", "Dikwa", "Gubio", "Guzamala", "Gwoza", "Hawul", "Jere", "Kaga", "Kala/Balge", "Konduga", "Kukawa", "Kwaya Kusar", "Mafa", "Magumeri", "Maiduguri", "Marte", "Mobbar", "Monguno", "Ngala", "Nganzai", "Shani"] },
-    { name: "Cross River", lgAs: ["Abi", "Akamkpa", "Akpabuyo", "Bakassi", "Bekwarra", "Biase", "Boki", "Calabar Municipal", "Calabar South", "Etung", "Ikom", "Obanliku", "Obubra", "Obudu", "Odukpani", "Ogoja", "Yakuur", "Yala"] },
-    { name: "Delta", lgAs: ["Aniocha North", "Aniocha South", "Bomadi", "Burutu", "Ethiope East", "Ethiope West", "Ika North East", "Ika South", "Isoko North", "Isoko South", "Ndokwa East", "Ndokwa West", "Okpe", "Oshimili North", "Oshimili South", "Patani", "Sapele", "Udu", "Ughelli North", "Ughelli South", "Ukwuani", "Uvwie", "Warri North", "Warri South", "Warri South West"] },
-    { name: "Ebonyi", lgAs: ["Abakaliki", "Afikpo North", "Afikpo South", "Ebonyi", "Ezza North", "Ezza South", "Ikwo", "Ishielu", "Ivo", "Izzi", "Ohaozara", "Ohaukwu", "Onicha"] },
-    { name: "Edo", lgAs: ["Akoko-Edo", "Egor", "Esan Central", "Esan North-East", "Esan South-East", "Esan West", "Etsako Central", "Etsako East", "Etsako West", "Igueben", "Ikpoba Okha", "Orhionmwon", "Oredo", "Ovia North-East", "Ovia South-West", "Owan East", "Owan West", "Uhunmwonde"] },
-    { name: "Ekiti", lgAs: ["Ado Ekiti", "Efon", "Ekiti East", "Ekiti South-West", "Ekiti West", "Emure", "Gbonyin", "Ido Osi", "Ijero", "Ikere", "Ilejemeje", "Irepodun/Ifelodun", "Ise/Orun", "Moba", "Oye"] },
-    { name: "Enugu", lgAs: ["Aninri", "Awgu", "Enugu East", "Enugu North", "Enugu South", "Ezeagu", "Igbo Etiti", "Igbo Eze North", "Igbo Eze South", "Isi Uzo", "Nkanu East", "Nkanu West", "Nsukka", "Oji River", "Udenu", "Udi", "Uzo Uwani"] },
-    { name: "FCT", lgAs: ["Abaji", "Bwari", "Gwagwalada", "Kuje", "Kwali", "Municipal Area Council"] },
-    { name: "Gombe", lgAs: ["Akko", "Balanga", "Billiri", "Dukku", "Funakaye", "Gombe", "Kaltungo", "Kwami", "Nafada", "Shongom", "Yamaltu/Deba"] },
-    { name: "Imo", lgAs: ["Aboh Mbaise", "Ahiazu Mbaise", "Ehime Mbano", "Ezinihitte", "Ideato North", "Ideato South", "Ihitte/Uboma", "Ikeduru", "Isiala Mbano", "Isu", "Mbaitoli", "Ngor Okpala", "Njaba", "Nkwerre", "Nwangele", "Obowo", "Oguta", "Ohaji/Egbema", "Okigwe", "Orlu", "Orsu", "Oru East", "Oru West", "Owerri Municipal", "Owerri North", "Owerri West", "Unuimo"] },
-    { name: "Jigawa", lgAs: ["Auyo", "Babura", "Biriniwa", "Birnin Kudu", "Buji", "Dutse", "Gagarawa", "Garki", "Gumel", "Guri", "Gwaram", "Gwiwa", "Hadejia", "Jahun", "Kafin Hausa", "Kazaure", "Kiri Kasama", "Kiyawa", "Kaugama", "Maigatari", "Malam Madori", "Miga", "Ringim", "Roni", "Sule Tankarkar", "Taura", "Yankwashi"] },
-    { name: "Kaduna", lgAs: ["Birnin Gwari", "Chikun", "Giwa", "Igabi", "Ikara", "Jaba", "Jema'a", "Kachia", "Kaduna North", "Kaduna South", "Kagarko", "Kajuru", "Kaura", "Kauru", "Kubau", "Kudan", "Lere", "Makarfi", "Sabon Gari", "Sanga", "Soba", "Zangon Kataf", "Zaria"] },
-    { name: "Kano", lgAs: ["Ajingi", "Albasu", "Bagwai", "Bebeji", "Bichi", "Bunkure", "Dala", "Dambatta", "Dawakin Kudu", "Dawakin Tofa", "Doguwa", "Fagge", "Gabasawa", "Garko", "Garun Mallam", "Gaya", "Gezawa", "Gwale", "Gwarzo", "Kabo", "Kano Municipal", "Karaye", "Kibiya", "Kiru", "Kumbotso", "Kunchi", "Kura", "Madobi", "Makoda", "Minjibir", "Nasarawa", "Rano", "Rimin Gado", "Rogo", "Shanono", "Sumaila", "Takai", "Tarauni", "Tofa", "Tsanyawa", "Tudun Wada", "Ungogo", "Warawa", "Wudil"] },
-    { name: "Katsina", lgAs: ["Bakori", "Batagarawa", "Batsari", "Baure", "Bindawa", "Charanchi", "Dan Musa", "Dandume", "Danja", "Daura", "Dutsi", "Dutsin Ma", "Faskari", "Funtua", "Ingawa", "Jibia", "Kafur", "Kaita", "Kankara", "Kankia", "Katsina", "Kurfi", "Kusada", "Mai'Adua", "Malumfashi", "Mani", "Mashi", "Matazu", "Musawa", "Rimi", "Sabuwa", "Safana", "Sandamu", "Zango"] },
-    { name: "Kebbi", lgAs: ["Aleiro", "Arewa Dandi", "Argungu", "Augie", "Bagudo", "Birnin Kebbi", "Bunza", "Dandi", "Fakai", "Gwandu", "Jega", "Kalgo", "Koko/Besse", "Maiyama", "Ngaski", "Sakaba", "Shanga", "Suru", "Danko/Wasagu", "Yauri", "Zuru"] },
-    { name: "Kogi", lgAs: ["Adavi", "Ajaokuta", "Ankpa", "Bassa", "Dekina", "Ibaji", "Idah", "Igalamela Odolu", "Ijumu", "Kabba/Bunu", "Kogi", "Lokoja", "Mopa Muro", "Ofu", "Ogori/Magongo", "Okehi", "Okene", "Olamaboro", "Omala", "Yagba East", "Yagba West"] },
-    { name: "Kwara", lgAs: ["Asa", "Baruten", "Edu", "Ekiti", "Ifelodun", "Ilorin East", "Ilorin South", "Ilorin West", "Irepodun", "Isin", "Kaiama", "Moro", "Offa", "Oke Ero", "Oyun", "Pategi"] },
-    { name: "Lagos", lgAs: ["Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin", "Apapa", "Badagry", "Epe", "Eti Osa", "Ibeju-Lekki", "Ifako-Ijaiye", "Ikeja", "Ikorodu", "Kosofe", "Lagos Island", "Lagos Mainland", "Mushin", "Ojo", "Oshodi-Isolo", "Shomolu", "Surulere"] },
-    { name: "Nasarawa", lgAs: ["Akwanga", "Awe", "Doma", "Karu", "Keana", "Keffi", "Kokona", "Lafia", "Nasarawa", "Nasarawa Egon", "Obi", "Toto", "Wamba"] },
-    { name: "Niger", lgAs: ["Agaie", "Agwara", "Bida", "Borgu", "Bosso", "Chanchaga", "Edati", "Gbako", "Gurara", "Katcha", "Kontagora", "Lapai", "Lavun", "Magama", "Mariga", "Mashegu", "Mokwa", "Moya", "Paikoro", "Rafi", "Rijau", "Shiroro", "Suleja", "Tafa", "Wushishi"] },
-    { name: "Ogun", lgAs: ["Abeokuta North", "Abeokuta South", "Ado-Odo/Ota", "Egbado North", "Egbado South", "Ewekoro", "Ifo", "Ijebu East", "Ijebu North", "Ijebu North East", "Ijebu Ode", "Ikenne", "Imeko Afon", "Ipokia", "Obafemi Owode", "Odeda", "Odogbolu", "Ogun Waterside", "Remo North", "Shagamu"] },
-    { name: "Ondo", lgAs: ["Akoko North-East", "Akoko North-West", "Akoko South-East", "Akoko South-West", "Akure North", "Akure South", "Ese Odo", "Idanre", "Ifedore", "Ilaje", "Ile Oluji/Okeigbo", "Irele", "Odigbo", "Okitipupa", "Ondo East", "Ondo West", "Ose", "Owo"] },
-    { name: "Osun", lgAs: ["Aiyedade", "Aiyedire", "Atakunmosa East", "Atakunmosa West", "Boluwaduro", "Boripe", "Ede North", "Ede South", "Egbedore", "Ejigbo", "Ife Central", "Ife East", "Ife North", "Ife South", "Ifedayo", "Ifelodun", "Ila", "Ilesa East", "Ilesa West", "Irepodun", "Irewole", "Isokan", "Iwo", "Obokun", "Odo Otin", "Ola Oluwa", "Olorunda", "Oriade", "Orolu", "Osogbo"] },
-    { name: "Oyo", lgAs: ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo East", "Oyo West", "Saki East", "Saki West", "Surulere"] },
-    { name: "Plateau", lgAs: ["Bokkos", "Barkin Ladi", "Bassa", "Jos East", "Jos North", "Jos South", "Kanam", "Kanke", "Langtang North", "Langtang South", "Mangu", "Mikang", "Pankshin", "Qua'an Pan", "Riyom", "Shendam", "Wase"] },
-    { name: "Rivers", lgAs: ["Abua/Odual", "Ahoada East", "Ahoada West", "Akuku-Toru", "Andoni", "Asari-Toru", "Bonny", "Degema", "Eleme", "Emohua", "Etche", "Gokana", "Ikwerre", "Khana", "Obio/Akpor", "Ogba/Egbema/Ndoni", "Ogu/Bolo", "Okrika", "Omuma", "Opobo/Nkoro", "Oyigbo", "Port Harcourt", "Tai"] },
-    { name: "Sokoto", lgAs: ["Binji", "Bodinga", "Dange Shuni", "Gada", "Goronyo", "Gudu", "Gwadabawa", "Illela", "Isa", "Kebbe", "Kware", "Rabah", "Sabon Birni", "Shagari", "Silame", "Sokoto North", "Sokoto South", "Tambuwal", "Tangaza", "Tureta", "Wamako", "Wurno", "Yabo"] },
-    { name: "Taraba", lgAs: ["Ardo Kola", "Bali", "Donga", "Gashaka", "Gassol", "Ibi", "Jalingo", "Karim Lamido", "Kumi", "Lau", "Sardauna", "Takum", "Ussa", "Wukari", "Yorro", "Zing"] },
-    { name: "Yobe", lgAs: ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
-    { name: "Zamfara", lgAs: ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Chafe", "Zurmi"] }
-];
-
-// Initialize states dropdown
-function initializeStatesDropdown(stateDropdownId, lgaDropdownId) {
-    const stateSelect = document.getElementById(stateDropdownId);
-    const lgaSelect = document.getElementById(lgaDropdownId);
-
-    if (!stateSelect || !lgaSelect) return;
-
-    // Clear existing options
-    stateSelect.innerHTML = '<option value="">Select State</option>';
-    lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-
-    // Populate states
-    nigerianStates.forEach(state => {
-        const option = document.createElement('option');
-        option.value = state.name;
-        option.textContent = state.name;
-        stateSelect.appendChild(option);
-    });
-
-    // Add change event listener
-    stateSelect.addEventListener('change', function() {
-        const selectedState = this.value;
-        const state = nigerianStates.find(s => s.name === selectedState);
-
-        // Clear LGA dropdown
-        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-
-        if (state) {
-            // Populate LGAs for selected state
-            state.lgAs.forEach(lga => {
-                const option = document.createElement('option');
-                option.value = lga;
-                option.textContent = lga;
-                lgaSelect.appendChild(option);
-            });
-        }
-    });
-}
-
-// Set specific state and LGA (for edit mode)
-function setStateAndLGA(stateDropdownId, lgaDropdownId, stateName, lgaName) {
-    const stateSelect = document.getElementById(stateDropdownId);
-    const lgaSelect = document.getElementById(lgaDropdownId);
-
-    if (!stateSelect || !lgaSelect) return;
-
-    // Set state
-    if (stateName) {
-        stateSelect.value = stateName;
-
-        // Trigger change to populate LGAs
-        const event = new Event('change');
-        stateSelect.dispatchEvent(event);
-
-        // Set LGA after a short delay to ensure LGAs are populated
-        setTimeout(() => {
-            lgaSelect.value = lgaName;
-        }, 100);
-    }
-}
-
-// FIXED: Calculate age function with proper parameter
+// Calculate age
 window.calculateAge = function(dateValue, targetId) {
     if (!dateValue) {
         console.error('No date value provided');
@@ -2351,7 +2510,6 @@ window.calculateAge = function(dateValue, targetId) {
         const ageInput = document.getElementById(targetId);
         if (ageInput) {
             ageInput.value = age;
-            console.log('Age calculated:', age, 'for target:', targetId);
         } else {
             console.error('Target element not found:', targetId);
         }
@@ -2360,7 +2518,33 @@ window.calculateAge = function(dateValue, targetId) {
     }
 };
 
-// View toggle function
+// Preview image
+function previewImage(input, targetId = 'addStudentAvatar') {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById(targetId);
+            if (img) {
+                img.src = e.target.result;
+                img.style.display = 'block';
+
+                // Remove initials overlay if it exists
+                const initialsDiv = img.nextElementSibling;
+                if (initialsDiv && initialsDiv.classList.contains('avatar-initials')) {
+                    initialsDiv.style.display = 'none';
+                }
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// ============================================================================
+// VIEW TOGGLE FUNCTIONS
+// ============================================================================
+
+// Toggle between table and card view
 function toggleView(viewType) {
     const tableView = document.getElementById('tableView');
     const cardView = document.getElementById('cardView');
@@ -2375,6 +2559,9 @@ function toggleView(viewType) {
 
         document.getElementById('checkAll').checked = false;
         document.getElementById('remove-actions').classList.add('d-none');
+
+        // Render table view
+        renderStudents(allStudents);
     } else {
         tableView.classList.add('d-none');
         cardView.classList.remove('d-none');
@@ -2390,7 +2577,11 @@ function toggleView(viewType) {
     }
 }
 
-// FIXED: Render students as cards
+// ============================================================================
+// STUDENT RENDERING FUNCTIONS
+// ============================================================================
+
+// Render students as cards
 function renderStudentsCards(students) {
     console.log('Rendering students as cards:', students);
     const container = document.getElementById('studentsCardsContainer');
@@ -2416,10 +2607,8 @@ function renderStudentsCards(students) {
     }
 
     students.forEach(student => {
-        // FIXED: Get proper initials
         const displayInitials = getStudentInitials(student.firstname, student.lastname);
 
-        // FIXED: Get avatar URL with proper fallback
         let avatarUrl = defaultAvatar;
         if (student.picture && student.picture !== 'unnamed.jpg') {
             avatarUrl = `/storage/images/student_avatars/${student.picture}`;
@@ -2496,6 +2685,69 @@ function renderStudentsCards(students) {
     updateCounts(students.length);
 }
 
+// Render students in table
+function renderStudents(students) {
+    console.log('Rendering students in table:', students);
+    const tbody = document.getElementById('studentTableBody');
+    if (!tbody) {
+        console.error('studentTableBody element not found');
+        return;
+    }
+
+    tbody.innerHTML = '';
+
+    if (students.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="8" class="text-center">No students found</td>`;
+        tbody.appendChild(row);
+        updatePagination();
+        return;
+    }
+
+    students.forEach(student => {
+        const studentImage = student.picture && student.picture !== 'unnamed.jpg' ?
+            `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+
+        const row = document.createElement('tr');
+        row.setAttribute('data-id', student.id);
+        row.innerHTML = `
+            <td class="id" data-id="${student.id}">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="chk_child">
+                </div>
+            </td>
+            <td class="name" data-name="${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}">
+                <div class="d-flex align-items-center">
+                    <div class="symbol symbol-50px me-3">
+                        <img src="${studentImage}" alt="" class="rounded-circle avatar-sm student-image" style="object-fit:cover; width: 50px; height: 50px;"/>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">
+                            <b>${student.lastname || ''}</b> ${student.firstname || ''} ${student.othername || ''}
+                        </h6>
+                    </div>
+                </div>
+            </td>
+            <td class="admissionNo" data-admissionno="${student.admissionNo || ''}">${student.admissionNo || ''}</td>
+            <td class="class" data-class="${student.schoolclassid || ''}">${student.schoolclass || ''} ${student.arm ? ' - ' + student.arm : ''}</td>
+            <td class="status" data-status="${student.statusId || ''}">${student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : ''}</td>
+            <td class="gender" data-gender="${student.gender || ''}">${student.gender || ''}</td>
+            <td class="datereg">${student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : ''}</td>
+            <td>
+                <ul class="d-flex gap-2 list-unstyled mb-0">
+                    <li><a href="javascript:void(0);" class="btn btn-subtle-info btn-icon btn-sm view-item-btn" data-id="${student.id}" onclick="viewStudent(${student.id})" title="View Details"><i class="ph-eye"></i></a></li>
+                    <li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" onclick="editStudent(${student.id})" title="Edit"><i class="ph-pencil"></i></a></li>
+                    <li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}" onclick="deleteStudent(${student.id})" title="Delete"><i class="ph-trash"></i></a></li>
+                </ul>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    updatePagination();
+    initializeCheckboxes();
+}
+
 // Update counts display
 function updateCounts(count) {
     const totalStudents = document.getElementById('totalStudents');
@@ -2507,46 +2759,11 @@ function updateCounts(count) {
     if (showingCount) showingCount.textContent = count;
 }
 
-// Initialize student checkboxes for card view
-function initializeStudentCheckboxes() {
-    const checkAll = document.getElementById('checkAll');
-    const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+// ============================================================================
+// STUDENT CRUD OPERATIONS
+// ============================================================================
 
-    if (checkAll) {
-        checkAll.addEventListener('change', function() {
-            studentCheckboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-                const card = checkbox.closest('.student-card');
-                if (card) {
-                    card.classList.toggle('selected', this.checked);
-                }
-            });
-            document.getElementById('remove-actions').classList.toggle('d-none', !this.checked);
-        });
-    }
-
-    studentCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const card = this.closest('.student-card');
-            if (card) {
-                card.classList.toggle('selected', this.checked);
-            }
-
-            const allChecked = document.querySelectorAll('.student-checkbox').length ===
-                             document.querySelectorAll('.student-checkbox:checked').length;
-            const someChecked = document.querySelectorAll('.student-checkbox:checked').length > 0;
-
-            if (checkAll) {
-                checkAll.checked = allChecked;
-                checkAll.indeterminate = someChecked && !allChecked;
-            }
-
-            document.getElementById('remove-actions').classList.toggle('d-none', !someChecked);
-        });
-    });
-}
-
-// FIXED: View student details
+// View student details
 function viewStudent(id) {
     console.log('View student:', id);
     if (!ensureAxios()) return;
@@ -2599,12 +2816,179 @@ function viewStudent(id) {
         });
 }
 
-// FIXED: Function to populate view modal
+// Edit student
+function editStudent(id) {
+    console.log('Edit student:', id);
+    if (!ensureAxios()) return;
+
+    axios.get(`/student/${id}/edit`)
+        .then((response) => {
+            console.log('Student data received for edit:', response.data);
+            let student = response.data.student || response.data;
+
+            if (!student) {
+                throw new Error('Student data is empty');
+            }
+
+            populateEditForm(student);
+
+            const editModalElement = document.getElementById('editStudentModal');
+            if (editModalElement) {
+                const editModal = new bootstrap.Modal(editModalElement);
+                editModal.show();
+            }
+        })
+        .catch((error) => {
+            console.error('Error editing student:', error);
+            Swal.fire({
+                title: 'Error!',
+                text: error.response?.data?.message || 'Failed to load student data',
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
+        });
+}
+
+// Delete student
+function deleteStudent(id) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' },
+        buttonsStyling: false
+    }).then((result) => {
+        if (result.isConfirmed && ensureAxios()) {
+            axios.delete(`/student/${id}/destroy`)
+                .then(() => {
+                    const card = document.querySelector(`.student-card[data-id="${id}"]`);
+                    if (card) {
+                        card.closest('.col-xl-3').remove();
+                    }
+                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    if (row) {
+                        row.remove();
+                    }
+                    fetchStudents();
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'Student has been deleted',
+                        icon: 'success',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                })
+                .catch((error) => {
+                    console.error('Error deleting student:', error);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: error.response?.data?.message || 'Failed to delete student',
+                        icon: 'error',
+                        customClass: { confirmButton: 'btn btn-primary' },
+                        buttonsStyling: false
+                    });
+                });
+        }
+    });
+}
+
+// Delete multiple students
+function deleteMultiple() {
+    const tableView = document.getElementById('tableView');
+    const isTableView = !tableView.classList.contains('d-none');
+
+    let ids = [];
+
+    if (isTableView) {
+        ids = Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
+            .map(checkbox => {
+                const row = checkbox.closest('tr');
+                return row ? row.getAttribute('data-id') : null;
+            })
+            .filter(id => id !== null);
+    } else {
+        ids = Array.from(document.querySelectorAll('.student-checkbox:checked'))
+            .map(checkbox => checkbox.value)
+            .filter(id => id !== null);
+    }
+
+    if (ids.length === 0) {
+        Swal.fire({
+            title: "Error!",
+            text: "Please select at least one student",
+            icon: "error",
+            customClass: { confirmButton: "btn btn-primary" },
+            buttonsStyling: false
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: "Are you sure?",
+        text: `You are about to delete ${ids.length} student(s). This action cannot be undone!`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, delete them!",
+        cancelButtonText: "Cancel",
+        customClass: {
+            confirmButton: "btn btn-danger",
+            cancelButton: "btn btn-secondary"
+        },
+        buttonsStyling: false
+    }).then((result) => {
+        if (result.isConfirmed && ensureAxios()) {
+            const deletePromises = ids.map(id =>
+                axios.delete(`/student/${id}/destroy`)
+            );
+
+            Promise.all(deletePromises)
+                .then(() => {
+                    fetchStudents();
+
+                    Swal.fire({
+                        title: "Deleted!",
+                        text: `Successfully deleted ${ids.length} student(s)`,
+                        icon: "success",
+                        customClass: { confirmButton: "btn btn-primary" },
+                        buttonsStyling: false
+                    });
+                })
+                .catch((error) => {
+                    console.error('Error deleting students:', error);
+                    Swal.fire({
+                        title: "Error!",
+                        text: error.response?.data?.message || "Failed to delete students",
+                        icon: "error",
+                        customClass: { confirmButton: "btn btn-primary" },
+                        buttonsStyling: false
+                    });
+                });
+        }
+    });
+}
+
+// ============================================================================
+// MODAL POPULATION FUNCTIONS
+// ============================================================================
+
+// Populate view modal
 function populateViewModal(student) {
     console.log('=== DEBUG: Populating View Modal ===');
     console.log('Student object:', student);
 
-    // FIXED: Student Photo with proper fallback
+    // Helper function to set element text
+    function setElementText(id, text) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = text || '-';
+        } else {
+            console.warn(`Element with ID '${id}' not found`);
+        }
+    }
+
+    // Student Photo
     const photoElement = document.getElementById('viewStudentPhoto');
     if (photoElement) {
         const displayInitials = getStudentInitials(student.firstname, student.lastname);
@@ -2613,7 +2997,6 @@ function populateViewModal(student) {
             photoElement.src = `/storage/images/student_avatars/${student.picture}`;
             photoElement.style.display = 'block';
             photoElement.onerror = function() {
-                // Fallback to initials
                 this.style.display = 'none';
                 const overlay = this.nextElementSibling;
                 if (overlay) {
@@ -2621,7 +3004,6 @@ function populateViewModal(student) {
                 }
             };
         } else {
-            // Show initials placeholder
             photoElement.style.display = 'none';
             const overlay = photoElement.nextElementSibling;
             if (overlay) {
@@ -2630,7 +3012,7 @@ function populateViewModal(student) {
         }
     }
 
-    // FIXED: Academic Details with null checks
+    // Academic Details
     setElementText('viewAcademicYear', student.admissionYear || student.admission_year || '-');
     setElementText('viewRegistrationNo', student.admissionNo || student.admission_no || '-');
 
@@ -2642,15 +3024,12 @@ function populateViewModal(student) {
         setElementText('viewAdmissionDate', '-');
     }
 
-    // FIXED: Class, Term, Session display
     const classText = student.schoolclass || '';
     const armText = student.arm || '';
     setElementText('viewClass', classText && armText ? `${classText} - ${armText}` : classText || armText || '-');
 
     setElementText('viewTerm', student.term_name || student.term || '-');
     setElementText('viewSession', student.session_name || student.session || '-');
-
-    // State and LGA
     setElementText('viewState', student.state || '-');
     setElementText('viewLocal', student.local || '-');
 
@@ -2755,51 +3134,7 @@ function populateViewModal(student) {
     setElementText('viewReasonLeaving', student.reason_for_leaving || '-');
 }
 
-// Helper function to set element text
-function setElementText(id, text) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.textContent = text || '-';
-    } else {
-        console.warn(`Element with ID '${id}' not found`);
-    }
-}
-
-// FIXED: Edit student function
-function editStudent(id) {
-    console.log('Edit student:', id);
-    if (!ensureAxios()) return;
-
-    axios.get(`/student/${id}/edit`)
-        .then((response) => {
-            console.log('Student data received for edit:', response.data);
-            let student = response.data.student || response.data;
-
-            if (!student) {
-                throw new Error('Student data is empty');
-            }
-
-            populateEditForm(student);
-
-            const editModalElement = document.getElementById('editStudentModal');
-            if (editModalElement) {
-                const editModal = new bootstrap.Modal(editModalElement);
-                editModal.show();
-            }
-        })
-        .catch((error) => {
-            console.error('Error editing student:', error);
-            Swal.fire({
-                title: 'Error!',
-                text: error.response?.data?.message || 'Failed to load student data',
-                icon: 'error',
-                customClass: { confirmButton: 'btn btn-primary' },
-                buttonsStyling: false
-            });
-        });
-}
-
-// FIXED: Populate edit form
+// Populate edit form
 function populateEditForm(student) {
     console.log('Populating edit form with student:', student);
 
@@ -2863,6 +3198,7 @@ function populateEditForm(student) {
         });
         console.log('Set gender to:', studentGender);
     }
+
     // Set status
     const statusRadios = document.querySelectorAll('#editStudentModal input[name="statusId"]');
     if (statusRadios.length > 0) {
@@ -2883,7 +3219,7 @@ function populateEditForm(student) {
         console.log('Set student_status to:', studentActivityStatus);
     }
 
-    // FIXED: Set avatar with initials fallback
+    // Set avatar
     const avatarElement = document.getElementById('editStudentAvatar');
     if (avatarElement) {
         const displayInitials = getStudentInitials(student.firstname, student.lastname);
@@ -2893,7 +3229,6 @@ function populateEditForm(student) {
             avatarElement.src = avatarUrl;
             avatarElement.style.display = 'block';
             avatarElement.onerror = function() {
-                // Create initials overlay
                 this.style.display = 'none';
                 const container = this.parentElement;
                 if (container) {
@@ -2905,7 +3240,6 @@ function populateEditForm(student) {
                 }
             };
         } else {
-            // Show initials
             avatarElement.style.display = 'none';
             const container = avatarElement.parentElement;
             if (container) {
@@ -2926,11 +3260,6 @@ function populateEditForm(student) {
         calculateAge(student.dateofbirth, 'editAgeInput');
     }
 
-    // Set state and LGA
-    setTimeout(() => {
-        setStateAndLGA('editState', 'editLocal', student.state || '', student.local || '');
-    }, 100);
-
     // Update form action
     const form = document.getElementById('editStudentForm');
     if (form && student.id) {
@@ -2939,48 +3268,170 @@ function populateEditForm(student) {
     }
 }
 
-function deleteStudent(id) {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' },
-        buttonsStyling: false
-    }).then((result) => {
-        if (result.isConfirmed && ensureAxios()) {
-            axios.delete(`/student/${id}/destroy`)
-                .then(() => {
-                    const card = document.querySelector(`.student-card[data-id="${id}"]`);
-                    if (card) {
-                        card.closest('.col-xl-3').remove();
-                    }
-                    const row = document.querySelector(`tr[data-id="${id}"]`);
-                    if (row) {
-                        row.remove();
-                    }
-                    fetchStudents();
-                    Swal.fire({
-                        title: 'Deleted!',
-                        text: 'Student has been deleted',
-                        icon: 'success',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                })
-                .catch((error) => {
-                    console.error('Error deleting student:', error);
-                    Swal.fire({
-                        title: 'Error!',
-                        text: error.response?.data?.message || 'Failed to delete student',
-                        icon: 'error',
-                        customClass: { confirmButton: 'btn btn-primary' },
-                        buttonsStyling: false
-                    });
-                });
-        }
+// ============================================================================
+// FILTER AND SEARCH FUNCTIONS
+// ============================================================================
+
+// Filter data
+function filterData() {
+    const search = document.querySelector('#search-input')?.value.toLowerCase() || '';
+    const classId = document.getElementById('schoolclass-filter')?.value || 'all';
+    const statusId = document.getElementById('status-filter')?.value || 'all';
+    const gender = document.getElementById('gender-filter')?.value || 'all';
+
+    console.log('Filtering with:', { search, classId, statusId, gender });
+
+    const filteredStudents = allStudents.filter(student => {
+        const name = `${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}`.toLowerCase();
+        const admissionNo = (student.admissionNo || '').toLowerCase();
+
+        const matchesSearch = name.includes(search) || admissionNo.includes(search);
+        const matchesClass = classId === 'all' || student.schoolclassid == classId;
+        const matchesStatus = statusId === 'all' || student.statusId == statusId;
+        const matchesGender = gender === 'all' || student.gender === gender;
+
+        return matchesSearch && matchesClass && matchesStatus && matchesGender;
+    });
+
+    const tableView = document.getElementById('tableView');
+    const isTableView = !tableView.classList.contains('d-none');
+
+    if (isTableView) {
+        renderStudents(filteredStudents);
+    } else {
+        renderStudentsCards(filteredStudents);
+    }
+
+    document.getElementById('showingCount').textContent = filteredStudents.length;
+}
+
+// ============================================================================
+// CHECKBOX FUNCTIONS
+// ============================================================================
+
+// Initialize checkboxes for table view
+function initializeCheckboxes() {
+    const checkAll = document.getElementById('checkAll');
+    if (!checkAll) return;
+
+    checkAll.addEventListener('change', function () {
+        document.querySelectorAll('input[name="chk_child"]').forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        document.getElementById('remove-actions').classList.toggle('d-none', !this.checked);
+    });
+
+    document.querySelectorAll('input[name="chk_child"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+            const allChecked = document.querySelectorAll('input[name="chk_child"]').length ===
+                document.querySelectorAll('input[name="chk_child"]:checked').length;
+            checkAll.checked = allChecked;
+            document.getElementById('remove-actions').classList.toggle('d-none',
+                document.querySelectorAll('input[name="chk_child"]:checked').length === 0);
+        });
     });
 }
+
+// Initialize student checkboxes for card view
+function initializeStudentCheckboxes() {
+    const checkAll = document.getElementById('checkAll');
+    const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+
+    if (checkAll) {
+        checkAll.addEventListener('change', function() {
+            studentCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+                const card = checkbox.closest('.student-card');
+                if (card) {
+                    card.classList.toggle('selected', this.checked);
+                }
+            });
+            document.getElementById('remove-actions').classList.toggle('d-none', !this.checked);
+        });
+    }
+
+    studentCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const card = this.closest('.student-card');
+            if (card) {
+                card.classList.toggle('selected', this.checked);
+            }
+
+            const allChecked = document.querySelectorAll('.student-checkbox').length ===
+                             document.querySelectorAll('.student-checkbox:checked').length;
+            const someChecked = document.querySelectorAll('.student-checkbox:checked').length > 0;
+
+            if (checkAll) {
+                checkAll.checked = allChecked;
+                checkAll.indeterminate = someChecked && !allChecked;
+            }
+
+            document.getElementById('remove-actions').classList.toggle('d-none', !someChecked);
+        });
+    });
+}
+
+// ============================================================================
+// PAGINATION FUNCTIONS
+// ============================================================================
+
+// Update pagination controls
+function updatePagination() {
+    const totalItems = allStudents.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const currentPage = 1;
+    const paginationLinks = document.getElementById('paginationLinks');
+
+    if (!paginationLinks) return;
+
+    paginationLinks.innerHTML = '';
+
+    const maxPagesToShow = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+    if (endPage - startPage + 1 < maxPagesToShow) {
+        startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="javascript:void(0);">${i}</a>`;
+        li.addEventListener('click', () => {
+            const startIndex = (i - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageStudents = allStudents.slice(startIndex, endIndex);
+
+            const tableView = document.getElementById('tableView');
+            const isTableView = !tableView.classList.contains('d-none');
+
+            if (isTableView) {
+                renderStudents(pageStudents);
+            } else {
+                renderStudentsCards(pageStudents);
+            }
+
+            document.getElementById('showingCount').textContent = pageStudents.length;
+        });
+        paginationLinks.appendChild(li);
+    }
+
+    const prevPage = document.getElementById('prevPage');
+    const nextPage = document.getElementById('nextPage');
+
+    if (prevPage) {
+        prevPage.classList.toggle('disabled', currentPage === 1);
+    }
+
+    if (nextPage) {
+        nextPage.classList.toggle('disabled', currentPage === totalPages);
+    }
+}
+
+// ============================================================================
+// DATA FETCHING FUNCTIONS
+// ============================================================================
 
 // Fetch students from the server
 function fetchStudents() {
@@ -3060,255 +3511,456 @@ function fetchStudents() {
         });
 }
 
-// Render students in the table
-function renderStudents(students) {
-    console.log('Rendering students in table:', students);
-    const tbody = document.getElementById('studentTableBody');
-    if (!tbody) {
-        console.error('studentTableBody element not found');
+// ============================================================================
+// REPORT MODAL DRAG AND DROP FUNCTIONS
+// ============================================================================
+
+// Initialize column ordering
+function initializeColumnOrdering() {
+    console.log('Initializing column ordering...');
+
+    const columnContainer = document.getElementById('columnsContainer');
+    const hiddenOrderInput = document.getElementById('columnsOrderInput');
+
+    if (!columnContainer || !hiddenOrderInput) {
+        console.error('Column container or hidden input not found');
         return;
     }
 
-    tbody.innerHTML = '';
+    // Function to update column order
+    function updateColumnOrder() {
+        console.log('Updating column order...');
 
-    if (students.length === 0) {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td colspan="8" class="text-center">No students found</td>`;
-        tbody.appendChild(row);
-        updatePagination();
-        return;
-    }
+        // Get all checked checkboxes in their current DOM order
+        const columnItems = columnContainer.querySelectorAll('.draggable-item');
+        const order = [];
+        const selectedLabels = [];
 
-    students.forEach(student => {
-        const studentImage = student.picture && student.picture !== 'unnamed.jpg' ?
-            `/storage/images/student_avatars/${student.picture}` : defaultAvatar;
+        columnItems.forEach(item => {
+            const checkbox = item.querySelector('.column-checkbox');
+            if (checkbox && checkbox.checked) {
+                order.push(checkbox.value);
 
-        const row = document.createElement('tr');
-        row.setAttribute('data-id', student.id);
-        row.innerHTML = `
-            <td class="id" data-id="${student.id}">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="chk_child">
-                </div>
-            </td>
-            <td class="name" data-name="${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}">
-                <div class="d-flex align-items-center">
-                    <div class="symbol symbol-50px me-3">
-                        <img src="${studentImage}" alt="" class="rounded-circle avatar-sm student-image" style="object-fit:cover; width: 50px; height: 50px;"/>
-                    </div>
-                    <div>
-                        <h6 class="mb-0">
-                            <b>${student.lastname || ''}</b> ${student.firstname || ''} ${student.othername || ''}
-                        </h6>
-                    </div>
-                </div>
-            </td>
-            <td class="admissionNo" data-admissionno="${student.admissionNo || ''}">${student.admissionNo || ''}</td>
-            <td class="class" data-class="${student.schoolclassid || ''}">${student.schoolclass || ''} ${student.arm ? ' - ' + student.arm : ''}</td>
-            <td class="status" data-status="${student.statusId || ''}">${student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : ''}</td>
-            <td class="gender" data-gender="${student.gender || ''}">${student.gender || ''}</td>
-            <td class="datereg">${student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : ''}</td>
-            <td>
-                <ul class="d-flex gap-2 list-unstyled mb-0">
-                    <li><a href="javascript:void(0);" class="btn btn-subtle-info btn-icon btn-sm view-item-btn" data-id="${student.id}" onclick="viewStudent(${student.id})" title="View Details"><i class="ph-eye"></i></a></li>
-                    <li><a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="${student.id}" onclick="editStudent(${student.id})" title="Edit"><i class="ph-pencil"></i></a></li>
-                    <li><a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="${student.id}" onclick="deleteStudent(${student.id})" title="Delete"><i class="ph-trash"></i></a></li>
-                </ul>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-
-    updatePagination();
-    initializeCheckboxes();
-}
-
-// Update pagination controls
-function updatePagination() {
-    const totalItems = allStudents.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const currentPage = 1;
-    const paginationLinks = document.getElementById('paginationLinks');
-
-    if (!paginationLinks) return;
-
-    paginationLinks.innerHTML = '';
-
-    const maxPagesToShow = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-
-    if (endPage - startPage + 1 < maxPagesToShow) {
-        startPage = Math.max(1, endPage - maxPagesToShow + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-        const li = document.createElement('li');
-        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-        li.innerHTML = `<a class="page-link" href="javascript:void(0);">${i}</a>`;
-        li.addEventListener('click', () => {
-            const startIndex = (i - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const pageStudents = allStudents.slice(startIndex, endIndex);
-
-            const tableView = document.getElementById('tableView');
-            const isTableView = !tableView.classList.contains('d-none');
-
-            if (isTableView) {
-                renderStudents(pageStudents);
-            } else {
-                renderStudentsCards(pageStudents);
+                // Get the label text
+                const label = item.querySelector('.form-check-label');
+                if (label) {
+                    selectedLabels.push(label.textContent.trim());
+                }
             }
-
-            document.getElementById('showingCount').textContent = pageStudents.length;
         });
-        paginationLinks.appendChild(li);
+
+        console.log('New order:', order);
+        console.log('Selected labels:', selectedLabels);
+
+        hiddenOrderInput.value = order.join(',');
+
+        // Update preview
+        updatePreview();
     }
 
-    const prevPage = document.getElementById('prevPage');
-    const nextPage = document.getElementById('nextPage');
+    // Check if Sortable.js is loaded
+    if (typeof Sortable !== 'undefined') {
+        console.log('Sortable.js loaded, version:', Sortable.version);
 
-    if (prevPage) {
-        prevPage.classList.toggle('disabled', currentPage === 1);
+        // Destroy existing instance if any
+        if (columnSortable) {
+            columnSortable.destroy();
+        }
+
+        // Initialize Sortable.js
+        columnSortable = new Sortable(columnContainer, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            handle: '.drag-handle',
+            filter: '.column-checkbox',
+            onStart: function() {
+                console.log('Drag started');
+            },
+            onEnd: function() {
+                console.log('Drag ended');
+                updateColumnOrder();
+            },
+            onSort: function() {
+                console.log('Items sorted');
+            }
+        });
+
+        console.log('Sortable.js initialized successfully');
+    } else {
+        console.error('Sortable.js not loaded!');
+        // Fallback to native drag and drop
+        initializeNativeDragDrop();
     }
 
-    if (nextPage) {
-        nextPage.classList.toggle('disabled', currentPage === totalPages);
-    }
-}
-
-// Filter function for both views
-function filterData() {
-    const search = document.querySelector('#search-input')?.value.toLowerCase() || '';
-    const classId = document.getElementById('schoolclass-filter')?.value || 'all';
-    const statusId = document.getElementById('status-filter')?.value || 'all';
-    const gender = document.getElementById('gender-filter')?.value || 'all';
-
-    console.log('Filtering with:', { search, classId, statusId, gender });
-
-    const filteredStudents = allStudents.filter(student => {
-        const name = `${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}`.toLowerCase();
-        const admissionNo = (student.admissionNo || '').toLowerCase();
-
-        const matchesSearch = name.includes(search) || admissionNo.includes(search);
-        const matchesClass = classId === 'all' || student.schoolclassid == classId;
-        const matchesStatus = statusId === 'all' || student.statusId == statusId;
-        const matchesGender = gender === 'all' || student.gender === gender;
-
-        return matchesSearch && matchesClass && matchesStatus && matchesGender;
+    // Update order when checkboxes change
+    columnContainer.querySelectorAll('.column-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            console.log('Checkbox changed:', this.value, this.checked);
+            updateColumnOrder();
+        });
     });
 
-    const tableView = document.getElementById('tableView');
-    const isTableView = !tableView.classList.contains('d-none');
-
-    if (isTableView) {
-        renderStudents(filteredStudents);
-    } else {
-        renderStudentsCards(filteredStudents);
-    }
-
-    document.getElementById('showingCount').textContent = filteredStudents.length;
+    // Initial update
+    updateColumnOrder();
 }
 
-// Delete multiple students
-function deleteMultiple() {
-    const tableView = document.getElementById('tableView');
-    const isTableView = !tableView.classList.contains('d-none');
+// Native drag and drop fallback
+function initializeNativeDragDrop() {
+    console.log('Initializing native drag and drop...');
 
-    let ids = [];
+    const container = document.getElementById('columnsContainer');
+    const draggables = container.querySelectorAll('.draggable-item');
 
-    if (isTableView) {
-        ids = Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
-            .map(checkbox => {
-                const row = checkbox.closest('tr');
-                return row ? row.getAttribute('data-id') : null;
-            })
-            .filter(id => id !== null);
-    } else {
-        ids = Array.from(document.querySelectorAll('.student-checkbox:checked'))
-            .map(checkbox => checkbox.value)
-            .filter(id => id !== null);
+    let draggedItem = null;
+
+    draggables.forEach(item => {
+        item.setAttribute('draggable', 'true');
+
+        item.addEventListener('dragstart', function(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.dataset.column);
+        });
+
+        item.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            container.querySelectorAll('.draggable-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            draggedItem = null;
+        });
+
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        item.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            if (this !== draggedItem) {
+                this.classList.add('drag-over');
+            }
+        });
+
+        item.addEventListener('dragleave', function() {
+            this.classList.remove('drag-over');
+        });
+
+        item.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (this !== draggedItem) {
+                // Remove drag-over class
+                this.classList.remove('drag-over');
+
+                // Get all items
+                const allItems = Array.from(container.querySelectorAll('.draggable-item'));
+                const draggedIndex = allItems.indexOf(draggedItem);
+                const targetIndex = allItems.indexOf(this);
+
+                // Move the dragged item
+                if (draggedIndex < targetIndex) {
+                    this.parentElement.after(draggedItem.parentElement);
+                } else {
+                    this.parentElement.before(draggedItem.parentElement);
+                }
+
+                // Update the order
+                updateColumnOrder();
+            }
+        });
+    });
+}
+
+// ============================================================================
+// REPORT GENERATION FUNCTIONS
+// ============================================================================
+
+// Update preview
+function updatePreview() {
+    console.log('Updating preview...');
+
+    const form = document.getElementById('printReportForm');
+    if (!form) {
+        console.error('Report form not found');
+        return;
     }
 
-    if (ids.length === 0) {
+    // Get selected columns in current order
+    const columnItems = document.querySelectorAll('#columnsContainer .draggable-item');
+    const selectedColumns = [];
+    const selectedLabels = [];
+
+    columnItems.forEach(item => {
+        const checkbox = item.querySelector('.column-checkbox');
+        if (checkbox && checkbox.checked) {
+            selectedColumns.push(checkbox.value);
+
+            // Get the label text
+            const label = item.querySelector('.form-check-label');
+            if (label) {
+                selectedLabels.push(label.textContent.trim());
+            }
+        }
+    });
+
+    console.log('Selected columns for preview:', selectedColumns);
+    console.log('Selected labels for preview:', selectedLabels);
+
+    const preview = document.getElementById('columnOrderPreview');
+    if (preview) {
+        preview.textContent = selectedLabels.join(', ') || 'No columns selected';
+        console.log('Preview updated:', preview.textContent);
+    }
+}
+
+// Generate report
+function generateReport() {
+    const form = document.getElementById('printReportForm');
+    if (!form) {
+        console.error('Report form not found');
+        return;
+    }
+
+    // Get selected columns
+    const selectedColumns = Array.from(form.querySelectorAll('input[name="columns[]"]:checked'))
+        .map(cb => cb.value);
+
+    if (selectedColumns.length === 0) {
         Swal.fire({
-            title: "Error!",
-            text: "Please select at least one student",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
+            title: 'Warning!',
+            text: 'Please select at least one column to include in the report.',
+            icon: 'warning',
+            customClass: { confirmButton: 'btn btn-primary' },
             buttonsStyling: false
         });
         return;
     }
 
+    // Get form values
+    const classId = form.querySelector('[name="class_id"]').value;
+    const status = form.querySelector('[name="status"]').value;
+    const formatElement = form.querySelector('[name="format"]:checked');
+    const columnsOrderInput = form.querySelector('[name="columns_order"]');
+    const includeHeader = form.querySelector('[name="include_header"]').checked;
+    const includeLogo = form.querySelector('[name="include_logo"]').checked;
+    const orientation = form.querySelector('[name="orientation"]').value;
+    const termId = form.querySelector('[name="term_id"]')?.value || '';
+    const sessionId = form.querySelector('[name="session_id"]')?.value || '';
+
+    if (!formatElement) {
+        Swal.fire({
+            title: 'Error!',
+            text: 'Please select an export format (PDF or Excel).',
+            icon: 'error',
+            customClass: { confirmButton: 'btn btn-primary' },
+            buttonsStyling: false
+        });
+        return;
+    }
+
+    const format = formatElement.value;
+
+    // Debug: Log what's being sent
+    console.log('Generating report with:', {
+        selectedColumns: selectedColumns,
+        columnsOrder: columnsOrderInput?.value || '',
+        classId: classId,
+        status: status,
+        termId: termId,
+        sessionId: sessionId,
+        format: format,
+        orientation: orientation,
+        includeHeader: includeHeader,
+        includeLogo: includeLogo
+    });
+
+    // Show loading indicator
     Swal.fire({
-        title: "Are you sure?",
-        text: `You are about to delete ${ids.length} student(s). This action cannot be undone!`,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Yes, delete them!",
-        cancelButtonText: "Cancel",
-        customClass: {
-            confirmButton: "btn btn-danger",
-            cancelButton: "btn btn-secondary"
-        },
-        buttonsStyling: false
-    }).then((result) => {
-        if (result.isConfirmed && ensureAxios()) {
-            const deletePromises = ids.map(id =>
-                axios.delete(`/student/${id}/destroy`)
-            );
-
-            Promise.all(deletePromises)
-                .then(() => {
-                    fetchStudents();
-
-                    Swal.fire({
-                        title: "Deleted!",
-                        text: `Successfully deleted ${ids.length} student(s)`,
-                        icon: "success",
-                        customClass: { confirmButton: "btn btn-primary" },
-                        buttonsStyling: false
-                    });
-                })
-                .catch((error) => {
-                    console.error('Error deleting students:', error);
-                    Swal.fire({
-                        title: "Error!",
-                        text: error.response?.data?.message || "Failed to delete students",
-                        icon: "error",
-                        customClass: { confirmButton: "btn btn-primary" },
-                        buttonsStyling: false
-                    });
-                });
+        title: 'Generating Report...',
+        text: 'This may take a moment. Please wait...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
         }
     });
-}
 
-// Initialize checkboxes for multiple selection
-function initializeCheckboxes() {
-    const checkAll = document.getElementById('checkAll');
-    if (!checkAll) return;
-
-    checkAll.addEventListener('change', function () {
-        document.querySelectorAll('input[name="chk_child"]').forEach(checkbox => {
-            checkbox.checked = this.checked;
-        });
-        document.getElementById('remove-actions').classList.toggle('d-none', !this.checked);
+    // Build query parameters
+    const params = new URLSearchParams({
+        class_id: classId,
+        term_id: termId,
+        session_id: sessionId,
+        status: status,
+        columns: selectedColumns.join(','),
+        columns_order: columnsOrderInput?.value || '',
+        format: format,
+        orientation: orientation,
+        include_header: includeHeader ? '1' : '0',
+        include_logo: includeLogo ? '1' : '0'
     });
 
-    document.querySelectorAll('input[name="chk_child"]').forEach(checkbox => {
-        checkbox.addEventListener('change', function () {
-            const allChecked = document.querySelectorAll('input[name="chk_child"]').length ===
-                document.querySelectorAll('input[name="chk_child"]:checked').length;
-            checkAll.checked = allChecked;
-            document.getElementById('remove-actions').classList.toggle('d-none',
-                document.querySelectorAll('input[name="chk_child"]:checked').length === 0);
+    // Make the request
+    axios.get(`/students/report?${params.toString()}`, {
+        responseType: 'blob',
+        timeout: 120000 // 2 minutes timeout
+    })
+    .then(response => {
+        Swal.close();
+
+        // Create a blob from the response
+        const blob = new Blob([response.data], {
+            type: response.headers['content-type']
+        });
+
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Get filename from content-disposition header or generate one
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = 'student-report.' + (format === 'pdf' ? 'pdf' : 'xlsx');
+
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+            if (filenameMatch && filenameMatch[1]) {
+                filename = filenameMatch[1];
+            }
+        }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+
+        // Cleanup
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }, 100);
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('printStudentReportModal'));
+        if (modal) {
+            modal.hide();
+        }
+
+        // Show success message
+        Swal.fire({
+            title: 'Success!',
+            text: `Report generated successfully and downloaded as ${format.toUpperCase()}`,
+            icon: 'success',
+            customClass: { confirmButton: 'btn btn-primary' },
+            buttonsStyling: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    })
+    .catch(error => {
+        Swal.close();
+
+        console.error('Error generating report:', error);
+
+        let errorMessage = 'Failed to generate report. Please try again.';
+
+        if (error.response) {
+            // Server responded with error status
+            if (error.response.status === 404) {
+                errorMessage = 'No students found matching the selected filters.';
+            } else if (error.response.status === 422) {
+                errorMessage = error.response.data.message || 'Validation error. Please check your selections.';
+            } else if (error.response.status === 500) {
+                if (error.response.data && error.response.data.message) {
+                    errorMessage = error.response.data.message;
+                } else {
+                    errorMessage = 'Server error. Please try again later.';
+                }
+            }
+
+            // Try to parse error message from response
+            if (error.response.data && typeof error.response.data === 'object') {
+                if (error.response.data.message) {
+                    errorMessage = error.response.data.message;
+                }
+            }
+        } else if (error.code === 'ECONNABORTED') {
+            errorMessage = 'Request timeout. The report generation is taking too long. Try with fewer students or different filters.';
+        }
+
+        Swal.fire({
+            title: 'Error!',
+            text: errorMessage,
+            icon: 'error',
+            customClass: { confirmButton: 'btn btn-primary' },
+            buttonsStyling: false
         });
     });
 }
 
-// Initialize the student list
+// ============================================================================
+// DEBUG FUNCTIONS
+// ============================================================================
+
+// Debug column ordering
+function debugColumnOrdering() {
+    console.log('=== DEBUG COLUMN ORDERING ===');
+
+    const container = document.getElementById('columnsContainer');
+    const hiddenInput = document.getElementById('columnsOrderInput');
+    const preview = document.getElementById('columnOrderPreview');
+
+    if (!container) {
+        console.error('❌ columnsContainer not found');
+        return;
+    }
+
+    if (!hiddenInput) {
+        console.error('❌ columnsOrderInput not found');
+        return;
+    }
+
+    console.log('✅ Container found:', container);
+    console.log('✅ Hidden input found, value:', hiddenInput.value);
+    console.log('✅ Preview element:', preview ? 'found' : 'not found');
+    console.log('✅ Preview text:', preview ? preview.textContent : 'N/A');
+
+    // Check Sortable.js
+    if (typeof Sortable !== 'undefined') {
+        console.log('✅ Sortable.js loaded, version:', Sortable.version);
+    } else {
+        console.error('❌ Sortable.js NOT loaded');
+    }
+
+    // Check column items
+    const items = container.querySelectorAll('.draggable-item');
+    console.log('✅ Column items found:', items.length);
+
+    items.forEach((item, index) => {
+        const checkbox = item.querySelector('.column-checkbox');
+        const label = item.querySelector('.form-check-label');
+        const dragHandle = item.querySelector('.drag-handle');
+
+        console.log(`Item ${index + 1}:`, {
+            value: checkbox ? checkbox.value : 'N/A',
+            checked: checkbox ? checkbox.checked : false,
+            label: label ? label.textContent.trim() : 'N/A',
+            dragHandle: dragHandle ? 'found' : 'not found',
+            position: index + 1
+        });
+    });
+
+    // Check current order
+    const checkboxes = container.querySelectorAll('.column-checkbox:checked');
+    const currentOrder = Array.from(checkboxes).map(cb => cb.value);
+    console.log('✅ Current checked order:', currentOrder);
+}
+
+// ============================================================================
+// INITIALIZATION FUNCTIONS
+// ============================================================================
+
+// Initialize student list
 function initializeStudentList() {
     console.log('Initializing student list...');
 
@@ -3348,255 +4000,399 @@ function initializeStudentList() {
 }
 
 // ============================================================================
-// FORM SUBMISSION HANDLERS
+// EVENT LISTENERS
 // ============================================================================
 
-// Handle edit form submission
+// DOM Content Loaded Event
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing application...');
+
+    // Initialize student list
+    initializeStudentList();
+
+    // Initialize form submission handlers
+    initializeFormSubmissions();
+
+    // Initialize report modal
+    initializeReportModal();
+
+    // Add event listeners for admission year changes
+    document.getElementById('admissionYear')?.addEventListener('change', () => updateAdmissionNumber());
+    document.getElementById('editAdmissionYear')?.addEventListener('change', () => updateAdmissionNumber('edit'));
+});
+
+// Initialize form submissions
+function initializeFormSubmissions() {
+    // Edit form submission
     const editForm = document.getElementById('editStudentForm');
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
             e.preventDefault();
-
-            console.log('Edit form submitted');
-
-            if (!ensureAxios()) return;
-
-            // Show loading
-            Swal.fire({
-                title: 'Updating Student...',
-                text: 'Please wait while we update student information',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            const formData = new FormData(this);
-
-            // Get the student ID from the form
-            const studentId = document.getElementById('editStudentId')?.value;
-            if (!studentId) {
-                Swal.fire({
-                    title: 'Error!',
-                    text: 'Student ID not found',
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
-
-            // Get the form action URL
-            const url = this.action;
-
-            axios.post(url, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
-            })
-            .then((response) => {
-                Swal.close();
-
-                if (response.data.success) {
-                    // Show success message
-                    Swal.fire({
-                        title: 'Success!',
-                        text: response.data.message || 'Student updated successfully',
-                        icon: 'success',
-                        showCancelButton: false,
-                        confirmButtonText: 'OK',
-                        customClass: {
-                            confirmButton: 'btn btn-primary'
-                        },
-                        buttonsStyling: false
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // Close the modal
-                            const editModalElement = document.getElementById('editStudentModal');
-                            if (editModalElement) {
-                                const editModal = bootstrap.Modal.getInstance(editModalElement);
-                                if (editModal) {
-                                    editModal.hide();
-                                }
-                            }
-
-                            // Refresh the student list
-                            fetchStudents();
-
-                            // Check if redirect URL is provided
-                            if (response.data.redirect) {
-                                // Redirect after a short delay
-                                setTimeout(() => {
-                                    window.location.href = response.data.redirect;
-                                }, 1000);
-                            }
-                        }
-                    });
-                } else {
-                    throw new Error(response.data.message || 'Update failed');
-                }
-            })
-            .catch((error) => {
-                Swal.close();
-                console.error('Error updating student:', error);
-
-                let errorMessage = 'Failed to update student';
-                if (error.response?.data?.message) {
-                    errorMessage = error.response.data.message;
-                } else if (error.message) {
-                    errorMessage = error.message;
-                }
-
-                // Display validation errors if they exist
-                if (error.response?.data?.errors) {
-                    const errors = error.response.data.errors;
-                    let errorList = '';
-                    for (const field in errors) {
-                        errorList += `<li>${errors[field].join(', ')}</li>`;
-                    }
-                    errorMessage = `<div class="text-start"><strong>Validation Errors:</strong><ul class="mb-0">${errorList}</ul></div>`;
-                }
-
-                Swal.fire({
-                    title: 'Error!',
-                    html: errorMessage,
-                    icon: 'error',
-                    customClass: {
-                        confirmButton: 'btn btn-primary'
-                    },
-                    buttonsStyling: false
-                });
-            });
+            handleEditFormSubmit(this);
         });
     }
-});
 
-// Handle add form submission
-document.addEventListener('DOMContentLoaded', function() {
+    // Add form submission
     const addForm = document.getElementById('addStudentForm');
     if (addForm) {
         addForm.addEventListener('submit', function(e) {
             e.preventDefault();
-
-            console.log('Add form submitted');
-
-            if (!ensureAxios()) return;
-
-            // Show loading
-            Swal.fire({
-                title: 'Creating Student...',
-                text: 'Please wait while we create the student record',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            const formData = new FormData(this);
-
-            axios.post(this.action, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
-            })
-            .then((response) => {
-                Swal.close();
-
-                if (response.data.success) {
-                    // Show success message
-                    Swal.fire({
-                        title: 'Success!',
-                        text: response.data.message || 'Student created successfully',
-                        icon: 'success',
-                        showCancelButton: false,
-                        confirmButtonText: 'OK',
-                        customClass: {
-                            confirmButton: 'btn btn-primary'
-                        },
-                        buttonsStyling: false
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // Close the modal
-                            const addModalElement = document.getElementById('addStudentModal');
-                            if (addModalElement) {
-                                const addModal = bootstrap.Modal.getInstance(addModalElement);
-                                if (addModal) {
-                                    addModal.hide();
-                                }
-                            }
-
-                            // Reset the form
-                            addForm.reset();
-
-                            // Refresh the student list
-                            fetchStudents();
-
-                            // Check if redirect URL is provided
-                            if (response.data.redirect) {
-                                // Redirect after a short delay
-                                setTimeout(() => {
-                                    window.location.href = response.data.redirect;
-                                }, 1000);
-                            }
-                        }
-                    });
-                } else {
-                    throw new Error(response.data.message || 'Creation failed');
-                }
-            })
-            .catch((error) => {
-                Swal.close();
-                console.error('Error creating student:', error);
-
-                let errorMessage = 'Failed to create student';
-                if (error.response?.data?.message) {
-                    errorMessage = error.response.data.message;
-                } else if (error.message) {
-                    errorMessage = error.message;
-                }
-
-                // Display validation errors if they exist
-                if (error.response?.data?.errors) {
-                    const errors = error.response.data.errors;
-                    let errorList = '';
-                    for (const field in errors) {
-                        errorList += `<li>${errors[field].join(', ')}</li>`;
-                    }
-                    errorMessage = `<div class="text-start"><strong>Validation Errors:</strong><ul class="mb-0">${errorList}</ul></div>`;
-                }
-
-                Swal.fire({
-                    title: 'Error!',
-                    html: errorMessage,
-                    icon: 'error',
-                    customClass: {
-                        confirmButton: 'btn btn-primary'
-                    },
-                    buttonsStyling: false
-                });
-            });
+            handleAddFormSubmit(this);
         });
     }
-});
+}
 
-// Initialize states dropdowns when the page loads
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing student list and states dropdowns...');
+// Handle edit form submission
+function handleEditFormSubmit(form) {
+    console.log('Edit form submitted');
 
-    // Initialize states dropdowns
-    initializeStatesDropdown('addState', 'addLocal');
-    initializeStatesDropdown('editState', 'editLocal');
+    if (!ensureAxios()) return;
 
-    // Initialize student list
-    initializeStudentList();
-});
+    Swal.fire({
+        title: 'Updating Student...',
+        text: 'Please wait while we update student information',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
 
-// Call initializeStudentList on page load (for backward compatibility)
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing student list...');
-    initializeStudentList();
-});
+    const formData = new FormData(form);
+    const studentId = document.getElementById('editStudentId')?.value;
+
+    if (!studentId) {
+        Swal.fire({
+            title: 'Error!',
+            text: 'Student ID not found',
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+
+    const url = form.action;
+
+    axios.post(url, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then((response) => {
+        Swal.close();
+
+        if (response.data.success) {
+            Swal.fire({
+                title: 'Success!',
+                text: response.data.message || 'Student updated successfully',
+                icon: 'success',
+                showCancelButton: false,
+                confirmButtonText: 'OK',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const editModalElement = document.getElementById('editStudentModal');
+                    if (editModalElement) {
+                        const editModal = bootstrap.Modal.getInstance(editModalElement);
+                        if (editModal) {
+                            editModal.hide();
+                        }
+                    }
+
+                    fetchStudents();
+
+                    if (response.data.redirect) {
+                        setTimeout(() => {
+                            window.location.href = response.data.redirect;
+                        }, 1000);
+                    }
+                }
+            });
+        } else {
+            throw new Error(response.data.message || 'Update failed');
+        }
+    })
+    .catch((error) => {
+        Swal.close();
+        console.error('Error updating student:', error);
+
+        let errorMessage = 'Failed to update student';
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        if (error.response?.data?.errors) {
+            const errors = error.response.data.errors;
+            let errorList = '';
+            for (const field in errors) {
+                errorList += `<li>${errors[field].join(', ')}</li>`;
+            }
+            errorMessage = `<div class="text-start"><strong>Validation Errors:</strong><ul class="mb-0">${errorList}</ul></div>`;
+        }
+
+        Swal.fire({
+            title: 'Error!',
+            html: errorMessage,
+            icon: 'error',
+            customClass: {
+                confirmButton: 'btn btn-primary'
+            },
+            buttonsStyling: false
+        });
+    });
+}
+
+// Handle add form submission
+function handleAddFormSubmit(form) {
+    console.log('Add form submitted');
+
+    if (!ensureAxios()) return;
+
+    Swal.fire({
+        title: 'Creating Student...',
+        text: 'Please wait while we create the student record',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    const formData = new FormData(form);
+
+    axios.post(form.action, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then((response) => {
+        Swal.close();
+
+        if (response.data.success) {
+            Swal.fire({
+                title: 'Success!',
+                text: response.data.message || 'Student created successfully',
+                icon: 'success',
+                showCancelButton: false,
+                confirmButtonText: 'OK',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const addModalElement = document.getElementById('addStudentModal');
+                    if (addModalElement) {
+                        const addModal = bootstrap.Modal.getInstance(addModalElement);
+                        if (addModal) {
+                            addModal.hide();
+                        }
+                    }
+
+                    form.reset();
+                    fetchStudents();
+
+                    if (response.data.redirect) {
+                        setTimeout(() => {
+                            window.location.href = response.data.redirect;
+                        }, 1000);
+                    }
+                }
+            });
+        } else {
+            throw new Error(response.data.message || 'Creation failed');
+        }
+    })
+    .catch((error) => {
+        Swal.close();
+        console.error('Error creating student:', error);
+
+        let errorMessage = 'Failed to create student';
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        if (error.response?.data?.errors) {
+            const errors = error.response.data.errors;
+            let errorList = '';
+            for (const field in errors) {
+                errorList += `<li>${errors[field].join(', ')}</li>`;
+            }
+            errorMessage = `<div class="text-start"><strong>Validation Errors:</strong><ul class="mb-0">${errorList}</ul></div>`;
+        }
+
+        Swal.fire({
+            title: 'Error!',
+            html: errorMessage,
+            icon: 'error',
+            customClass: {
+                confirmButton: 'btn btn-primary'
+            },
+            buttonsStyling: false
+        });
+    });
+}
+
+// Initialize report modal
+function initializeReportModal() {
+    const reportModal = document.getElementById('printStudentReportModal');
+
+    if (reportModal) {
+        // Initialize when modal is shown
+        reportModal.addEventListener('shown.bs.modal', function() {
+            console.log('Report modal shown, initializing column ordering...');
+            setTimeout(() => {
+                initializeColumnOrdering();
+            }, 100);
+        });
+
+        // Clean up when modal is hidden
+        reportModal.addEventListener('hidden.bs.modal', function() {
+            console.log('Report modal hidden');
+            if (columnSortable) {
+                columnSortable.destroy();
+                columnSortable = null;
+            }
+        });
+
+        // Initialize on load if modal is already open
+        if (reportModal.classList.contains('show')) {
+            console.log('Modal already open, initializing...');
+            setTimeout(() => {
+                initializeColumnOrdering();
+            }, 100);
+        }
+    }
+
+    // Initialize generate report button
+    const generateReportBtn = document.getElementById('generateReportBtn');
+    if (generateReportBtn) {
+        generateReportBtn.addEventListener('click', generateReport);
+    }
+
+    // Update preview when checkboxes change
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.classList.contains('column-checkbox')) {
+            console.log('Checkbox change detected, updating preview...');
+            updatePreview();
+        }
+    });
+
+    // Initialize preview on load
+    updatePreview();
+}
+
+// ============================================================================
+// STATE AND LGA MANAGEMENT (If needed)
+// ============================================================================
+
+// Nigerian states data
+const nigerianStates = [
+     { name: "Abia", lgAs: ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
+    { name: "Adamawa", lgAs: ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
+    { name: "Akwa Ibom", lgAs: ["Abak", "Eastern Obolo", "Eket", "Esit Eket", "Essien Udim", "Etim Ekpo", "Etinan", "Ibeno", "Ibesikpo Asutan", "Ibiono-Ibom", "Ika", "Ikono", "Ikot Abasi", "Ikot Ekpene", "Ini", "Itu", "Mbo", "Mkpat-Enin", "Nsit-Atai", "Nsit-Ibom", "Nsit-Ubium", "Obot Akara", "Okobo", "Onna", "Oron", "Oruk Anam", "Udung-Uko", "Ukanafun", "Uruan", "Urue-Offong/Oruko", "Uyo"] },
+    { name: "Anambra", lgAs: ["Aguata", "Anambra East", "Anambra West", "Anaocha", "Awka North", "Awka South", "Ayamelum", "Dunukofia", "Ekwusigo", "Idemili North", "Idemili South", "Ihiala", "Njikoka", "Nnewi North", "Nnewi South", "Ogbaru", "Onitsha North", "Onitsha South", "Orumba North", "Orumba South", "Oyi"] },
+    { name: "Bauchi", lgAs: ["Alkaleri", "Bauchi", "Bogoro", "Damban", "Darazo", "Dass", "Gamawa", "Ganjuwa", "Giade", "Itas/Gadau", "Jama'are", "Katagum", "Kirfi", "Misau", "Ningi", "Shira", "Tafawa Balewa", "Toro", "Warji", "Zaki"] },
+    { name: "Bayelsa", lgAs: ["Brass", "Ekeremor", "Kolokuma/Opokuma", "Nembe", "Ogbia", "Sagbama", "Southern Ijaw", "Yenagoa"] },
+    { name: "Benue", lgAs: ["Ado", "Agatu", "Apa", "Buruku", "Gboko", "Guma", "Gwer East", "Gwer West", "Katsina-Ala", "Konshisha", "Kwande", "Logo", "Makurdi", "Obi", "Ogbadibo", "Ohimini", "Oju", "Okpokwu", "Oturkpo", "Tarka", "Ukum", "Ushongo", "Vandeikya"] },
+    { name: "Borno", lgAs: ["Abadam", "Askira/Uba", "Bama", "Bayo", "Biu", "Chibok", "Damboa", "Dikwa", "Gubio", "Guzamala", "Gwoza", "Hawul", "Jere", "Kaga", "Kala/Balge", "Konduga", "Kukawa", "Kwaya Kusar", "Mafa", "Magumeri", "Maiduguri", "Marte", "Mobbar", "Monguno", "Ngala", "Nganzai", "Shani"] },
+    { name: "Cross River", lgAs: ["Abi", "Akamkpa", "Akpabuyo", "Bakassi", "Bekwarra", "Biase", "Boki", "Calabar Municipal", "Calabar South", "Etung", "Ikom", "Obanliku", "Obubra", "Obudu", "Odukpani", "Ogoja", "Yakuur", "Yala"] },
+    { name: "Delta", lgAs: ["Aniocha North", "Aniocha South", "Bomadi", "Burutu", "Ethiope East", "Ethiope West", "Ika North East", "Ika South", "Isoko North", "Isoko South", "Ndokwa East", "Ndokwa West", "Okpe", "Oshimili North", "Oshimili South", "Patani", "Sapele", "Udu", "Ughelli North", "Ughelli South", "Ukwuani", "Uvwie", "Warri North", "Warri South", "Warri South West"] },
+    { name: "Ebonyi", lgAs: ["Abakaliki", "Afikpo North", "Afikpo South", "Ebonyi", "Ezza North", "Ezza South", "Ikwo", "Ishielu", "Ivo", "Izzi", "Ohaozara", "Ohaukwu", "Onicha"] },
+    { name: "Edo", lgAs: ["Akoko-Edo", "Egor", "Esan Central", "Esan North-East", "Esan South-East", "Esan West", "Etsako Central", "Etsako East", "Etsako West", "Igueben", "Ikpoba Okha", "Orhionmwon", "Oredo", "Ovia North-East", "Ovia South-West", "Owan East", "Owan West", "Uhunmwonde"] },
+    { name: "Ekiti", lgAs: ["Ado Ekiti", "Efon", "Ekiti East", "Ekiti South-West", "Ekiti West", "Emure", "Gbonyin", "Ido Osi", "Ijero", "Ikere", "Ilejemeje", "Irepodun/Ifelodun", "Ise/Orun", "Moba", "Oye"] },
+    { name: "Enugu", lgAs: ["Aninri", "Awgu", "Enugu East", "Enugu North", "Enugu South", "Ezeagu", "Igbo Etiti", "Igbo Eze North", "Igbo Eze South", "Isi Uzo", "Nkanu East", "Nkanu West", "Nsukka", "Oji River", "Udenu", "Udi", "Uzo Uwani"] },
+    { name: "FCT", lgAs: ["Abaji", "Bwari", "Gwagwalada", "Kuje", "Kwali", "Municipal Area Council"] },
+    { name: "Gombe", lgAs: ["Akko", "Balanga", "Billiri", "Dukku", "Funakaye", "Gombe", "Kaltungo", "Kwami", "Nafada", "Shongom", "Yamaltu/Deba"] },
+    { name: "Imo", lgAs: ["Aboh Mbaise", "Ahiazu Mbaise", "Ehime Mbano", "Ezinihitte", "Ideato North", "Ideato South", "Ihitte/Uboma", "Ikeduru", "Isiala Mbano", "Isu", "Mbaitoli", "Ngor Okpala", "Njaba", "Nkwerre", "Nwangele", "Obowo", "Oguta", "Ohaji/Egbema", "Okigwe", "Orlu", "Orsu", "Oru East", "Oru West", "Owerri Municipal", "Owerri North", "Owerri West", "Unuimo"] },
+    { name: "Jigawa", lgAs: ["Auyo", "Babura", "Biriniwa", "Birnin Kudu", "Buji", "Dutse", "Gagarawa", "Garki", "Gumel", "Guri", "Gwaram", "Gwiwa", "Hadejia", "Jahun", "Kafin Hausa", "Kazaure", "Kiri Kasama", "Kiyawa", "Kaugama", "Maigatari", "Malam Madori", "Miga", "Ringim", "Roni", "Sule Tankarkar", "Taura", "Yankwashi"] },
+    { name: "Kaduna", lgAs: ["Birnin Gwari", "Chikun", "Giwa", "Igabi", "Ikara", "Jaba", "Jema'a", "Kachia", "Kaduna North", "Kaduna South", "Kagarko", "Kajuru", "Kaura", "Kauru", "Kubau", "Kudan", "Lere", "Makarfi", "Sabon Gari", "Sanga", "Soba", "Zangon Kataf", "Zaria"] },
+    { name: "Kano", lgAs: ["Ajingi", "Albasu", "Bagwai", "Bebeji", "Bichi", "Bunkure", "Dala", "Dambatta", "Dawakin Kudu", "Dawakin Tofa", "Doguwa", "Fagge", "Gabasawa", "Garko", "Garun Mallam", "Gaya", "Gezawa", "Gwale", "Gwarzo", "Kabo", "Kano Municipal", "Karaye", "Kibiya", "Kiru", "Kumbotso", "Kunchi", "Kura", "Madobi", "Makoda", "Minjibir", "Nasarawa", "Rano", "Rimin Gado", "Rogo", "Shanono", "Sumaila", "Takai", "Tarauni", "Tofa", "Tsanyawa", "Tudun Wada", "Ungogo", "Warawa", "Wudil"] },
+    { name: "Katsina", lgAs: ["Bakori", "Batagarawa", "Batsari", "Baure", "Bindawa", "Charanchi", "Dan Musa", "Dandume", "Danja", "Daura", "Dutsi", "Dutsin Ma", "Faskari", "Funtua", "Ingawa", "Jibia", "Kafur", "Kaita", "Kankara", "Kankia", "Katsina", "Kurfi", "Kusada", "Mai'Adua", "Malumfashi", "Mani", "Mashi", "Matazu", "Musawa", "Rimi", "Sabuwa", "Safana", "Sandamu", "Zango"] },
+    { name: "Kebbi", lgAs: ["Aleiro", "Arewa Dandi", "Argungu", "Augie", "Bagudo", "Birnin Kebbi", "Bunza", "Dandi", "Fakai", "Gwandu", "Jega", "Kalgo", "Koko/Besse", "Maiyama", "Ngaski", "Sakaba", "Shanga", "Suru", "Danko/Wasagu", "Yauri", "Zuru"] },
+    { name: "Kogi", lgAs: ["Adavi", "Ajaokuta", "Ankpa", "Bassa", "Dekina", "Ibaji", "Idah", "Igalamela Odolu", "Ijumu", "Kabba/Bunu", "Kogi", "Lokoja", "Mopa Muro", "Ofu", "Ogori/Magongo", "Okehi", "Okene", "Olamaboro", "Omala", "Yagba East", "Yagba West"] },
+    { name: "Kwara", lgAs: ["Asa", "Baruten", "Edu", "Ekiti", "Ifelodun", "Ilorin East", "Ilorin South", "Ilorin West", "Irepodun", "Isin", "Kaiama", "Moro", "Offa", "Oke Ero", "Oyun", "Pategi"] },
+    { name: "Lagos", lgAs: ["Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin", "Apapa", "Badagry", "Epe", "Eti Osa", "Ibeju-Lekki", "Ifako-Ijaiye", "Ikeja", "Ikorodu", "Kosofe", "Lagos Island", "Lagos Mainland", "Mushin", "Ojo", "Oshodi-Isolo", "Shomolu", "Surulere"] },
+    { name: "Nasarawa", lgAs: ["Akwanga", "Awe", "Doma", "Karu", "Keana", "Keffi", "Kokona", "Lafia", "Nasarawa", "Nasarawa Egon", "Obi", "Toto", "Wamba"] },
+    { name: "Niger", lgAs: ["Agaie", "Agwara", "Bida", "Borgu", "Bosso", "Chanchaga", "Edati", "Gbako", "Gurara", "Katcha", "Kontagora", "Lapai", "Lavun", "Magama", "Mariga", "Mashegu", "Mokwa", "Moya", "Paikoro", "Rafi", "Rijau", "Shiroro", "Suleja", "Tafa", "Wushishi"] },
+    { name: "Ogun", lgAs: ["Abeokuta North", "Abeokuta South", "Ado-Odo/Ota", "Egbado North", "Egbado South", "Ewekoro", "Ifo", "Ijebu East", "Ijebu North", "Ijebu North East", "Ijebu Ode", "Ikenne", "Imeko Afon", "Ipokia", "Obafemi Owode", "Odeda", "Odogbolu", "Ogun Waterside", "Remo North", "Shagamu"] },
+    { name: "Ondo", lgAs: ["Akoko North-East", "Akoko North-West", "Akoko South-East", "Akoko South-West", "Akure North", "Akure South", "Ese Odo", "Idanre", "Ifedore", "Ilaje", "Ile Oluji/Okeigbo", "Irele", "Odigbo", "Okitipupa", "Ondo East", "Ondo West", "Ose", "Owo"] },
+    { name: "Osun", lgAs: ["Aiyedade", "Aiyedire", "Atakunmosa East", "Atakunmosa West", "Boluwaduro", "Boripe", "Ede North", "Ede South", "Egbedore", "Ejigbo", "Ife Central", "Ife East", "Ife North", "Ife South", "Ifedayo", "Ifelodun", "Ila", "Ilesa East", "Ilesa West", "Irepodun", "Irewole", "Isokan", "Iwo", "Obokun", "Odo Otin", "Ola Oluwa", "Olorunda", "Oriade", "Orolu", "Osogbo"] },
+    { name: "Oyo", lgAs: ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo East", "Oyo West", "Saki East", "Saki West", "Surulere"] },
+    { name: "Plateau", lgAs: ["Bokkos", "Barkin Ladi", "Bassa", "Jos East", "Jos North", "Jos South", "Kanam", "Kanke", "Langtang North", "Langtang South", "Mangu", "Mikang", "Pankshin", "Qua'an Pan", "Riyom", "Shendam", "Wase"] },
+    { name: "Rivers", lgAs: ["Abua/Odual", "Ahoada East", "Ahoada West", "Akuku-Toru", "Andoni", "Asari-Toru", "Bonny", "Degema", "Eleme", "Emohua", "Etche", "Gokana", "Ikwerre", "Khana", "Obio/Akpor", "Ogba/Egbema/Ndoni", "Ogu/Bolo", "Okrika", "Omuma", "Opobo/Nkoro", "Oyigbo", "Port Harcourt", "Tai"] },
+    { name: "Sokoto", lgAs: ["Binji", "Bodinga", "Dange Shuni", "Gada", "Goronyo", "Gudu", "Gwadabawa", "Illela", "Isa", "Kebbe", "Kware", "Rabah", "Sabon Birni", "Shagari", "Silame", "Sokoto North", "Sokoto South", "Tambuwal", "Tangaza", "Tureta", "Wamako", "Wurno", "Yabo"] },
+    { name: "Taraba", lgAs: ["Ardo Kola", "Bali", "Donga", "Gashaka", "Gassol", "Ibi", "Jalingo", "Karim Lamido", "Kumi", "Lau", "Sardauna", "Takum", "Ussa", "Wukari", "Yorro", "Zing"] },
+    { name: "Yobe", lgAs: ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
+    { name: "Zamfara", lgAs: ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Chafe", "Zurmi"] }
+];
+
+// Initialize states dropdown
+function initializeStatesDropdown(stateDropdownId, lgaDropdownId) {
+    const stateSelect = document.getElementById(stateDropdownId);
+    const lgaSelect = document.getElementById(lgaDropdownId);
+
+    if (!stateSelect || !lgaSelect) return;
+
+    // Clear existing options
+    stateSelect.innerHTML = '<option value="">Select State</option>';
+    lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+
+    // Populate states
+    nigerianStates.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state.name;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+    });
+
+    // Add change event listener
+    stateSelect.addEventListener('change', function() {
+        const selectedState = this.value;
+        const state = nigerianStates.find(s => s.name === selectedState);
+
+        // Clear LGA dropdown
+        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+
+        if (state) {
+            // Populate LGAs for selected state
+            state.lgAs.forEach(lga => {
+                const option = document.createElement('option');
+                option.value = lga;
+                option.textContent = lga;
+                lgaSelect.appendChild(option);
+            });
+        }
+    });
+}
+
+// Set specific state and LGA
+function setStateAndLGA(stateDropdownId, lgaDropdownId, stateName, lgaName) {
+    const stateSelect = document.getElementById(stateDropdownId);
+    const lgaSelect = document.getElementById(lgaDropdownId);
+
+    if (!stateSelect || !lgaSelect) return;
+
+    // Set state
+    if (stateName) {
+        stateSelect.value = stateName;
+
+        // Trigger change to populate LGAs
+        const event = new Event('change');
+        stateSelect.dispatchEvent(event);
+
+        // Set LGA after a short delay
+        setTimeout(() => {
+            lgaSelect.value = lgaName;
+        }, 100);
+    }
+}
 </script>
 @endsection
