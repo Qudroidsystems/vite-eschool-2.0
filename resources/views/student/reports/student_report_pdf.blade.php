@@ -221,7 +221,7 @@
         @if($include_logo && $school_info)
         <div class="header-with-logo">
             <div class="logo-container">
-                @if($school_logo_base64)
+                @if(!empty($school_logo_base64))
                     <!-- Use base64 for PDF -->
                     <img src="{{ $school_logo_base64 }}" alt="School Logo">
                 @elseif($school_info->getLogoUrlAttribute())
@@ -383,7 +383,14 @@
                     <td class="text-center {{ $widthClass }}">{{ $student->age ?? 'N/A' }}</td>
                     @elseif($col == 'class')
                     <td class="text-left {{ $widthClass }}">
-                        {{ $student->schoolclass ?? 'N/A' }}{{ $student->arm_name ? ' - ' . $student->arm_name : '' }}
+                        @if(isset($student->current_class_name) || isset($student->schoolclass))
+                            {{ $student->current_class_name ?? $student->schoolclass }}
+                            @if(isset($student->current_arm) && $student->current_arm)
+                                - {{ $student->current_arm }}
+                            @endif
+                        @else
+                            N/A
+                        @endif
                     </td>
                     @elseif($col == 'status')
                     <td class="text-center {{ $widthClass }}">
@@ -426,17 +433,11 @@
                     </td>
                     @elseif($col == 'term')
                     <td class="text-center {{ $widthClass }}">
-                        @php
-                            $term = $student->termid ? \App\Models\Schoolterm::find($student->termid) : null;
-                        @endphp
-                        {{ $term ? $term->term : 'N/A' }}
+                        {{ $student->current_term_name ?? ($student->termid ? \App\Models\Schoolterm::find($student->termid)->term ?? 'N/A' : 'N/A') }}
                     </td>
                     @elseif($col == 'session')
                     <td class="text-center {{ $widthClass }}">
-                        @php
-                            $session = $student->sessionid ? \App\Models\Schoolsession::find($student->sessionid) : null;
-                        @endphp
-                        {{ $session ? $session->session : 'N/A' }}
+                        {{ $student->current_session_name ?? ($student->sessionid ? \App\Models\Schoolsession::find($student->sessionid)->session ?? 'N/A' : 'N/A') }}
                     </td>
                     @else
                     <td class="text-left {{ $widthClass }}">

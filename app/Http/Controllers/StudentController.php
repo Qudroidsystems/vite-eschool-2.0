@@ -1477,7 +1477,8 @@ public function generateReport(Request $request)
                 $currentSessionName = $currentTerm->session->name;
             }
 
-            return (object) [
+            // Build student data
+            $studentData = [
                 'id' => $student->id,
                 'admissionNo' => $student->admissionNo,
                 'admissionYear' => $student->admissionYear,
@@ -1521,6 +1522,12 @@ public function generateReport(Request $request)
                 'current_term_name' => $currentTermName,
                 'current_session_name' => $currentSessionName,
 
+                // For report display - use the correct property names
+                'schoolclass' => $currentClass,
+                'arm_name' => $currentArm,
+                'termid' => $currentTerm ? $currentTerm->termId : null,
+                'sessionid' => $currentTerm ? $currentTerm->sessionId : null,
+
                 // Picture
                 'picture' => $picture ? $picture->picture : null,
 
@@ -1534,6 +1541,8 @@ public function generateReport(Request $request)
                 'father_occupation' => $parent ? $parent->father_occupation : null,
                 'father_city' => $parent ? $parent->father_city : null,
             ];
+
+            return (object) $studentData;
         });
 
         // Get class name for report header
@@ -1586,10 +1595,8 @@ public function generateReport(Request $request)
             'include_header'    => $includeHeader,
             'include_logo'      => $includeLogo,
             'school_info'       => $schoolInfo,
+            'school_logo_base64' => null, // Always initialize
         ];
-
-        // FIX: Always initialize the school_logo_base64 variable
-        $data['school_logo_base64'] = null;
 
         // Only add logo base64 if we have a school info and logo is requested for PDF
         if ($includeLogo && $schoolInfo && $format === 'pdf') {
