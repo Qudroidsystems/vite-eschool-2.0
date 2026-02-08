@@ -1,277 +1,378 @@
-console.log("term.init.js loaded");
+console.log("term.init.js is loaded and executing!");
 
-// ────────────────────────────────────────────────────────────────
-// Dependencies check
-// ────────────────────────────────────────────────────────────────
+// Verify dependencies
 try {
-    if (typeof axios === 'undefined') throw new Error("Axios missing");
-    if (typeof Swal === 'undefined') throw new Error("SweetAlert2 missing");
-    if (typeof bootstrap === 'undefined') throw new Error("Bootstrap missing");
-    if (typeof List === 'undefined') throw new Error("List.js missing");
-} catch (err) {
-    console.error("Dependency error:", err.message);
+    if (typeof axios === 'undefined') throw new Error("Axios is not loaded");
+    if (typeof Swal === 'undefined') throw new Error("SweetAlert2 is not loaded");
+    if (typeof bootstrap === 'undefined') throw new Error("Bootstrap is not loaded");
+    if (typeof List === 'undefined') throw new Error("List.js is not loaded");
+} catch (error) {
+    console.error("Dependency check failed:", error);
 }
 
-// CSRF token
-axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.content || '';
+// Set Axios CSRF token globally
+axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
 
-// ────────────────────────────────────────────────────────────────
-// Helpers
-// ────────────────────────────────────────────────────────────────
-function debounce(func, wait = 300) {
+// Debounce function for search input
+function debounce(func, wait) {
     let timeout;
-    return (...args) => {
+    return function (...args) {
         clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), wait);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
 
-function updateRemoveButtonVisibility() {
-    const checked = document.querySelectorAll('tbody input[name="chk_child"]:checked').length;
-    document.getElementById("remove-actions")?.classList.toggle("d-none", checked === 0);
-}
-
-// ────────────────────────────────────────────────────────────────
-// Select All Checkbox
-// ────────────────────────────────────────────────────────────────
-const checkAll = document.getElementById("checkAll");
+// Check all checkbox
+var checkAll = document.getElementById("checkAll");
 if (checkAll) {
-    checkAll.addEventListener("change", function () {
-        document.querySelectorAll('tbody input[name="chk_child"]').forEach(chk => {
-            chk.checked = this.checked;
-            chk.closest("tr").classList.toggle("table-active", this.checked);
+    checkAll.onclick = function () {
+        console.log("checkAll clicked");
+        var checkboxes = document.querySelectorAll('tbody input[name="chk_child"]');
+        checkboxes.forEach((checkbox) => {
+            checkbox.checked = this.checked;
+            const row = checkbox.closest("tr");
+            if (checkbox.checked) {
+                row.classList.add("table-active");
+            } else {
+                row.classList.remove("table-active");
+            }
         });
-        updateRemoveButtonVisibility();
-    });
-}
-
-// Individual checkboxes
-function initCheckboxes() {
-    document.querySelectorAll('tbody input[name="chk_child"]').forEach(chk => {
-        chk.addEventListener("change", function () {
-            this.closest("tr").classList.toggle("table-active", this.checked);
-            updateRemoveButtonVisibility();
-
-            const all = document.querySelectorAll('tbody input[name="chk_child"]');
-            const checked = document.querySelectorAll('tbody input[name="chk_child"]:checked');
-            if (checkAll) checkAll.checked = all.length > 0 && all.length === checked.length;
-        });
-    });
-}
-
-// ────────────────────────────────────────────────────────────────
-// Edit handler
-// ────────────────────────────────────────────────────────────────
-function handleEditClick(e) {
-    e.preventDefault();
-    const tr = e.target.closest("tr");
-    if (!tr) return;
-
-    const id     = tr.querySelector(".id")?.getAttribute("data-id");
-    const term   = tr.querySelector(".term")?.innerText.trim();
-    const status = tr.querySelector(".status")?.getAttribute("data-status") === "1";
-
-    if (!id || !term) return;
-
-    document.getElementById("edit-id-field").value = id;
-    document.getElementById("edit-term").value = term;
-    document.getElementById("editStatus").checked = status;
-
-    const modal = new bootstrap.Modal(document.getElementById("editModal"));
-    modal.show();
-}
-
-// ────────────────────────────────────────────────────────────────
-// Delete handler (single)
-// ────────────────────────────────────────────────────────────────
-function handleRemoveClick(e) {
-    e.preventDefault();
-    const tr = e.target.closest("tr");
-    if (!tr) return;
-
-    const id = tr.querySelector(".id")?.getAttribute("data-id");
-    if (!id) return;
-
-    // Replace delete button to prevent duplicate listeners
-    const oldBtn = document.getElementById("delete-record");
-    if (oldBtn) {
-        const newBtn = oldBtn.cloneNode(true);
-        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-
-        newBtn.addEventListener("click", () => {
-            axios.delete(`/term/${id}`)
-                .then(() => {
-                    Swal.fire({
-                        position: "center",
-                        icon: "success",
-                        title: "Deleted successfully",
-                        showConfirmButton: false,
-                        timer: 1800,
-                        showCloseButton: true
-                    });
-                    location.reload();
-                })
-                .catch(err => {
-                    Swal.fire({
-                        icon: "error",
-                        title: "Delete failed",
-                        text: err.response?.data?.message || "Server error"
-                    });
-                });
-        }, { once: true });
-    }
-
-    const modal = new bootstrap.Modal(document.getElementById("deleteRecordModal"));
-    modal.show();
-}
-
-// ────────────────────────────────────────────────────────────────
-// Bulk delete
-// ────────────────────────────────────────────────────────────────
-window.deleteMultiple = function () {
-    const ids = Array.from(
-        document.querySelectorAll('tbody input[name="chk_child"]:checked')
-    ).map(chk => chk.closest("tr").querySelector(".id").getAttribute("data-id"));
-
-    if (ids.length === 0) {
-        Swal.fire("No terms selected", "", "info");
-        return;
-    }
-
-    Swal.fire({
-        title: `Delete ${ids.length} term(s)?`,
-        text: "This cannot be undone.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#dc3545",
-        cancelButtonColor: "#6c757d",
-        confirmButtonText: "Yes, delete"
-    }).then(result => {
-        if (!result.isConfirmed) return;
-
-        Promise.all(ids.map(id => axios.delete(`/term/${id}`)))
-            .then(() => {
-                Swal.fire("Deleted!", "", "success");
-                location.reload();
-            })
-            .catch(err => {
-                Swal.fire("Error", err.response?.data?.message || "Failed", "error");
-            });
-    });
-};
-
-// ────────────────────────────────────────────────────────────────
-// List.js search
-// ────────────────────────────────────────────────────────────────
-let termList;
-if (document.getElementById('termList')) {
-    termList = new List('termList', {
-        valueNames: ['term', 'datereg', 'status'],
-        page: 1000,
-        pagination: false
-    });
-
-    termList.on('searchComplete', () => {
-        const noresult = document.querySelector('.noresult');
-        if (noresult) {
-            noresult.style.display = termList.visibleItems.length === 0 ? 'block' : 'none';
+        const checkedCount = document.querySelectorAll('tbody input[name="chk_child"]:checked').length;
+        var removeActions = document.getElementById("remove-actions");
+        if (removeActions) {
+            removeActions.classList.toggle("d-none", checkedCount === 0);
         }
+    };
+}
+
+// Form fields
+var addIdField = document.getElementById("add-id-field");
+var addTermField = document.getElementById("term");
+var editIdField = document.getElementById("edit-id-field");
+var editTermField = document.getElementById("edit-term");
+
+// Checkbox handling
+function ischeckboxcheck() {
+    const checkboxes = document.querySelectorAll('tbody input[name="chk_child"]');
+    checkboxes.forEach((checkbox) => {
+        checkbox.removeEventListener("change", handleCheckboxChange);
+        checkbox.addEventListener("change", handleCheckboxChange);
     });
 }
 
-const searchInput = document.querySelector(".search");
-if (searchInput && termList) {
-    searchInput.addEventListener("input", debounce(() => {
-        termList.search(searchInput.value.trim());
-    }, 300));
+function handleCheckboxChange(e) {
+    const row = e.target.closest("tr");
+    if (e.target.checked) {
+        row.classList.add("table-active");
+    } else {
+        row.classList.remove("table-active");
+    }
+    const checkedCount = document.querySelectorAll('tbody input[name="chk_child"]:checked').length;
+    var removeActions = document.getElementById("remove-actions");
+    if (removeActions) {
+        removeActions.classList.toggle("d-none", checkedCount === 0);
+    }
+    const allCheckboxes = document.querySelectorAll('tbody input[name="chk_child"]');
+    if (checkAll) {
+        checkAll.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCount;
+    }
 }
 
-// ────────────────────────────────────────────────────────────────
-// Add form
-// ────────────────────────────────────────────────────────────────
-document.getElementById("add-term-form")?.addEventListener("submit", function(e) {
-    e.preventDefault();
-    const errorEl = document.getElementById("alert-error-msg");
-    errorEl?.classList.add("d-none");
-
-    const formData = new FormData(this);
-    const payload = {
-        term: formData.get("term")?.trim(),
-        status: formData.get("status") === "on"
-    };
-
-    if (!payload.term) {
-        errorEl.innerHTML = "Term name is required";
-        errorEl?.classList.remove("d-none");
-        return;
-    }
-
-    axios.post('/term', payload)
-        .then(() => location.reload())
-        .catch(err => {
-            errorEl.innerHTML = err.response?.data?.message || "Failed to add term";
-            errorEl?.classList.remove("d-none");
-        });
-});
-
-// ────────────────────────────────────────────────────────────────
-// Edit form
-// ────────────────────────────────────────────────────────────────
-document.getElementById("edit-term-form")?.addEventListener("submit", function(e) {
-    e.preventDefault();
-    const errorEl = document.getElementById("edit-alert-error-msg");
-    errorEl?.classList.add("d-none");
-
-    const formData = new FormData(this);
-    const id = formData.get("id");
-    const payload = {
-        term: formData.get("term")?.trim(),
-        status: formData.get("status") === "on"
-    };
-
-    if (!id || !payload.term) {
-        errorEl.innerHTML = "Invalid data";
-        errorEl?.classList.remove("d-none");
-        return;
-    }
-
-    axios.put(`/term/${id}`, payload)
-        .then(() => location.reload())
-        .catch(err => {
-            errorEl.innerHTML = err.response?.data?.message || "Failed to update term";
-            errorEl?.classList.remove("d-none");
-        });
-});
-
-// ────────────────────────────────────────────────────────────────
-// Event delegation
-// ────────────────────────────────────────────────────────────────
-document.addEventListener('click', e => {
+// Event delegation for edit and remove buttons
+document.addEventListener('click', function (e) {
     if (e.target.closest('.edit-item-btn')) {
         handleEditClick(e);
-    }
-    if (e.target.closest('.remove-item-btn')) {
+    } else if (e.target.closest('.remove-item-btn')) {
         handleRemoveClick(e);
     }
 });
 
-// ────────────────────────────────────────────────────────────────
-// Modal reset
-// ────────────────────────────────────────────────────────────────
-document.getElementById("addTermModal")?.addEventListener("hidden.bs.modal", () => {
-    document.getElementById("add-term-form")?.reset();
-    document.getElementById("addStatus")?.checked = true;
+// Delete single term
+function handleRemoveClick(e) {
+    e.preventDefault();
+    var itemId = e.target.closest("tr").querySelector(".id").getAttribute("data-id");
+    var deleteButton = document.getElementById("delete-record");
+    if (deleteButton) {
+        deleteButton.addEventListener("click", function () {
+            axios.delete(`/term/${itemId}`).then(function () {
+                Swal.fire({
+                    position: "center",
+                    icon: "success",
+                    title: "Term deleted successfully!",
+                    showConfirmButton: false,
+                    timer: 2000,
+                    showCloseButton: true
+                });
+                window.location.reload();
+            }).catch(function (error) {
+                Swal.fire({
+                    position: "center",
+                    icon: "error",
+                    title: "Error deleting term",
+                    text: error.response?.data?.message || "An error occurred",
+                    showConfirmButton: true
+                });
+            });
+        }, { once: true });
+    }
+    try {
+        var modal = new bootstrap.Modal(document.getElementById("deleteRecordModal"));
+        modal.show();
+    } catch (error) {
+        console.error("Error opening delete modal:", error);
+    }
+}
+
+// Edit term
+function handleEditClick(e) {
+    e.preventDefault();
+    var itemId = e.target.closest("tr").querySelector(".id").getAttribute("data-id");
+    var tr = e.target.closest("tr");
+    if (editIdField) editIdField.value = itemId;
+    if (editTermField) editTermField.value = tr.querySelector(".term").innerText;
+    try {
+        var modal = new bootstrap.Modal(document.getElementById("editModal"));
+        modal.show();
+    } catch (error) {
+        console.error("Error opening edit modal:", error);
+    }
+}
+
+// Clear form fields
+function clearAddFields() {
+    if (addIdField) addIdField.value = "";
+    if (addTermField) addTermField.value = "";
+}
+
+function clearEditFields() {
+    if (editIdField) editIdField.value = "";
+    if (editTermField) editTermField.value = "";
+}
+
+// Delete multiple terms
+function deleteMultiple() {
+    const ids_array = [];
+    const checkboxes = document.querySelectorAll('tbody input[name="chk_child"]');
+    checkboxes.forEach((checkbox) => {
+        if (checkbox.checked) {
+            const id = checkbox.closest("tr").querySelector(".id").getAttribute("data-id");
+            ids_array.push(id);
+        }
+    });
+    if (ids_array.length > 0) {
+        Swal.fire({
+            title: "Are you sure?",
+            text: "You won't be able to revert this!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonClass: "btn btn-primary w-xs me-2 mt-2",
+            cancelButtonClass: "btn btn-danger w-xs mt-2",
+            confirmButtonText: "Yes, delete it!",
+            buttonsStyling: false,
+            showCloseButton: true
+        }).then((result) => {
+            if (result.value) {
+                Promise.all(ids_array.map((id) => {
+                    return axios.delete(`/term/${id}`);
+                })).then(() => {
+                    Swal.fire({
+                        title: "Deleted!",
+                        text: "Your terms have been deleted.",
+                        icon: "success",
+                        confirmButtonClass: "btn btn-info w-xs mt-2",
+                        buttonsStyling: false
+                    });
+                    window.location.reload();
+                }).catch((error) => {
+                    Swal.fire({
+                        title: "Error!",
+                        text: error.response?.data?.message || "Failed to delete terms",
+                        icon: "error",
+                        confirmButtonClass: "btn btn-info w-xs mt-2",
+                        buttonsStyling: false
+                    });
+                });
+            }
+        });
+    } else {
+        Swal.fire({
+            title: "Please select at least one checkbox",
+            confirmButtonClass: "btn btn-info",
+            buttonsStyling: false,
+            showCloseButton: true
+        });
+    }
+}
+
+// Initialize List.js for client-side filtering
+var termList;
+var termListContainer = document.getElementById('termList');
+if (termListContainer && document.querySelectorAll('#termList tbody tr').length > 0) {
+    try {
+        termList = new List('termList', {
+            valueNames: ['term', 'datereg'],
+            page: 1000,
+            pagination: false,
+            listClass: 'list'
+        });
+    } catch (error) {
+        console.error("List.js initialization failed:", error);
+    }
+} else {
+    console.warn("No terms available for List.js initialization");
+}
+
+// Update no results message
+if (termList) {
+    termList.on('searchComplete', function () {
+        var noResultRow = document.querySelector('.noresult');
+        if (termList.visibleItems.length === 0) {
+            noResultRow.style.display = 'block';
+        } else {
+            noResultRow.style.display = 'none';
+        }
+    });
+}
+
+// Filter data (client-side)
+function filterData() {
+    var searchInput = document.querySelector(".search-box input.search");
+    var searchValue = searchInput ? searchInput.value : "";
+    console.log("Filtering with search:", searchValue);
+    if (termList) {
+        termList.search(searchValue, ['term']);
+    }
+}
+
+// Add term
+var addTermForm = document.getElementById("add-term-form");
+if (addTermForm) {
+    addTermForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var errorMsg = document.getElementById("alert-error-msg");
+        if (errorMsg) errorMsg.classList.add("d-none");
+        var formData = new FormData(addTermForm);
+        var term = formData.get('term');
+        if (!term) {
+            if (errorMsg) {
+                errorMsg.innerHTML = "Please enter a term name";
+                errorMsg.classList.remove("d-none");
+            }
+            return;
+        }
+        console.log("Submitting Add Term:", { term });
+        axios.post('/term', {
+            term: term
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        }).then(function (response) {
+            console.log("Add Term Success:", response.data);
+            Swal.fire({
+                position: "center",
+                icon: "success",
+                title: "Term added successfully!",
+                showConfirmButton: false,
+                timer: 2000,
+                showCloseButton: true
+            });
+            window.location.reload();
+        }).catch(function (error) {
+            console.error("Add Term Error:", error.response);
+            if (errorMsg) {
+                errorMsg.innerHTML = error.response?.data?.message || Object.values(error.response?.data?.errors || {}).flat().join(", ") || "Error adding term";
+                errorMsg.classList.remove("d-none");
+            }
+        });
+    });
+}
+
+// Edit term
+var editTermForm = document.getElementById("edit-term-form");
+if (editTermForm) {
+    editTermForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var errorMsg = document.getElementById("edit-alert-error-msg");
+        if (errorMsg) errorMsg.classList.add("d-none");
+        var formData = new FormData(editTermForm);
+        var term = formData.get('term');
+        var id = editIdField.value;
+        if (!term) {
+            if (errorMsg) {
+                errorMsg.innerHTML = "Please enter a term name";
+                errorMsg.classList.remove("d-none");
+            }
+            return;
+        }
+        console.log("Submitting Edit Term:", { id, term });
+        axios.put(`/term/${id}`, {
+            term: term
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        }).then(function (response) {
+            console.log("Edit Term Success:", response.data);
+            Swal.fire({
+                position: "center",
+                icon: "success",
+                title: "Term updated successfully!",
+                showConfirmButton: false,
+                timer: 2000,
+                showCloseButton: true
+            });
+            window.location.reload();
+        }).catch(function (error) {
+            console.error("Edit Term Error:", error.response);
+            if (errorMsg) {
+                errorMsg.innerHTML = error.response?.data?.message || Object.values(error.response?.data?.errors || {}).flat().join(", ") || "Error updating term";
+                errorMsg.classList.remove("d-none");
+            }
+        });
+    });
+}
+
+// Modal events
+var addModal = document.getElementById("addTermModal");
+if (addModal) {
+    addModal.addEventListener("show.bs.modal", function (e) {
+        if (e.relatedTarget.classList.contains("add-btn")) {
+            var modalLabel = document.getElementById("exampleModalLabel");
+            var addBtn = document.getElementById("add-btn");
+            if (modalLabel) modalLabel.innerHTML = "Add Term";
+            if (addBtn) addBtn.innerHTML = "Add Term";
+        }
+    });
+    addModal.addEventListener("hidden.bs.modal", function () {
+        clearAddFields();
+    });
+}
+
+var editModal = document.getElementById("editModal");
+if (editModal) {
+    editModal.addEventListener("show.bs.modal", function () {
+        var modalLabel = document.getElementById("editModalLabel");
+        var updateBtn = document.getElementById("update-btn");
+        if (modalLabel) modalLabel.innerHTML = "Edit Term";
+        if (updateBtn) updateBtn.innerHTML = "Update";
+    });
+    editModal.addEventListener("hidden.bs.modal", function () {
+        clearEditFields();
+    });
+}
+
+// Initialize listeners
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("DOMContentLoaded fired");
+    var searchInput = document.querySelector(".search-box input.search");
+    if (searchInput) {
+        searchInput.addEventListener("input", debounce(function () {
+            console.log("Search input changed:", searchInput.value);
+            filterData();
+        }, 300));
+    } else {
+        console.error("Search input not found!");
+    }
+
+    ischeckboxcheck();
 });
 
-document.getElementById("editModal")?.addEventListener("hidden.bs.modal", () => {
-    document.getElementById("edit-term-form")?.reset();
-});
-
-// ────────────────────────────────────────────────────────────────
-// Init
-// ────────────────────────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
-    initCheckboxes();
-    updateRemoveButtonVisibility();
-    console.log("Term JS initialized");
-});
+// Expose functions to global scope
+window.deleteMultiple = deleteMultiple;
