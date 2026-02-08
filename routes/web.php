@@ -158,7 +158,10 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('schoolhouse/deletehouse', [SchoolHouseController::class, 'deletehouse'])->name('schoolhouse.deletehouse');
     Route::post('schoolhouse/updatehouse', [SchoolHouseController::class, 'updatehouse'])->name('schoolhouse.updatehouse');
 
+
+
     Route::resource('term', SchooltermController::class);
+    Route::patch('term/{term}/status', [SchooltermController::class, 'updateStatus'])->name('term.status.update');
     Route::post('term/deleteterm', [SchooltermController::class, 'deleteterm'])->name('term.deleteterm');
     Route::post('term/updateterm', [SchooltermController::class, 'updateterm'])->name('term.updateterm');
 
