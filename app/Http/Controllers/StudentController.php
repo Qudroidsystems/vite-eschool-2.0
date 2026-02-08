@@ -139,7 +139,7 @@ class StudentController extends Controller
         ));
     }
 
-   public function store(Request $request)
+    public function store(Request $request)
     {
         Log::debug('Creating new student', $request->all());
 
@@ -450,8 +450,6 @@ class StudentController extends Controller
         }
     }
 
-
-
     protected function generateAdmissionNumber()
     {
         $lastAdmission = Student::max('admissionNo');
@@ -542,108 +540,104 @@ class StudentController extends Controller
         return view('student.create', compact('schoolclasses', 'schoolterms', 'schoolsessions', 'currentSession', 'pagetitle'));
     }
 
-  public function edit($student)
-{
-    try {
-        $studentData = Student::where('studentRegistration.id', $student)
-            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-            ->leftJoin('studentclass', 'studentRegistration.id', '=', 'studentclass.studentId')
-            ->leftJoin('parentRegistration', 'studentRegistration.id', '=', 'parentRegistration.studentId')
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
-            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
-            ->leftJoin('studenthouses', 'studenthouses.studentId', '=', 'studentRegistration.id')
-            ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
-            ->leftJoin('studentpersonalityprofiles', 'studentpersonalityprofiles.studentId', '=', 'studentRegistration.id')
-            ->select([
-                // Student Registration fields
-                'studentRegistration.id',
-                'studentRegistration.admissionNo',
-                'studentRegistration.admissionYear',
-                'studentRegistration.admission_date as admissionDate',
-                'studentRegistration.title',
-                'studentRegistration.firstname',
-                'studentRegistration.lastname',
-                'studentRegistration.othername',
-                'studentRegistration.gender',
-                'studentRegistration.dateofbirth',
-                'studentRegistration.age',
-                'studentRegistration.blood_group',
-                'studentRegistration.mother_tongue',
-                'studentRegistration.religion',
-                'studentRegistration.sport_house',
-                'studentRegistration.phone_number',
-                'studentRegistration.email',
-                'studentRegistration.nin_number',
-                'studentRegistration.city',
-                'studentRegistration.state',
-                'studentRegistration.local',
-                'studentRegistration.nationality',
-                'studentRegistration.placeofbirth',
-                'studentRegistration.future_ambition',
-                'studentRegistration.home_address2 as permanent_address',
-                'studentRegistration.student_category',
-                'studentRegistration.statusId',
-                'studentRegistration.student_status',
-                'studentRegistration.last_school',
-                'studentRegistration.last_class',
-                'studentRegistration.reason_for_leaving',
+    public function edit($student)
+    {
+        try {
+            $studentData = Student::where('studentRegistration.id', $student)
+                ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+                ->leftJoin('studentclass', 'studentRegistration.id', '=', 'studentclass.studentId')
+                ->leftJoin('parentRegistration', 'studentRegistration.id', '=', 'parentRegistration.studentId')
+                ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+                ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+                ->leftJoin('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
+                ->leftJoin('studenthouses', 'studenthouses.studentId', '=', 'studentRegistration.id')
+                ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
+                ->leftJoin('studentpersonalityprofiles', 'studentpersonalityprofiles.studentId', '=', 'studentRegistration.id')
+                ->select([
+                    // Student Registration fields
+                    'studentRegistration.id',
+                    'studentRegistration.admissionNo',
+                    'studentRegistration.admissionYear',
+                    'studentRegistration.admission_date as admissionDate',
+                    'studentRegistration.title',
+                    'studentRegistration.firstname',
+                    'studentRegistration.lastname',
+                    'studentRegistration.othername',
+                    'studentRegistration.gender',
+                    'studentRegistration.dateofbirth',
+                    'studentRegistration.age',
+                    'studentRegistration.blood_group',
+                    'studentRegistration.mother_tongue',
+                    'studentRegistration.religion',
+                    'studentRegistration.sport_house',
+                    'studentRegistration.phone_number',
+                    'studentRegistration.email',
+                    'studentRegistration.nin_number',
+                    'studentRegistration.city',
+                    'studentRegistration.state',
+                    'studentRegistration.local',
+                    'studentRegistration.nationality',
+                    'studentRegistration.placeofbirth',
+                    'studentRegistration.future_ambition',
+                    'studentRegistration.home_address2 as permanent_address',
+                    'studentRegistration.student_category',
+                    'studentRegistration.statusId',
+                    'studentRegistration.student_status',
+                    'studentRegistration.last_school',
+                    'studentRegistration.last_class',
+                    'studentRegistration.reason_for_leaving',
 
-                // Student Class fields
-                'studentclass.schoolclassid',
-                'studentclass.termid',
-                'studentclass.sessionid',
+                    // Student Class fields
+                    'studentclass.schoolclassid',
+                    'studentclass.termid',
+                    'studentclass.sessionid',
 
-                // School Class fields (ADDED)
-                'schoolclass.schoolclass',
-                'schoolarm.arm',
+                    // School Class fields (ADDED)
+                    'schoolclass.schoolclass',
+                    'schoolarm.arm',
 
-                // Term and Session names (ADDED)
-                'schoolterm.term as term_name',
-                'schoolsession.session as session_name',
+                    // Term and Session names (ADDED)
+                    'schoolterm.term as term_name',
+                    'schoolsession.session as session_name',
 
-                // Parent fields
-                'parentRegistration.father_title',
-                'parentRegistration.mother_title',
-                'parentRegistration.father as father_name',
-                'parentRegistration.mother as mother_name',
-                'parentRegistration.father_occupation',
-                'parentRegistration.father_city',
-                'parentRegistration.office_address',
-                'parentRegistration.father_phone',
-                'parentRegistration.mother_phone',
-                'parentRegistration.parent_email',
-                'parentRegistration.parent_address',
+                    // Parent fields
+                    'parentRegistration.father_title',
+                    'parentRegistration.mother_title',
+                    'parentRegistration.father as father_name',
+                    'parentRegistration.mother as mother_name',
+                    'parentRegistration.father_occupation',
+                    'parentRegistration.father_city',
+                    'parentRegistration.office_address',
+                    'parentRegistration.father_phone',
+                    'parentRegistration.mother_phone',
+                    'parentRegistration.parent_email',
+                    'parentRegistration.parent_address',
 
-                // Picture and House
-                'studentpicture.picture',
-                'studenthouses.schoolhouse',
-                'schoolhouses.house as school_house',  // ADDED for house name
-            ])
-            ->first();
+                    // Picture and House
+                    'studentpicture.picture',
+                    'studenthouses.schoolhouse',
+                    'schoolhouses.house as school_house',  // ADDED for house name
+                ])
+                ->first();
 
-        if (!$studentData) {
-            Log::warning("Student ID {$student} not found");
-            return response()->json(['success' => false, 'message' => 'Student not found'], 404);
+            if (!$studentData) {
+                Log::warning("Student ID {$student} not found");
+                return response()->json(['success' => false, 'message' => 'Student not found'], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'student' => $studentData
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Error fetching student ID {$student}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+            return response()->json([
+                'success' => false,
+                'message' => 'Server error: ' . $e->getMessage()
+            ], 500);
         }
-
-        // FIXED: Don't convert picture path - just return the filename
-        // The JavaScript will handle path construction
-        // Remove this line: $studentData->picture = $studentData->picture ? asset('storage/' . $studentData->picture) : null;
-
-        return response()->json([
-            'success' => true,
-            'student' => $studentData
-        ], 200);
-    } catch (\Exception $e) {
-        Log::error("Error fetching student ID {$student}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-        return response()->json([
-            'success' => false,
-            'message' => 'Server error: ' . $e->getMessage()
-        ], 500);
     }
-}
 
     public function update(Request $request, $id): JsonResponse
     {
@@ -809,62 +803,60 @@ class StudentController extends Controller
 
             DB::commit();
 
-            // Always return JSON response for AJAX requests
-        return response()->json([
-            'success' => true,
-            'message' => 'Student updated successfully',
-            'redirect' => route('student.index'), // ADD THIS LINE
-            'student' => [
-                'id' => $student->id,
-                'admissionNo' => $student->admissionNo,
-                'admissionYear' => $student->admissionYear,
-                'title' => $student->title,
-                'firstname' => $student->firstname,
-                'lastname' => $student->lastname,
-                'othername' => $student->othername,
-                'gender' => $student->gender,
-                'dateofbirth' => $student->dateofbirth,
-                'placeofbirth' => $student->placeofbirth,
-                'nationality' => $student->nationality,
-                'religion' => $student->religion,
-                'last_school' => $student->last_school,
-                'last_class' => $student->last_class,
-                'schoolclassid' => $student->schoolclassid,
-                'termid' => $student->termid,
-                'sessionid' => $student->sessionid,
-                'phone_number' => $student->phone_number,
-                'nin_number' => $student->nin_number,
-                'blood_group' => $student->blood_group,
-                'mother_tongue' => $student->mother_tongue,
-                'father_name' => $parent->father ?? '',
-                'father_phone' => $parent->father_phone ?? '',
-                'father_occupation' => $parent->father_occupation ?? '',
-                'mother_name' => $parent->mother ?? '',
-                'mother_phone' => $parent->mother_phone ?? '',
-                'parent_address' => $parent->parent_address ?? '',
-                'student_category' => $student->student_category,
-                'reason_for_leaving' => $student->reason_for_leaving,
-                'picture' => $picture->picture ?? 'unnamed.jpg',
-                'state' => $student->state,
-                'local' => $student->local,
-                'statusId' => $student->statusId,
-                'student_status' => $student->student_status,
-                'future_ambition' => $student->future_ambition,
-                'permanent_address' => $student->home_address2,
-                'schoolclass' => $studentClass->schoolclass->name ?? '',
-                'arm' => $studentClass->schoolclass->arm ?? ''
-            ]
-        ], 200);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error("Error updating student ID {$id}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to update student: ' . $e->getMessage(),
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'message' => 'Student updated successfully',
+                'redirect' => route('student.index'),
+                'student' => [
+                    'id' => $student->id,
+                    'admissionNo' => $student->admissionNo,
+                    'admissionYear' => $student->admissionYear,
+                    'title' => $student->title,
+                    'firstname' => $student->firstname,
+                    'lastname' => $student->lastname,
+                    'othername' => $student->othername,
+                    'gender' => $student->gender,
+                    'dateofbirth' => $student->dateofbirth,
+                    'placeofbirth' => $student->placeofbirth,
+                    'nationality' => $student->nationality,
+                    'religion' => $student->religion,
+                    'last_school' => $student->last_school,
+                    'last_class' => $student->last_class,
+                    'schoolclassid' => $student->schoolclassid,
+                    'termid' => $student->termid,
+                    'sessionid' => $student->sessionid,
+                    'phone_number' => $student->phone_number,
+                    'nin_number' => $student->nin_number,
+                    'blood_group' => $student->blood_group,
+                    'mother_tongue' => $student->mother_tongue,
+                    'father_name' => $parent->father ?? '',
+                    'father_phone' => $parent->father_phone ?? '',
+                    'father_occupation' => $parent->father_occupation ?? '',
+                    'mother_name' => $parent->mother ?? '',
+                    'mother_phone' => $parent->mother_phone ?? '',
+                    'parent_address' => $parent->parent_address ?? '',
+                    'student_category' => $student->student_category,
+                    'reason_for_leaving' => $student->reason_for_leaving,
+                    'picture' => $picture->picture ?? 'unnamed.jpg',
+                    'state' => $student->state,
+                    'local' => $student->local,
+                    'statusId' => $student->statusId,
+                    'student_status' => $student->student_status,
+                    'future_ambition' => $student->future_ambition,
+                    'permanent_address' => $student->home_address2,
+                    'schoolclass' => $studentClass->schoolclass->name ?? '',
+                    'arm' => $studentClass->schoolclass->arm ?? ''
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Error updating student ID {$id}: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update student: ' . $e->getMessage(),
+            ], 500);
+        }
     }
-    }
-
 
     protected function deleteImage($filename)
     {
@@ -1276,7 +1268,6 @@ class StudentController extends Controller
         }
     }
 
-
     public function getLastAdmissionNumber(Request $request)
     {
         try {
@@ -1318,10 +1309,7 @@ class StudentController extends Controller
         }
     }
 
-
-
-
-   /**
+    /**
      * Generate student report
      */
     public function generateReport(Request $request)
@@ -1739,201 +1727,196 @@ class StudentController extends Controller
         }
     }
 
+    /**
+     * Get student's current term
+     */
+    public function getCurrentTerm($studentId)
+    {
+        try {
+            $currentTerm = StudentCurrentTerm::getCurrentForStudent($studentId);
 
-
-/**
- * Get student's current term
- */
-public function getCurrentTerm($studentId)
-{
-    try {
-        $currentTerm = StudentCurrentTerm::getCurrentForStudent($studentId);
-
-        if (!$currentTerm) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No current term found for student'
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => $currentTerm
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error fetching current term: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Update student's current term
- */
-public function updateCurrentTerm(Request $request, $studentId)
-{
-    $request->validate([
-        'schoolclassId' => 'required|exists:schoolclass,id',
-        'termId' => 'required|exists:schoolterm,id',
-        'sessionId' => 'required|exists:schoolsession,id'
-    ]);
-
-    try {
-        // Check if student exists
-        $student = Student::find($studentId);
-        if (!$student) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Student not found'
-            ], 404);
-        }
-
-        // Create or update current term
-        $currentTerm = StudentCurrentTerm::updateOrCreate(
-            [
-                'studentId' => $studentId,
-                'is_current' => true
-            ],
-            [
-                'schoolclassId' => $request->schoolclassId,
-                'termId' => $request->termId,
-                'sessionId' => $request->sessionId,
-                'is_current' => true
-            ]
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Current term updated successfully',
-            'data' => $currentTerm
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error updating current term: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-
-/**
- * Get students by current class, term, and session
- */
-public function getStudentsByCurrentFilters(Request $request)
-{
-    $request->validate([
-        'classId' => 'nullable|exists:schoolclass,id',
-        'termId' => 'nullable|exists:schoolterm,id',
-        'sessionId' => 'nullable|exists:schoolsession,id'
-    ]);
-
-    try {
-        $query = StudentCurrentTerm::with(['student', 'schoolClass', 'term', 'session'])
-            ->where('is_current', true);
-
-        if ($request->filled('classId')) {
-            $query->where('schoolclassId', $request->classId);
-        }
-
-        if ($request->filled('termId')) {
-            $query->where('termId', $request->termId);
-        }
-
-        if ($request->filled('sessionId')) {
-            $query->where('sessionId', $request->sessionId);
-        }
-
-        $students = $query->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $students
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error fetching students: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-
-
-/**
- * Bulk update current term for multiple students
- */
-public function bulkUpdateCurrentTerm(Request $request)
-{
-    $request->validate([
-        'student_ids' => 'required|array',
-        'student_ids.*' => 'exists:studentRegistration,id',
-        'schoolclassId' => 'required|exists:schoolclass,id',
-        'termId' => 'required|exists:schoolterm,id',
-        'sessionId' => 'required|exists:schoolsession,id'
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $results = [];
-        $successCount = 0;
-        $failedCount = 0;
-
-        foreach ($request->student_ids as $studentId) {
-            try {
-                // Check if student exists
-                $student = Student::find($studentId);
-                if (!$student) {
-                    $results[$studentId] = 'Student not found';
-                    $failedCount++;
-                    continue;
-                }
-
-                // Create or update current term
-                $currentTerm = StudentCurrentTerm::updateOrCreate(
-                    [
-                        'studentId' => $studentId,
-                        'is_current' => true
-                    ],
-                    [
-                        'schoolclassId' => $request->schoolclassId,
-                        'termId' => $request->termId,
-                        'sessionId' => $request->sessionId,
-                        'is_current' => true
-                    ]
-                );
-
-                $results[$studentId] = 'Success';
-                $successCount++;
-
-            } catch (\Exception $e) {
-                Log::error("Error updating current term for student {$studentId}: " . $e->getMessage());
-                $results[$studentId] = 'Failed: ' . $e->getMessage();
-                $failedCount++;
+            if (!$currentTerm) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No current term found for student'
+                ], 404);
             }
+
+            return response()->json([
+                'success' => true,
+                'data' => $currentTerm
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching current term: ' . $e->getMessage()
+            ], 500);
         }
+    }
 
-        DB::commit();
-
-        return response()->json([
-            'success' => true,
-            'message' => "Updated current term for {$successCount} student(s). Failed: {$failedCount}.",
-            'data' => $results,
-            'summary' => [
-                'total' => count($request->student_ids),
-                'success' => $successCount,
-                'failed' => $failedCount
-            ]
+    /**
+     * Update student's current term
+     */
+    public function updateCurrentTerm(Request $request, $studentId)
+    {
+        $request->validate([
+            'schoolclassId' => 'required|exists:schoolclass,id',
+            'termId' => 'required|exists:schoolterm,id',
+            'sessionId' => 'required|exists:schoolsession,id'
         ]);
 
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error("Bulk update current term error: " . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to update current term: ' . $e->getMessage()
-        ], 500);
+        try {
+            // Check if student exists
+            $student = Student::find($studentId);
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not found'
+                ], 404);
+            }
+
+            // Create or update current term
+            $currentTerm = StudentCurrentTerm::updateOrCreate(
+                [
+                    'studentId' => $studentId,
+                    'is_current' => true
+                ],
+                [
+                    'schoolclassId' => $request->schoolclassId,
+                    'termId' => $request->termId,
+                    'sessionId' => $request->sessionId,
+                    'is_current' => true
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Current term updated successfully',
+                'data' => $currentTerm
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating current term: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
+
+    /**
+     * Get students by current class, term, and session
+     */
+    public function getStudentsByCurrentFilters(Request $request)
+    {
+        $request->validate([
+            'classId' => 'nullable|exists:schoolclass,id',
+            'termId' => 'nullable|exists:schoolterm,id',
+            'sessionId' => 'nullable|exists:schoolsession,id'
+        ]);
+
+        try {
+            $query = StudentCurrentTerm::with(['student', 'schoolClass', 'term', 'session'])
+                ->where('is_current', true);
+
+            if ($request->filled('classId')) {
+                $query->where('schoolclassId', $request->classId);
+            }
+
+            if ($request->filled('termId')) {
+                $query->where('termId', $request->termId);
+            }
+
+            if ($request->filled('sessionId')) {
+                $query->where('sessionId', $request->sessionId);
+            }
+
+            $students = $query->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $students
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching students: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Bulk update current term for multiple students
+     */
+    public function bulkUpdateCurrentTerm(Request $request)
+    {
+        $request->validate([
+            'student_ids' => 'required|array',
+            'student_ids.*' => 'exists:studentRegistration,id',
+            'schoolclassId' => 'required|exists:schoolclass,id',
+            'termId' => 'required|exists:schoolterm,id',
+            'sessionId' => 'required|exists:schoolsession,id'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $results = [];
+            $successCount = 0;
+            $failedCount = 0;
+
+            foreach ($request->student_ids as $studentId) {
+                try {
+                    // Check if student exists
+                    $student = Student::find($studentId);
+                    if (!$student) {
+                        $results[$studentId] = 'Student not found';
+                        $failedCount++;
+                        continue;
+                    }
+
+                    // Create or update current term
+                    $currentTerm = StudentCurrentTerm::updateOrCreate(
+                        [
+                            'studentId' => $studentId,
+                            'is_current' => true
+                        ],
+                        [
+                            'schoolclassId' => $request->schoolclassId,
+                            'termId' => $request->termId,
+                            'sessionId' => $request->sessionId,
+                            'is_current' => true
+                        ]
+                    );
+
+                    $results[$studentId] = 'Success';
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    Log::error("Error updating current term for student {$studentId}: " . $e->getMessage());
+                    $results[$studentId] = 'Failed: ' . $e->getMessage();
+                    $failedCount++;
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Updated current term for {$successCount} student(s). Failed: {$failedCount}.",
+                'data' => $results,
+                'summary' => [
+                    'total' => count($request->student_ids),
+                    'success' => $successCount,
+                    'failed' => $failedCount
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Bulk update current term error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update current term: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

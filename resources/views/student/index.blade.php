@@ -1108,58 +1108,70 @@ use Spatie\Permission\Models\Role;
         </div>
 
         <!-- Update Current Term Modal -->
-        <div id="updateCurrentTermModal" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-gradient">
-                        <h5 class="modal-title">
-                            <i class="fas fa-calendar-alt me-2"></i>Update Current Term
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-4">
-                        <form id="updateCurrentTermForm">
-                            @csrf
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Updating current term for <span id="selectedStudentsCount">0</span> selected student(s).
-                            </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Current Class</label>
-                                <select class="form-control" name="schoolclassId" required>
-                                    <option value="">Select Class</option>
-                                    @foreach ($schoolclasses as $class)
-                                        <option value="{{ $class->id }}">{{ $class->class_display }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Current Session</label>
-                                <select class="form-control" name="sessionId" required>
-                                    <option value="">Select Session</option>
-                                    @foreach ($schoolsessions as $session)
-                                        <option value="{{ $session->id }}">{{ $session->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                This action will update the current term for all selected students. This cannot be undone.
-                            </div>
-                        </form>
+        <!-- Update Current Term Modal -->
+<div id="updateCurrentTermModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header modal-header-gradient">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-alt me-2"></i>Update Current Term
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="updateCurrentTermForm">
+                    @csrf
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Updating current term for <span id="selectedStudentsCount">0</span> selected student(s).
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary-gradient" id="confirmUpdateCurrentTerm">
-                            <i class="fas fa-save me-2"></i>Update Current Term
-                        </button>
+
+                    <div class="mb-3">
+                        <label class="form-label">Current Class</label>
+                        <select class="form-control" name="schoolclassId" required>
+                            <option value="">Select Class</option>
+                            @foreach ($schoolclasses as $class)
+                                <option value="{{ $class->id }}">{{ $class->class_display }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Current Term</label>
+                        <select class="form-control" name="termId" required>
+                            <option value="">Select Term</option>
+                            @foreach ($schoolterms as $term)
+                                <option value="{{ $term->id }}">{{ $term->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Current Session</label>
+                        <select class="form-control" name="sessionId" required>
+                            <option value="">Select Session</option>
+                            @foreach ($schoolsessions as $session)
+                                <option value="{{ $session->id }}">{{ $session->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        This action will update the current term for all selected students. This cannot be undone.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary-gradient" id="confirmUpdateCurrentTerm" onclick="updateCurrentTerm()">
+                    <i class="fas fa-save me-2"></i>Update Current Term
+                </button>
             </div>
         </div>
+    </div>
+</div>
 
         <!-- Print/Export Report Modal -->
         <div id="printStudentReportModal" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -2285,10 +2297,45 @@ let currentFilter = {
 };
 const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
 
-// Nigerian states data (from original code)
+// Nigerian states data
 const nigerianStates = [
     { name: "Abia", lgAs: ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
-    // ... (all other states from original code)
+    { name: "Adamawa", lgAs: ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
+    { name: "Akwa Ibom", lgAs: ["Abak", "Eastern Obolo", "Eket", "Esit Eket", "Essien Udim", "Etim Ekpo", "Etinan", "Ibeno", "Ibesikpo Asutan", "Ibiono-Ibom", "Ikot Abasi", "Ikot Ekpene", "Ini", "Itu", "Mbo", "Mkpat-Enin", "Nsit-Atai", "Nsit-Ibom", "Nsit-Ubium", "Obot Akara", "Okobo", "Onna", "Oron", "Oruk Anam", "Udung-Uko", "Ukanafun", "Uruan", "Urue-Offong/Oruko", "Uyo"] },
+    { name: "Anambra", lgAs: ["Aguata", "Anambra East", "Anambra West", "Anaocha", "Awka North", "Awka South", "Ayamelum", "Dunukofia", "Ekwusigo", "Idemili North", "Idemili South", "Ihiala", "Njikoka", "Nnewi North", "Nnewi South", "Ogbaru", "Onitsha North", "Onitsha South", "Orumba North", "Orumba South", "Oyi"] },
+    { name: "Bauchi", lgAs: ["Alkaleri", "Bauchi", "Bogoro", "Damban", "Darazo", "Dass", "Gamawa", "Ganjuwa", "Giade", "Itas/Gadau", "Jama'are", "Katagum", "Kirfi", "Misau", "Ningi", "Shira", "Tafawa Balewa", "Toro", "Warji", "Zaki"] },
+    { name: "Bayelsa", lgAs: ["Brass", "Ekeremor", "Kolokuma/Opokuma", "Nembe", "Ogbia", "Sagbama", "Southern Ijaw", "Yenagoa"] },
+    { name: "Benue", lgAs: ["Ado", "Agatu", "Apa", "Buruku", "Gboko", "Guma", "Gwer East", "Gwer West", "Katsina-Ala", "Konshisha", "Kwande", "Logo", "Makurdi", "Obi", "Ogbadibo", "Ohimini", "Oju", "Okpokwu", "Oturkpo", "Tarka", "Ukum", "Ushongo", "Vandeikya"] },
+    { name: "Borno", lgAs: ["Abadam", "Askira/Uba", "Bama", "Bayo", "Biu", "Chibok", "Damboa", "Dikwa", "Gubio", "Guzamala", "Gwoza", "Hawul", "Jere", "Kaga", "Kala/Balge", "Konduga", "Kukawa", "Kwaya Kusar", "Mafa", "Magumeri", "Maiduguri", "Marte", "Mobbar", "Monguno", "Ngala", "Nganzai", "Shani"] },
+    { name: "Cross River", lgAs: ["Abi", "Akamkpa", "Akpabuyo", "Bakassi", "Bekwarra", "Biase", "Boki", "Calabar Municipal", "Calabar South", "Etung", "Ikom", "Obanliku", "Obubra", "Obudu", "Odukpani", "Ogoja", "Yakuur", "Yala"] },
+    { name: "Delta", lgAs: ["Aniocha North", "Aniocha South", "Bomadi", "Burutu", "Ethiope East", "Ethiope West", "Ika North East", "Ika South", "Isoko North", "Isoko South", "Ndokwa East", "Ndokwa West", "Okpe", "Oshimili North", "Oshimili South", "Patani", "Sapele", "Udu", "Ughelli North", "Ughelli South", "Ukwuani", "Uvwie", "Warri North", "Warri South", "Warri South West"] },
+    { name: "Ebonyi", lgAs: ["Abakaliki", "Afikpo North", "Afikpo South", "Ebonyi", "Ezza North", "Ezza South", "Ikwo", "Ishielu", "Ivo", "Izzi", "Ohaozara", "Ohaukwu", "Onicha"] },
+    { name: "Edo", lgAs: ["Akoko-Edo", "Egor", "Esan Central", "Esan North-East", "Esan South-East", "Esan West", "Etsako Central", "Etsako East", "Etsako West", "Igueben", "Ikpoba-Okha", "Orhionmwon", "Oredo", "Ovia North-East", "Ovia South-West", "Owan East", "Owan West", "Umunede"] },
+    { name: "Ekiti", lgAs: ["Ado Ekiti", "Efon", "Ekiti East", "Ekiti South-West", "Ekiti West", "Emure", "Gbonyin", "Ido Osi", "Ijero", "Ikere", "Ikole", "Ilejemeje", "Irepodun/Ifelodun", "Ise/Orun", "Moba", "Oye"] },
+    { name: "Enugu", lgAs: ["Aninri", "Awgu", "Enugu East", "Enugu North", "Enugu South", "Ezeagu", "Igbo Etiti", "Igbo Eze North", "Igbo Eze South", "Isi Uzo", "Nkanu East", "Nkanu West", "Nsukka", "Oji River", "Udenu", "Udi", "Uzo-Uwani"] },
+    { name: "Federal Capital Territory", lgAs: ["Abuja", "Bwari", "Gwagwalada", "Kuje", "Kwali", "Municipal Area Council"] },
+    { name: "Gombe", lgAs: ["Akko", "Balanga", "Billiri", "Dukku", "Funakaye", "Gombe", "Kaltungo", "Kwami", "Nafada", "Shongom", "Yamaltu/Deba"] },
+    { name: "Imo", lgAs: ["Aboh Mbaise", "Ahiazu Mbaise", "Ehime Mbano", "Ezinihitte", "Ideato North", "Ideato South", "Ihitte/Uboma", "Ikeduru", "Isiala Mbano", "Isu", "Mbaitoli", "Ngor Okpala", "Njaba", "Nkwerre", "Nwangele", "Obowo", "Oguta", "Ohaji/Egbema", "Okigwe", "Orlu", "Orsu", "Oru East", "Oru West", "Owerri Municipal", "Owerri North", "Owerri West", "Unuimo"] },
+    { name: "Jigawa", lgAs: ["Auyo", "Babura", "Biriniwa", "Birnin Kudu", "Buji", "Dutse", "Gagarawa", "Garki", "Gumel", "Guri", "Gwaram", "Gwiwa", "Hadejia", "Jahun", "Kafin Hausa", "Kazaure", "Kiri Kasama", "Kiyawa", "Kaugama", "Maigatari", "Malam Madori", "Miga", "Ringim", "Roni", "Sule Tankarkar", "Taura", "Yankwashi"] },
+    { name: "Kaduna", lgAs: ["Birnin Gwari", "Chikun", "Giwa", "Igabi", "Ikara", "Jaba", "Jema'a", "Kachia", "Kaduna North", "Kaduna South", "Kagarko", "Kajuru", "Kaura", "Kauru", "Kubau", "Kudan", "Lere", "Makarfi", "Sabon Gari", "Sanga", "Soba", "Zangon Kataf", "Zaria"] },
+    { name: "Kano", lgAs: ["Ajingi", "Albasu", "Bagwai", "Bebeji", "Bichi", "Bunkure", "Dala", "Dambatta", "Dawakin Kudu", "Dawakin Tofa", "Doguwa", "Fagge", "Gabasawa", "Garko", "Garun Mallam", "Gaya", "Gezawa", "Gwale", "Gwarzo", "Kabo", "Kano Municipal", "Karaye", "Kibiya", "Kiru", "Kumbotso", "Kunchi", "Kura", "Madobi", "Makoda", "Minjibir", "Nasarawa", "Rano", "Rimin Gado", "Rogo", "Shanono", "Sumaila", "Takai", "Tarauni", "Tofa", "Tsanyawa", "Tudun Wada", "Ungogo", "Warawa", "Wudil"] },
+    { name: "Katsina", lgAs: ["Bakori", "Batagarawa", "Batsari", "Baure", "Bindawa", "Charanci", "Dan Musa", "Dandume", "Danja", "Daura", "Dutsi", "Dutsin Ma", "Faskari", "Funtua", "Ingawa", "Jibia", "Kafur", "Kaita", "Kankara", "Kankia", "Katsina", "Kurfi", "Kusada", "Mai'Adua", "Malumfashi", "Mani", "Mashi", "Matazu", "Musawa", "Rimi", "Sabuwa", "Safana", "Sandamu", "Zango"] },
+    { name: "Kebbi", lgAs: ["Aleiro", "Arewa Dandi", "Argungu", "Augie", "Bagudo", "Birnin Kebbi", "Bunza", "Dandi", "Fakai", "Gwandu", "Jega", "Kalgo", "Koko/Besse", "Maiyama", "Ngaski", "Sakaba", "Shanga", "Suru", "Danko/Wasagu", "Yauri", "Zuru"] },
+    { name: "Kogi", lgAs: ["Adavi", "Ajaokuta", "Ankpa", "Bassa", "Dekina", "Ibaji", "Idah", "Igalamela Odolu", "Ijumu", "Kabba/Bunu", "Kogi", "Lokoja", "Mopa Muro", "Ofu", "Ogori/Magongo", "Okehi", "Okene", "Olamaboro", "Omala", "Yagba East", "Yagba West"] },
+    { name: "Kwara", lgAs: ["Asa", "Baruten", "Edu", "Ekiti", "Ifelodun", "Ilorin East", "Ilorin South", "Ilorin West", "Irepodun", "Isin", "Kaiama", "Moro", "Offa", "Oke Ero", "Oyun", "Pategi"] },
+    { name: "Lagos", lgAs: ["Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin", "Apapa", "Badagry", "Epe", "Eti Osa", "Ibeju-Lekki", "Ifako-Ijaiye", "Ikeja", "Ikorodu", "Kosofe", "Lagos Island", "Lagos Mainland", "Mushin", "Ojo", "Oshodi-Isolo", "Shomolu", "Surulere"] },
+    { name: "Nasarawa", lgAs: ["Akwanga", "Awe", "Doma", "Karu", "Keana", "Keffi", "Kokona", "Lafia", "Nasarawa", "Nasarawa Egon", "Obi", "Toto", "Wamba"] },
+    { name: "Niger", lgAs: ["Agaie", "Agwara", "Bida", "Borgu", "Bosso", "Chanchaga", "Edati", "Gbako", "Gurara", "Katcha", "Kontagora", "Lapai", "Lavun", "Magama", "Mariga", "Mashegu", "Mokwa", "Moya", "Paikoro", "Rafi", "Rijau", "Shiroro", "Suleja", "Tafa", "Wushishi"] },
+    { name: "Ogun", lgAs: ["Abeokuta North", "Abeokuta South", "Ado-Odo/Ota", "Egbado North", "Egbado South", "Ewekoro", "Ifo", "Ijebu East", "Ijebu North", "Ijebu North East", "Ijebu Ode", "Ikenne", "Imeko Afon", "Ipokia", "Obafemi Owode", "Odeda", "Odogbolu", "Ogun Waterside", "Remo North", "Shagamu"] },
+    { name: "Ondo", lgAs: ["Akoko North-East", "Akoko North-West", "Akoko South-East", "Akoko South-West", "Akure North", "Akure South", "Ese Odo", "Idanre", "Ifedore", "Ilaje", "Ile Oluji/Okeigbo", "Irele", "Odigbo", "Okitipupa", "Ondo East", "Ondo West", "Ose", "Owo"] },
+    { name: "Osun", lgAs: ["Aiyedade", "Aiyedire", "Atakunmosa East", "Atakunmosa West", "Boluwaduro", "Boripe", "Ede North", "Ede South", "Egbedore", "Ejigbo", "Ife Central", "Ife East", "Ife North", "Ife South", "Ifedayo", "Ifelodun", "Ila", "Ilesa East", "Ilesa West", "Irepodun", "Irewole", "Isokan", "Iwo", "Obokun", "Odo Otin", "Ola Oluwa", "Olorunda", "Oriade", "Orolu", "Osogbo"] },
+    { name: "Oyo", lgAs: ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo", "Oyo East", "Saki East", "Saki West", "Surulere"] },
+    { name: "Plateau", lgAs: ["Barkin Ladi", "Bassa", "Bokkos", "Jos East", "Jos North", "Jos South", "Kanam", "Kanke", "Langtang North", "Langtang South", "Mangu", "Mikang", "Pankshin", "Qua'an Pan", "Riyom", "Shendam", "Wase"] },
+    { name: "Rivers", lgAs: ["Abua/Odual", "Ahoada East", "Ahoada West", "Akuku-Toru", "Andoni", "Asari-Toru", "Bonny", "Degema", "Eleme", "Emuoha", "Etche", "Gokana", "Ikwerre", "Khana", "Obio/Akpor", "Ogba/Egbema/Ndoni", "Ogu/Bolo", "Okrika", "Omuma", "Opobo/Nkoro", "Oyigbo", "Port Harcourt", "Tai"] },
+    { name: "Sokoto", lgAs: ["Binji", "Bodinga", "Dange Shuni", "Gada", "Goronyo", "Gudu", "Gwadabawa", "Illela", "Isa", "Kebbe", "Kware", "Rabah", "Sabon Birni", "Shagari", "Silame", "Sokoto North", "Sokoto South", "Tambuwal", "Tangaza", "Tureta", "Wamako", "Wurno", "Yabo"] },
+    { name: "Taraba", lgAs: ["Ardo Kola", "Bali", "Donga", "Gashaka", "Gassol", "Ibi", "Jalingo", "Karim Lamido", "Kumi", "Lau", "Sardauna", "Takum", "Ussa", "Wukari", "Yorro", "Zing"] },
+    { name: "Yobe", lgAs: ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
+    { name: "Zamfara", lgAs: ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Chafe", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Zurmi"] }
 ];
 
 // DOM Ready
@@ -2400,7 +2447,7 @@ function debounce(func, wait) {
 }
 
 // ============================================================================
-// ADMISSION NUMBER FUNCTIONS (from original)
+// ADMISSION NUMBER FUNCTIONS
 // ============================================================================
 
 // Update admission number based on year selection
@@ -2496,7 +2543,7 @@ window.toggleAdmissionInput = function(prefix = '') {
 };
 
 // ============================================================================
-// STATE AND LGA MANAGEMENT FUNCTIONS (from original)
+// STATE AND LGA MANAGEMENT FUNCTIONS
 // ============================================================================
 
 // Initialize states dropdown
@@ -2674,7 +2721,6 @@ function resetFilters() {
 // STUDENT DATA FUNCTIONS
 // ============================================================================
 
-// Fetch Students
 // Fetch Students with proper relationships
 async function fetchStudents() {
     showLoading();
@@ -2773,8 +2819,6 @@ async function fetchStudents() {
         hideLoading();
     }
 }
-
-
 
 // ============================================================================
 // RENDER FUNCTIONS
@@ -3542,6 +3586,12 @@ function showUpdateCurrentTermModal() {
         return;
     }
 
+    // Reset form and update count
+    const form = document.getElementById('updateCurrentTermForm');
+    if (form) {
+        form.reset();
+    }
+
     document.getElementById('selectedStudentsCount').textContent = selectedIds.length;
 
     const modal = new bootstrap.Modal(document.getElementById('updateCurrentTermModal'));
@@ -3552,29 +3602,78 @@ function showUpdateCurrentTermModal() {
 async function updateCurrentTerm() {
     const selectedIds = getSelectedStudentIds();
     const form = document.getElementById('updateCurrentTermForm');
-    const formData = new FormData(form);
 
-    formData.append('student_ids', JSON.stringify(selectedIds));
+    // Validate form
+    const classId = form.querySelector('[name="schoolclassId"]').value;
+    const termId = form.querySelector('[name="termId"]').value;
+    const sessionId = form.querySelector('[name="sessionId"]').value;
+
+    if (!classId || !termId || !sessionId) {
+        Swal.fire({
+            title: 'Missing Fields',
+            text: 'Please select class, term, and session.',
+            icon: 'warning',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
 
     try {
-        await axios.post('/student-current-term/bulk-update', formData);
+        // Show loading
+        Swal.fire({
+            title: 'Updating...',
+            text: 'Please wait while updating current term.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Prepare data
+        const data = {
+            student_ids: selectedIds,
+            schoolclassId: classId,
+            termId: termId,
+            sessionId: sessionId
+        };
+
+        // Make the API call
+        const response = await axios.post('/student-current-term/bulk-update', data);
 
         const modal = bootstrap.Modal.getInstance(document.getElementById('updateCurrentTermModal'));
         modal.hide();
 
         Swal.fire({
             title: 'Success!',
-            text: `Current term updated for ${selectedIds.length} student(s).`,
+            text: response.data.message || `Current term updated for ${selectedIds.length} student(s).`,
             icon: 'success',
             confirmButtonText: 'OK'
         });
+
+        // Refresh the student list
+        await fetchStudents();
+
     } catch (error) {
-        showError('Failed to update current term.');
+        console.error('Error updating current term:', error);
+
+        let errorMessage = 'Failed to update current term.';
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        Swal.fire({
+            title: 'Error!',
+            text: errorMessage,
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
     }
 }
 
 // ============================================================================
-// REPORT MODAL FUNCTIONS (from original)
+// REPORT MODAL FUNCTIONS
 // ============================================================================
 
 let columnSortable = null;
@@ -3778,7 +3877,6 @@ function updatePreview() {
     }
 }
 
-// Generate Report
 // Generate Report
 window.generateReport = function() {
     console.log('Generate report clicked');
