@@ -89,6 +89,7 @@
                                                     </div>
                                                 </th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="term">Term</th>
+                                                <th class="min-w-125px sort cursor-pointer" data-sort="status">Status</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="datereg">Date Updated</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
@@ -103,17 +104,29 @@
                                                         </div>
                                                     </td>
                                                     <td class="term" data-term="{{ $term->term }}">{{ $term->term }}</td>
+                                                    <td class="status">
+                                                        <div class="form-check form-switch d-inline-block">
+                                                            <input type="checkbox"
+                                                                   class="form-check-input status-toggle"
+                                                                   data-id="{{ $term->id }}"
+                                                                   id="status-switch-{{ $term->id }}"
+                                                                   {{ $term->status ? 'checked' : '' }}>
+                                                            <label class="form-check-label ms-1 status-label" for="status-switch-{{ $term->id }}" data-id="{{ $term->id }}">
+                                                                {{ $term->status ? 'Active' : 'Inactive' }}
+                                                            </label>
+                                                        </div>
+                                                    </td>
                                                     <td class="datereg">{{ $term->updated_at->format('Y-m-d') }}</td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('Update term')
                                                                 <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn"><i class="ph-pencil"></i></a>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="{{ $term->id }}"><i class="ph-pencil"></i></a>
                                                                 </li>
                                                             @endcan
                                                             @can('Delete term')
                                                                 <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn"><i class="ph-trash"></i></a>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="{{ $term->id }}"><i class="ph-trash"></i></a>
                                                                 </li>
                                                             @endcan
                                                         </ul>
@@ -148,6 +161,12 @@
                                     <label for="term" class="form-label">Term Name</label>
                                     <input type="text" name="term" id="term" class="form-control" placeholder="Enter term name" required>
                                 </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input type="checkbox" class="form-check-input" id="add-status-switch" name="status" checked>
+                                        <label class="form-check-label" for="add-status-switch">Active</label>
+                                    </div>
+                                </div>
                                 <div class="alert alert-danger d-none" id="alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
@@ -173,6 +192,12 @@
                                 <div class="mb-3">
                                     <label for="edit-term" class="form-label">Term Name</label>
                                     <input type="text" name="term" id="edit-term" class="form-control" placeholder="Enter term name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input type="checkbox" class="form-check-input" id="edit-status-switch" name="status">
+                                        <label class="form-check-label" for="edit-status-switch">Active</label>
+                                    </div>
                                 </div>
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
@@ -203,12 +228,52 @@
         </div>
         <!-- End Page-content -->
 
-        {{-- <!-- Scripts -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-        <script src="{{ asset('theme/layouts/assets/js/list.min.js') }}"></script>
-        <script src="{{ asset('theme/layouts/assets/js/sweetalert2.min.js') }}"></script>
-        <script src="{{ asset('js/term.init.js') }}"></script> --}}
+        <style>
+            .form-check-input.status-toggle {
+                width: 3em;
+                height: 1.5em;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .form-check-input.status-toggle:checked {
+                background-color: #198754;
+                border-color: #198754;
+            }
+
+            .form-check-input.status-toggle:disabled {
+                cursor: not-allowed;
+                opacity: 0.6;
+            }
+
+            .form-check-label.ms-1 {
+                font-size: 0.875rem;
+                color: #6c757d;
+                transition: color 0.3s ease;
+            }
+
+            .status-label.active {
+                color: #198754;
+                font-weight: 500;
+            }
+
+            .status-label.inactive {
+                color: #dc3545;
+                font-weight: 500;
+            }
+
+            .badge-status-active {
+                background-color: rgba(25, 135, 84, 0.1);
+                color: #198754;
+                border: 1px solid rgba(25, 135, 84, 0.2);
+            }
+
+            .badge-status-inactive {
+                background-color: rgba(220, 53, 69, 0.1);
+                color: #dc3545;
+                border: 1px solid rgba(220, 53, 69, 0.2);
+            }
+        </style>
     </div>
 </div>
 @endsection

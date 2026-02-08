@@ -48,8 +48,10 @@ if (checkAll) {
 // Form fields
 var addIdField = document.getElementById("add-id-field");
 var addTermField = document.getElementById("term");
+var addStatusSwitch = document.getElementById("add-status-switch");
 var editIdField = document.getElementById("edit-id-field");
 var editTermField = document.getElementById("edit-term");
+var editStatusSwitch = document.getElementById("edit-status-switch");
 
 // Checkbox handling
 function ischeckboxcheck() {
@@ -92,29 +94,33 @@ function handleRemoveClick(e) {
     e.preventDefault();
     var itemId = e.target.closest("tr").querySelector(".id").getAttribute("data-id");
     var deleteButton = document.getElementById("delete-record");
-    if (deleteButton) {
-        deleteButton.addEventListener("click", function () {
-            axios.delete(`/term/${itemId}`).then(function () {
-                Swal.fire({
-                    position: "center",
-                    icon: "success",
-                    title: "Term deleted successfully!",
-                    showConfirmButton: false,
-                    timer: 2000,
-                    showCloseButton: true
-                });
-                window.location.reload();
-            }).catch(function (error) {
-                Swal.fire({
-                    position: "center",
-                    icon: "error",
-                    title: "Error deleting term",
-                    text: error.response?.data?.message || "An error occurred",
-                    showConfirmButton: true
-                });
+
+    // Remove any existing event listeners
+    deleteButton.replaceWith(deleteButton.cloneNode(true));
+    deleteButton = document.getElementById("delete-record");
+
+    deleteButton.addEventListener("click", function () {
+        axios.delete(`/term/${itemId}`).then(function () {
+            Swal.fire({
+                position: "center",
+                icon: "success",
+                title: "Term deleted successfully!",
+                showConfirmButton: false,
+                timer: 2000,
+                showCloseButton: true
             });
-        }, { once: true });
-    }
+            setTimeout(() => window.location.reload(), 2000);
+        }).catch(function (error) {
+            Swal.fire({
+                position: "center",
+                icon: "error",
+                title: "Error deleting term",
+                text: error.response?.data?.message || "An error occurred",
+                showConfirmButton: true
+            });
+        });
+    });
+
     try {
         var modal = new bootstrap.Modal(document.getElementById("deleteRecordModal"));
         modal.show();
@@ -128,8 +134,16 @@ function handleEditClick(e) {
     e.preventDefault();
     var itemId = e.target.closest("tr").querySelector(".id").getAttribute("data-id");
     var tr = e.target.closest("tr");
+
     if (editIdField) editIdField.value = itemId;
     if (editTermField) editTermField.value = tr.querySelector(".term").innerText;
+
+    // Set status in edit modal
+    var statusCheckbox = tr.querySelector('.status-toggle');
+    if (editStatusSwitch) {
+        editStatusSwitch.checked = statusCheckbox ? statusCheckbox.checked : false;
+    }
+
     try {
         var modal = new bootstrap.Modal(document.getElementById("editModal"));
         modal.show();
@@ -138,15 +152,88 @@ function handleEditClick(e) {
     }
 }
 
+// Status toggle functionality
+function handleStatusToggle() {
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.classList.contains('status-toggle')) {
+            e.preventDefault();
+
+            const checkbox = e.target;
+            const termId = checkbox.getAttribute('data-id');
+            const isChecked = checkbox.checked;
+            const label = checkbox.nextElementSibling;
+
+            // Disable checkbox during API call to prevent rapid clicks
+            checkbox.disabled = true;
+
+            // Show loading state
+            const originalLabel = label.textContent;
+            label.textContent = 'Updating...';
+            label.classList.remove('active', 'inactive');
+
+            // Call API to update status
+            axios.patch(`/term/${termId}/status`, {
+                status: isChecked ? 1 : 0
+            }, {
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(function(response) {
+                console.log("Status updated successfully:", response.data);
+
+                // Update label
+                label.textContent = isChecked ? 'Active' : 'Inactive';
+                label.classList.add(isChecked ? 'active' : 'inactive');
+
+                // Show success notification
+                Swal.fire({
+                    position: "top-end",
+                    icon: "success",
+                    title: "Status updated!",
+                    showConfirmButton: false,
+                    timer: 1500,
+                    toast: true
+                });
+            })
+            .catch(function(error) {
+                console.error("Status update error:", error);
+
+                // Revert checkbox state on error
+                checkbox.checked = !isChecked;
+
+                // Revert label
+                label.textContent = !isChecked ? 'Active' : 'Inactive';
+                label.classList.add(!isChecked ? 'active' : 'inactive');
+
+                // Show error notification
+                Swal.fire({
+                    position: "top-end",
+                    icon: "error",
+                    title: "Failed to update status",
+                    text: error.response?.data?.message || "Please try again",
+                    showConfirmButton: false,
+                    timer: 3000,
+                    toast: true
+                });
+            })
+            .finally(function() {
+                // Re-enable checkbox
+                checkbox.disabled = false;
+            });
+        }
+    });
+}
+
 // Clear form fields
 function clearAddFields() {
     if (addIdField) addIdField.value = "";
     if (addTermField) addTermField.value = "";
+    if (addStatusSwitch) addStatusSwitch.checked = true;
 }
 
 function clearEditFields() {
     if (editIdField) editIdField.value = "";
     if (editTermField) editTermField.value = "";
+    if (editStatusSwitch) editStatusSwitch.checked = true;
 }
 
 // Delete multiple terms
@@ -167,7 +254,7 @@ function deleteMultiple() {
             showCancelButton: true,
             confirmButtonClass: "btn btn-primary w-xs me-2 mt-2",
             cancelButtonClass: "btn btn-danger w-xs mt-2",
-            confirmButtonText: "Yes, delete it!",
+            confirmButtonText: "Yes, delete them!",
             buttonsStyling: false,
             showCloseButton: true
         }).then((result) => {
@@ -177,12 +264,12 @@ function deleteMultiple() {
                 })).then(() => {
                     Swal.fire({
                         title: "Deleted!",
-                        text: "Your terms have been deleted.",
+                        text: "Selected terms have been deleted.",
                         icon: "success",
                         confirmButtonClass: "btn btn-info w-xs mt-2",
                         buttonsStyling: false
                     });
-                    window.location.reload();
+                    setTimeout(() => window.location.reload(), 2000);
                 }).catch((error) => {
                     Swal.fire({
                         title: "Error!",
@@ -210,7 +297,7 @@ var termListContainer = document.getElementById('termList');
 if (termListContainer && document.querySelectorAll('#termList tbody tr').length > 0) {
     try {
         termList = new List('termList', {
-            valueNames: ['term', 'datereg'],
+            valueNames: ['term', 'status', 'datereg'],
             page: 1000,
             pagination: false,
             listClass: 'list'
@@ -240,7 +327,7 @@ function filterData() {
     var searchValue = searchInput ? searchInput.value : "";
     console.log("Filtering with search:", searchValue);
     if (termList) {
-        termList.search(searchValue, ['term']);
+        termList.search(searchValue, ['term', 'status']);
     }
 }
 
@@ -251,8 +338,11 @@ if (addTermForm) {
         e.preventDefault();
         var errorMsg = document.getElementById("alert-error-msg");
         if (errorMsg) errorMsg.classList.add("d-none");
+
         var formData = new FormData(addTermForm);
         var term = formData.get('term');
+        var status = addStatusSwitch ? addStatusSwitch.checked : true;
+
         if (!term) {
             if (errorMsg) {
                 errorMsg.innerHTML = "Please enter a term name";
@@ -260,9 +350,11 @@ if (addTermForm) {
             }
             return;
         }
-        console.log("Submitting Add Term:", { term });
+
+        console.log("Submitting Add Term:", { term, status });
         axios.post('/term', {
-            term: term
+            term: term,
+            status: status
         }, {
             headers: { 'Content-Type': 'application/json' }
         }).then(function (response) {
@@ -275,7 +367,7 @@ if (addTermForm) {
                 timer: 2000,
                 showCloseButton: true
             });
-            window.location.reload();
+            setTimeout(() => window.location.reload(), 2000);
         }).catch(function (error) {
             console.error("Add Term Error:", error.response);
             if (errorMsg) {
@@ -293,9 +385,12 @@ if (editTermForm) {
         e.preventDefault();
         var errorMsg = document.getElementById("edit-alert-error-msg");
         if (errorMsg) errorMsg.classList.add("d-none");
+
         var formData = new FormData(editTermForm);
         var term = formData.get('term');
+        var status = editStatusSwitch ? editStatusSwitch.checked : true;
         var id = editIdField.value;
+
         if (!term) {
             if (errorMsg) {
                 errorMsg.innerHTML = "Please enter a term name";
@@ -303,9 +398,11 @@ if (editTermForm) {
             }
             return;
         }
-        console.log("Submitting Edit Term:", { id, term });
+
+        console.log("Submitting Edit Term:", { id, term, status });
         axios.put(`/term/${id}`, {
-            term: term
+            term: term,
+            status: status
         }, {
             headers: { 'Content-Type': 'application/json' }
         }).then(function (response) {
@@ -318,7 +415,7 @@ if (editTermForm) {
                 timer: 2000,
                 showCloseButton: true
             });
-            window.location.reload();
+            setTimeout(() => window.location.reload(), 2000);
         }).catch(function (error) {
             console.error("Edit Term Error:", error.response);
             if (errorMsg) {
@@ -333,7 +430,7 @@ if (editTermForm) {
 var addModal = document.getElementById("addTermModal");
 if (addModal) {
     addModal.addEventListener("show.bs.modal", function (e) {
-        if (e.relatedTarget.classList.contains("add-btn")) {
+        if (e.relatedTarget && e.relatedTarget.classList.contains("add-btn")) {
             var modalLabel = document.getElementById("exampleModalLabel");
             var addBtn = document.getElementById("add-btn");
             if (modalLabel) modalLabel.innerHTML = "Add Term";
@@ -358,21 +455,39 @@ if (editModal) {
     });
 }
 
-// Initialize listeners
+// Initialize all event listeners
+function initializeAllEventListeners() {
+    // Status toggle listener
+    handleStatusToggle();
+
+    // Initialize status labels
+    document.querySelectorAll('.status-label').forEach(function(label) {
+        const isActive = label.textContent.trim() === 'Active';
+        label.classList.add(isActive ? 'active' : 'inactive');
+    });
+
+    // Initialize checkboxes
+    ischeckboxcheck();
+}
+
+// DOM Content Loaded
 document.addEventListener("DOMContentLoaded", function () {
     console.log("DOMContentLoaded fired");
+
+    // Initialize all event listeners
+    initializeAllEventListeners();
+
+    // Search functionality
     var searchInput = document.querySelector(".search-box input.search");
     if (searchInput) {
         searchInput.addEventListener("input", debounce(function () {
-            console.log("Search input changed:", searchInput.value);
             filterData();
         }, 300));
     } else {
         console.error("Search input not found!");
     }
-
-    ischeckboxcheck();
 });
 
 // Expose functions to global scope
 window.deleteMultiple = deleteMultiple;
+window.initializeAllEventListeners = initializeAllEventListeners;

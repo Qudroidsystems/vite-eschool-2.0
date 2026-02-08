@@ -12,7 +12,7 @@ class SchooltermController extends Controller
     {
         $this->middleware('permission:View term|Create term|Update term|Delete term', ['only' => ['index']]);
         $this->middleware('permission:Create term', ['only' => ['store']]);
-        $this->middleware('permission:Update term', ['only' => ['update', 'updateterm']]);
+        $this->middleware('permission:Update term', ['only' => ['update', 'updateterm', 'updateStatus']]);
         $this->middleware('permission:Delete term', ['only' => ['destroy', 'deleteterm']]);
     }
 
@@ -24,6 +24,11 @@ class SchooltermController extends Controller
 
         if ($request->filled('search')) {
             $query->where('term', 'like', '%' . $request->search . '%');
+        }
+
+        // Add filter by status if needed
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
 
         $terms = $query->latest()->paginate(10);
@@ -52,7 +57,8 @@ class SchooltermController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Term created successfully'
+            'message' => 'Term created successfully',
+            'term' => $term
         ]);
     }
 
@@ -69,7 +75,24 @@ class SchooltermController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Term updated successfully'
+            'message' => 'Term updated successfully',
+            'term' => $term
+        ]);
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|boolean'
+        ]);
+
+        $term = Schoolterm::findOrFail($id);
+        $term->update(['status' => $request->status]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status updated successfully',
+            'term' => $term
         ]);
     }
 
@@ -84,10 +107,7 @@ class SchooltermController extends Controller
         ]);
     }
 
-    // ─────────────────────────────────────────────
-    // AJAX helpers (you can keep or remove them)
-    // ─────────────────────────────────────────────
-
+    // AJAX helpers
     public function updateterm(Request $request)
     {
         $validated = $request->validate([

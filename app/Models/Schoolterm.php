@@ -13,13 +13,23 @@ class Schoolterm extends Model
 
     protected $fillable = [
         'term',
-        'status',           // ← add this
+        'status',
     ];
 
-    // Optional: scope for active terms only
+    // Cast the status field to boolean
+    protected $casts = [
+        'status' => 'boolean',
+    ];
+
+    // Scope for active terms only
     public function scopeActive($query)
     {
         return $query->where('status', true);
-        // or → where('status', 1) / where('status', 'active')
+    }
+
+    // Scope for inactive terms
+    public function scopeInactive($query)
+    {
+        return $query->where('status', false);
     }
 }
