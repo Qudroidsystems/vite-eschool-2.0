@@ -24,7 +24,7 @@ class StudentCurrentTerm extends Model
      */
     public function student()
     {
-        return $this->belongsTo(StudentRegistration::class, 'studentId');
+        return $this->belongsTo(Student::class, 'studentId');
     }
 
     /**
@@ -127,28 +127,5 @@ class StudentCurrentTerm extends Model
                    ->exists();
     }
 
-    /**
-     * Promote student to next class/term
-     */
-    public static function promoteStudent($studentId, $newClassId, $newTermId, $newSessionId)
-    {
-        // Get current term record
-        $current = self::getCurrentForStudent($studentId);
 
-        if ($current) {
-            // Mark current as not current (historical record)
-            $current->update(['is_current' => false]);
-
-            // Create new current term record
-            return self::create([
-                'studentId' => $studentId,
-                'schoolclassId' => $newClassId,
-                'termId' => $newTermId,
-                'sessionId' => $newSessionId,
-                'is_current' => true
-            ]);
-        }
-
-        return null;
-    }
 }

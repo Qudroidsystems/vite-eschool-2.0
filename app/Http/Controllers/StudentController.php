@@ -120,6 +120,8 @@ class StudentController extends Controller
             $query->whereNotIn('name', ['Student']);
         })->count();
 
+        $currentTerm = Schoolterm::where('status', 'Current')->first(); // Add this
+
         return view('student.index', compact(
             'schoolclasses',
             'schoolterms',
@@ -132,7 +134,8 @@ class StudentController extends Controller
             'religion_counts',
             'pagetitle',
             'total_population',
-            'staff_count'
+            'staff_count',
+            'currentTerm', // Add this
         ));
     }
 
@@ -1805,4 +1808,81 @@ public function getStudentsByCurrentFilters(Request $request)
 }
 
 
+
+/**
+ * Bulk update current term for multiple students
+ */
+public function bulkUpdateCurrentTerm(Request $request)
+{
+    $request->validate([
+        'student_ids' => 'required|array',
+        'student_ids.*' => 'exists:studentRegistration,id',
+        'schoolclassId' => 'required|exists:schoolclass,id',
+        'termId' => 'required|exists:schoolterm,id',
+        'sessionId' => 'required|exists:schoolsession,id'
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $results = [];
+        $successCount = 0;
+        $failedCount = 0;
+
+        foreach ($request->student_ids as $studentId) {
+            try {
+                // Check if student exists
+                $student = Student::find($studentId);
+                if (!$student) {
+                    $results[$studentId] = 'Student not found';
+                    $failedCount++;
+                    continue;
+                }
+
+                // Create or update current term
+                $currentTerm = StudentCurrentTerm::updateOrCreate(
+                    [
+                        'studentId' => $studentId,
+                        'is_current' => true
+                    ],
+                    [
+                        'schoolclassId' => $request->schoolclassId,
+                        'termId' => $request->termId,
+                        'sessionId' => $request->sessionId,
+                        'is_current' => true
+                    ]
+                );
+
+                $results[$studentId] = 'Success';
+                $successCount++;
+
+            } catch (\Exception $e) {
+                Log::error("Error updating current term for student {$studentId}: " . $e->getMessage());
+                $results[$studentId] = 'Failed: ' . $e->getMessage();
+                $failedCount++;
+            }
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Updated current term for {$successCount} student(s). Failed: {$failedCount}.",
+            'data' => $results,
+            'summary' => [
+                'total' => count($request->student_ids),
+                'success' => $successCount,
+                'failed' => $failedCount
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("Bulk update current term error: " . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update current term: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

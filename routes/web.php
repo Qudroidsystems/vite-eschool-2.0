@@ -194,7 +194,16 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/students/last-admission-number', [StudentController::class, 'getLastAdmissionNumber'])->name('student.getLastAdmissionNumber');
     Route::get('/students/report', action: [StudentController::class, 'generateReport'])->name('students.report');
 
+    // Student Current Term Routes with inline middleware
+    Route::prefix('student-current-term')->group(function () {
+        Route::get('/student/{studentId}', [StudentController::class, 'getCurrentTerm']);
+        Route::put('/student/{studentId}', [StudentController::class, 'updateCurrentTerm']);
+        Route::post('/student/{studentId}/promote', [StudentController::class, 'promoteStudent']);
+        Route::get('/students', [StudentController::class, 'getStudentsByCurrentFilters']);
+    });
 
+    // Bulk update current term
+    Route::post('/student-current-term/bulk-update', [StudentController::class, 'bulkUpdateCurrentTerm']);
 
 
     Route::resource('classoperation', ClassOperationController::class);
