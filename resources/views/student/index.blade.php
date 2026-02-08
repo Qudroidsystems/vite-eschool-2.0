@@ -1124,10 +1124,9 @@ use Spatie\Permission\Models\Role;
         </div>
     </div>
 </div>
-
 <script>
 // ============================================================================
-// STUDENT MANAGEMENT SYSTEM - ENHANCED VERSION
+// COMPLETE STUDENT MANAGEMENT JAVASCRIPT
 // ============================================================================
 
 // Global Variables
@@ -1141,22 +1140,35 @@ let currentFilter = {
     status: 'all',
     gender: 'all'
 };
+let columnSortable = null;
 
-// DOM Ready
+// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
     initializeApplication();
+
+    // Initialize admission numbers
+    if (document.getElementById('admissionYear')) {
+        updateAdmissionNumber();
+    }
+    if (document.getElementById('editAdmissionYear')) {
+        updateAdmissionNumber('edit');
+    }
 });
 
 // Initialize Application
 function initializeApplication() {
-    // Load initial data
     fetchStudents();
-
-    // Initialize event listeners
     initializeEventListeners();
-
-    // Initialize UI components
     initializeUIComponents();
+    initializeStatesDropdowns();
+
+    // Report modal initialization
+    const reportModal = document.getElementById('printStudentReportModal');
+    if (reportModal) {
+        reportModal.addEventListener('show.bs.modal', function() {
+            setTimeout(initializeReportModal, 100);
+        });
+    }
 }
 
 // Initialize Event Listeners
@@ -1180,11 +1192,50 @@ function initializeEventListeners() {
     document.getElementById('nextPage').addEventListener('click', goToNextPage);
 
     // Update current term
-    document.getElementById('confirmUpdateCurrentTerm').addEventListener('click', updateCurrentTerm);
+    const confirmUpdateBtn = document.getElementById('confirmUpdateCurrentTerm');
+    if (confirmUpdateBtn) {
+        confirmUpdateBtn.addEventListener('click', updateCurrentTermForSelected);
+    }
 
     // Form submissions
-    document.getElementById('addStudentForm')?.addEventListener('submit', handleAddStudent);
-    document.getElementById('editStudentForm')?.addEventListener('submit', handleEditStudent);
+    const addForm = document.getElementById('addStudentForm');
+    if (addForm) {
+        addForm.addEventListener('submit', handleAddStudent);
+    }
+
+    const editForm = document.getElementById('editStudentForm');
+    if (editForm) {
+        editForm.addEventListener('submit', handleEditStudent);
+    }
+
+    // Admission mode toggles
+    document.querySelectorAll('input[name="admissionMode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            toggleAdmissionInput(this.name.includes('edit') ? 'edit' : '');
+        });
+    });
+
+    // Admission year changes
+    document.getElementById('admissionYear')?.addEventListener('change', () => updateAdmissionNumber());
+    document.getElementById('editAdmissionYear')?.addEventListener('change', () => updateAdmissionNumber('edit'));
+
+    // Date of birth age calculation
+    document.getElementById('addDOB')?.addEventListener('change', function() {
+        calculateAge(this.value, 'addAgeInput');
+    });
+
+    document.getElementById('editDOB')?.addEventListener('change', function() {
+        calculateAge(this.value, 'editAgeInput');
+    });
+
+    // Image preview
+    document.getElementById('avatar')?.addEventListener('change', function() {
+        previewImage(this, 'addStudentAvatar');
+    });
+
+    document.getElementById('editAvatar')?.addEventListener('change', function() {
+        previewImage(this, 'editStudentAvatar');
+    });
 }
 
 // Initialize UI Components
@@ -1195,24 +1246,295 @@ function initializeUIComponents() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Initialize form validation
-    initializeFormValidation();
+    // Initialize Choices.js for select elements
+    if (typeof Choices !== 'undefined') {
+        document.querySelectorAll('[data-choices]').forEach(select => {
+            new Choices(select, {
+                searchEnabled: select.dataset.choicesSearchFalse ? false : true,
+                itemSelectText: '',
+                shouldSort: false
+            });
+        });
+    }
 }
 
-// Debounce function for search
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
+// Initialize States Dropdowns
+function initializeStatesDropdowns() {
+    if (document.getElementById('addState') && document.getElementById('addLocal')) {
+        initializeStatesDropdown('addState', 'addLocal');
+    }
+    if (document.getElementById('editState') && document.getElementById('editLocal')) {
+        initializeStatesDropdown('editState', 'editLocal');
+    }
+}
+
+// ============================================================================
+// ADMISSION NUMBER FUNCTIONS
+// ============================================================================
+
+// Update admission number based on year selection
+function updateAdmissionNumber(prefix = '') {
+    const yearSelect = document.getElementById(`${prefix}admissionYear`);
+    const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+
+    if (!yearSelect || !admissionNoInput) return;
+
+    const year = yearSelect.value;
+    const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? '[id^="edit"]' : ''}`);
+
+    if (admissionMode && admissionMode.value === 'auto') {
+        admissionNoInput.readOnly = true;
+        generateAutoAdmissionNumber(year, admissionNoInput);
+    } else {
+        admissionNoInput.readOnly = false;
+        if (!admissionNoInput.value) {
+            admissionNoInput.value = `TCC/${year}/0001`;
+        }
+    }
+}
+
+// Generate auto admission number
+async function generateAutoAdmissionNumber(year, inputElement) {
+    try {
+        const response = await axios.get(`/students/last-admission-number?year=${year}`);
+        if (response.data.success) {
+            inputElement.value = response.data.admissionNo;
+        } else {
+            inputElement.value = `TCC/${year}/0001`;
+        }
+    } catch (error) {
+        console.error('Error generating admission number:', error);
+        inputElement.value = `TCC/${year}/0001`;
+    }
+}
+
+// Toggle admission input based on mode
+function toggleAdmissionInput(prefix = '') {
+    updateAdmissionNumber(prefix);
+}
+
+// ============================================================================
+// FORM FUNCTIONS
+// ============================================================================
+
+// Calculate age from date of birth
+function calculateAge(dateValue, targetId) {
+    if (!dateValue) return;
+
+    const dob = new Date(dateValue);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        age--;
+    }
+
+    const ageInput = document.getElementById(targetId);
+    if (ageInput) {
+        ageInput.value = age;
+    }
+}
+
+// Preview image before upload
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+
+            // Hide initials if showing
+            const initialsDiv = preview.nextElementSibling;
+            if (initialsDiv && initialsDiv.classList.contains('avatar-initials')) {
+                initialsDiv.style.display = 'none';
+            }
         };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
+
+        reader.readAsDataURL(input.files[0]);
+    }
 }
 
-// Toggle View Function
+// ============================================================================
+// STATE AND LGA MANAGEMENT
+// ============================================================================
+
+// Nigerian states data
+const nigerianStates = [
+    // ... (same states data as before)
+];
+
+// Initialize states dropdown
+function initializeStatesDropdown(stateDropdownId, lgaDropdownId) {
+    const stateSelect = document.getElementById(stateDropdownId);
+    const lgaSelect = document.getElementById(lgaDropdownId);
+
+    if (!stateSelect || !lgaSelect) return;
+
+    // Clear existing options
+    stateSelect.innerHTML = '<option value="">Select State</option>';
+    lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+
+    // Populate states
+    nigerianStates.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state.name;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+    });
+
+    // Add change event listener
+    stateSelect.addEventListener('change', function() {
+        const selectedState = this.value;
+        const state = nigerianStates.find(s => s.name === selectedState);
+
+        // Clear LGA dropdown
+        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+
+        if (state) {
+            // Populate LGAs for selected state
+            state.lgAs.forEach(lga => {
+                const option = document.createElement('option');
+                option.value = lga;
+                option.textContent = lga;
+                lgaSelect.appendChild(option);
+            });
+        }
+    });
+}
+
+// Set specific state and LGA
+function setStateAndLGA(stateDropdownId, lgaDropdownId, stateName, lgaName) {
+    const stateSelect = document.getElementById(stateDropdownId);
+    const lgaSelect = document.getElementById(lgaDropdownId);
+
+    if (!stateSelect || !lgaSelect) return;
+
+    // Set state
+    if (stateName) {
+        stateSelect.value = stateName;
+
+        // Trigger change to populate LGAs
+        const event = new Event('change');
+        stateSelect.dispatchEvent(event);
+
+        // Set LGA after a short delay to ensure LGAs are populated
+        setTimeout(() => {
+            lgaSelect.value = lgaName;
+        }, 100);
+    }
+}
+
+// ============================================================================
+// STUDENT DATA FUNCTIONS
+// ============================================================================
+
+// Fetch students from server
+async function fetchStudents() {
+    showLoading();
+
+    try {
+        const response = await axios.get('/students/data');
+        console.log('API Response:', response.data);
+
+        // Parse response data
+        let studentsArray = [];
+
+        if (Array.isArray(response.data)) {
+            studentsArray = response.data;
+        } else if (response.data.students && Array.isArray(response.data.students)) {
+            studentsArray = response.data.students;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+            studentsArray = response.data.data;
+        } else if (response.data.success && Array.isArray(response.data.data)) {
+            studentsArray = response.data.data;
+        } else {
+            // Try to extract students from object
+            studentsArray = Object.values(response.data).filter(item =>
+                item && (item.id || item.student_id)
+            );
+        }
+
+        // Transform student data
+        allStudents = studentsArray.map(student => ({
+            id: student.id || student.student_id || '',
+            admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
+            firstname: student.firstname || student.first_name || '',
+            lastname: student.lastname || student.last_name || '',
+            othername: student.othername || student.other_name || student.middle_name || '',
+            gender: student.gender || '',
+            statusId: student.statusId || student.status_id || student.student_status_id || '',
+            student_status: student.student_status || student.status || '',
+            created_at: student.created_at || student.created_date || student.registration_date || '',
+            picture: student.picture || student.avatar || student.profile_picture || '',
+            schoolclass: student.schoolclass || student.class || student.class_name || '',
+            arm: student.arm || student.section || '',
+            schoolclassid: student.schoolclassid || student.class_id || '',
+            dateofbirth: student.dateofbirth || student.dob || '',
+            religion: student.religion || '',
+            permanent_address: student.permanent_address || student.address || '',
+            phone_number: student.phone_number || student.phone || '',
+            email: student.email || '',
+            state: student.state || '',
+            local: student.local || '',
+            father_name: student.father_name || '',
+            mother_name: student.mother_name || '',
+            father_phone: student.father_phone || '',
+            last_school: student.last_school || '',
+            last_class: student.last_class || '',
+            reason_for_leaving: student.reason_for_leaving || '',
+            schoolhouseid: student.schoolhouseid || student.house_id || '',
+            student_category: student.student_category || student.category || ''
+        }));
+
+        console.log('Processed students:', allStudents.length);
+
+        renderCurrentView();
+    } catch (error) {
+        console.error('Error fetching students:', error);
+        showError('Failed to load students. Please try again.');
+        renderCurrentView(); // Render empty state
+    } finally {
+        hideLoading();
+    }
+}
+
+// Show loading state
+function showLoading() {
+    const loadingState = document.getElementById('loadingState');
+    const emptyState = document.getElementById('emptyState');
+
+    if (loadingState) loadingState.classList.remove('d-none');
+    if (emptyState) emptyState.classList.add('d-none');
+}
+
+// Hide loading state
+function hideLoading() {
+    const loadingState = document.getElementById('loadingState');
+    if (loadingState) loadingState.classList.add('d-none');
+}
+
+// Show error message
+function showError(message) {
+    Swal.fire({
+        title: 'Error!',
+        text: message,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        customClass: {
+            confirmButton: 'btn btn-primary'
+        }
+    });
+}
+
+// ============================================================================
+// VIEW RENDERING FUNCTIONS
+// ============================================================================
+
+// Toggle between table and card view
 function toggleView(viewType) {
     currentView = viewType;
     const tableView = document.getElementById('tableView');
@@ -1235,7 +1557,7 @@ function toggleView(viewType) {
     renderCurrentView();
 }
 
-// Render Current View
+// Render current view based on filters
 function renderCurrentView() {
     const filteredStudents = filterStudents();
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -1250,9 +1572,10 @@ function renderCurrentView() {
 
     updatePagination(filteredStudents.length);
     updateCounts(filteredStudents.length, pageStudents.length);
+    updateEmptyState(filteredStudents.length === 0);
 }
 
-// Filter Students
+// Filter students based on current filters
 function filterStudents() {
     const searchTerm = currentFilter.search.toLowerCase();
     const classFilter = currentFilter.class;
@@ -1261,20 +1584,23 @@ function filterStudents() {
 
     return allStudents.filter(student => {
         // Search filter
+        const fullName = `${student.firstname || ''} ${student.lastname || ''} ${student.othername || ''}`.toLowerCase();
         const searchMatch = !searchTerm ||
-            student.firstname?.toLowerCase().includes(searchTerm) ||
-            student.lastname?.toLowerCase().includes(searchTerm) ||
-            student.admissionNo?.toLowerCase().includes(searchTerm);
+            fullName.includes(searchTerm) ||
+            (student.admissionNo && student.admissionNo.toLowerCase().includes(searchTerm));
 
         // Class filter
         const classMatch = classFilter === 'all' || student.schoolclassid == classFilter;
 
         // Status filter
-        const statusMatch = statusFilter === 'all' ||
-            (statusFilter === '1' && student.statusId == 1) ||
-            (statusFilter === '2' && student.statusId == 2) ||
-            (statusFilter === 'Active' && student.student_status === 'Active') ||
-            (statusFilter === 'Inactive' && student.student_status === 'Inactive');
+        let statusMatch = statusFilter === 'all';
+        if (!statusMatch) {
+            if (statusFilter === '1' || statusFilter === '2') {
+                statusMatch = student.statusId == statusFilter;
+            } else if (statusFilter === 'Active' || statusFilter === 'Inactive') {
+                statusMatch = student.student_status === statusFilter;
+            }
+        }
 
         // Gender filter
         const genderMatch = genderFilter === 'all' || student.gender === genderFilter;
@@ -1283,7 +1609,7 @@ function filterStudents() {
     });
 }
 
-// Filter Data
+// Apply filters
 function filterData() {
     currentFilter = {
         search: document.getElementById('search-input').value,
@@ -1296,7 +1622,7 @@ function filterData() {
     renderCurrentView();
 }
 
-// Reset Filters
+// Reset all filters
 function resetFilters() {
     document.getElementById('search-input').value = '';
     document.getElementById('schoolclass-filter').value = 'all';
@@ -1314,103 +1640,44 @@ function resetFilters() {
     renderCurrentView();
 }
 
-// Toggle Select All
-function toggleSelectAll(e) {
-    const isChecked = e.target.checked;
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = isChecked;
-        const parent = checkbox.closest('.student-profile-card, tr');
-        if (parent) {
-            parent.classList.toggle('selected', isChecked);
-        }
-    });
-
-    updateBulkActionsVisibility();
+// Debounce function for search
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
-// Update Bulk Actions Visibility
-function updateBulkActionsVisibility() {
-    const selectedCount = document.querySelectorAll('.student-checkbox:checked').length;
-    const bulkActionsDropdown = document.getElementById('bulkActionsDropdown');
+// ============================================================================
+// TABLE VIEW FUNCTIONS
+// ============================================================================
 
-    if (selectedCount > 0) {
-        bulkActionsDropdown.disabled = false;
-        bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions (${selectedCount})`;
-    } else {
-        bulkActionsDropdown.disabled = true;
-        bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions`;
-    }
-}
-
-// Fetch Students
-async function fetchStudents() {
-    showLoading();
-
-    try {
-        const response = await axios.get('/students/data');
-        allStudents = response.data.students || response.data.data || response.data || [];
-
-        renderCurrentView();
-    } catch (error) {
-        console.error('Error fetching students:', error);
-        showError('Failed to load students. Please try again.');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Show Loading
-function showLoading() {
-    document.getElementById('loadingState').classList.remove('d-none');
-    document.getElementById('tableView').classList.add('d-none');
-    document.getElementById('cardView').classList.add('d-none');
-    document.getElementById('emptyState').classList.add('d-none');
-}
-
-// Hide Loading
-function hideLoading() {
-    document.getElementById('loadingState').classList.add('d-none');
-}
-
-// Show Error
-function showError(message) {
-    Swal.fire({
-        title: 'Error!',
-        text: message,
-        icon: 'error',
-        confirmButtonText: 'OK',
-        customClass: {
-            confirmButton: 'btn btn-primary'
-        }
-    });
-}
-
-// Render Table View
+// Render table view
 function renderTableView(students) {
     const tbody = document.getElementById('studentTableBody');
 
     if (students.length === 0) {
         tbody.innerHTML = '';
-        document.getElementById('emptyState').classList.remove('d-none');
         return;
     }
 
-    document.getElementById('emptyState').classList.add('d-none');
-
     tbody.innerHTML = students.map(student => `
-        <tr data-id="${student.id}">
+        <tr data-id="${student.id}" class="${student.selected ? 'selected' : ''}">
             <td>
                 <div class="form-check">
                     <input class="form-check-input student-checkbox" type="checkbox"
-                           value="${student.id}" onchange="updateBulkActionsVisibility()">
+                           value="${student.id}" onchange="updateSelection(this, ${student.id})">
                 </div>
             </td>
             <td>
                 <div class="d-flex align-items-center">
                     <div class="avatar-sm me-3">
-                        ${getStudentAvatar(student)}
+                        ${getStudentAvatar(student, false)}
                     </div>
                     <div>
                         <h6 class="mb-0">${student.firstname} ${student.lastname}</h6>
@@ -1419,27 +1686,30 @@ function renderTableView(students) {
                 </div>
             </td>
             <td>
-                <span class="badge bg-light text-dark">${student.admissionNo}</span>
+                <span class="badge bg-light text-dark">${student.admissionNo || 'N/A'}</span>
             </td>
-            <td>${student.schoolclass || ''} ${student.arm || ''}</td>
+            <td>${student.schoolclass || ''} ${student.arm ? ' - ' + student.arm : ''}</td>
             <td>
-                ${getStatusBadge(student)}
+                ${getStatusBadges(student)}
             </td>
             <td>
-                <span class="badge bg-${student.gender === 'Male' ? 'primary' : 'pink'} bg-gradient">
-                    ${student.gender}
+                <span class="badge ${student.gender === 'Male' ? 'bg-primary' : 'bg-pink'}">
+                    ${student.gender || 'N/A'}
                 </span>
             </td>
-            <td>${formatDate(student.created_at)}</td>
+            <td>${formatDate(student.created_at, 'short')}</td>
             <td>
                 <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary" onclick="viewStudent(${student.id})">
+                    <button class="btn btn-outline-primary" onclick="viewStudent(${student.id})"
+                            title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn btn-outline-warning" onclick="editStudent(${student.id})">
+                    <button class="btn btn-outline-warning" onclick="editStudent(${student.id})"
+                            title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-outline-danger" onclick="deleteStudent(${student.id})">
+                    <button class="btn btn-outline-danger" onclick="deleteStudent(${student.id})"
+                            title="Delete">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -1448,32 +1718,33 @@ function renderTableView(students) {
     `).join('');
 }
 
-// Render Card View
+// ============================================================================
+// CARD VIEW FUNCTIONS
+// ============================================================================
+
+// Render card view
 function renderCardView(students) {
     const container = document.getElementById('studentsCardsContainer');
 
     if (students.length === 0) {
         container.innerHTML = '';
-        document.getElementById('emptyState').classList.remove('d-none');
         return;
     }
 
-    document.getElementById('emptyState').classList.add('d-none');
-
     container.innerHTML = students.map(student => `
         <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
-            <div class="student-profile-card" data-id="${student.id}">
+            <div class="student-profile-card ${student.selected ? 'selected' : ''}" data-id="${student.id}">
                 <div class="checkbox-container">
                     <div class="form-check">
                         <input class="form-check-input student-checkbox" type="checkbox"
-                               value="${student.id}" onchange="updateBulkActionsVisibility()">
+                               value="${student.id}" onchange="updateSelection(this, ${student.id})">
                     </div>
                 </div>
 
                 <div class="card-header">
                     <div class="header-content">
                         <h5 class="student-name">${student.firstname} ${student.lastname}</h5>
-                        <span class="student-admission">${student.admissionNo}</span>
+                        <span class="student-admission">${student.admissionNo || 'No Admission No'}</span>
                     </div>
                     <div class="avatar-container">
                         ${getStudentAvatar(student, true)}
@@ -1481,20 +1752,20 @@ function renderCardView(students) {
                 </div>
 
                 <div class="card-body">
-                    ${getStatusBadge(student, true)}
+                    ${getStatusBadges(student, true)}
 
                     <div class="student-info-grid">
                         <div class="info-item">
                             <span class="info-label">Class</span>
-                            <span class="info-value">${student.schoolclass || ''} ${student.arm || ''}</span>
+                            <span class="info-value">${student.schoolclass || 'N/A'} ${student.arm || ''}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Gender</span>
-                            <span class="info-value">${student.gender}</span>
+                            <span class="info-value">${student.gender || 'N/A'}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Age</span>
-                            <span class="info-value">${calculateAge(student.dateofbirth)}</span>
+                            <span class="info-value">${calculateStudentAge(student.dateofbirth)}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Registered</span>
@@ -1519,7 +1790,7 @@ function renderCardView(students) {
     `).join('');
 }
 
-// Get Student Avatar
+// Get student avatar
 function getStudentAvatar(student, isCard = false) {
     const initials = `${student.firstname?.charAt(0) || ''}${student.lastname?.charAt(0) || ''}`;
     const size = isCard ? '80px' : '40px';
@@ -1529,7 +1800,11 @@ function getStudentAvatar(student, isCard = false) {
             <img src="/storage/images/student_avatars/${student.picture}"
                  alt="${student.firstname}"
                  class="avatar"
-                 style="width: ${size}; height: ${size}; object-fit: cover;">
+                 style="width: ${size}; height: ${size}; object-fit: cover;"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="avatar-initials" style="width: ${size}; height: ${size}; display: none;">
+                ${initials}
+            </div>
         `;
     }
 
@@ -1540,36 +1815,39 @@ function getStudentAvatar(student, isCard = false) {
     `;
 }
 
-// Get Status Badge
-function getStatusBadge(student, isCard = false) {
-    let badge = '';
+// Get status badges
+function getStatusBadges(student, isCard = false) {
+    let badges = '';
 
+    // Student activity status
     if (student.student_status === 'Active') {
-        badge = `<span class="status-badge status-active">
-                    <i class="fas fa-check-circle"></i> Active
-                </span>`;
+        badges += `<span class="status-badge status-active ${isCard ? '' : 'me-1'}">
+            <i class="fas fa-check-circle"></i> Active
+        </span>`;
     } else if (student.student_status === 'Inactive') {
-        badge = `<span class="status-badge status-inactive">
-                    <i class="fas fa-pause-circle"></i> Inactive
-                </span>`;
+        badges += `<span class="status-badge status-inactive ${isCard ? '' : 'me-1'}">
+            <i class="fas fa-pause-circle"></i> Inactive
+        </span>`;
     }
 
+    // Student type (New/Old)
     if (student.statusId == 2) {
-        badge += `<span class="status-badge status-new ms-2">
-                    <i class="fas fa-star"></i> New
-                </span>`;
+        badges += `<span class="status-badge status-new ${isCard ? 'mt-1' : 'ms-1'}">
+            <i class="fas fa-star"></i> New
+        </span>`;
     } else if (student.statusId == 1) {
-        badge += `<span class="status-badge status-old ms-2">
-                    <i class="fas fa-history"></i> Old
-                </span>`;
+        badges += `<span class="status-badge status-old ${isCard ? 'mt-1' : 'ms-1'}">
+            <i class="fas fa-history"></i> Old
+        </span>`;
     }
 
-    return badge;
+    return badges;
 }
 
-// Calculate Age
-function calculateAge(dateOfBirth) {
+// Calculate student age
+function calculateStudentAge(dateOfBirth) {
     if (!dateOfBirth) return 'N/A';
+
     const dob = new Date(dateOfBirth);
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -1579,14 +1857,19 @@ function calculateAge(dateOfBirth) {
         age--;
     }
 
-    return age;
+    return age + ' years';
 }
 
-// Format Date
+// Format date
 function formatDate(dateString, format = 'long') {
     if (!dateString) return 'N/A';
 
     const date = new Date(dateString);
+
+    if (isNaN(date.getTime())) {
+        return 'N/A';
+    }
+
     const options = format === 'short' ?
         { year: 'numeric', month: 'short', day: 'numeric' } :
         { year: 'numeric', month: 'long', day: 'numeric' };
@@ -1594,7 +1877,102 @@ function formatDate(dateString, format = 'long') {
     return date.toLocaleDateString('en-US', options);
 }
 
-// Update Pagination
+// ============================================================================
+// SELECTION AND BULK OPERATIONS
+// ============================================================================
+
+// Update selection state
+function updateSelection(checkbox, studentId) {
+    const student = allStudents.find(s => s.id == studentId);
+    if (student) {
+        student.selected = checkbox.checked;
+    }
+
+    // Update UI
+    const element = checkbox.closest('.student-profile-card, tr');
+    if (element) {
+        element.classList.toggle('selected', checkbox.checked);
+    }
+
+    updateBulkActionsVisibility();
+    updateSelectAllCheckbox();
+}
+
+// Toggle select all
+function toggleSelectAll(e) {
+    const isChecked = e.target.checked;
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = isChecked;
+
+        // Update student data
+        const studentId = checkbox.value;
+        const student = allStudents.find(s => s.id == studentId);
+        if (student) {
+            student.selected = isChecked;
+        }
+
+        // Update UI
+        const parent = checkbox.closest('.student-profile-card, tr');
+        if (parent) {
+            parent.classList.toggle('selected', isChecked);
+        }
+    });
+
+    updateBulkActionsVisibility();
+}
+
+// Update select all checkbox state
+function updateSelectAllCheckbox() {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    const checkedCount = document.querySelectorAll('.student-checkbox:checked').length;
+    const checkAll = document.getElementById('checkAll');
+    const checkAllTable = document.getElementById('checkAllTable');
+
+    if (checkboxes.length > 0) {
+        const allChecked = checkedCount === checkboxes.length;
+        const someChecked = checkedCount > 0 && checkedCount < checkboxes.length;
+
+        if (checkAll) {
+            checkAll.checked = allChecked;
+            checkAll.indeterminate = someChecked;
+        }
+
+        if (checkAllTable) {
+            checkAllTable.checked = allChecked;
+            checkAllTable.indeterminate = someChecked;
+        }
+    }
+}
+
+// Update bulk actions visibility
+function updateBulkActionsVisibility() {
+    const selectedCount = document.querySelectorAll('.student-checkbox:checked').length;
+    const bulkActionsDropdown = document.getElementById('bulkActionsDropdown');
+
+    if (bulkActionsDropdown) {
+        if (selectedCount > 0) {
+            bulkActionsDropdown.disabled = false;
+            bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions (${selectedCount})`;
+        } else {
+            bulkActionsDropdown.disabled = true;
+            bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions`;
+        }
+    }
+}
+
+// Get selected student IDs
+function getSelectedStudentIds() {
+    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// ============================================================================
+// PAGINATION FUNCTIONS
+// ============================================================================
+
+// Update pagination
 function updatePagination(totalItems) {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const prevBtn = document.getElementById('prevPage');
@@ -1603,18 +1981,18 @@ function updatePagination(totalItems) {
 
     currentPageSpan.textContent = currentPage;
 
-    prevBtn.classList.toggle('disabled', currentPage === 1);
-    nextBtn.classList.toggle('disabled', currentPage === totalPages || totalPages === 0);
+    if (prevBtn) {
+        prevBtn.classList.toggle('disabled', currentPage === 1);
+        prevBtn.onclick = currentPage === 1 ? null : goToPrevPage;
+    }
+
+    if (nextBtn) {
+        nextBtn.classList.toggle('disabled', currentPage === totalPages || totalPages === 0);
+        nextBtn.onclick = (currentPage === totalPages || totalPages === 0) ? null : goToNextPage;
+    }
 }
 
-// Update Counts
-function updateCounts(total, showing) {
-    document.getElementById('totalStudents').textContent = total;
-    document.getElementById('totalCount').textContent = total;
-    document.getElementById('showingCount').textContent = showing;
-}
-
-// Pagination Functions
+// Go to previous page
 function goToPrevPage() {
     if (currentPage > 1) {
         currentPage--;
@@ -1622,6 +2000,7 @@ function goToPrevPage() {
     }
 }
 
+// Go to next page
 function goToNextPage() {
     const filteredStudents = filterStudents();
     const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
@@ -1632,7 +2011,37 @@ function goToNextPage() {
     }
 }
 
-// Student CRUD Operations
+// Update counts
+function updateCounts(total, showing) {
+    const totalStudents = document.getElementById('totalStudents');
+    const totalCount = document.getElementById('totalCount');
+    const showingCount = document.getElementById('showingCount');
+
+    if (totalStudents) totalStudents.textContent = total;
+    if (totalCount) totalCount.textContent = total;
+    if (showingCount) showingCount.textContent = showing;
+}
+
+// Update empty state
+function updateEmptyState(isEmpty) {
+    const emptyState = document.getElementById('emptyState');
+    const tableView = document.getElementById('tableView');
+    const cardView = document.getElementById('cardView');
+
+    if (isEmpty) {
+        if (emptyState) emptyState.classList.remove('d-none');
+        if (tableView) tableView.classList.add('d-none');
+        if (cardView) cardView.classList.add('d-none');
+    } else {
+        if (emptyState) emptyState.classList.add('d-none');
+    }
+}
+
+// ============================================================================
+// STUDENT CRUD OPERATIONS
+// ============================================================================
+
+// View student details
 async function viewStudent(id) {
     try {
         const response = await axios.get(`/student/${id}/edit`);
@@ -1640,26 +2049,199 @@ async function viewStudent(id) {
 
         showStudentDetails(student);
     } catch (error) {
+        console.error('Error viewing student:', error);
         showError('Failed to load student details.');
     }
 }
 
+// Show student details modal
+function showStudentDetails(student) {
+    const content = `
+        <div class="row">
+            <div class="col-md-4 text-center mb-4">
+                <div style="width: 150px; height: 150px; margin: 0 auto; border-radius: 50%; overflow: hidden; border: 5px solid #f3f4f6;">
+                    ${getStudentAvatar(student, true).replace('80px', '140px')}
+                </div>
+                <h4 class="mt-3 mb-1">${student.firstname} ${student.lastname}</h4>
+                <p class="text-muted mb-2">${student.admissionNo || 'No Admission No'}</p>
+                ${getStatusBadges(student, true)}
+            </div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Date of Birth</label>
+                        <p class="fw-bold">${formatDate(student.dateofbirth)}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Gender</label>
+                        <p class="fw-bold">${student.gender || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Class</label>
+                        <p class="fw-bold">${student.schoolclass || 'N/A'} ${student.arm || ''}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Religion</label>
+                        <p class="fw-bold">${student.religion || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Phone</label>
+                        <p class="fw-bold">${student.phone_number || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Email</label>
+                        <p class="fw-bold">${student.email || 'N/A'}</p>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label text-muted">Address</label>
+                        <p class="fw-bold">${student.permanent_address || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Father's Name</label>
+                        <p class="fw-bold">${student.father_name || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Mother's Name</label>
+                        <p class="fw-bold">${student.mother_name || 'N/A'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const modalContent = document.getElementById('viewStudentContent');
+    if (modalContent) {
+        modalContent.innerHTML = content;
+
+        const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
+        modal.show();
+
+        // Store student ID for edit button
+        modal._element.dataset.studentId = student.id;
+    }
+}
+
+// Edit student from view modal
+function editStudentFromView() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('viewStudentModal'));
+    const studentId = modal._element.dataset.studentId;
+
+    if (studentId) {
+        modal.hide();
+        setTimeout(() => editStudent(studentId), 300);
+    }
+}
+
+// Edit student
 async function editStudent(id) {
     try {
         const response = await axios.get(`/student/${id}/edit`);
         const student = response.data.student || response.data;
 
         populateEditForm(student);
-        showEditModal();
+
+        const modal = new bootstrap.Modal(document.getElementById('editStudentModal'));
+        modal.show();
     } catch (error) {
+        console.error('Error editing student:', error);
         showError('Failed to load student for editing.');
     }
 }
 
+// Populate edit form
+function populateEditForm(student) {
+    // Basic information
+    document.getElementById('editStudentId').value = student.id;
+    document.getElementById('editAdmissionNo').value = student.admissionNo || '';
+    document.getElementById('editAdmissionYear').value = student.admissionYear || new Date().getFullYear();
+    document.getElementById('editAdmissionDate').value = student.admissionDate ? student.admissionDate.split('T')[0] : '';
+    document.getElementById('editFirstname').value = student.firstname || '';
+    document.getElementById('editLastname').value = student.lastname || '';
+    document.getElementById('editOthername').value = student.othername || '';
+    document.getElementById('editPermanentAddress').value = student.permanent_address || '';
+
+    // Date of birth and age
+    if (student.dateofbirth) {
+        document.getElementById('editDOB').value = student.dateofbirth.split('T')[0];
+        calculateAge(student.dateofbirth, 'editAgeInput');
+    }
+
+    // Set radio buttons
+    setRadioValue('gender', student.gender);
+    setRadioValue('statusId', student.statusId);
+    setRadioValue('student_status', student.student_status);
+
+    // Set select values
+    setSelectValue('editSchoolclassid', student.schoolclassid);
+    setSelectValue('editTermid', student.termid);
+    setSelectValue('editSessionid', student.sessionid);
+    setSelectValue('editReligion', student.religion);
+    setSelectValue('editStudentCategory', student.student_category);
+    setSelectValue('editSchoolHouse', student.schoolhouseid);
+
+    // Set other fields
+    document.getElementById('editPlaceofbirth').value = student.placeofbirth || '';
+    document.getElementById('editNationality').value = student.nationality || '';
+    document.getElementById('editCity').value = student.city || '';
+    document.getElementById('editNinNumber').value = student.nin_number || '';
+    document.getElementById('editBloodGroup').value = student.blood_group || '';
+    document.getElementById('editMotherTongue').value = student.mother_tongue || '';
+    document.getElementById('editPhoneNumber').value = student.phone_number || '';
+    document.getElementById('editEmail').value = student.email || '';
+    document.getElementById('editFutureAmbition').value = student.future_ambition || '';
+
+    // Parent/Guardian details
+    document.getElementById('editFatherName').value = student.father_name || '';
+    document.getElementById('editFatherPhone').value = student.father_phone || '';
+    document.getElementById('editFatherOccupation').value = student.father_occupation || '';
+    document.getElementById('editFatherCity').value = student.father_city || '';
+    document.getElementById('editMotherName').value = student.mother_name || '';
+    document.getElementById('editMotherPhone').value = student.mother_phone || '';
+    document.getElementById('editParentEmail').value = student.parent_email || '';
+    document.getElementById('editParentAddress').value = student.parent_address || '';
+
+    // Previous school
+    document.getElementById('editLastSchool').value = student.last_school || '';
+    document.getElementById('editLastClass').value = student.last_class || '';
+    document.getElementById('editReasonForLeaving').value = student.reason_for_leaving || '';
+
+    // Set state and LGA
+    setTimeout(() => {
+        setStateAndLGA('editState', 'editLocal', student.state || '', student.local || '');
+    }, 100);
+
+    // Set admission mode
+    const admissionMode = student.admissionNo && student.admissionNo.includes('AUTO') ? 'auto' : 'manual';
+    setRadioValue('admissionMode', admissionMode, 'edit');
+
+    // Update form action
+    const form = document.getElementById('editStudentForm');
+    if (form && student.id) {
+        form.action = `/student/${student.id}`;
+    }
+}
+
+// Helper function to set radio button value
+function setRadioValue(name, value, prefix = '') {
+    const radios = document.querySelectorAll(`input[name="${name}"]${prefix ? '[id^="' + prefix + '"]' : ''}`);
+    radios.forEach(radio => {
+        radio.checked = (radio.value == value);
+    });
+}
+
+// Helper function to set select value
+function setSelectValue(selectId, value) {
+    const select = document.getElementById(selectId);
+    if (select) {
+        select.value = value || '';
+    }
+}
+
+// Delete student
 async function deleteStudent(id) {
     const result = await Swal.fire({
         title: 'Are you sure?',
-        text: "You won't be able to revert this!",
+        text: "This student will be permanently deleted!",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Yes, delete it!',
@@ -1674,23 +2256,26 @@ async function deleteStudent(id) {
         try {
             await axios.delete(`/student/${id}/destroy`);
 
-            // Remove from UI
+            // Remove from local data
             allStudents = allStudents.filter(s => s.id != id);
+
+            // Update UI
             renderCurrentView();
 
             Swal.fire({
                 title: 'Deleted!',
-                text: 'Student has been deleted.',
+                text: 'Student has been deleted successfully.',
                 icon: 'success',
                 confirmButtonText: 'OK'
             });
         } catch (error) {
-            showError('Failed to delete student.');
+            console.error('Error deleting student:', error);
+            showError('Failed to delete student. Please try again.');
         }
     }
 }
 
-// Delete Multiple Students
+// Delete multiple students
 async function deleteMultiple() {
     const selectedIds = getSelectedStudentIds();
 
@@ -1705,7 +2290,7 @@ async function deleteMultiple() {
     }
 
     const result = await Swal.fire({
-        title: `Delete ${selectedIds.length} Students?`,
+        title: `Delete ${selectedIds.length} Student(s)?`,
         text: "This action cannot be undone!",
         icon: 'warning',
         showCancelButton: true,
@@ -1725,8 +2310,10 @@ async function deleteMultiple() {
 
             await Promise.all(deletePromises);
 
-            // Remove from UI
+            // Remove from local data
             allStudents = allStudents.filter(s => !selectedIds.includes(s.id.toString()));
+
+            // Update UI
             renderCurrentView();
 
             Swal.fire({
@@ -1736,18 +2323,124 @@ async function deleteMultiple() {
                 confirmButtonText: 'OK'
             });
         } catch (error) {
-            showError('Failed to delete selected students.');
+            console.error('Error deleting students:', error);
+            showError('Failed to delete selected students. Please try again.');
         }
     }
 }
 
-// Get Selected Student IDs
-function getSelectedStudentIds() {
-    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
+// ============================================================================
+// FORM HANDLING
+// ============================================================================
+
+// Handle add student form submission
+async function handleAddStudent(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = new FormData(form);
+
+    try {
+        const response = await axios.post(form.action, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        if (response.data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
+            modal.hide();
+
+            // Reset form
+            form.reset();
+
+            // Refresh student list
+            await fetchStudents();
+
+            Swal.fire({
+                title: 'Success!',
+                text: response.data.message || 'Student registered successfully.',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+        } else {
+            throw new Error(response.data.message || 'Registration failed');
+        }
+    } catch (error) {
+        handleFormError(error, 'add');
+    }
 }
 
-// Update Current Term Functions
+// Handle edit student form submission
+async function handleEditStudent(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = new FormData(form);
+
+    try {
+        const response = await axios.post(form.action, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        if (response.data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editStudentModal'));
+            modal.hide();
+
+            // Refresh student list
+            await fetchStudents();
+
+            Swal.fire({
+                title: 'Success!',
+                text: response.data.message || 'Student updated successfully.',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+        } else {
+            throw new Error(response.data.message || 'Update failed');
+        }
+    } catch (error) {
+        handleFormError(error, 'edit');
+    }
+}
+
+// Handle form errors
+function handleFormError(error, formType) {
+    let errorMessage = `Failed to ${formType === 'add' ? 'register' : 'update'} student.`;
+    const errorElementId = formType === 'add' ? 'alert-error-msg' : 'edit-alert-error-msg';
+    const errorElement = document.getElementById(errorElementId);
+
+    if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+    }
+
+    if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        let errorList = '';
+        for (const field in errors) {
+            errorList += `<li>${errors[field].join(', ')}</li>`;
+        }
+        errorMessage = `<strong>Validation Errors:</strong><ul class="mb-0">${errorList}</ul>`;
+    }
+
+    if (errorElement) {
+        errorElement.innerHTML = errorMessage;
+        errorElement.classList.remove('d-none');
+    } else {
+        Swal.fire({
+            title: 'Error!',
+            html: errorMessage,
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
+    }
+}
+
+// ============================================================================
+// CURRENT TERM MANAGEMENT
+// ============================================================================
+
+// Show update current term modal
 function showUpdateCurrentTermModal() {
     const selectedIds = getSelectedStudentIds();
 
@@ -1767,7 +2460,8 @@ function showUpdateCurrentTermModal() {
     modal.show();
 }
 
-async function updateCurrentTerm() {
+// Update current term for selected students
+async function updateCurrentTermForSelected() {
     const selectedIds = getSelectedStudentIds();
     const form = document.getElementById('updateCurrentTermForm');
     const formData = new FormData(form);
@@ -1775,196 +2469,373 @@ async function updateCurrentTerm() {
     formData.append('student_ids', JSON.stringify(selectedIds));
 
     try {
-        await axios.post('/student-current-term/bulk-update', formData);
+        const response = await axios.post('/student-current-term/bulk-update', formData);
 
-        const modal = bootstrap.Modal.getInstance(document.getElementById('updateCurrentTermModal'));
+        if (response.data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('updateCurrentTermModal'));
+            modal.hide();
+
+            // Clear selections
+            document.querySelectorAll('.student-checkbox:checked').forEach(cb => {
+                cb.checked = false;
+                cb.dispatchEvent(new Event('change'));
+            });
+
+            Swal.fire({
+                title: 'Success!',
+                text: `Current term updated for ${selectedIds.length} student(s).`,
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+        } else {
+            throw new Error(response.data.message || 'Update failed');
+        }
+    } catch (error) {
+        console.error('Error updating current term:', error);
+        showError('Failed to update current term. Please try again.');
+    }
+}
+
+// ============================================================================
+// REPORT MODAL FUNCTIONS
+// ============================================================================
+
+// Initialize report modal
+function initializeReportModal() {
+    initializeColumnOrdering();
+    updatePreview();
+
+    // Set up event listeners for checkboxes
+    document.querySelectorAll('.column-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updatePreview);
+    });
+}
+
+// Initialize column ordering
+function initializeColumnOrdering() {
+    const container = document.getElementById('columnsContainer');
+    if (!container) return;
+
+    if (typeof Sortable !== 'undefined') {
+        columnSortable = new Sortable(container, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            handle: '.drag-handle',
+            onEnd: updateColumnOrder
+        });
+    }
+}
+
+// Update column order
+function updateColumnOrder() {
+    const container = document.getElementById('columnsContainer');
+    const hiddenInput = document.getElementById('columnsOrderInput');
+
+    if (!container || !hiddenInput) return;
+
+    const columnItems = container.querySelectorAll('.draggable-item');
+    const order = [];
+
+    columnItems.forEach(item => {
+        const checkbox = item.querySelector('.column-checkbox');
+        if (checkbox && checkbox.checked) {
+            order.push(checkbox.value);
+        }
+    });
+
+    hiddenInput.value = order.join(',');
+    updatePreview();
+}
+
+// Update preview
+function updatePreview() {
+    const container = document.getElementById('columnsContainer');
+    const preview = document.getElementById('columnOrderPreview');
+
+    if (!container || !preview) return;
+
+    const columnItems = container.querySelectorAll('.draggable-item');
+    const selectedLabels = [];
+
+    columnItems.forEach(item => {
+        const checkbox = item.querySelector('.column-checkbox');
+        if (checkbox && checkbox.checked) {
+            const label = item.querySelector('.form-check-label');
+            if (label) {
+                selectedLabels.push(label.textContent.trim());
+            }
+        }
+    });
+
+    preview.textContent = selectedLabels.join(', ') || 'No columns selected';
+}
+
+// Generate report
+async function generateReport() {
+    const form = document.getElementById('printReportForm');
+    const selectedCheckboxes = form.querySelectorAll('input[name="columns[]"]:checked');
+    const selectedColumns = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+    if (selectedColumns.length === 0) {
+        Swal.fire({
+            title: 'Warning!',
+            text: 'Please select at least one column.',
+            icon: 'warning',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+
+    // Get form values
+    const formData = new FormData(form);
+    const params = new URLSearchParams();
+
+    formData.forEach((value, key) => {
+        if (key === 'columns[]') {
+            // Handle array values
+            if (!params.has('columns')) {
+                params.set('columns', value);
+            }
+        } else {
+            params.set(key, value);
+        }
+    });
+
+    // Add columns order
+    const columnsOrderInput = document.getElementById('columnsOrderInput');
+    if (columnsOrderInput && columnsOrderInput.value) {
+        params.set('columns_order', columnsOrderInput.value);
+    }
+
+    try {
+        const response = await axios.get(`/students/report?${params.toString()}`, {
+            responseType: 'blob'
+        });
+
+        // Create download link
+        const blob = new Blob([response.data]);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Get filename
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = 'student-report.pdf';
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+            if (filenameMatch && filenameMatch[1]) {
+                filename = filenameMatch[1];
+            }
+        }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('printStudentReportModal'));
         modal.hide();
 
         Swal.fire({
             title: 'Success!',
-            text: `Current term updated for ${selectedIds.length} student(s).`,
+            text: 'Report generated successfully.',
             icon: 'success',
             confirmButtonText: 'OK'
         });
     } catch (error) {
-        showError('Failed to update current term.');
+        console.error('Error generating report:', error);
+        showError('Failed to generate report. Please try again.');
     }
 }
 
-// Form Handlers
-async function handleAddStudent(e) {
-    e.preventDefault();
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
-    const form = e.target;
-    const formData = new FormData(form);
-
-    try {
-        const response = await axios.post(form.action, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+// Ensure axios is available
+function ensureAxios() {
+    if (typeof axios === 'undefined') {
+        console.error('Axios is not loaded');
+        Swal.fire({
+            title: 'Error!',
+            text: 'Required libraries are not loaded. Please refresh the page.',
+            icon: 'error',
+            confirmButtonText: 'OK'
         });
-
-        if (response.data.success) {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
-            modal.hide();
-
-            // Refresh student list
-            await fetchStudents();
-
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message || 'Student registered successfully.',
-                icon: 'success',
-                confirmButtonText: 'OK'
-            });
-        }
-    } catch (error) {
-        handleFormError(error, 'add');
+        return false;
     }
+
+    // Set CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (csrfToken) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+    }
+
+    return true;
 }
 
-async function handleEditStudent(e) {
-    e.preventDefault();
+// Get student initials
+function getStudentInitials(firstName, lastName) {
+    const firstInitial = firstName && firstName.length > 0 ? firstName.charAt(0).toUpperCase() : '';
+    const lastInitial = lastName && lastName.length > 0 ? lastName.charAt(0).toUpperCase() : '';
+    return (firstInitial + lastInitial) || '??';
+}
 
-    const form = e.target;
+// Generate placeholder image
+function generatePlaceholderImage(text = 'PHOTO') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 150;
+    canvas.height = 150;
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 150, 150);
+    gradient.addColorStop(0, '#6366f1');
+    gradient.addColorStop(1, '#8b5cf6');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 150, 150);
+
+    // Text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 75, 75);
+
+    return canvas.toDataURL();
+}
+
+// Print student details
+function printStudentDetails(mode = 'add') {
+    const form = mode === 'edit' ? document.getElementById('editStudentForm') : document.getElementById('addStudentForm');
+
+    if (!form) {
+        showError('Form not found for printing.');
+        return;
+    }
+
+    // Collect form data
     const formData = new FormData(form);
+    const data = {};
+    formData.forEach((value, key) => {
+        data[key] = value;
+    });
 
-    try {
-        const response = await axios.post(form.action, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+    // Open print window
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Student Details</title>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; }
+                    .header { text-align: center; margin-bottom: 30px; }
+                    .section { margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+                    .section h3 { color: #333; margin-bottom: 10px; }
+                    .field { margin-bottom: 8px; }
+                    .label { font-weight: bold; color: #666; }
+                    .value { margin-left: 10px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Student Registration Form</h1>
+                    <p>Generated on ${new Date().toLocaleDateString()}</p>
+                </div>
+                <div class="section">
+                    <h3>Academic Details</h3>
+                    <div class="field">
+                        <span class="label">Admission Number:</span>
+                        <span class="value">${data.admissionNo || ''}</span>
+                    </div>
+                    <div class="field">
+                        <span class="label">Class:</span>
+                        <span class="value">${getClassName(data.schoolclassid) || ''}</span>
+                    </div>
+                </div>
+                <div class="section">
+                    <h3>Personal Details</h3>
+                    <div class="field">
+                        <span class="label">Name:</span>
+                        <span class="value">${data.firstname || ''} ${data.lastname || ''} ${data.othername || ''}</span>
+                    </div>
+                    <div class="field">
+                        <span class="label">Gender:</span>
+                        <span class="value">${data.gender || ''}</span>
+                    </div>
+                </div>
+                <!-- Add more sections as needed -->
+            </body>
+        </html>
+    `);
 
-        if (response.data.success) {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editStudentModal'));
-            modal.hide();
-
-            // Refresh student list
-            await fetchStudents();
-
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message || 'Student updated successfully.',
-                icon: 'success',
-                confirmButtonText: 'OK'
-            });
-        }
-    } catch (error) {
-        handleFormError(error, 'edit');
-    }
+    printWindow.document.close();
+    printWindow.print();
 }
 
-// Handle Form Errors
-function handleFormError(error, formType) {
-    let errorMessage = 'Failed to save student.';
-
-    if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+// Get class name from ID
+function getClassName(classId) {
+    const select = document.getElementById('schoolclassid') || document.getElementById('editSchoolclassid');
+    if (select) {
+        const option = select.querySelector(`option[value="${classId}"]`);
+        return option ? option.textContent : classId;
     }
+    return classId;
+}
 
-    if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        let errorList = '';
-        for (const field in errors) {
-            errorList += `<li>${errors[field].join(', ')}</li>`;
-        }
-        errorMessage = `<div class="text-start">
-            <strong>Validation Errors:</strong>
-            <ul class="mb-0">${errorList}</ul>
-        </div>`;
-    }
+// Debug function
+function debugColumnOrdering() {
+    const container = document.getElementById('columnsContainer');
+    const hiddenInput = document.getElementById('columnsOrderInput');
 
-    Swal.fire({
-        title: 'Error!',
-        html: errorMessage,
-        icon: 'error',
-        confirmButtonText: 'OK'
+    console.log('Container:', container);
+    console.log('Hidden input:', hiddenInput);
+    console.log('Hidden input value:', hiddenInput?.value);
+
+    const columnItems = container.querySelectorAll('.draggable-item');
+    console.log('Column items:', columnItems.length);
+
+    columnItems.forEach((item, index) => {
+        const checkbox = item.querySelector('.column-checkbox');
+        console.log(`Item ${index + 1}:`, {
+            value: checkbox?.value,
+            checked: checkbox?.checked,
+            label: item.querySelector('.form-check-label')?.textContent.trim()
+        });
     });
 }
 
-// Initialize Form Validation
-function initializeFormValidation() {
-    // Add your form validation logic here
-    // This is a placeholder for form validation initialization
-}
+// Initialize everything when page loads
+window.addEventListener('load', function() {
+    // Ensure all required scripts are loaded
+    if (!ensureAxios()) {
+        console.error('Required scripts not loaded');
+        return;
+    }
 
-// Show Student Details Modal
-function showStudentDetails(student) {
-    const content = `
-        <div class="row">
-            <div class="col-md-4 text-center mb-4">
-                <div class="avatar-container" style="width: 150px; height: 150px; margin: 0 auto;">
-                    ${getStudentAvatar(student, true)}
-                </div>
-                <h4 class="mt-3">${student.firstname} ${student.lastname}</h4>
-                <p class="text-muted">${student.admissionNo}</p>
-                ${getStatusBadge(student, true)}
-            </div>
-            <div class="col-md-8">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Date of Birth</label>
-                        <p class="fw-bold">${formatDate(student.dateofbirth)}</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Gender</label>
-                        <p class="fw-bold">${student.gender}</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Class</label>
-                        <p class="fw-bold">${student.schoolclass || ''} ${student.arm || ''}</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Religion</label>
-                        <p class="fw-bold">${student.religion || 'N/A'}</p>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label text-muted">Address</label>
-                        <p class="fw-bold">${student.permanent_address || 'N/A'}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    // Initialize the application
+    initializeApplication();
+});
 
-    document.getElementById('viewStudentContent').innerHTML = content;
-    const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
-    modal.show();
-}
-
-// Populate Edit Form
-function populateEditForm(student) {
-    // Populate form fields with student data
-    // This is a simplified version - you should populate all fields
-    document.getElementById('editStudentId').value = student.id;
-    document.getElementById('editAdmissionNo').value = student.admissionNo;
-    document.getElementById('editFirstname').value = student.firstname;
-    document.getElementById('editLastname').value = student.lastname;
-    document.getElementById('editStudentForm').action = `/student/${student.id}`;
-
-    // Populate other fields as needed
-}
-
-// Show Edit Modal
-function showEditModal() {
-    const modal = new bootstrap.Modal(document.getElementById('editStudentModal'));
-    modal.show();
-}
-
-// Edit Student from View
-function editStudentFromView() {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('viewStudentModal'));
-    modal.hide();
-
-    // Get the student ID from somewhere (you might need to store it)
-    // For now, we'll just show a message
-    setTimeout(() => {
-        Swal.fire({
-            title: 'Edit Student',
-            text: 'Please select a student to edit from the list.',
-            icon: 'info',
-            confirmButtonText: 'OK'
-        });
-    }, 300);
-}
-
+// Export functions that need to be available globally
+window.toggleView = toggleView;
+window.filterData = filterData;
+window.resetFilters = resetFilters;
+window.deleteMultiple = deleteMultiple;
+window.showUpdateCurrentTermModal = showUpdateCurrentTermModal;
+window.updateCurrentTermForSelected = updateCurrentTermForSelected;
+window.generateReport = generateReport;
+window.debugColumnOrdering = debugColumnOrdering;
+window.calculateAge = calculateAge;
+window.toggleAdmissionInput = toggleAdmissionInput;
+window.updateAdmissionNumber = updateAdmissionNumber;
+window.previewImage = previewImage;
+window.editStudentFromView = editStudentFromView;
+window.printStudentDetails = printStudentDetails;
 </script>
 @endsection
