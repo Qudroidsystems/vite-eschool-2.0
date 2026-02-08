@@ -23,6 +23,7 @@ use App\Models\StudentBillPayment;
 use App\Models\StudentBillPaymentBook;
 use App\Models\StudentBillPaymentRecord;
 use App\Models\Studentclass;
+use App\Models\StudentCurrentTerm;
 use App\Models\Studenthouse;
 use App\Models\Studenthouses;
 use App\Models\Studentpersonalityprofile;
@@ -1680,6 +1681,125 @@ public function generateReport(Request $request)
             'success' => false,
             'message' => 'Server error: ' . $e->getMessage(),
             'error' => env('APP_DEBUG') ? $e->getTraceAsString() : 'Internal server error'
+        ], 500);
+    }
+}
+
+
+
+/**
+ * Get student's current term
+ */
+public function getCurrentTerm($studentId)
+{
+    try {
+        $currentTerm = StudentCurrentTerm::getCurrentForStudent($studentId);
+
+        if (!$currentTerm) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No current term found for student'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $currentTerm
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching current term: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Update student's current term
+ */
+public function updateCurrentTerm(Request $request, $studentId)
+{
+    $request->validate([
+        'schoolclassId' => 'required|exists:schoolclass,id',
+        'termId' => 'required|exists:schoolterm,id',
+        'sessionId' => 'required|exists:schoolsession,id'
+    ]);
+
+    try {
+        // Check if student exists
+        $student = Student::find($studentId);
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student not found'
+            ], 404);
+        }
+
+        // Create or update current term
+        $currentTerm = StudentCurrentTerm::updateOrCreate(
+            [
+                'studentId' => $studentId,
+                'is_current' => true
+            ],
+            [
+                'schoolclassId' => $request->schoolclassId,
+                'termId' => $request->termId,
+                'sessionId' => $request->sessionId,
+                'is_current' => true
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Current term updated successfully',
+            'data' => $currentTerm
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error updating current term: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
+/**
+ * Get students by current class, term, and session
+ */
+public function getStudentsByCurrentFilters(Request $request)
+{
+    $request->validate([
+        'classId' => 'nullable|exists:schoolclass,id',
+        'termId' => 'nullable|exists:schoolterm,id',
+        'sessionId' => 'nullable|exists:schoolsession,id'
+    ]);
+
+    try {
+        $query = StudentCurrentTerm::with(['student', 'schoolClass', 'term', 'session'])
+            ->where('is_current', true);
+
+        if ($request->filled('classId')) {
+            $query->where('schoolclassId', $request->classId);
+        }
+
+        if ($request->filled('termId')) {
+            $query->where('termId', $request->termId);
+        }
+
+        if ($request->filled('sessionId')) {
+            $query->where('sessionId', $request->sessionId);
+        }
+
+        $students = $query->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $students
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching students: ' . $e->getMessage()
         ], 500);
     }
 }
