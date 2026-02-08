@@ -1,4 +1,5 @@
 @extends('layouts.master')
+
 @section('content')
 
 <div class="main-content">
@@ -37,6 +38,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
+
             @if (session('danger'))
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     {{ session('danger') }}
@@ -72,7 +74,7 @@
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
                                         <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">
-                                            <i class="ri-delete-bin-2-line"></i>
+                                            <i class="ri-delete-bin-2-line align-baseline"></i>
                                         </button>
                                         @can('Create term')
                                             <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addTermModal">
@@ -163,7 +165,7 @@
                                     <input type="text" name="term" id="term" class="form-control" placeholder="Enter term name" required>
                                 </div>
                                 <div class="mb-3 form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" name="status" id="addStatus" checked>
+                                    <input class="form-check-input" type="checkbox" role="switch" name="status" id="addStatus" checked>
                                     <label class="form-check-label" for="addStatus">Active</label>
                                 </div>
                                 <div class="alert alert-danger d-none" id="alert-error-msg"></div>
@@ -193,7 +195,7 @@
                                     <input type="text" name="term" id="edit-term" class="form-control" placeholder="Enter term name" required>
                                 </div>
                                 <div class="mb-3 form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" name="status" id="editStatus">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="status" id="editStatus">
                                     <label class="form-check-label" for="editStatus">Active</label>
                                 </div>
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
@@ -211,9 +213,9 @@
             <div id="deleteRecordModal" class="modal fade" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
-                        <div class="modal-body text-center">
+                        <div class="modal-body text-center py-5">
                             <h4>Are you sure?</h4>
-                            <p>You won't be able to revert this!</p>
+                            <p class="text-muted">You won't be able to revert this!</p>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
