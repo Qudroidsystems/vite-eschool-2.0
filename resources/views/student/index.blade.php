@@ -762,6 +762,11 @@ use Spatie\Permission\Models\Role;
                                             <i class="bi bi-plus-circle align-baseline me-1"></i> Add Student
                                         </button>
                                     @endcan
+
+                                      <!-- Print/Export Report Button -->
+                                    <button type="button" class="btn btn-soft-success" data-bs-toggle="modal" data-bs-target="#printStudentReportModal">
+                                        <i class="ri-printer-line align-bottom me-1"></i> Print / Export Report
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -862,6 +867,286 @@ use Spatie\Permission\Models\Role;
                 </div>
             </div>
         </div>
+
+
+
+    <!-- ================================================= -->
+    <!--        PRINT / EXPORT REPORT MODAL               -->
+    <!-- ================================================= -->
+<!-- Print/Export Report Modal -->
+<div class="modal fade" id="printStudentReportModal" tabindex="-1" aria-labelledby="printStudentReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-soft-success">
+                <h5 class="modal-title" id="printStudentReportModalLabel">
+                    <i class="ri-printer-line me-2"></i> Generate Student Report
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="printReportForm">
+                    <!-- Filters Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Class</label>
+                            <select class="form-select" name="class_id">
+                                <option value="">— All Classes —</option>
+                                @foreach ($schoolclasses as $class)
+                                    <option value="{{ $class->id }}">{{ $class->class_display }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="">— All —</option>
+                                <option value="1">Old Students</option>
+                                <option value="2">New Students</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Term and Session Filters -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Term</label>
+                            <select class="form-select" name="term_id">
+                                <option value="">— All Terms —</option>
+                                @foreach ($schoolterms as $term)
+                                    <option value="{{ $term->id }}">{{ $term->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Session</label>
+                            <select class="form-select" name="session_id">
+                                <option value="">— All Sessions —</option>
+                                @foreach ($schoolsessions as $session)
+                                    <option value="{{ $session->id }}">{{ $session->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Column Selection with Drag & Drop -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="ri-draggable me-1"></i> Select & Arrange Columns (Drag to reorder)
+                        </label>
+                        <div class="row g-3" id="columnsContainer">
+                            <input type="hidden" name="columns_order" id="columnsOrderInput" value="">
+                            @php
+                                $availableColumns = [
+                                    'photo'          => 'Photo',
+                                    'admissionNo'    => 'Admission No',
+                                    'lastname'       => 'Last Name',
+                                    'firstname'      => 'First Name',
+                                    'othername'      => 'Other Name',
+                                    'gender'         => 'Gender',
+                                    'dateofbirth'    => 'Date of Birth',
+                                    'age'            => 'Age',
+                                    'class'          => 'Class / Arm',
+                                    'status'         => 'Student Status',
+                                    'admission_date' => 'Admission Date',
+                                    'phone_number'   => 'Phone Number',
+                                    'state'          => 'State of Origin',
+                                    'local'          => 'LGA',
+                                    'religion'       => 'Religion',
+                                    'blood_group'    => 'Blood Group',
+                                    'father_name'    => "Father's Name",
+                                    'mother_name'    => "Mother's Name",
+                                    'guardian_phone' => 'Guardian Phone',
+                                    'term'           => 'Term',
+                                    'session'        => 'Session',
+                                ];
+                            @endphp
+                            @foreach ($availableColumns as $key => $label)
+                                <div class="col-md-4 col-sm-6">
+                                    <div class="form-check border rounded p-2 mb-2 bg-light draggable-item" data-column="{{ $key }}">
+                                        <div class="d-flex align-items-center">
+                                            <span class="drag-handle me-2 cursor-move">
+                                                <i class="ri-draggable"></i>
+                                            </span>
+                                            <input class="form-check-input column-checkbox" type="checkbox" name="columns[]" value="{{ $key }}" id="col_{{ $key }}"
+                                                {{ in_array($key, ['admissionNo','lastname','firstname','class','gender']) ? 'checked' : '' }}>
+                                            <label class="form-check-label w-100 cursor-move" for="col_{{ $key }}">
+                                                {{ $label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <small class="text-muted">Drag columns to arrange their order in the report</small>
+                    </div>
+
+                    <!-- Report Header Options -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="ri-file-info-line me-2"></i> Report Header Options</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="include_header" id="includeHeader" checked>
+                                        <label class="form-check-label" for="includeHeader">
+                                            <i class="ri-building-line me-1"></i> Include School Header
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="include_logo" id="includeLogo" checked>
+                                        <label class="form-check-label" for="includeLogo">
+                                            <i class="ri-image-line me-1"></i> Include School Logo
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="orientation" class="form-label">Page Orientation</label>
+                                        <select class="form-select" name="orientation" id="orientation">
+                                            <option value="portrait">Portrait</option>
+                                            <option value="landscape">Landscape</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Format -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Export Format</label>
+                        <div class="d-flex gap-3 flex-wrap">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="format" id="format_pdf" value="pdf" checked>
+                                <label class="form-check-label" for="format_pdf">
+                                    <i class="ri-file-pdf-2-line text-danger me-1"></i> PDF
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="format" id="format_excel" value="excel">
+                                <label class="form-check-label" for="format_excel">
+                                    <i class="ri-file-excel-2-line text-success me-1"></i> Excel
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="alert alert-info small mb-0">
+                        <div class="d-flex align-items-center">
+                            <i class="ri-information-fill me-2"></i>
+                            <div>
+                                <strong>Preview:</strong>
+                                <span id="columnOrderPreview">admissionNo, lastname, firstname, class, gender</span>
+                                <br>
+                                <small>Only students matching the selected filters will be included.</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="generateReportBtn">
+                    <i class="ri-printer-line me-1"></i> Generate & Download
+                </button>
+                <!-- Debug button - remove in production -->
+                <button type="button" class="btn btn-warning btn-sm d-none" onclick="debugColumnOrdering()" id="debugBtn">
+                    <i class="ri-bug-line me-1"></i> Debug
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+  /* Drag and Drop Styles */
+.cursor-move {
+    cursor: move !important;
+}
+
+.drag-handle {
+    cursor: move;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+}
+
+.drag-handle:hover {
+    opacity: 1;
+}
+
+.draggable-item {
+    user-select: none;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.draggable-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+    background-color: #f8f9fa !important;
+}
+
+.draggable-item.drag-over {
+    background-color: #e9ecef !important;
+    border-color: #405189 !important;
+}
+
+/* Sortable.js specific classes */
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #f8f9fa !important;
+    transform: rotate(2deg);
+}
+
+.sortable-chosen {
+    background-color: #405189 !important;
+    color: white !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transform: scale(1.02);
+    z-index: 1000;
+}
+
+.sortable-chosen .form-check-label {
+    color: white !important;
+}
+
+.sortable-chosen .drag-handle {
+    color: white !important;
+}
+
+.sortable-drag {
+    opacity: 0.8;
+}
+
+#columnsContainer {
+    min-height: 200px;
+}
+
+/* Preview styling */
+#columnOrderPreview {
+    font-weight: 500;
+    color: #405189;
+    background-color: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 2px;
+}
+</style>
         <!-- Add Student Modal -->
         <div id="addStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
             <div class="modal-dialog modal-dialog-centered modal-xl">
