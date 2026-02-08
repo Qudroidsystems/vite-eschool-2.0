@@ -1057,7 +1057,7 @@ use Spatie\Permission\Models\Role;
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success" id="generateReportBtn">
+                <button type="button" class="btn btn-success" id="generateReportBtn" onclick="generateReport()">
                     <i class="ri-printer-line me-1"></i> Generate & Download
                 </button>
                 <!-- Debug button - remove in production -->
@@ -2309,8 +2309,6 @@ use Spatie\Permission\Models\Role;
 </div>
 
 <script>
-
-
 // ============================================================================
 // FIXED VERSION - Student Management JavaScript
 // ============================================================================
@@ -3888,6 +3886,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // REPORT MODAL DRAG AND DROP FUNCTIONS
 // ============================================================================
 
+let columnSortable = null;
+
 // Initialize column ordering
 function initializeColumnOrdering() {
     console.log('Initializing column ordering...');
@@ -4055,23 +4055,16 @@ function initializeNativeDragDrop() {
 function updatePreview() {
     console.log('Updating preview...');
 
-    const form = document.getElementById('printReportForm');
-    if (!form) {
-        console.error('Report form not found');
-        return;
-    }
+    const container = document.getElementById('columnsContainer');
+    if (!container) return;
 
     // Get selected columns in current order
-    const columnItems = document.querySelectorAll('#columnsContainer .draggable-item');
-    const selectedColumns = [];
+    const columnItems = container.querySelectorAll('.draggable-item');
     const selectedLabels = [];
 
     columnItems.forEach(item => {
         const checkbox = item.querySelector('.column-checkbox');
         if (checkbox && checkbox.checked) {
-            selectedColumns.push(checkbox.value);
-
-            // Get the label text
             const label = item.querySelector('.form-check-label');
             if (label) {
                 selectedLabels.push(label.textContent.trim());
@@ -4079,18 +4072,19 @@ function updatePreview() {
         }
     });
 
-    console.log('Selected columns for preview:', selectedColumns);
-    console.log('Selected labels for preview:', selectedLabels);
-
     const preview = document.getElementById('columnOrderPreview');
     if (preview) {
         preview.textContent = selectedLabels.join(', ') || 'No columns selected';
-        console.log('Preview updated:', preview.textContent);
     }
+
+    // Update hidden input with order
+    updateColumnOrder();
 }
 
-// Generate report
-function generateReport() {
+// FIXED: Generate report function with proper event handling
+window.generateReport = function() {
+    console.log('Generate report clicked');
+
     const form = document.getElementById('printReportForm');
     if (!form) {
         console.error('Report form not found');
@@ -4098,8 +4092,10 @@ function generateReport() {
     }
 
     // Get selected columns
-    const selectedColumns = Array.from(form.querySelectorAll('input[name="columns[]"]:checked'))
-        .map(cb => cb.value);
+    const selectedCheckboxes = form.querySelectorAll('input[name="columns[]"]:checked');
+    const selectedColumns = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+    console.log('Selected columns:', selectedColumns);
 
     if (selectedColumns.length === 0) {
         Swal.fire({
@@ -4115,15 +4111,16 @@ function generateReport() {
     // Get form values
     const classId = form.querySelector('[name="class_id"]').value;
     const status = form.querySelector('[name="status"]').value;
-    const formatElement = form.querySelector('[name="format"]:checked');
-    const columnsOrderInput = form.querySelector('[name="columns_order"]');
-    const includeHeader = form.querySelector('[name="include_header"]').checked;
-    const includeLogo = form.querySelector('[name="include_logo"]').checked;
-    const orientation = form.querySelector('[name="orientation"]').value;
-    const termId = form.querySelector('[name="term_id"]')?.value || '';
-    const sessionId = form.querySelector('[name="session_id"]')?.value || '';
+    const formatElements = form.querySelectorAll('[name="format"]');
+    let format = '';
 
-    if (!formatElement) {
+    formatElements.forEach(element => {
+        if (element.checked) {
+            format = element.value;
+        }
+    });
+
+    if (!format) {
         Swal.fire({
             title: 'Error!',
             text: 'Please select an export format (PDF or Excel).',
@@ -4134,7 +4131,12 @@ function generateReport() {
         return;
     }
 
-    const format = formatElement.value;
+    const columnsOrderInput = document.getElementById('columnsOrderInput');
+    const includeHeader = form.querySelector('[name="include_header"]').checked;
+    const includeLogo = form.querySelector('[name="include_logo"]').checked;
+    const orientation = form.querySelector('[name="orientation"]').value;
+    const termId = form.querySelector('[name="term_id"]')?.value || '';
+    const sessionId = form.querySelector('[name="session_id"]')?.value || '';
 
     // Debug: Log what's being sent
     console.log('Generating report with:', {
@@ -4162,10 +4164,10 @@ function generateReport() {
 
     // Build query parameters
     const params = new URLSearchParams({
-        class_id: classId,
+        class_id: classId || '',
         term_id: termId,
         session_id: sessionId,
-        status: status,
+        status: status || '',
         columns: selectedColumns.join(','),
         columns_order: columnsOrderInput?.value || '',
         format: format,
@@ -4214,9 +4216,12 @@ function generateReport() {
         }, 100);
 
         // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('printStudentReportModal'));
-        if (modal) {
-            modal.hide();
+        const modalElement = document.getElementById('printStudentReportModal');
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
         }
 
         // Show success message
@@ -4238,20 +4243,14 @@ function generateReport() {
         let errorMessage = 'Failed to generate report. Please try again.';
 
         if (error.response) {
-            // Server responded with error status
             if (error.response.status === 404) {
                 errorMessage = 'No students found matching the selected filters.';
             } else if (error.response.status === 422) {
                 errorMessage = error.response.data.message || 'Validation error. Please check your selections.';
             } else if (error.response.status === 500) {
-                if (error.response.data && error.response.data.message) {
-                    errorMessage = error.response.data.message;
-                } else {
-                    errorMessage = 'Server error. Please try again later.';
-                }
+                errorMessage = error.response.data?.message || 'Server error. Please try again later.';
             }
 
-            // Try to parse error message from response
             if (error.response.data && typeof error.response.data === 'object') {
                 if (error.response.data.message) {
                     errorMessage = error.response.data.message;
@@ -4259,6 +4258,8 @@ function generateReport() {
             }
         } else if (error.code === 'ECONNABORTED') {
             errorMessage = 'Request timeout. The report generation is taking too long. Try with fewer students or different filters.';
+        } else if (error.message) {
+            errorMessage = error.message;
         }
 
         Swal.fire({
@@ -4269,11 +4270,26 @@ function generateReport() {
             buttonsStyling: false
         });
     });
-}
+};
 
-// ============================================================================
-// DEBUG FUNCTIONS
-// ============================================================================
+// Initialize report modal when shown
+function initializeReportModal() {
+    console.log('Initializing report modal...');
+
+    // Initialize column ordering
+    initializeColumnOrdering();
+
+    // Set up event listeners for checkboxes
+    const container = document.getElementById('columnsContainer');
+    if (container) {
+        container.querySelectorAll('.column-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updatePreview);
+        });
+    }
+
+    // Initial preview update
+    updatePreview();
+}
 
 // Debug column ordering
 function debugColumnOrdering() {
@@ -4332,6 +4348,32 @@ function debugColumnOrdering() {
 // ============================================================================
 // INITIALIZATION FUNCTIONS
 // ============================================================================
+
+// Initialize report modal when shown
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up modal show event listener
+    const reportModal = document.getElementById('printStudentReportModal');
+    if (reportModal) {
+        reportModal.addEventListener('show.bs.modal', function() {
+            console.log('Report modal shown, initializing...');
+            setTimeout(initializeReportModal, 100);
+        });
+    }
+
+    // Direct button binding as fallback
+    setTimeout(function() {
+        const generateBtn = document.getElementById('generateReportBtn');
+        if (generateBtn) {
+            console.log('Direct binding generate button');
+            generateBtn.onclick = window.generateReport;
+        }
+
+        // Initialize column ordering if modal is already open
+        if (document.getElementById('printStudentReportModal').classList.contains('show')) {
+            initializeReportModal();
+        }
+    }, 1000);
+});
 
 </script>
 @endsection
