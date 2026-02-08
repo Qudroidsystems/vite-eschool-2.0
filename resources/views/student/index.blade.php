@@ -2675,6 +2675,7 @@ function resetFilters() {
 // ============================================================================
 
 // Fetch Students
+// Fetch Students with proper relationships
 async function fetchStudents() {
     showLoading();
 
@@ -2701,46 +2702,69 @@ async function fetchStudents() {
 
         console.log('Students array:', studentsArray);
 
-        allStudents = studentsArray.map(student => ({
-            id: student.id || student.student_id || '',
-            admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
-            firstname: student.firstname || student.first_name || '',
-            lastname: student.lastname || student.last_name || '',
-            othername: student.othername || student.other_name || student.middle_name || '',
-            gender: student.gender || '',
-            statusId: student.statusId || student.status_id || student.student_status_id || '',
-            student_status: student.student_status || student.status || '',
-            created_at: student.created_at || student.created_date || student.registration_date || '',
-            picture: student.picture || student.avatar || student.profile_picture || '',
-            schoolclass: student.schoolclass || student.class || student.class_name || '',
-            arm: student.arm || student.section || '',
-            schoolclassid: student.schoolclassid || student.class_id || '',
-            state: student.state || '',
-            local: student.local || '',
-            dateofbirth: student.dateofbirth || '',
-            placeofbirth: student.placeofbirth || '',
-            phone_number: student.phone_number || '',
-            email: student.email || '',
-            permanent_address: student.permanent_address || '',
-            future_ambition: student.future_ambition || '',
-            nationality: student.nationality || '',
-            religion: student.religion || '',
-            blood_group: student.blood_group || '',
-            mother_tongue: student.mother_tongue || '',
-            nin_number: student.nin_number || '',
-            student_category: student.student_category || '',
-            father_name: student.father_name || '',
-            mother_name: student.mother_name || '',
-            father_phone: student.father_phone || '',
-            mother_phone: student.mother_phone || '',
-            parent_email: student.parent_email || '',
-            parent_address: student.parent_address || '',
-            last_school: student.last_school || '',
-            last_class: student.last_class || '',
-            reason_for_leaving: student.reason_for_leaving || ''
+        // Process students and fetch their current term/class info
+        allStudents = await Promise.all(studentsArray.map(async (student) => {
+            // Try to get current term/class info
+            let currentClassInfo = {};
+            try {
+                const currentInfo = await axios.get(`/student/${student.id}/current-info`);
+                if (currentInfo.data.success) {
+                    currentClassInfo = currentInfo.data.data;
+                }
+            } catch (error) {
+                console.log(`No current info for student ${student.id}`);
+            }
+
+            return {
+                id: student.id || student.student_id || '',
+                admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
+                firstname: student.firstname || student.first_name || '',
+                lastname: student.lastname || student.last_name || '',
+                othername: student.othername || student.other_name || student.middle_name || '',
+                gender: student.gender || '',
+                statusId: student.statusId || student.status_id || student.student_status_id || '',
+                student_status: student.student_status || student.status || '',
+                created_at: student.created_at || student.created_date || student.registration_date || '',
+                picture: student.picture || student.avatar || student.profile_picture || '',
+                schoolclass: student.schoolclass || student.class || student.class_name || '',
+                arm: student.arm || student.section || '',
+                schoolclassid: student.schoolclassid || student.class_id || '',
+                // Current term info
+                current_class_id: currentClassInfo.current_class_id || '',
+                current_class: currentClassInfo.current_class || '',
+                current_class_arm: currentClassInfo.current_class_arm || '',
+                current_term_id: currentClassInfo.current_term_id || '',
+                current_term: currentClassInfo.current_term || '',
+                current_session_id: currentClassInfo.current_session_id || '',
+                current_session: currentClassInfo.current_session || '',
+                // Other fields
+                state: student.state || '',
+                local: student.local || '',
+                dateofbirth: student.dateofbirth || '',
+                placeofbirth: student.placeofbirth || '',
+                phone_number: student.phone_number || '',
+                email: student.email || '',
+                permanent_address: student.permanent_address || '',
+                future_ambition: student.future_ambition || '',
+                nationality: student.nationality || '',
+                religion: student.religion || '',
+                blood_group: student.blood_group || '',
+                mother_tongue: student.mother_tongue || '',
+                nin_number: student.nin_number || '',
+                student_category: student.student_category || '',
+                father_name: student.father_name || '',
+                mother_name: student.mother_name || '',
+                father_phone: student.father_phone || '',
+                mother_phone: student.mother_phone || '',
+                parent_email: student.parent_email || '',
+                parent_address: student.parent_address || '',
+                last_school: student.last_school || '',
+                last_class: student.last_class || '',
+                reason_for_leaving: student.reason_for_leaving || ''
+            };
         }));
 
-        console.log('Processed students:', allStudents);
+        console.log('Processed students with current info:', allStudents);
         renderCurrentView();
     } catch (error) {
         console.error('Error fetching students:', error);
@@ -2749,6 +2773,8 @@ async function fetchStudents() {
         hideLoading();
     }
 }
+
+
 
 // ============================================================================
 // RENDER FUNCTIONS
@@ -3753,6 +3779,7 @@ function updatePreview() {
 }
 
 // Generate Report
+// Generate Report
 window.generateReport = function() {
     console.log('Generate report clicked');
 
@@ -3809,7 +3836,6 @@ window.generateReport = function() {
     const termId = form.querySelector('[name="term_id"]')?.value || '';
     const sessionId = form.querySelector('[name="session_id"]')?.value || '';
 
-    // Debug: Log what's being sent
     console.log('Generating report with:', {
         selectedColumns: selectedColumns,
         columnsOrder: columnsOrderInput?.value || '',

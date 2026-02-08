@@ -196,6 +196,9 @@ Route::group(['middleware' => ['auth']], function () {
     // Route::get('/student/data', [StudentController::class, 'data'])->name('students.data');
     Route::get('/students/last-admission-number', [StudentController::class, 'getLastAdmissionNumber'])->name('student.getLastAdmissionNumber');
     Route::get('/students/report', action: [StudentController::class, 'generateReport'])->name('students.report');
+    // Student routes
+    Route::get('/student/{id}/current-info', [StudentController::class, 'getCurrentInfo'])->name('student.current-info');
+
 
     // Student Current Term Routes with inline middleware
     Route::prefix('student-current-term')->group(function () {
