@@ -4,8 +4,7 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-
-            <!-- Page title -->
+            <!-- Start page title -->
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
@@ -90,12 +89,12 @@
                                                     </div>
                                                 </th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="term">Term</th>
-                                                <th class="min-w-100px sort cursor-pointer" data-sort="status">Status</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="datereg">Date Updated</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="fw-semibold text-gray-600 list form-check-all">
+                                            @php $i = 0 @endphp
                                             @forelse ($terms as $term)
                                                 <tr data-url="{{ route('term.deleteterm', ['termid' => $term->id]) }}">
                                                     <td class="id" data-id="{{ $term->id }}">
@@ -104,13 +103,6 @@
                                                         </div>
                                                     </td>
                                                     <td class="term" data-term="{{ $term->term }}">{{ $term->term }}</td>
-                                                    <td>
-                                                        @if($term->status)
-                                                            <span class="badge bg-success">Active</span>
-                                                        @else
-                                                            <span class="badge bg-danger">Inactive</span>
-                                                        @endif
-                                                    </td>
                                                     <td class="datereg">{{ $term->updated_at->format('Y-m-d') }}</td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
@@ -146,18 +138,15 @@
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Add Term</h5>
+                            <h5 id="exampleModalLabel" class="modal-title">Add Term</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="add-term-form">
                             <div class="modal-body">
+                                <input type="hidden" id="add-id-field" name="id">
                                 <div class="mb-3">
                                     <label for="term" class="form-label">Term Name</label>
                                     <input type="text" name="term" id="term" class="form-control" placeholder="Enter term name" required>
-                                </div>
-                                <div class="mb-3 form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" name="status" id="addStatus" checked>
-                                    <label class="form-check-label" for="addStatus">Active</label>
                                 </div>
                                 <div class="alert alert-danger d-none" id="alert-error-msg"></div>
                             </div>
@@ -175,19 +164,15 @@
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Edit Term</h5>
+                            <h5 id="editModalLabel" class="modal-title">Edit Term</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form class="tablelist-form" autocomplete="off" id="edit-term-form">
-                            <input type="hidden" id="edit-id-field" name="id">
                             <div class="modal-body">
+                                <input type="hidden" id="edit-id-field" name="id">
                                 <div class="mb-3">
                                     <label for="edit-term" class="form-label">Term Name</label>
                                     <input type="text" name="term" id="edit-term" class="form-control" placeholder="Enter term name" required>
-                                </div>
-                                <div class="mb-3 form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" name="status" id="editStatus">
-                                    <label class="form-check-label" for="editStatus">Active</label>
                                 </div>
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
@@ -215,9 +200,15 @@
                     </div>
                 </div>
             </div>
-
         </div>
+        <!-- End Page-content -->
+
+        {{-- <!-- Scripts -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script src="{{ asset('theme/layouts/assets/js/list.min.js') }}"></script>
+        <script src="{{ asset('theme/layouts/assets/js/sweetalert2.min.js') }}"></script>
+        <script src="{{ asset('js/term.init.js') }}"></script> --}}
     </div>
 </div>
-
 @endsection
