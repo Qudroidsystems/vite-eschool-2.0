@@ -1321,7 +1321,7 @@ class StudentController extends Controller
 
 
 
-    /**
+   /**
      * Generate student report
      */
     public function generateReport(Request $request)
@@ -1600,6 +1600,14 @@ class StudentController extends Controller
                 'school_info'       => $schoolInfo,
             ];
 
+            // Only add logo base64 if we have a school info and logo is requested for PDF
+            if ($includeLogo && $schoolInfo && $format === 'pdf') {
+                $schoolLogoBase64 = $this->getSchoolLogoBase64($schoolInfo);
+                if ($schoolLogoBase64) {
+                    $data['school_logo_base64'] = $schoolLogoBase64;
+                }
+            }
+
             $filename = 'student-report-' . now()->format('Y-m-d-His');
             \Log::info('Generating report with filename:', ['filename' => $filename]);
 
@@ -1637,6 +1645,53 @@ class StudentController extends Controller
                 'error' => env('APP_DEBUG') ? $e->getTraceAsString() : 'Internal server error'
             ], 500);
         }
+    }
+
+    /**
+     * Get school logo as base64 string
+     */
+    private function getSchoolLogoBase64($schoolInfo)
+    {
+        try {
+            $logoUrl = $schoolInfo->getLogoUrlAttribute();
+            if ($logoUrl) {
+                // For external URLs
+                if (filter_var($logoUrl, FILTER_VALIDATE_URL)) {
+                    // Try to fetch the image
+                    $context = stream_context_create([
+                        'ssl' => [
+                            'verify_peer' => false,
+                            'verify_peer_name' => false,
+                        ],
+                    ]);
+
+                    $imageData = @file_get_contents($logoUrl, false, $context);
+                    if ($imageData !== false) {
+                        // Try to determine mime type
+                        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                        $mimeType = $finfo->buffer($imageData);
+
+                        if (strpos($mimeType, 'image/') === 0) {
+                            return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+                        }
+                    }
+                }
+                // For local files
+                elseif (file_exists(public_path($logoUrl))) {
+                    $imagePath = public_path($logoUrl);
+                    $imageData = file_get_contents($imagePath);
+                    $mimeType = mime_content_type($imagePath);
+
+                    if (strpos($mimeType, 'image/') === 0) {
+                        return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error converting logo to base64: ' . $e->getMessage());
+        }
+
+        return null;
     }
 
     /**
@@ -1685,7 +1740,6 @@ class StudentController extends Controller
     }
 
 
-    
 
 /**
  * Get student's current term
