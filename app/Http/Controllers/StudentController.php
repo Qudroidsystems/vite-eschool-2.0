@@ -31,6 +31,7 @@ use App\Models\Studentpicture;
 use App\Models\Subjectclass;
 use App\Models\SubjectRegistrationStatus;
 use App\Traits\ImageManager as TraitsImageManager;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
