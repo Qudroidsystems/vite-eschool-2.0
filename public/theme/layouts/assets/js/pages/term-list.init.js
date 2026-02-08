@@ -10,10 +10,10 @@ try {
     console.error("Dependency check failed:", error);
 }
 
-// Set Axios CSRF token globally
-axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
+// CSRF token
+axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.content;
 
-// Debounce function for search input
+// Debounce
 function debounce(func, wait) {
     let timeout;
     return function (...args) {
@@ -22,79 +22,67 @@ function debounce(func, wait) {
     };
 }
 
-// Check all checkbox
+// Check all
 var checkAll = document.getElementById("checkAll");
 if (checkAll) {
     checkAll.onclick = function () {
-        console.log("checkAll clicked");
         var checkboxes = document.querySelectorAll('tbody input[name="chk_child"]');
         checkboxes.forEach((checkbox) => {
             checkbox.checked = this.checked;
-            const row = checkbox.closest("tr");
-            if (checkbox.checked) {
-                row.classList.add("table-active");
-            } else {
-                row.classList.remove("table-active");
-            }
+            checkbox.closest("tr").classList.toggle("table-active", this.checked);
         });
-        const checkedCount = document.querySelectorAll('tbody input[name="chk_child"]:checked').length;
-        var removeActions = document.getElementById("remove-actions");
-        if (removeActions) {
-            removeActions.classList.toggle("d-none", checkedCount === 0);
-        }
+        updateRemoveButton();
     };
 }
 
-// Form fields
-var addIdField = document.getElementById("add-id-field");
-var addTermField = document.getElementById("term");
-var editIdField = document.getElementById("edit-id-field");
-var editTermField = document.getElementById("edit-term");
+function updateRemoveButton() {
+    var checkedCount = document.querySelectorAll('tbody input[name="chk_child"]:checked').length;
+    var removeActions = document.getElementById("remove-actions");
+    if (removeActions) removeActions.classList.toggle("d-none", checkedCount === 0);
+}
 
-// Checkbox handling
+// Individual checkbox
 function ischeckboxcheck() {
-    const checkboxes = document.querySelectorAll('tbody input[name="chk_child"]');
-    checkboxes.forEach((checkbox) => {
-        checkbox.removeEventListener("change", handleCheckboxChange);
-        checkbox.addEventListener("change", handleCheckboxChange);
+    document.querySelectorAll('tbody input[name="chk_child"]').forEach(checkbox => {
+        checkbox.addEventListener("change", function () {
+            this.closest("tr").classList.toggle("table-active", this.checked);
+            updateRemoveButton();
+
+            var all = document.querySelectorAll('tbody input[name="chk_child"]');
+            var checked = document.querySelectorAll('tbody input[name="chk_child"]:checked');
+            if (checkAll) checkAll.checked = all.length > 0 && all.length === checked.length;
+        });
     });
 }
 
-function handleCheckboxChange(e) {
-    const row = e.target.closest("tr");
-    if (e.target.checked) {
-        row.classList.add("table-active");
-    } else {
-        row.classList.remove("table-active");
-    }
-    const checkedCount = document.querySelectorAll('tbody input[name="chk_child"]:checked').length;
-    var removeActions = document.getElementById("remove-actions");
-    if (removeActions) {
-        removeActions.classList.toggle("d-none", checkedCount === 0);
-    }
-    const allCheckboxes = document.querySelectorAll('tbody input[name="chk_child"]');
-    if (checkAll) {
-        checkAll.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCount;
-    }
+// Edit handler
+function handleEditClick(e) {
+    e.preventDefault();
+    var tr = e.target.closest("tr");
+    var id = tr.querySelector(".id").getAttribute("data-id");
+    var term = tr.querySelector(".term").innerText.trim();
+    var status = tr.querySelector(".status").getAttribute("data-status") === "1";
+
+    document.getElementById("edit-id-field").value = id;
+    document.getElementById("edit-term").value = term;
+    document.getElementById("editStatus").checked = status;
+
+    new bootstrap.Modal(document.getElementById("editModal")).show();
 }
 
-// Event delegation for edit and remove buttons
-document.addEventListener('click', function (e) {
-    if (e.target.closest('.edit-item-btn')) {
-        handleEditClick(e);
-    } else if (e.target.closest('.remove-item-btn')) {
-        handleRemoveClick(e);
-    }
-});
-
-// Delete single term
+// Delete single
 function handleRemoveClick(e) {
     e.preventDefault();
     var itemId = e.target.closest("tr").querySelector(".id").getAttribute("data-id");
     var deleteButton = document.getElementById("delete-record");
-    if (deleteButton) {
-        deleteButton.addEventListener("click", function () {
-            axios.delete(`/term/${itemId}`).then(function () {
+
+    // Clone to avoid multiple listeners
+    var newDeleteButton = deleteButton.cloneNode(true);
+    deleteButton.parentNode.replaceChild(newDeleteButton, deleteButton);
+
+    newDeleteButton.addEventListener("click", function () {
+        axios.delete(`/term/${itemId}`)
+            .then(() => {
                 Swal.fire({
                     position: "center",
                     icon: "success",
@@ -104,7 +92,8 @@ function handleRemoveClick(e) {
                     showCloseButton: true
                 });
                 window.location.reload();
-            }).catch(function (error) {
+            })
+            .catch(error => {
                 Swal.fire({
                     position: "center",
                     icon: "error",
@@ -113,160 +102,91 @@ function handleRemoveClick(e) {
                     showConfirmButton: true
                 });
             });
-        }, { once: true });
-    }
-    try {
-        var modal = new bootstrap.Modal(document.getElementById("deleteRecordModal"));
-        modal.show();
-    } catch (error) {
-        console.error("Error opening delete modal:", error);
-    }
+    }, { once: true });
+
+    new bootstrap.Modal(document.getElementById("deleteRecordModal")).show();
 }
 
-// Edit term
-function handleEditClick(e) {
-    e.preventDefault();
-    var itemId = e.target.closest("tr").querySelector(".id").getAttribute("data-id");
-    var tr = e.target.closest("tr");
-    if (editIdField) editIdField.value = itemId;
-    if (editTermField) editTermField.value = tr.querySelector(".term").innerText;
-    try {
-        var modal = new bootstrap.Modal(document.getElementById("editModal"));
-        modal.show();
-    } catch (error) {
-        console.error("Error opening edit modal:", error);
-    }
-}
-
-// Clear form fields
-function clearAddFields() {
-    if (addIdField) addIdField.value = "";
-    if (addTermField) addTermField.value = "";
-}
-
-function clearEditFields() {
-    if (editIdField) editIdField.value = "";
-    if (editTermField) editTermField.value = "";
-}
-
-// Delete multiple terms
+// Bulk delete
 function deleteMultiple() {
-    const ids_array = [];
-    const checkboxes = document.querySelectorAll('tbody input[name="chk_child"]');
-    checkboxes.forEach((checkbox) => {
-        if (checkbox.checked) {
-            const id = checkbox.closest("tr").querySelector(".id").getAttribute("data-id");
-            ids_array.push(id);
-        }
+    const ids = [];
+    document.querySelectorAll('tbody input[name="chk_child"]:checked').forEach(chk => {
+        ids.push(chk.closest("tr").querySelector(".id").getAttribute("data-id"));
     });
-    if (ids_array.length > 0) {
-        Swal.fire({
-            title: "Are you sure?",
-            text: "You won't be able to revert this!",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonClass: "btn btn-primary w-xs me-2 mt-2",
-            cancelButtonClass: "btn btn-danger w-xs mt-2",
-            confirmButtonText: "Yes, delete it!",
-            buttonsStyling: false,
-            showCloseButton: true
-        }).then((result) => {
-            if (result.value) {
-                Promise.all(ids_array.map((id) => {
-                    return axios.delete(`/term/${id}`);
-                })).then(() => {
-                    Swal.fire({
-                        title: "Deleted!",
-                        text: "Your terms have been deleted.",
-                        icon: "success",
-                        confirmButtonClass: "btn btn-info w-xs mt-2",
-                        buttonsStyling: false
-                    });
-                    window.location.reload();
-                }).catch((error) => {
-                    Swal.fire({
-                        title: "Error!",
-                        text: error.response?.data?.message || "Failed to delete terms",
-                        icon: "error",
-                        confirmButtonClass: "btn btn-info w-xs mt-2",
-                        buttonsStyling: false
-                    });
-                });
-            }
-        });
-    } else {
-        Swal.fire({
-            title: "Please select at least one checkbox",
-            confirmButtonClass: "btn btn-info",
-            buttonsStyling: false,
-            showCloseButton: true
-        });
+
+    if (ids.length === 0) {
+        Swal.fire("Please select at least one term", "", "info");
+        return;
     }
+
+    Swal.fire({
+        title: "Are you sure?",
+        text: "You won't be able to revert this!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#dc3545",
+        cancelButtonColor: "#6c757d",
+        confirmButtonText: "Yes, delete it!",
+        cancelButtonText: "Cancel"
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        Promise.all(ids.map(id => axios.delete(`/term/${id}`)))
+            .then(() => {
+                Swal.fire("Deleted!", "Selected terms have been deleted.", "success");
+                window.location.reload();
+            })
+            .catch(error => {
+                Swal.fire("Error!", error.response?.data?.message || "Failed to delete terms", "error");
+            });
+    });
 }
 
-// Initialize List.js for client-side filtering
+// List.js
 var termList;
-var termListContainer = document.getElementById('termList');
-if (termListContainer && document.querySelectorAll('#termList tbody tr').length > 0) {
-    try {
-        termList = new List('termList', {
-            valueNames: ['term', 'datereg'],
-            page: 1000,
-            pagination: false,
-            listClass: 'list'
-        });
-    } catch (error) {
-        console.error("List.js initialization failed:", error);
-    }
-} else {
-    console.warn("No terms available for List.js initialization");
-}
+if (document.getElementById('termList') && document.querySelectorAll('#termList tbody tr').length > 0) {
+    termList = new List('termList', {
+        valueNames: ['term', 'datereg', 'status'],
+        page: 1000,
+        pagination: false
+    });
 
-// Update no results message
-if (termList) {
     termList.on('searchComplete', function () {
         var noResultRow = document.querySelector('.noresult');
-        if (termList.visibleItems.length === 0) {
-            noResultRow.style.display = 'block';
-        } else {
-            noResultRow.style.display = 'none';
+        if (noResultRow) {
+            noResultRow.style.display = termList.visibleItems.length === 0 ? 'block' : 'none';
         }
     });
 }
 
-// Filter data (client-side)
-function filterData() {
-    var searchInput = document.querySelector(".search-box input.search");
-    var searchValue = searchInput ? searchInput.value : "";
-    console.log("Filtering with search:", searchValue);
-    if (termList) {
-        termList.search(searchValue, ['term']);
-    }
+// Search
+var searchInput = document.querySelector(".search-box input.search");
+if (searchInput) {
+    searchInput.addEventListener("input", debounce(function () {
+        if (termList) termList.search(searchInput.value);
+    }, 300));
 }
 
-// Add term
-var addTermForm = document.getElementById("add-term-form");
-if (addTermForm) {
-    addTermForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var errorMsg = document.getElementById("alert-error-msg");
-        if (errorMsg) errorMsg.classList.add("d-none");
-        var formData = new FormData(addTermForm);
-        var term = formData.get('term');
-        if (!term) {
-            if (errorMsg) {
-                errorMsg.innerHTML = "Please enter a term name";
-                errorMsg.classList.remove("d-none");
-            }
-            return;
-        }
-        console.log("Submitting Add Term:", { term });
-        axios.post('/term', {
-            term: term
-        }, {
-            headers: { 'Content-Type': 'application/json' }
-        }).then(function (response) {
-            console.log("Add Term Success:", response.data);
+// Add form
+document.getElementById("add-term-form")?.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var errorMsg = document.getElementById("alert-error-msg");
+    errorMsg?.classList.add("d-none");
+
+    var formData = new FormData(this);
+    var payload = {
+        term: formData.get('term')?.trim(),
+        status: formData.get('status') === 'on'
+    };
+
+    if (!payload.term) {
+        errorMsg.innerHTML = "Please enter a term name";
+        errorMsg?.classList.remove("d-none");
+        return;
+    }
+
+    axios.post('/term', payload)
+        .then(() => {
             Swal.fire({
                 position: "center",
                 icon: "success",
@@ -275,41 +195,35 @@ if (addTermForm) {
                 timer: 2000,
                 showCloseButton: true
             });
-            window.location.reload();
-        }).catch(function (error) {
-            console.error("Add Term Error:", error.response);
-            if (errorMsg) {
-                errorMsg.innerHTML = error.response?.data?.message || Object.values(error.response?.data?.errors || {}).flat().join(", ") || "Error adding term";
-                errorMsg.classList.remove("d-none");
-            }
+            location.reload();
+        })
+        .catch(error => {
+            errorMsg.innerHTML = error.response?.data?.message || "Error adding term";
+            errorMsg?.classList.remove("d-none");
         });
-    });
-}
+});
 
-// Edit term
-var editTermForm = document.getElementById("edit-term-form");
-if (editTermForm) {
-    editTermForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var errorMsg = document.getElementById("edit-alert-error-msg");
-        if (errorMsg) errorMsg.classList.add("d-none");
-        var formData = new FormData(editTermForm);
-        var term = formData.get('term');
-        var id = editIdField.value;
-        if (!term) {
-            if (errorMsg) {
-                errorMsg.innerHTML = "Please enter a term name";
-                errorMsg.classList.remove("d-none");
-            }
-            return;
-        }
-        console.log("Submitting Edit Term:", { id, term });
-        axios.put(`/term/${id}`, {
-            term: term
-        }, {
-            headers: { 'Content-Type': 'application/json' }
-        }).then(function (response) {
-            console.log("Edit Term Success:", response.data);
+// Edit form
+document.getElementById("edit-term-form")?.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var errorMsg = document.getElementById("edit-alert-error-msg");
+    errorMsg?.classList.add("d-none");
+
+    var formData = new FormData(this);
+    var id = formData.get('id');
+    var payload = {
+        term: formData.get('term')?.trim(),
+        status: formData.get('status') === 'on'
+    };
+
+    if (!payload.term) {
+        errorMsg.innerHTML = "Please enter a term name";
+        errorMsg?.classList.remove("d-none");
+        return;
+    }
+
+    axios.put(`/term/${id}`, payload)
+        .then(() => {
             Swal.fire({
                 position: "center",
                 icon: "success",
@@ -318,61 +232,34 @@ if (editTermForm) {
                 timer: 2000,
                 showCloseButton: true
             });
-            window.location.reload();
-        }).catch(function (error) {
-            console.error("Edit Term Error:", error.response);
-            if (errorMsg) {
-                errorMsg.innerHTML = error.response?.data?.message || Object.values(error.response?.data?.errors || {}).flat().join(", ") || "Error updating term";
-                errorMsg.classList.remove("d-none");
-            }
+            location.reload();
+        })
+        .catch(error => {
+            errorMsg.innerHTML = error.response?.data?.message || "Error updating term";
+            errorMsg?.classList.remove("d-none");
         });
-    });
-}
-
-// Modal events
-var addModal = document.getElementById("addTermModal");
-if (addModal) {
-    addModal.addEventListener("show.bs.modal", function (e) {
-        if (e.relatedTarget.classList.contains("add-btn")) {
-            var modalLabel = document.getElementById("exampleModalLabel");
-            var addBtn = document.getElementById("add-btn");
-            if (modalLabel) modalLabel.innerHTML = "Add Term";
-            if (addBtn) addBtn.innerHTML = "Add Term";
-        }
-    });
-    addModal.addEventListener("hidden.bs.modal", function () {
-        clearAddFields();
-    });
-}
-
-var editModal = document.getElementById("editModal");
-if (editModal) {
-    editModal.addEventListener("show.bs.modal", function () {
-        var modalLabel = document.getElementById("editModalLabel");
-        var updateBtn = document.getElementById("update-btn");
-        if (modalLabel) modalLabel.innerHTML = "Edit Term";
-        if (updateBtn) updateBtn.innerHTML = "Update";
-    });
-    editModal.addEventListener("hidden.bs.modal", function () {
-        clearEditFields();
-    });
-}
-
-// Initialize listeners
-document.addEventListener("DOMContentLoaded", function () {
-    console.log("DOMContentLoaded fired");
-    var searchInput = document.querySelector(".search-box input.search");
-    if (searchInput) {
-        searchInput.addEventListener("input", debounce(function () {
-            console.log("Search input changed:", searchInput.value);
-            filterData();
-        }, 300));
-    } else {
-        console.error("Search input not found!");
-    }
-
-    ischeckboxcheck();
 });
 
-// Expose functions to global scope
+// Event delegation
+document.addEventListener('click', function (e) {
+    if (e.target.closest('.edit-item-btn')) handleEditClick(e);
+    if (e.target.closest('.remove-item-btn')) handleRemoveClick(e);
+});
+
+// Modal cleanup
+document.getElementById("addTermModal")?.addEventListener("hidden.bs.modal", function () {
+    document.getElementById("add-term-form")?.reset();
+    document.getElementById("addStatus")?.checked = true;
+});
+
+document.getElementById("editModal")?.addEventListener("hidden.bs.modal", function () {
+    document.getElementById("edit-term-form")?.reset();
+});
+
+// Init
+document.addEventListener("DOMContentLoaded", function () {
+    ischeckboxcheck();
+    updateRemoveButton();
+});
+
 window.deleteMultiple = deleteMultiple;

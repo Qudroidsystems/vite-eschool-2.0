@@ -4,7 +4,8 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <!-- Start page title -->
+
+            <!-- Page title -->
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
@@ -18,7 +19,6 @@
                     </div>
                 </div>
             </div>
-            <!-- End page title -->
 
             @if ($errors->any())
                 <div class="alert alert-danger">
@@ -67,17 +67,22 @@
                         <div class="card">
                             <div class="card-header d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h5 class="card-title mb-0">Term <span class="badge bg-dark-subtle text-dark ms-1">{{ count($terms) }}</span></h5>
+                                    <h5 class="card-title mb-0">Term <span class="badge bg-dark-subtle text-dark ms-1">{{ $terms->total() }}</span></h5>
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
-                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
+                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">
+                                            <i class="ri-delete-bin-2-line"></i>
+                                        </button>
                                         @can('Create term')
-                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addTermModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Create Term</button>
+                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#addTermModal">
+                                                <i class="bi bi-plus-circle align-baseline me-1"></i> Create Term
+                                            </button>
                                         @endcan
                                     </div>
                                 </div>
                             </div>
+
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0" id="kt_roles_view_table">
@@ -89,12 +94,12 @@
                                                     </div>
                                                 </th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="term">Term</th>
+                                                <th class="min-w-100px sort cursor-pointer" data-sort="status">Status</th>
                                                 <th class="min-w-125px sort cursor-pointer" data-sort="datereg">Date Updated</th>
                                                 <th class="min-w-100px">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="fw-semibold text-gray-600 list form-check-all">
-                                            @php $i = 0 @endphp
                                             @forelse ($terms as $term)
                                                 <tr data-url="{{ route('term.deleteterm', ['termid' => $term->id]) }}">
                                                     <td class="id" data-id="{{ $term->id }}">
@@ -103,17 +108,26 @@
                                                         </div>
                                                     </td>
                                                     <td class="term" data-term="{{ $term->term }}">{{ $term->term }}</td>
+                                                    <td class="status" data-status="{{ $term->status ? 1 : 0 }}">
+                                                        <span class="badge {{ $term->status ? 'bg-success' : 'bg-danger-subtle text-danger' }}">
+                                                            {{ $term->status ? 'Active' : 'Inactive' }}
+                                                        </span>
+                                                    </td>
                                                     <td class="datereg">{{ $term->updated_at->format('Y-m-d') }}</td>
                                                     <td>
                                                         <ul class="d-flex gap-2 list-unstyled mb-0">
                                                             @can('Update term')
                                                                 <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn"><i class="ph-pencil"></i></a>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn">
+                                                                        <i class="ph-pencil"></i>
+                                                                    </a>
                                                                 </li>
                                                             @endcan
                                                             @can('Delete term')
                                                                 <li>
-                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn"><i class="ph-trash"></i></a>
+                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn">
+                                                                        <i class="ph-trash"></i>
+                                                                    </a>
                                                                 </li>
                                                             @endcan
                                                         </ul>
@@ -148,6 +162,10 @@
                                     <label for="term" class="form-label">Term Name</label>
                                     <input type="text" name="term" id="term" class="form-control" placeholder="Enter term name" required>
                                 </div>
+                                <div class="mb-3 form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="status" id="addStatus" checked>
+                                    <label class="form-check-label" for="addStatus">Active</label>
+                                </div>
                                 <div class="alert alert-danger d-none" id="alert-error-msg"></div>
                             </div>
                             <div class="modal-footer">
@@ -173,6 +191,10 @@
                                 <div class="mb-3">
                                     <label for="edit-term" class="form-label">Term Name</label>
                                     <input type="text" name="term" id="edit-term" class="form-control" placeholder="Enter term name" required>
+                                </div>
+                                <div class="mb-3 form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="status" id="editStatus">
+                                    <label class="form-check-label" for="editStatus">Active</label>
                                 </div>
                                 <div class="alert alert-danger d-none" id="edit-alert-error-msg"></div>
                             </div>
@@ -200,15 +222,9 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <!-- End Page-content -->
 
-        {{-- <!-- Scripts -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-        <script src="{{ asset('theme/layouts/assets/js/list.min.js') }}"></script>
-        <script src="{{ asset('theme/layouts/assets/js/sweetalert2.min.js') }}"></script>
-        <script src="{{ asset('js/term.init.js') }}"></script> --}}
+        </div>
     </div>
 </div>
+
 @endsection
