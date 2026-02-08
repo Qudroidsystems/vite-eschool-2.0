@@ -3883,5 +3883,455 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing student list...');
     initializeStudentList();
 });
+
+// ============================================================================
+// REPORT MODAL DRAG AND DROP FUNCTIONS
+// ============================================================================
+
+// Initialize column ordering
+function initializeColumnOrdering() {
+    console.log('Initializing column ordering...');
+
+    const columnContainer = document.getElementById('columnsContainer');
+    const hiddenOrderInput = document.getElementById('columnsOrderInput');
+
+    if (!columnContainer || !hiddenOrderInput) {
+        console.error('Column container or hidden input not found');
+        return;
+    }
+
+    // Function to update column order
+    function updateColumnOrder() {
+        console.log('Updating column order...');
+
+        // Get all checked checkboxes in their current DOM order
+        const columnItems = columnContainer.querySelectorAll('.draggable-item');
+        const order = [];
+        const selectedLabels = [];
+
+        columnItems.forEach(item => {
+            const checkbox = item.querySelector('.column-checkbox');
+            if (checkbox && checkbox.checked) {
+                order.push(checkbox.value);
+
+                // Get the label text
+                const label = item.querySelector('.form-check-label');
+                if (label) {
+                    selectedLabels.push(label.textContent.trim());
+                }
+            }
+        });
+
+        console.log('New order:', order);
+        console.log('Selected labels:', selectedLabels);
+
+        hiddenOrderInput.value = order.join(',');
+
+        // Update preview
+        updatePreview();
+    }
+
+    // Check if Sortable.js is loaded
+    if (typeof Sortable !== 'undefined') {
+        console.log('Sortable.js loaded, version:', Sortable.version);
+
+        // Destroy existing instance if any
+        if (columnSortable) {
+            columnSortable.destroy();
+        }
+
+        // Initialize Sortable.js
+        columnSortable = new Sortable(columnContainer, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            handle: '.drag-handle',
+            filter: '.column-checkbox',
+            onStart: function() {
+                console.log('Drag started');
+            },
+            onEnd: function() {
+                console.log('Drag ended');
+                updateColumnOrder();
+            },
+            onSort: function() {
+                console.log('Items sorted');
+            }
+        });
+
+        console.log('Sortable.js initialized successfully');
+    } else {
+        console.error('Sortable.js not loaded!');
+        // Fallback to native drag and drop
+        initializeNativeDragDrop();
+    }
+
+    // Update order when checkboxes change
+    columnContainer.querySelectorAll('.column-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            console.log('Checkbox changed:', this.value, this.checked);
+            updateColumnOrder();
+        });
+    });
+
+    // Initial update
+    updateColumnOrder();
+}
+
+// Native drag and drop fallback
+function initializeNativeDragDrop() {
+    console.log('Initializing native drag and drop...');
+
+    const container = document.getElementById('columnsContainer');
+    const draggables = container.querySelectorAll('.draggable-item');
+
+    let draggedItem = null;
+
+    draggables.forEach(item => {
+        item.setAttribute('draggable', 'true');
+
+        item.addEventListener('dragstart', function(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.dataset.column);
+        });
+
+        item.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            container.querySelectorAll('.draggable-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            draggedItem = null;
+        });
+
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        item.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            if (this !== draggedItem) {
+                this.classList.add('drag-over');
+            }
+        });
+
+        item.addEventListener('dragleave', function() {
+            this.classList.remove('drag-over');
+        });
+
+        item.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (this !== draggedItem) {
+                // Remove drag-over class
+                this.classList.remove('drag-over');
+
+                // Get all items
+                const allItems = Array.from(container.querySelectorAll('.draggable-item'));
+                const draggedIndex = allItems.indexOf(draggedItem);
+                const targetIndex = allItems.indexOf(this);
+
+                // Move the dragged item
+                if (draggedIndex < targetIndex) {
+                    this.parentElement.after(draggedItem.parentElement);
+                } else {
+                    this.parentElement.before(draggedItem.parentElement);
+                }
+
+                // Update the order
+                updateColumnOrder();
+            }
+        });
+    });
+}
+
+// ============================================================================
+// REPORT GENERATION FUNCTIONS
+// ============================================================================
+
+// Update preview
+function updatePreview() {
+    console.log('Updating preview...');
+
+    const form = document.getElementById('printReportForm');
+    if (!form) {
+        console.error('Report form not found');
+        return;
+    }
+
+    // Get selected columns in current order
+    const columnItems = document.querySelectorAll('#columnsContainer .draggable-item');
+    const selectedColumns = [];
+    const selectedLabels = [];
+
+    columnItems.forEach(item => {
+        const checkbox = item.querySelector('.column-checkbox');
+        if (checkbox && checkbox.checked) {
+            selectedColumns.push(checkbox.value);
+
+            // Get the label text
+            const label = item.querySelector('.form-check-label');
+            if (label) {
+                selectedLabels.push(label.textContent.trim());
+            }
+        }
+    });
+
+    console.log('Selected columns for preview:', selectedColumns);
+    console.log('Selected labels for preview:', selectedLabels);
+
+    const preview = document.getElementById('columnOrderPreview');
+    if (preview) {
+        preview.textContent = selectedLabels.join(', ') || 'No columns selected';
+        console.log('Preview updated:', preview.textContent);
+    }
+}
+
+// Generate report
+function generateReport() {
+    const form = document.getElementById('printReportForm');
+    if (!form) {
+        console.error('Report form not found');
+        return;
+    }
+
+    // Get selected columns
+    const selectedColumns = Array.from(form.querySelectorAll('input[name="columns[]"]:checked'))
+        .map(cb => cb.value);
+
+    if (selectedColumns.length === 0) {
+        Swal.fire({
+            title: 'Warning!',
+            text: 'Please select at least one column to include in the report.',
+            icon: 'warning',
+            customClass: { confirmButton: 'btn btn-primary' },
+            buttonsStyling: false
+        });
+        return;
+    }
+
+    // Get form values
+    const classId = form.querySelector('[name="class_id"]').value;
+    const status = form.querySelector('[name="status"]').value;
+    const formatElement = form.querySelector('[name="format"]:checked');
+    const columnsOrderInput = form.querySelector('[name="columns_order"]');
+    const includeHeader = form.querySelector('[name="include_header"]').checked;
+    const includeLogo = form.querySelector('[name="include_logo"]').checked;
+    const orientation = form.querySelector('[name="orientation"]').value;
+    const termId = form.querySelector('[name="term_id"]')?.value || '';
+    const sessionId = form.querySelector('[name="session_id"]')?.value || '';
+
+    if (!formatElement) {
+        Swal.fire({
+            title: 'Error!',
+            text: 'Please select an export format (PDF or Excel).',
+            icon: 'error',
+            customClass: { confirmButton: 'btn btn-primary' },
+            buttonsStyling: false
+        });
+        return;
+    }
+
+    const format = formatElement.value;
+
+    // Debug: Log what's being sent
+    console.log('Generating report with:', {
+        selectedColumns: selectedColumns,
+        columnsOrder: columnsOrderInput?.value || '',
+        classId: classId,
+        status: status,
+        termId: termId,
+        sessionId: sessionId,
+        format: format,
+        orientation: orientation,
+        includeHeader: includeHeader,
+        includeLogo: includeLogo
+    });
+
+    // Show loading indicator
+    Swal.fire({
+        title: 'Generating Report...',
+        text: 'This may take a moment. Please wait...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // Build query parameters
+    const params = new URLSearchParams({
+        class_id: classId,
+        term_id: termId,
+        session_id: sessionId,
+        status: status,
+        columns: selectedColumns.join(','),
+        columns_order: columnsOrderInput?.value || '',
+        format: format,
+        orientation: orientation,
+        include_header: includeHeader ? '1' : '0',
+        include_logo: includeLogo ? '1' : '0'
+    });
+
+    // Make the request
+    axios.get(`/students/report?${params.toString()}`, {
+        responseType: 'blob',
+        timeout: 120000 // 2 minutes timeout
+    })
+    .then(response => {
+        Swal.close();
+
+        // Create a blob from the response
+        const blob = new Blob([response.data], {
+            type: response.headers['content-type']
+        });
+
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Get filename from content-disposition header or generate one
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = 'student-report.' + (format === 'pdf' ? 'pdf' : 'xlsx');
+
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+            if (filenameMatch && filenameMatch[1]) {
+                filename = filenameMatch[1];
+            }
+        }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+
+        // Cleanup
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }, 100);
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('printStudentReportModal'));
+        if (modal) {
+            modal.hide();
+        }
+
+        // Show success message
+        Swal.fire({
+            title: 'Success!',
+            text: `Report generated successfully and downloaded as ${format.toUpperCase()}`,
+            icon: 'success',
+            customClass: { confirmButton: 'btn btn-primary' },
+            buttonsStyling: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    })
+    .catch(error => {
+        Swal.close();
+
+        console.error('Error generating report:', error);
+
+        let errorMessage = 'Failed to generate report. Please try again.';
+
+        if (error.response) {
+            // Server responded with error status
+            if (error.response.status === 404) {
+                errorMessage = 'No students found matching the selected filters.';
+            } else if (error.response.status === 422) {
+                errorMessage = error.response.data.message || 'Validation error. Please check your selections.';
+            } else if (error.response.status === 500) {
+                if (error.response.data && error.response.data.message) {
+                    errorMessage = error.response.data.message;
+                } else {
+                    errorMessage = 'Server error. Please try again later.';
+                }
+            }
+
+            // Try to parse error message from response
+            if (error.response.data && typeof error.response.data === 'object') {
+                if (error.response.data.message) {
+                    errorMessage = error.response.data.message;
+                }
+            }
+        } else if (error.code === 'ECONNABORTED') {
+            errorMessage = 'Request timeout. The report generation is taking too long. Try with fewer students or different filters.';
+        }
+
+        Swal.fire({
+            title: 'Error!',
+            text: errorMessage,
+            icon: 'error',
+            customClass: { confirmButton: 'btn btn-primary' },
+            buttonsStyling: false
+        });
+    });
+}
+
+// ============================================================================
+// DEBUG FUNCTIONS
+// ============================================================================
+
+// Debug column ordering
+function debugColumnOrdering() {
+    console.log('=== DEBUG COLUMN ORDERING ===');
+
+    const container = document.getElementById('columnsContainer');
+    const hiddenInput = document.getElementById('columnsOrderInput');
+    const preview = document.getElementById('columnOrderPreview');
+
+    if (!container) {
+        console.error('❌ columnsContainer not found');
+        return;
+    }
+
+    if (!hiddenInput) {
+        console.error('❌ columnsOrderInput not found');
+        return;
+    }
+
+    console.log('✅ Container found:', container);
+    console.log('✅ Hidden input found, value:', hiddenInput.value);
+    console.log('✅ Preview element:', preview ? 'found' : 'not found');
+    console.log('✅ Preview text:', preview ? preview.textContent : 'N/A');
+
+    // Check Sortable.js
+    if (typeof Sortable !== 'undefined') {
+        console.log('✅ Sortable.js loaded, version:', Sortable.version);
+    } else {
+        console.error('❌ Sortable.js NOT loaded');
+    }
+
+    // Check column items
+    const items = container.querySelectorAll('.draggable-item');
+    console.log('✅ Column items found:', items.length);
+
+    items.forEach((item, index) => {
+        const checkbox = item.querySelector('.column-checkbox');
+        const label = item.querySelector('.form-check-label');
+        const dragHandle = item.querySelector('.drag-handle');
+
+        console.log(`Item ${index + 1}:`, {
+            value: checkbox ? checkbox.value : 'N/A',
+            checked: checkbox ? checkbox.checked : false,
+            label: label ? label.textContent.trim() : 'N/A',
+            dragHandle: dragHandle ? 'found' : 'not found',
+            position: index + 1
+        });
+    });
+
+    // Check current order
+    const checkboxes = container.querySelectorAll('.column-checkbox:checked');
+    const currentOrder = Array.from(checkboxes).map(cb => cb.value);
+    console.log('✅ Current checked order:', currentOrder);
+}
+
+// ============================================================================
+// INITIALIZATION FUNCTIONS
+// ============================================================================
+
 </script>
 @endsection
