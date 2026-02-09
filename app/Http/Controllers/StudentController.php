@@ -540,7 +540,7 @@ class StudentController extends Controller
         return view('student.create', compact('schoolclasses', 'schoolterms', 'schoolsessions', 'currentSession', 'pagetitle'));
     }
 
-    public function edit($student)
+     public function edit($student)
     {
         try {
             $studentData = Student::where('studentRegistration.id', $student)
@@ -593,11 +593,11 @@ class StudentController extends Controller
                     'studentclass.termid',
                     'studentclass.sessionid',
 
-                    // School Class fields (ADDED)
+                    // School Class fields
                     'schoolclass.schoolclass',
                     'schoolarm.arm',
 
-                    // Term and Session names (ADDED)
+                    // Term and Session names
                     'schoolterm.term as term_name',
                     'schoolsession.session as session_name',
 
@@ -617,7 +617,7 @@ class StudentController extends Controller
                     // Picture and House
                     'studentpicture.picture',
                     'studenthouses.schoolhouse',
-                    'schoolhouses.house as school_house',  // ADDED for house name
+                    'schoolhouses.house as school_house',
                 ])
                 ->first();
 
@@ -1691,6 +1691,7 @@ public function generateReport(Request $request)
 
         return null;
     }
+
 
     /**
      * Get current term info for a student
