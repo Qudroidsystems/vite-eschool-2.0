@@ -1108,70 +1108,68 @@ use Spatie\Permission\Models\Role;
         </div>
 
         <!-- Update Current Term Modal -->
-
-        <!-- Update Current Term Modal -->
-<div id="updateCurrentTermModal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header modal-header-gradient">
-                <h5 class="modal-title">
-                    <i class="fas fa-calendar-alt me-2"></i>Update Current Term
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <form id="updateCurrentTermForm">
-                    @csrf
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Updating current term for <span id="selectedStudentsCount">0</span> selected student(s).
+        <div id="updateCurrentTermModal" class="modal fade" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header modal-header-gradient">
+                        <h5 class="modal-title">
+                            <i class="fas fa-calendar-alt me-2"></i>Update Current Term
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+                    <div class="modal-body p-4">
+                        <form id="updateCurrentTermForm">
+                            @csrf
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Updating current term for <span id="selectedStudentsCount">0</span> selected student(s).
+                            </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Current Class</label>
-                        <select class="form-control" name="schoolclassId" required>
-                            <option value="">Select Class</option>
-                            @foreach ($schoolclasses as $class)
-                                <option value="{{ $class->id }}">{{ $class->class_display }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                            <div class="mb-3">
+                                <label class="form-label">Current Class</label>
+                                <select class="form-control" name="schoolclassId" required>
+                                    <option value="">Select Class</option>
+                                    @foreach ($schoolclasses as $class)
+                                        <option value="{{ $class->id }}">{{ $class->class_display }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Current Term</label>
-                        <select class="form-control" name="termId" required>
-                            <option value="">Select Term</option>
-                            @foreach ($schoolterms as $term)
-                                <option value="{{ $term->id }}">{{ $term->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                            <div class="mb-3">
+                                <label class="form-label">Current Term</label>
+                                <select class="form-control" name="termId" required>
+                                    <option value="">Select Term</option>
+                                    @foreach ($schoolterms as $term)
+                                        <option value="{{ $term->id }}">{{ $term->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Current Session</label>
-                        <select class="form-control" name="sessionId" required>
-                            <option value="">Select Session</option>
-                            @foreach ($schoolsessions as $session)
-                                <option value="{{ $session->id }}">{{ $session->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                            <div class="mb-3">
+                                <label class="form-label">Current Session</label>
+                                <select class="form-control" name="sessionId" required>
+                                    <option value="">Select Session</option>
+                                    @foreach ($schoolsessions as $session)
+                                        <option value="{{ $session->id }}">{{ $session->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        This action will update the current term for all selected students. This cannot be undone.
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                This action will update the current term for all selected students. This cannot be undone.
+                            </div>
+                        </form>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary-gradient" id="confirmUpdateCurrentTerm" onclick="updateCurrentTerm()">
-                    <i class="fas fa-save me-2"></i>Update Current Term
-                </button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary-gradient" id="confirmUpdateCurrentTerm" onclick="updateCurrentTerm()">
+                            <i class="fas fa-save me-2"></i>Update Current Term
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
         <!-- Print/Export Report Modal -->
         <div id="printStudentReportModal" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -2750,15 +2748,31 @@ async function fetchStudents() {
 
         // Process students and fetch their current term/class info
         allStudents = await Promise.all(studentsArray.map(async (student) => {
+            // Get student details to fetch age
+            let completeStudent = null;
+            try {
+                const studentResponse = await axios.get(`/student/${student.id || student.student_id}/edit`);
+                completeStudent = studentResponse.data.student || studentResponse.data;
+            } catch (error) {
+                console.log(`Could not fetch complete details for student ${student.id}`);
+                completeStudent = student;
+            }
+
             // Try to get current term/class info
             let currentClassInfo = {};
             try {
-                const currentInfo = await axios.get(`/student/${student.id}/current-info`);
+                const currentInfo = await axios.get(`/student/${student.id || student.student_id}/current-info`);
                 if (currentInfo.data.success) {
                     currentClassInfo = currentInfo.data.data;
                 }
             } catch (error) {
                 console.log(`No current info for student ${student.id}`);
+            }
+
+            // Calculate age
+            let age = completeStudent.age;
+            if (!age && completeStudent.dateofbirth) {
+                age = calculateAge(completeStudent.dateofbirth);
             }
 
             return {
@@ -2775,6 +2789,8 @@ async function fetchStudents() {
                 schoolclass: student.schoolclass || student.class || student.class_name || '',
                 arm: student.arm || student.section || '',
                 schoolclassid: student.schoolclassid || student.class_id || '',
+                age: age || '',
+                dateofbirth: completeStudent.dateofbirth || student.dateofbirth || '',
                 // Current term info
                 current_class_id: currentClassInfo.current_class_id || '',
                 current_class: currentClassInfo.current_class || '',
@@ -2786,7 +2802,6 @@ async function fetchStudents() {
                 // Other fields
                 state: student.state || '',
                 local: student.local || '',
-                dateofbirth: student.dateofbirth || '',
                 placeofbirth: student.placeofbirth || '',
                 phone_number: student.phone_number || '',
                 email: student.email || '',
@@ -2933,7 +2948,7 @@ function renderCardView(students) {
                         </div>
                         <div class="info-item">
                             <span class="info-label">Age</span>
-                            <span class="info-value">${calculateAge(student.dateofbirth)}</span>
+                            <span class="info-value">${student.age || calculateAge(student.dateofbirth)}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Registered</span>
@@ -2996,7 +3011,7 @@ function getStudentInitials(firstName, lastName) {
     return (firstInitial + lastInitial) || '??';
 }
 
-// Get Status Badge
+// Get Status Badge - Updated to show proper status
 function getStatusBadge(student, isCard = false) {
     let badge = '';
 
@@ -3012,31 +3027,55 @@ function getStatusBadge(student, isCard = false) {
 
     if (student.statusId == 2) {
         badge += `<span class="status-badge status-new ms-2">
-                    <i class="fas fa-star"></i> New
+                    <i class="fas fa-star"></i> New Student
                 </span>`;
     } else if (student.statusId == 1) {
         badge += `<span class="status-badge status-old ms-2">
-                    <i class="fas fa-history"></i> Old
+                    <i class="fas fa-history"></i> Old Student
                 </span>`;
     }
 
     return badge;
 }
 
-// Calculate Age
-function calculateAge(dateOfBirth) {
-    if (!dateOfBirth) return 'N/A';
-    const dob = new Date(dateOfBirth);
-    const today = new Date();
-    let age = today.getFullYear() - dob.getFullYear();
-    const monthDiff = today.getMonth() - dob.getMonth();
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-        age--;
+// Calculate Age - Updated with proper error handling
+window.calculateAge = function(dateValue, targetId = null) {
+    if (!dateValue) {
+        console.error('No date value provided');
+        return 'N/A';
     }
 
-    return age;
-}
+    try {
+        const dateString = dateValue.includes('T') ? dateValue.split('T')[0] : dateValue;
+        const dob = new Date(dateString);
+
+        if (isNaN(dob.getTime())) {
+            console.error('Invalid date:', dateValue);
+            return 'N/A';
+        }
+
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+
+        // If targetId is provided, update the input field
+        if (targetId) {
+            const ageInput = document.getElementById(targetId);
+            if (ageInput) {
+                ageInput.value = age;
+            }
+        }
+
+        return age;
+    } catch (error) {
+        console.error('Error calculating age:', error);
+        return 'N/A';
+    }
+};
 
 // Format Date
 function formatDate(dateString, format = 'long') {
@@ -3176,14 +3215,31 @@ function goToNextPage() {
 // CRUD OPERATIONS
 // ============================================================================
 
-// View Student
+// View Student - Updated to show complete information
 async function viewStudent(id) {
     try {
+        // Show loading state
+        Swal.fire({
+            title: 'Loading...',
+            text: 'Fetching student details',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Fetch student data
         const response = await axios.get(`/student/${id}/edit`);
         const student = response.data.student || response.data;
 
+        // Close loading
+        Swal.close();
+
+        // Show details
         showStudentDetails(student);
     } catch (error) {
+        Swal.close();
+        console.error('Error viewing student:', error);
         showError('Failed to load student details.');
     }
 }
@@ -3407,48 +3463,230 @@ function populateEditForm(student) {
     }
 }
 
-// Show Student Details Modal
-function showStudentDetails(student) {
-    const content = `
-        <div class="row">
-            <div class="col-md-4 text-center mb-4">
-                <div class="avatar-container" style="width: 150px; height: 150px; margin: 0 auto;">
-                    ${getStudentAvatar(student, true)}
-                </div>
-                <h4 class="mt-3">${student.firstname} ${student.lastname}</h4>
-                <p class="text-muted">${student.admissionNo}</p>
-                ${getStatusBadge(student, true)}
-            </div>
-            <div class="col-md-8">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Date of Birth</label>
-                        <p class="fw-bold">${formatDate(student.dateofbirth)}</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Gender</label>
-                        <p class="fw-bold">${student.gender}</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Class</label>
-                        <p class="fw-bold">${student.schoolclass || ''} ${student.arm || ''}</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Religion</label>
-                        <p class="fw-bold">${student.religion || 'N/A'}</p>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label text-muted">Address</label>
-                        <p class="fw-bold">${student.permanent_address || 'N/A'}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+// Show Student Details Modal - Updated with complete information
+async function showStudentDetails(student) {
+    try {
+        // Get current term info
+        let currentInfo = {};
+        try {
+            const currentResponse = await axios.get(`/student/${student.id}/current-info`);
+            if (currentResponse.data.success) {
+                currentInfo = currentResponse.data.data;
+            }
+        } catch (error) {
+            console.log('No current info available');
+        }
 
-    document.getElementById('viewStudentContent').innerHTML = content;
-    const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
-    modal.show();
+        // Format date of birth
+        const dob = student.dateofbirth ?
+            new Date(student.dateofbirth).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : 'N/A';
+
+        // Calculate age
+        const age = student.age || calculateAge(student.dateofbirth);
+
+        // Prepare the content HTML
+        const content = `
+            <div class="row">
+                <div class="col-md-3 text-center mb-4">
+                    <div class="avatar-container" style="width: 150px; height: 150px; margin: 0 auto;">
+                        ${getStudentAvatar(student, true)}
+                    </div>
+                    <h4 class="mt-3">${student.firstname} ${student.lastname}</h4>
+                    <p class="text-muted">${student.admissionNo}</p>
+                    ${getStatusBadge(student, true)}
+                </div>
+                <div class="col-md-9">
+                    <div class="row">
+                        <!-- Personal Information -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-primary mb-3"><i class="fas fa-user me-2"></i>Personal Information</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Date of Birth</label>
+                                    <p class="fw-bold">${dob}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Age</label>
+                                    <p class="fw-bold">${age}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Gender</label>
+                                    <p class="fw-bold">${student.gender || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Religion</label>
+                                    <p class="fw-bold">${student.religion || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Nationality</label>
+                                    <p class="fw-bold">${student.nationality || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Blood Group</label>
+                                    <p class="fw-bold">${student.blood_group || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-12 mb-2">
+                                    <label class="form-label text-muted">Place of Birth</label>
+                                    <p class="fw-bold">${student.placeofbirth || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-12 mb-2">
+                                    <label class="form-label text-muted">Future Ambition</label>
+                                    <p class="fw-bold">${student.future_ambition || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-primary mb-3"><i class="fas fa-address-card me-2"></i>Contact Information</h6>
+                            <div class="row">
+                                <div class="col-md-12 mb-2">
+                                    <label class="form-label text-muted">Permanent Address</label>
+                                    <p class="fw-bold">${student.permanent_address || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Phone Number</label>
+                                    <p class="fw-bold">${student.phone_number || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Email</label>
+                                    <p class="fw-bold">${student.email || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">State of Origin</label>
+                                    <p class="fw-bold">${student.state || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">LGA</label>
+                                    <p class="fw-bold">${student.local || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">City</label>
+                                    <p class="fw-bold">${student.city || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Mother Tongue</label>
+                                    <p class="fw-bold">${student.mother_tongue || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Academic Information -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-primary mb-3"><i class="fas fa-graduation-cap me-2"></i>Academic Information</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Current Class</label>
+                                    <p class="fw-bold">${currentInfo.current_class || student.schoolclass || 'N/A'} ${currentInfo.current_class_arm || student.arm || ''}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Current Term</label>
+                                    <p class="fw-bold">${currentInfo.current_term || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Current Session</label>
+                                    <p class="fw-bold">${currentInfo.current_session || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Student Category</label>
+                                    <p class="fw-bold">${student.student_category || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">School House</label>
+                                    <p class="fw-bold">${student.sport_house || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Admission Date</label>
+                                    <p class="fw-bold">${student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Parent/Guardian Information -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-primary mb-3"><i class="fas fa-users me-2"></i>Parent/Guardian Information</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Father's Name</label>
+                                    <p class="fw-bold">${student.father_name || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Father's Phone</label>
+                                    <p class="fw-bold">${student.father_phone || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Mother's Name</label>
+                                    <p class="fw-bold">${student.mother_name || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Mother's Phone</label>
+                                    <p class="fw-bold">${student.mother_phone || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Parent's Email</label>
+                                    <p class="fw-bold">${student.parent_email || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Parent's Address</label>
+                                    <p class="fw-bold">${student.parent_address || 'N/A'}</p>
+                                </div>
+                                ${student.father_occupation ? `
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Father's Occupation</label>
+                                    <p class="fw-bold">${student.father_occupation}</p>
+                                </div>
+                                ` : ''}
+                                ${student.father_city ? `
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Father's City</label>
+                                    <p class="fw-bold">${student.father_city}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Previous School Information -->
+                        ${(student.last_school || student.last_class || student.reason_for_leaving) ? `
+                        <div class="col-md-12 mb-3">
+                            <h6 class="text-primary mb-3"><i class="fas fa-school me-2"></i>Previous School Information</h6>
+                            <div class="row">
+                                ${student.last_school ? `
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Last School Attended</label>
+                                    <p class="fw-bold">${student.last_school}</p>
+                                </div>
+                                ` : ''}
+                                ${student.last_class ? `
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-muted">Last Class Attended</label>
+                                    <p class="fw-bold">${student.last_class}</p>
+                                </div>
+                                ` : ''}
+                                ${student.reason_for_leaving ? `
+                                <div class="col-md-12 mb-2">
+                                    <label class="form-label text-muted">Reason for Leaving</label>
+                                    <p class="fw-bold">${student.reason_for_leaving}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('viewStudentContent').innerHTML = content;
+        const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error showing student details:', error);
+        showError('Failed to load complete student details.');
+    }
 }
 
 // Show Edit Modal
@@ -3462,14 +3700,29 @@ function editStudentFromView() {
     const modal = bootstrap.Modal.getInstance(document.getElementById('viewStudentModal'));
     modal.hide();
 
-    // Get the student ID from somewhere (you might need to store it)
-    // For now, we'll just show a message
+    // Get the student ID from the view modal
     setTimeout(() => {
+        const viewContent = document.getElementById('viewStudentContent');
+        const studentName = viewContent.querySelector('h4')?.textContent || '';
+
         Swal.fire({
             title: 'Edit Student',
-            text: 'Please select a student to edit from the list.',
+            text: `Ready to edit ${studentName}. Please confirm.`,
             icon: 'info',
-            confirmButtonText: 'OK'
+            showCancelButton: true,
+            confirmButtonText: 'Continue',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // You might want to store the current student ID globally
+                // For now, we'll just show a message
+                Swal.fire({
+                    title: 'Redirecting',
+                    text: 'Please select the student from the list to edit.',
+                    icon: 'info',
+                    confirmButtonText: 'OK'
+                });
+            }
         });
     }, 300);
 }
@@ -4139,39 +4392,6 @@ function generatePlaceholderImage(text = 'PHOTO') {
 
     return canvas.toDataURL();
 }
-
-// Calculate Age (for form input)
-window.calculateAge = function(dateValue, targetId) {
-    if (!dateValue) {
-        console.error('No date value provided');
-        return;
-    }
-
-    try {
-        const dateString = dateValue.includes('T') ? dateValue.split('T')[0] : dateValue;
-        const dob = new Date(dateString);
-
-        if (isNaN(dob.getTime())) {
-            console.error('Invalid date:', dateValue);
-            return;
-        }
-
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const monthDiff = today.getMonth() - dob.getMonth();
-
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-            age--;
-        }
-
-        const ageInput = document.getElementById(targetId);
-        if (ageInput) {
-            ageInput.value = age;
-        }
-    } catch (error) {
-        console.error('Error calculating age:', error);
-    }
-};
 
 // Preview Image
 function previewImage(input, targetId = 'addStudentAvatar') {

@@ -196,33 +196,20 @@ Route::group(['middleware' => ['auth']], function () {
     // Route::get('/student/data', [StudentController::class, 'data'])->name('students.data');
     Route::get('/students/last-admission-number', [StudentController::class, 'getLastAdmissionNumber'])->name('student.getLastAdmissionNumber');
     Route::get('/students/report', action: [StudentController::class, 'generateReport'])->name('students.report');
-    // // Student routes
-    // Route::get('/student/{id}/current-info', [StudentController::class, 'getCurrentInfo'])->name('student.current-info');
 
-
-    // // Student Current Term Routes with inline middleware
-    // Route::prefix('student-current-term')->group(function () {
-    //     Route::get('/student/{studentId}', [StudentController::class, 'getCurrentTerm']);
-    //     Route::put('/student/{studentId}', [StudentController::class, 'updateCurrentTerm']);
-    //     Route::post('/student/{studentId}/promote', [StudentController::class, 'promoteStudent']);
-    //     Route::get('/students', [StudentController::class, 'getStudentsByCurrentFilters']);
-    // });
-
-    // // Bulk update current term
-    // Route::post('/student-current-term/bulk-update', [StudentController::class, 'bulkUpdateCurrentTerm']);
 
     // Student Current Term Routes
-Route::prefix('student-current-term')->group(function () {
-    Route::get('/student/{studentId}', [StudentController::class, 'getCurrentTerm']);
-    Route::put('/student/{studentId}', [StudentController::class, 'updateCurrentTerm']);
-    Route::post('/bulk-update', [StudentController::class, 'bulkUpdateCurrentTerm'])->name('student.current-term.bulk-update');
-    Route::get('/students', [StudentController::class, 'getStudentsByCurrentFilters']);
-});
+    Route::prefix('student-current-term')->group(function () {
+        Route::get('/student/{studentId}', [StudentController::class, 'getCurrentTerm']);
+        Route::put('/student/{studentId}', [StudentController::class, 'updateCurrentTerm']);
+        Route::post('/bulk-update', [StudentController::class, 'bulkUpdateCurrentTerm'])->name('student.current-term.bulk-update');
+        Route::get('/students', [StudentController::class, 'getStudentsByCurrentFilters']);
+    });
 
-// Other student routes
-Route::get('/student/{id}/current-info', [StudentController::class, 'getCurrentInfo'])->name('student.current-info');
-Route::get('/students/data', [StudentController::class, 'data'])->name('students.data');
-Route::resource('student', StudentController::class);
+    // Other student routes
+    Route::get('/student/{id}/current-info', [StudentController::class, 'getCurrentInfo'])->name('student.current-info');
+    Route::get('/students/data', [StudentController::class, 'data'])->name('students.data');
+    Route::resource('student', StudentController::class);
 
 
     Route::resource('classoperation', ClassOperationController::class);
