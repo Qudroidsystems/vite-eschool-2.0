@@ -127,5 +127,27 @@ class StudentCurrentTerm extends Model
                    ->exists();
     }
 
+    /**
+     * Check if term already exists for student in the same session
+     * Prevents duplicate term registration
+     */
+    public static function termExistsForSession($studentId, $termId, $sessionId)
+    {
+        return self::where('studentId', $studentId)
+                   ->where('termId', $termId)
+                   ->where('sessionId', $sessionId)
+                   ->exists();
+    }
 
+    /**
+     * Get all terms for a student in a specific session
+     */
+    public static function getStudentTermsInSession($studentId, $sessionId)
+    {
+        return self::with(['term', 'schoolClass'])
+                   ->where('studentId', $studentId)
+                   ->where('sessionId', $sessionId)
+                   ->orderBy('termId', 'asc')
+                   ->get();
+    }
 }
