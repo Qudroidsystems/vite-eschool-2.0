@@ -1771,93 +1771,7 @@ class StudentController extends Controller
         }
     }
 
-    /**
-     * Get student's current term
-     */
-    public function getCurrentTerm($studentId)
-    {
-        try {
-            $currentTerm = StudentCurrentTerm::getCurrentForStudent($studentId);
 
-            if (!$currentTerm) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No current term found for student'
-                ], 404);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $currentTerm
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching current term: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Update student's current term
-     */
-    public function updateCurrentTerm(Request $request, $studentId)
-    {
-        $request->validate([
-            'schoolclassId' => 'required|exists:schoolclass,id',
-            'termId' => 'required|exists:schoolterm,id',
-            'sessionId' => 'required|exists:schoolsession,id'
-        ]);
-
-        try {
-            // Check if student exists
-            $student = Student::find($studentId);
-            if (!$student) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Student not found'
-                ], 404);
-            }
-
-            // Check if term already exists for this student in the same session
-            $existingTerm = StudentCurrentTerm::where('studentId', $studentId)
-                ->where('termId', $request->termId)
-                ->where('sessionId', $request->sessionId)
-                ->first();
-
-            if ($existingTerm) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This term is already registered for this student in the selected session'
-                ], 422);
-            }
-
-            // Create or update current term
-            $currentTerm = StudentCurrentTerm::updateOrCreate(
-                [
-                    'studentId' => $studentId,
-                    'is_current' => true
-                ],
-                [
-                    'schoolclassId' => $request->schoolclassId,
-                    'termId' => $request->termId,
-                    'sessionId' => $request->sessionId,
-                    'is_current' => true
-                ]
-            );
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Current term updated successfully',
-                'data' => $currentTerm
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error updating current term: ' . $e->getMessage()
-            ], 500);
-        }
-    }
 
     /**
      * Get students by current class, term, and session
@@ -1900,92 +1814,184 @@ class StudentController extends Controller
         }
     }
 
+  
+
+
+
+
+
+
+
+
+
     /**
-     * Bulk update current term for multiple students
-     */
-    public function bulkUpdateCurrentTerm(Request $request)
-    {
-        $request->validate([
-            'student_ids' => 'required|array',
-            'student_ids.*' => 'exists:studentRegistration,id',
-            'schoolclassId' => 'required|exists:schoolclass,id',
-            'termId' => 'required|exists:schoolterm,id',
-            'sessionId' => 'required|exists:schoolsession,id'
-        ]);
+ * Get student's current term
+ */
+public function getCurrentTerm($studentId)
+{
+    try {
+        $currentTerm = StudentCurrentTerm::getCurrentForStudent($studentId);
 
-        try {
-            DB::beginTransaction();
-
-            $results = [];
-            $successCount = 0;
-            $failedCount = 0;
-
-            foreach ($request->student_ids as $studentId) {
-                try {
-                    // Check if student exists
-                    $student = Student::find($studentId);
-                    if (!$student) {
-                        $results[$studentId] = 'Student not found';
-                        $failedCount++;
-                        continue;
-                    }
-
-                    // Check if term already exists for this student in the same session
-                    $existingTerm = StudentCurrentTerm::where('studentId', $studentId)
-                        ->where('termId', $request->termId)
-                        ->where('sessionId', $request->sessionId)
-                        ->first();
-
-                    if ($existingTerm) {
-                        $results[$studentId] = 'Failed: Term already registered for this session';
-                        $failedCount++;
-                        continue;
-                    }
-
-                    // Create or update current term
-                    $currentTerm = StudentCurrentTerm::updateOrCreate(
-                        [
-                            'studentId' => $studentId,
-                            'is_current' => true
-                        ],
-                        [
-                            'schoolclassId' => $request->schoolclassId,
-                            'termId' => $request->termId,
-                            'sessionId' => $request->sessionId,
-                            'is_current' => true
-                        ]
-                    );
-
-                    $results[$studentId] = 'Success';
-                    $successCount++;
-
-                } catch (\Exception $e) {
-                    Log::error("Error updating current term for student {$studentId}: " . $e->getMessage());
-                    $results[$studentId] = 'Failed: ' . $e->getMessage();
-                    $failedCount++;
-                }
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => "Updated current term for {$successCount} student(s). Failed: {$failedCount}.",
-                'data' => $results,
-                'summary' => [
-                    'total' => count($request->student_ids),
-                    'success' => $successCount,
-                    'failed' => $failedCount
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Bulk update current term error: " . $e->getMessage());
+        if (!$currentTerm) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update current term: ' . $e->getMessage()
-            ], 500);
+                'message' => 'No current term found for student'
+            ], 404);
         }
+
+        return response()->json([
+            'success' => true,
+            'data' => $currentTerm
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching current term: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+/**
+ * Get student's active term based on system active term
+ */
+public function getActiveTerm($studentId)
+{
+    try {
+        $activeTerm = StudentCurrentTerm::getActiveTermForStudent($studentId);
+
+        if (!$activeTerm) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active term found for student based on current system term'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $activeTerm
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching active term: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Update student's current term
+ */
+public function updateCurrentTerm(Request $request, $studentId)
+{
+    $request->validate([
+        'schoolclassId' => 'required|exists:schoolclass,id',
+        'termId' => 'required|exists:schoolterm,id',
+        'sessionId' => 'required|exists:schoolsession,id',
+        'is_current' => 'sometimes|boolean'
+    ]);
+
+    try {
+        // Check if student exists
+        $student = Student::find($studentId);
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student not found'
+            ], 404);
+        }
+
+        // Use the new registerTerm method
+        $currentTerm = StudentCurrentTerm::registerTerm(
+            $studentId,
+            $request->schoolclassId,
+            $request->termId,
+            $request->sessionId,
+            $request->input('is_current', true)
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Term registered successfully',
+            'data' => $currentTerm
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error registering term: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Bulk update current term for multiple students
+ */
+public function bulkUpdateCurrentTerm(Request $request)
+{
+    $request->validate([
+        'student_ids' => 'required|array',
+        'student_ids.*' => 'exists:studentRegistration,id',
+        'schoolclassId' => 'required|exists:schoolclass,id',
+        'termId' => 'required|exists:schoolterm,id',
+        'sessionId' => 'required|exists:schoolsession,id',
+        'is_current' => 'sometimes|boolean'
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $results = [];
+        $successCount = 0;
+        $failedCount = 0;
+
+        foreach ($request->student_ids as $studentId) {
+            try {
+                // Check if student exists
+                $student = Student::find($studentId);
+                if (!$student) {
+                    $results[$studentId] = 'Student not found';
+                    $failedCount++;
+                    continue;
+                }
+
+                // Use registerTerm for each student
+                $currentTerm = StudentCurrentTerm::registerTerm(
+                    $studentId,
+                    $request->schoolclassId,
+                    $request->termId,
+                    $request->sessionId,
+                    $request->input('is_current', true)
+                );
+
+                $results[$studentId] = 'Success';
+                $successCount++;
+
+            } catch (\Exception $e) {
+                Log::error("Error registering term for student {$studentId}: " . $e->getMessage());
+                $results[$studentId] = 'Failed: ' . $e->getMessage();
+                $failedCount++;
+            }
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Registered term for {$successCount} student(s). Failed: {$failedCount}.",
+            'data' => $results,
+            'summary' => [
+                'total' => count($request->student_ids),
+                'success' => $successCount,
+                'failed' => $failedCount
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("Bulk register term error: " . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to register term: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

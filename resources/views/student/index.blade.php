@@ -1107,69 +1107,81 @@ use Spatie\Permission\Models\Role;
             </div>
         </div>
 
-        <!-- Update Current Term Modal -->
-        <div id="updateCurrentTermModal" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-gradient">
-                        <h5 class="modal-title">
-                            <i class="fas fa-calendar-alt me-2"></i>Update Current Term
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+       <!-- Update Current Term Modal -->
+<div id="updateCurrentTermModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header modal-header-gradient">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-alt me-2"></i>Register/Update Term
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="updateCurrentTermForm">
+                    @csrf
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Registering/updating term for <span id="selectedStudentsCount">0</span> selected student(s).
                     </div>
-                    <div class="modal-body p-4">
-                        <form id="updateCurrentTermForm">
-                            @csrf
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Updating current term for <span id="selectedStudentsCount">0</span> selected student(s).
-                            </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Current Class</label>
-                                <select class="form-control" name="schoolclassId" required>
-                                    <option value="">Select Class</option>
-                                    @foreach ($schoolclasses as $class)
-                                        <option value="{{ $class->id }}">{{ $class->class_display }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Current Term</label>
-                                <select class="form-control" name="termId" required>
-                                    <option value="">Select Term</option>
-                                    @foreach ($schoolterms as $term)
-                                        <option value="{{ $term->id }}">{{ $term->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Current Session</label>
-                                <select class="form-control" name="sessionId" required>
-                                    <option value="">Select Session</option>
-                                    @foreach ($schoolsessions as $session)
-                                        <option value="{{ $session->id }}">{{ $session->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                This action will update the current term for all selected students. This cannot be undone.
-                            </div>
-                        </form>
+                    <div class="mb-3">
+                        <label class="form-label">Class</label>
+                        <select class="form-control" name="schoolclassId" required>
+                            <option value="">Select Class</option>
+                            @foreach ($schoolclasses as $class)
+                                <option value="{{ $class->id }}">{{ $class->class_display }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary-gradient" id="confirmUpdateCurrentTerm" onclick="updateCurrentTerm()">
-                            <i class="fas fa-save me-2"></i>Update Current Term
-                        </button>
+
+                    <div class="mb-3">
+                        <label class="form-label">Term</label>
+                        <select class="form-control" name="termId" required>
+                            <option value="">Select Term</option>
+                            @foreach ($schoolterms as $term)
+                                <option value="{{ $term->id }}">{{ $term->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Session</label>
+                        <select class="form-control" name="sessionId" required>
+                            <option value="">Select Session</option>
+                            @foreach ($schoolsessions as $session)
+                                <option value="{{ $session->id }}">{{ $session->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_current" id="is_current" value="1" checked>
+                            <label class="form-check-label" for="is_current">
+                                Mark as current term for student(s)
+                            </label>
+                        </div>
+                        <small class="text-muted">If checked, this will be marked as the current term. Previous current term will be unmarked.</small>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Note:</strong> Students can have multiple terms registered in the same session.
+                        If a term already exists for a student in this session, it will be updated.
+                        Otherwise, a new term registration will be created.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary-gradient" id="confirmUpdateCurrentTerm" onclick="updateCurrentTerm()">
+                    <i class="fas fa-save me-2"></i>Register/Update Term
+                </button>
             </div>
         </div>
+    </div>
+</div>
 
         <!-- Print/Export Report Modal -->
         <div id="printStudentReportModal" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -2276,9 +2288,8 @@ use Spatie\Permission\Models\Role;
         </div>
     </div>
 </div>
-
 <script>
-// ============================================================================
+    // ============================================================================
 // COMBINED STUDENT MANAGEMENT SYSTEM - ENHANCED WITH ALL FEATURES
 // ============================================================================
 
@@ -2295,14 +2306,6 @@ let currentFilter = {
 };
 const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
 
-// Nigerian states data
-const nigerianStates = [
-    { name: "Abia", lgAs: ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
-    { name: "Adamawa", lgAs: ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
-    // ... (keep all states as in your original code)
-    { name: "Zamfara", lgAs: ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Chafe", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Zurmi"] }
-];
-
 // DOM Ready
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing application...');
@@ -2315,18 +2318,11 @@ function initializeApplication() {
     updateAdmissionNumber();
     updateAdmissionNumber('edit');
 
-    // Initialize states dropdowns
-    initializeStatesDropdown('addState', 'addLocal');
-    initializeStatesDropdown('editState', 'editLocal');
-
     // Load initial data
     fetchStudents();
 
     // Initialize event listeners
     initializeEventListeners();
-
-    // Initialize UI components
-    initializeUIComponents();
 }
 
 // Initialize Event Listeners
@@ -2384,18 +2380,6 @@ function initializeEventListeners() {
             setTimeout(initializeReportModal, 100);
         });
     }
-}
-
-// Initialize UI Components
-function initializeUIComponents() {
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Initialize form validation
-    initializeFormValidation();
 }
 
 // Debounce function for search
@@ -2506,71 +2490,6 @@ window.toggleAdmissionInput = function(prefix = '') {
         }
     }
 };
-
-// ============================================================================
-// STATE AND LGA MANAGEMENT FUNCTIONS
-// ============================================================================
-
-// Initialize states dropdown
-function initializeStatesDropdown(stateDropdownId, lgaDropdownId) {
-    const stateSelect = document.getElementById(stateDropdownId);
-    const lgaSelect = document.getElementById(lgaDropdownId);
-
-    if (!stateSelect || !lgaSelect) return;
-
-    // Clear existing options
-    stateSelect.innerHTML = '<option value="">Select State</option>';
-    lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-
-    // Populate states
-    nigerianStates.forEach(state => {
-        const option = document.createElement('option');
-        option.value = state.name;
-        option.textContent = state.name;
-        stateSelect.appendChild(option);
-    });
-
-    // Add change event listener
-    stateSelect.addEventListener('change', function() {
-        const selectedState = this.value;
-        const state = nigerianStates.find(s => s.name === selectedState);
-
-        // Clear LGA dropdown
-        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-
-        if (state) {
-            // Populate LGAs for selected state
-            state.lgAs.forEach(lga => {
-                const option = document.createElement('option');
-                option.value = lga;
-                option.textContent = lga;
-                lgaSelect.appendChild(option);
-            });
-        }
-    });
-}
-
-// Set specific state and LGA (for edit mode)
-function setStateAndLGA(stateDropdownId, lgaDropdownId, stateName, lgaName) {
-    const stateSelect = document.getElementById(stateDropdownId);
-    const lgaSelect = document.getElementById(lgaDropdownId);
-
-    if (!stateSelect || !lgaSelect) return;
-
-    // Set state
-    if (stateName) {
-        stateSelect.value = stateName;
-
-        // Trigger change to populate LGAs
-        const event = new Event('change');
-        stateSelect.dispatchEvent(event);
-
-        // Set LGA after a short delay to ensure LGAs are populated
-        setTimeout(() => {
-            lgaSelect.value = lgaName;
-        }, 100);
-    }
-}
 
 // ============================================================================
 // VIEW MANAGEMENT FUNCTIONS
@@ -2713,7 +2632,7 @@ async function fetchStudents() {
 
         console.log('Students array:', studentsArray);
 
-        // Process students and fetch their current term/class info
+        // Process students
         allStudents = await Promise.all(studentsArray.map(async (student) => {
             // Get student details to fetch age
             let completeStudent = null;
@@ -2723,17 +2642,6 @@ async function fetchStudents() {
             } catch (error) {
                 console.log(`Could not fetch complete details for student ${student.id}`);
                 completeStudent = student;
-            }
-
-            // Try to get current term/class info
-            let currentClassInfo = {};
-            try {
-                const currentInfo = await axios.get(`/student/${student.id || student.student_id}/current-info`);
-                if (currentInfo.data.success) {
-                    currentClassInfo = currentInfo.data.data;
-                }
-            } catch (error) {
-                console.log(`No current info for student ${student.id}`);
             }
 
             // Calculate age
@@ -2758,14 +2666,6 @@ async function fetchStudents() {
                 schoolclassid: student.schoolclassid || student.class_id || '',
                 age: age || '',
                 dateofbirth: completeStudent.dateofbirth || student.dateofbirth || '',
-                // Current term info
-                current_class_id: currentClassInfo.current_class_id || '',
-                current_class: currentClassInfo.current_class || '',
-                current_class_arm: currentClassInfo.current_class_arm || '',
-                current_term_id: currentClassInfo.current_term_id || '',
-                current_term: currentClassInfo.current_term || '',
-                current_session_id: currentClassInfo.current_session_id || '',
-                current_session: currentClassInfo.current_session || '',
                 // Other fields
                 state: student.state || '',
                 local: student.local || '',
@@ -2792,7 +2692,7 @@ async function fetchStudents() {
             };
         }));
 
-        console.log('Processed students with current info:', allStudents);
+        console.log('Processed students:', allStudents);
         renderCurrentView();
     } catch (error) {
         console.error('Error fetching students:', error);
@@ -2978,7 +2878,7 @@ function getStudentInitials(firstName, lastName) {
     return (firstInitial + lastInitial) || '??';
 }
 
-// Get Status Badge - Updated to show proper status
+// Get Status Badge
 function getStatusBadge(student, isCard = false) {
     let badge = '';
 
@@ -3005,7 +2905,7 @@ function getStatusBadge(student, isCard = false) {
     return badge;
 }
 
-// Calculate Age - Updated with proper error handling
+// Calculate Age
 window.calculateAge = function(dateValue, targetId = null) {
     if (!dateValue) {
         console.error('No date value provided');
@@ -3182,7 +3082,7 @@ function goToNextPage() {
 // CRUD OPERATIONS
 // ============================================================================
 
-// View Student - Updated with Tabs
+// View Student - Updated with Active Term Detection
 async function viewStudent(id) {
     try {
         // Show loading state
@@ -3203,19 +3103,23 @@ async function viewStudent(id) {
         const termsResponse = await axios.get(`/student/${id}/all-terms`);
         const allTerms = termsResponse.data.success ? termsResponse.data.data : [];
 
-        // Get active term and session from system
-        const systemResponse = await axios.get('/system/active-term-session');
-        const systemInfo = systemResponse.data.success ? systemResponse.data : { term: null, session: null };
+        // Get ACTIVE term based on system active term
+        const activeResponse = await axios.get(`/student-current-term/student/${id}/active`);
+        const activeTerm = activeResponse.data.success ? activeResponse.data.data : null;
 
-        // Get current term info
+        // Get current term info (marked as current in database)
         const currentResponse = await axios.get(`/student/${id}/current-info`);
         const currentInfo = currentResponse.data.success ? currentResponse.data.data : {};
+
+        // Get system info
+        const systemResponse = await axios.get('/system/active-term-session');
+        const systemInfo = systemResponse.data.success ? systemResponse.data : { term: null, session: null };
 
         // Close loading
         Swal.close();
 
         // Show details with tabs
-        showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo);
+        showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, currentInfo);
     } catch (error) {
         Swal.close();
         console.error('Error viewing student:', error);
@@ -3430,11 +3334,6 @@ function populateEditForm(student) {
         calculateAge(student.dateofbirth, 'editAgeInput');
     }
 
-    // Set state and LGA
-    setTimeout(() => {
-        setStateAndLGA('editState', 'editLocal', student.state || '', student.local || '');
-    }, 100);
-
     // Update form action
     const form = document.getElementById('editStudentForm');
     if (form && student.id) {
@@ -3442,8 +3341,8 @@ function populateEditForm(student) {
     }
 }
 
-// Show Student Details with Tabs
-function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) {
+// Show Student Details with Tabs - UPDATED with Active Term
+function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, currentInfo) {
     // Format date of birth
     const dob = student.dateofbirth ?
         new Date(student.dateofbirth).toLocaleDateString('en-US', {
@@ -3454,6 +3353,10 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) 
 
     // Calculate age
     const age = student.age || calculateAge(student.dateofbirth);
+
+    // Determine if student is active in current system term
+    const isActiveInCurrentTerm = activeTerm !== null;
+    const hasCurrentTermFlag = currentInfo && currentInfo.is_current;
 
     // Prepare the content HTML with tabs
     const content = `
@@ -3470,12 +3373,6 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) 
                     <button class="nav-link" id="academic-tab" data-bs-toggle="tab"
                             data-bs-target="#academic" type="button" role="tab">
                         <i class="fas fa-graduation-cap me-2"></i>Academic
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="parents-tab" data-bs-toggle="tab"
-                            data-bs-target="#parents" type="button" role="tab">
-                        <i class="fas fa-users me-2"></i>Parents
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -3538,22 +3435,6 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) 
                                     <label class="form-label text-muted">Permanent Address</label>
                                     <p class="fw-bold">${student.permanent_address || 'N/A'}</p>
                                 </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">State of Origin</label>
-                                    <p class="fw-bold">${student.state || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">LGA</label>
-                                    <p class="fw-bold">${student.local || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">City</label>
-                                    <p class="fw-bold">${student.city || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Mother Tongue</label>
-                                    <p class="fw-bold">${student.mother_tongue || 'N/A'}</p>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -3568,33 +3449,25 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) 
                                 <div class="col-md-6 mb-3">
                                     <div class="card">
                                         <div class="card-header bg-info text-white">
-                                            <h6 class="mb-0">Current Academic Status</h6>
+                                            <h6 class="mb-0">System Status</h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="row">
                                                 <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Current Class</label>
-                                                    <p class="fw-bold">${currentInfo.current_class || student.schoolclass || 'N/A'} ${currentInfo.current_class_arm || student.arm || ''}</p>
+                                                    <label class="form-label text-muted">Active School Term</label>
+                                                    <p class="fw-bold">${systemInfo.term ? systemInfo.term.term : 'N/A'}</p>
                                                 </div>
                                                 <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Current Term</label>
-                                                    <p class="fw-bold">${currentInfo.current_term || 'N/A'}</p>
+                                                    <label class="form-label text-muted">Active Session</label>
+                                                    <p class="fw-bold">${systemInfo.session ? systemInfo.session.session : 'N/A'}</p>
                                                 </div>
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Current Session</label>
-                                                    <p class="fw-bold">${currentInfo.current_session || 'N/A'}</p>
-                                                </div>
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Student Category</label>
-                                                    <p class="fw-bold">${student.student_category || 'N/A'}</p>
-                                                </div>
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">School House</label>
-                                                    <p class="fw-bold">${student.sport_house || 'N/A'}</p>
-                                                </div>
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Admission Date</label>
-                                                    <p class="fw-bold">${student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : 'N/A'}</p>
+                                                <div class="col-md-12 mb-2">
+                                                    <label class="form-label text-muted">Student Status</label>
+                                                    <p class="fw-bold">
+                                                        ${isActiveInCurrentTerm
+                                                            ? '<span class="badge bg-success">Active in Current Term</span>'
+                                                            : '<span class="badge bg-warning">Not in Current Term</span>'}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -3602,111 +3475,37 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) 
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <div class="card">
-                                        <div class="card-header bg-warning text-white">
-                                            <h6 class="mb-0">System Status</h6>
+                                        <div class="card-header bg-success text-white">
+                                            <h6 class="mb-0">Student's Current Status</h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="row">
+                                                ${activeTerm ? `
                                                 <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Active School Term</label>
-                                                    <p class="fw-bold">${systemInfo.term ? systemInfo.term.name : 'N/A'}</p>
+                                                    <label class="form-label text-muted">Active Class</label>
+                                                    <p class="fw-bold">${activeTerm.schoolClass ? activeTerm.schoolClass.schoolclass : 'N/A'} ${activeTerm.schoolClass && activeTerm.schoolClass.armRelation ? activeTerm.schoolClass.armRelation.arm : ''}</p>
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">Active Term</label>
+                                                    <p class="fw-bold">${activeTerm.term ? activeTerm.term.term : 'N/A'}</p>
                                                 </div>
                                                 <div class="col-md-6 mb-2">
                                                     <label class="form-label text-muted">Active Session</label>
-                                                    <p class="fw-bold">${systemInfo.session ? systemInfo.session.name : 'N/A'}</p>
+                                                    <p class="fw-bold">${activeTerm.session ? activeTerm.session.session : 'N/A'}</p>
                                                 </div>
-                                                <div class="col-md-12 mb-2">
-                                                    <label class="form-label text-muted">Is Current Student Active?</label>
-                                                    <p class="fw-bold">
-                                                        ${systemInfo.term && systemInfo.session &&
-                                                          currentInfo.current_term === systemInfo.term.name &&
-                                                          currentInfo.current_session === systemInfo.session.name
-                                                          ? '<span class="badge bg-success">Yes</span>'
-                                                          : '<span class="badge bg-warning">No</span>'}
-                                                    </p>
+                                                ` : `
+                                                <div class="col-12">
+                                                    <p class="text-warning"><i class="fas fa-exclamation-triangle me-2"></i>No active term registration found</p>
+                                                </div>
+                                                `}
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">Student Category</label>
+                                                    <p class="fw-bold">${student.student_category || 'N/A'}</p>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            <!-- Previous School Information -->
-                            ${(student.last_school || student.last_class || student.reason_for_leaving) ? `
-                            <div class="card mt-3">
-                                <div class="card-header bg-secondary text-white">
-                                    <h6 class="mb-0"><i class="fas fa-school me-2"></i>Previous School Information</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        ${student.last_school ? `
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label text-muted">Last School Attended</label>
-                                            <p class="fw-bold">${student.last_school}</p>
-                                        </div>
-                                        ` : ''}
-                                        ${student.last_class ? `
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label text-muted">Last Class Attended</label>
-                                            <p class="fw-bold">${student.last_class}</p>
-                                        </div>
-                                        ` : ''}
-                                        ${student.reason_for_leaving ? `
-                                        <div class="col-md-12 mb-2">
-                                            <label class="form-label text-muted">Reason for Leaving</label>
-                                            <p class="fw-bold">${student.reason_for_leaving}</p>
-                                        </div>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Parent/Guardian Information Tab -->
-                <div class="tab-pane fade" id="parents" role="tabpanel">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <h6 class="text-primary mb-3"><i class="fas fa-users me-2"></i>Parent/Guardian Information</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Father's Name</label>
-                                    <p class="fw-bold">${student.father_name || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Father's Phone</label>
-                                    <p class="fw-bold">${student.father_phone || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Mother's Name</label>
-                                    <p class="fw-bold">${student.mother_name || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Mother's Phone</label>
-                                    <p class="fw-bold">${student.mother_phone || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Parent's Email</label>
-                                    <p class="fw-bold">${student.parent_email || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Parent's Address</label>
-                                    <p class="fw-bold">${student.parent_address || 'N/A'}</p>
-                                </div>
-                                ${student.father_occupation ? `
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Father's Occupation</label>
-                                    <p class="fw-bold">${student.father_occupation}</p>
-                                </div>
-                                ` : ''}
-                                ${student.father_city ? `
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Father's City</label>
-                                    <p class="fw-bold">${student.father_city}</p>
-                                </div>
-                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -3718,24 +3517,28 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) 
                         <div class="col-md-12">
                             <h6 class="text-primary mb-3"><i class="fas fa-history me-2"></i>Registered Terms History</h6>
 
-                            <!-- Current Term Info -->
+                            <!-- Current Term Status -->
                             <div class="card mb-4">
-                                <div class="card-header bg-success text-white">
-                                    <h6 class="mb-0">Current Term Status</h6>
+                                <div class="card-header ${isActiveInCurrentTerm ? 'bg-success' : 'bg-warning'} text-white">
+                                    <h6 class="mb-0">Active Term Status</h6>
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-4">
-                                            <label class="form-label text-muted">Current Class</label>
-                                            <p class="fw-bold">${currentInfo.current_class || 'Not Set'}</p>
+                                            <label class="form-label text-muted">System Active Term</label>
+                                            <p class="fw-bold">${systemInfo.term ? systemInfo.term.term : 'Not Set'}</p>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label text-muted">Current Term</label>
-                                            <p class="fw-bold">${currentInfo.current_term || 'Not Set'}</p>
+                                            <label class="form-label text-muted">System Active Session</label>
+                                            <p class="fw-bold">${systemInfo.session ? systemInfo.session.session : 'Not Set'}</p>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label text-muted">Current Session</label>
-                                            <p class="fw-bold">${currentInfo.current_session || 'Not Set'}</p>
+                                            <label class="form-label text-muted">Student Status</label>
+                                            <p class="fw-bold">
+                                                ${isActiveInCurrentTerm
+                                                    ? '<span class="badge bg-success">Registered in Active Term</span>'
+                                                    : '<span class="badge bg-warning">Not Registered in Active Term</span>'}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -3761,20 +3564,29 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) 
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                ${allTerms.map(term => `
-                                                <tr class="${term.is_current ? 'table-success' : ''}">
-                                                    <td>${term.term_name || 'N/A'}</td>
-                                                    <td>${term.session_name || 'N/A'}</td>
-                                                    <td>${term.class_name || 'N/A'}</td>
-                                                    <td>${term.arm_name || 'N/A'}</td>
-                                                    <td>
-                                                        ${term.is_current ?
-                                                            '<span class="badge bg-success">Current</span>' :
-                                                            '<span class="badge bg-secondary">Past</span>'}
-                                                    </td>
-                                                    <td>${term.created_at ? new Date(term.created_at).toLocaleDateString() : 'N/A'}</td>
-                                                </tr>
-                                                `).join('')}
+                                                ${allTerms.map(term => {
+                                                    const isCurrentSystemTerm =
+                                                        systemInfo.term && systemInfo.session &&
+                                                        term.term_id == systemInfo.term.id &&
+                                                        term.session_id == systemInfo.session.id;
+                                                    const isMarkedCurrent = term.is_current;
+                                                    return `
+                                                    <tr class="${isCurrentSystemTerm ? 'table-success' : isMarkedCurrent ? 'table-info' : ''}">
+                                                        <td>${term.term_name || 'N/A'}</td>
+                                                        <td>${term.session_name || 'N/A'}</td>
+                                                        <td>${term.class_name || 'N/A'}</td>
+                                                        <td>${term.arm_name || 'N/A'}</td>
+                                                        <td>
+                                                            ${isCurrentSystemTerm
+                                                                ? '<span class="badge bg-success">Active System Term</span>'
+                                                                : isMarkedCurrent
+                                                                ? '<span class="badge bg-info">Marked as Current</span>'
+                                                                : '<span class="badge bg-secondary">Past</span>'}
+                                                        </td>
+                                                        <td>${term.created_at ? new Date(term.created_at).toLocaleDateString() : 'N/A'}</td>
+                                                    </tr>
+                                                    `;
+                                                }).join('')}
                                             </tbody>
                                         </table>
                                     </div>
@@ -3787,13 +3599,14 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) 
                                 </div>
                             </div>
 
-                            <!-- Registration Rules -->
+                            <!-- Registration Info -->
                             <div class="alert alert-info mt-3">
-                                <h6><i class="fas fa-info-circle me-2"></i>Term Registration Rules</h6>
+                                <h6><i class="fas fa-info-circle me-2"></i>Term Registration Information</h6>
                                 <ul class="mb-0">
-                                    <li>A student cannot have the same term registered twice in the same session</li>
-                                    <li>Current term is determined by the active term in the system</li>
-                                    <li>Only one term can be marked as "current" at any time</li>
+                                    <li><strong>Active System Term:</strong> The term currently marked as "active" in the system settings</li>
+                                    <li><strong>Marked as Current:</strong> Term manually marked as current for this student</li>
+                                    <li>Students can be registered for multiple terms in the same session</li>
+                                    <li>Only one term can be marked as "current" per student at any time</li>
                                 </ul>
                             </div>
                         </div>
@@ -3822,38 +3635,6 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) 
 function showEditModal() {
     const modal = new bootstrap.Modal(document.getElementById('editStudentModal'));
     modal.show();
-}
-
-// Edit Student from View
-function editStudentFromView() {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('viewStudentModal'));
-    modal.hide();
-
-    // Get the student ID from the view modal
-    setTimeout(() => {
-        const viewContent = document.getElementById('viewStudentContent');
-        const studentName = viewContent.querySelector('h4')?.textContent || '';
-
-        Swal.fire({
-            title: 'Edit Student',
-            text: `Ready to edit ${studentName}. Please confirm.`,
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonText: 'Continue',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // You might want to store the current student ID globally
-                // For now, we'll just show a message
-                Swal.fire({
-                    title: 'Redirecting',
-                    text: 'Please select the student from the list to edit.',
-                    icon: 'info',
-                    confirmButtonText: 'OK'
-                });
-            }
-        });
-    }, 300);
 }
 
 // ============================================================================
@@ -4016,7 +3797,8 @@ async function updateCurrentTerm() {
             student_ids: selectedIds,
             schoolclassId: classId,
             termId: termId,
-            sessionId: sessionId
+            sessionId: sessionId,
+            is_current: true
         };
 
         // Make the API call
@@ -4523,7 +4305,7 @@ function generatePlaceholderImage(text = 'PHOTO') {
 }
 
 // Preview Image
-function previewImage(input, targetId = 'addStudentAvatar') {
+window.previewImage = function(input, targetId = 'addStudentAvatar') {
     const file = input.files[0];
     const reader = new FileReader();
 
@@ -4534,12 +4316,7 @@ function previewImage(input, targetId = 'addStudentAvatar') {
     if (file) {
         reader.readAsDataURL(file);
     }
-}
-
-// Initialize Form Validation
-function initializeFormValidation() {
-    // Add your form validation logic here
-}
+};
 
 // Ensure Axios and CSRF token
 function ensureAxios() {
@@ -4572,6 +4349,5 @@ function ensureAxios() {
 
 // Initialize the application
 initializeApplication();
-
 </script>
 @endsection
