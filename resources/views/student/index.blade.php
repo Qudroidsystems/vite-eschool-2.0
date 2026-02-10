@@ -3342,7 +3342,7 @@ function populateEditForm(student) {
 }
 
 // Show Student Details with Tabs - UPDATED with Active Term
-function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, currentInfo) {
+function showStudentDetailsWithTabs(student, allTerms = [], systemInfo = { term: null, session: null }, activeTerm = null, currentInfo = {}) {
     // Format date of birth
     const dob = student.dateofbirth ?
         new Date(student.dateofbirth).toLocaleDateString('en-US', {
@@ -3354,8 +3354,65 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, c
     // Calculate age
     const age = student.age || calculateAge(student.dateofbirth);
 
+    // Extract system term/session names
+    const systemTermName = systemInfo.term ? (systemInfo.term.term || systemInfo.term.name || 'Not Set') : 'Not Set';
+    const systemSessionName = systemInfo.session ? (systemInfo.session.session || systemInfo.session.name || 'Not Set') : 'Not Set';
+    const systemTermId = systemInfo.term ? systemInfo.term.id : null;
+    const systemSessionId = systemInfo.session ? systemInfo.session.id : null;
+
+    // Extract active term details
+    let activeTermName = 'N/A';
+    let activeSessionName = 'N/A';
+    let activeClassName = 'N/A';
+    let activeArmName = 'N/A';
+    let activeTermId = null;
+    let activeSessionId = null;
+
+    if (activeTerm) {
+        if (typeof activeTerm === 'object') {
+            // Handle different response formats
+            if (activeTerm.term && activeTerm.term.term) {
+                activeTermName = activeTerm.term.term;
+                activeTermId = activeTerm.term.id;
+            } else if (activeTerm.term_name) {
+                activeTermName = activeTerm.term_name;
+                activeTermId = activeTerm.term_id;
+            }
+
+            if (activeTerm.session && activeTerm.session.session) {
+                activeSessionName = activeTerm.session.session;
+                activeSessionId = activeTerm.session.id;
+            } else if (activeTerm.session_name) {
+                activeSessionName = activeTerm.session_name;
+                activeSessionId = activeTerm.session_id;
+            }
+
+            if (activeTerm.schoolClass && activeTerm.schoolClass.schoolclass) {
+                activeClassName = activeTerm.schoolClass.schoolclass;
+            } else if (activeTerm.class_name) {
+                activeClassName = activeTerm.class_name;
+            }
+
+            if (activeTerm.schoolClass && activeTerm.schoolClass.armRelation && activeTerm.schoolClass.armRelation.arm) {
+                activeArmName = activeTerm.schoolClass.armRelation.arm;
+            } else if (activeTerm.arm_name) {
+                activeArmName = activeTerm.arm_name;
+            }
+        }
+    }
+
+    // Get current info details
+    let currentTermName = currentInfo.current_term || 'N/A';
+    let currentSessionName = currentInfo.current_session || 'N/A';
+    let currentClassName = currentInfo.current_class || 'N/A';
+    let currentArmName = currentInfo.current_class_arm || 'N/A';
+
     // Determine if student is active in current system term
-    const isActiveInCurrentTerm = activeTerm !== null;
+    const isActiveInCurrentTerm = activeTerm !== null &&
+                                 systemTermId && systemSessionId &&
+                                 activeTermId == systemTermId &&
+                                 activeSessionId == systemSessionId;
+
     const hasCurrentTermFlag = currentInfo && currentInfo.is_current;
 
     // Prepare the content HTML with tabs
@@ -3392,8 +3449,8 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, c
                             <div class="avatar-container" style="width: 150px; height: 150px; margin: 0 auto;">
                                 ${getStudentAvatar(student, true)}
                             </div>
-                            <h4 class="mt-3">${student.firstname} ${student.lastname}</h4>
-                            <p class="text-muted">${student.admissionNo}</p>
+                            <h4 class="mt-3">${student.firstname || ''} ${student.lastname || ''}</h4>
+                            <p class="text-muted">${student.admissionNo || 'No admission number'}</p>
                             ${getStatusBadge(student, true)}
                         </div>
                         <div class="col-md-8">
@@ -3415,25 +3472,13 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, c
                                     <label class="form-label text-muted">Religion</label>
                                     <p class="fw-bold">${student.religion || 'N/A'}</p>
                                 </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Nationality</label>
-                                    <p class="fw-bold">${student.nationality || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Blood Group</label>
-                                    <p class="fw-bold">${student.blood_group || 'N/A'}</p>
+                                <div class="col-md-12 mb-2">
+                                    <label class="form-label text-muted">Phone Number</label>
+                                    <p class="fw-bold">${student.phone_number || 'N/A'}</p>
                                 </div>
                                 <div class="col-md-12 mb-2">
-                                    <label class="form-label text-muted">Place of Birth</label>
-                                    <p class="fw-bold">${student.placeofbirth || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-12 mb-2">
-                                    <label class="form-label text-muted">Future Ambition</label>
-                                    <p class="fw-bold">${student.future_ambition || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-12 mb-2">
-                                    <label class="form-label text-muted">Permanent Address</label>
-                                    <p class="fw-bold">${student.permanent_address || 'N/A'}</p>
+                                    <label class="form-label text-muted">Email</label>
+                                    <p class="fw-bold">${student.email || 'N/A'}</p>
                                 </div>
                             </div>
                         </div>
@@ -3455,11 +3500,11 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, c
                                             <div class="row">
                                                 <div class="col-md-6 mb-2">
                                                     <label class="form-label text-muted">Active School Term</label>
-                                                    <p class="fw-bold">${systemInfo.term ? systemInfo.term.term : 'N/A'}</p>
+                                                    <p class="fw-bold">${systemTermName}</p>
                                                 </div>
                                                 <div class="col-md-6 mb-2">
                                                     <label class="form-label text-muted">Active Session</label>
-                                                    <p class="fw-bold">${systemInfo.session ? systemInfo.session.session : 'N/A'}</p>
+                                                    <p class="fw-bold">${systemSessionName}</p>
                                                 </div>
                                                 <div class="col-md-12 mb-2">
                                                     <label class="form-label text-muted">Student Status</label>
@@ -3475,34 +3520,39 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, c
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <div class="card">
-                                        <div class="card-header bg-success text-white">
-                                            <h6 class="mb-0">Student's Current Status</h6>
+                                        <div class="card-header ${activeTerm ? 'bg-success' : 'bg-warning'} text-white">
+                                            <h6 class="mb-0">${activeTerm ? 'Active Term Registration' : 'No Active Term'}</h6>
                                         </div>
                                         <div class="card-body">
+                                            ${activeTerm ? `
                                             <div class="row">
-                                                ${activeTerm ? `
                                                 <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Active Class</label>
-                                                    <p class="fw-bold">${activeTerm.schoolClass ? activeTerm.schoolClass.schoolclass : 'N/A'} ${activeTerm.schoolClass && activeTerm.schoolClass.armRelation ? activeTerm.schoolClass.armRelation.arm : ''}</p>
+                                                    <label class="form-label text-muted">Class</label>
+                                                    <p class="fw-bold">${activeClassName} ${activeArmName}</p>
                                                 </div>
                                                 <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Active Term</label>
-                                                    <p class="fw-bold">${activeTerm.term ? activeTerm.term.term : 'N/A'}</p>
+                                                    <label class="form-label text-muted">Term</label>
+                                                    <p class="fw-bold">${activeTermName}</p>
                                                 </div>
                                                 <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Active Session</label>
-                                                    <p class="fw-bold">${activeTerm.session ? activeTerm.session.session : 'N/A'}</p>
+                                                    <label class="form-label text-muted">Session</label>
+                                                    <p class="fw-bold">${activeSessionName}</p>
                                                 </div>
-                                                ` : `
-                                                <div class="col-12">
-                                                    <p class="text-warning"><i class="fas fa-exclamation-triangle me-2"></i>No active term registration found</p>
-                                                </div>
-                                                `}
                                                 <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Student Category</label>
-                                                    <p class="fw-bold">${student.student_category || 'N/A'}</p>
+                                                    <label class="form-label text-muted">Marked as Current</label>
+                                                    <p class="fw-bold">
+                                                        ${hasCurrentTermFlag
+                                                            ? '<span class="badge bg-info">Yes</span>'
+                                                            : '<span class="badge bg-secondary">No</span>'}
+                                                    </p>
                                                 </div>
                                             </div>
+                                            ` : `
+                                            <div class="text-center py-3">
+                                                <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
+                                                <p class="text-muted mb-0">Student is not registered in the current active term</p>
+                                            </div>
+                                            `}
                                         </div>
                                     </div>
                                 </div>
@@ -3516,33 +3566,6 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, c
                     <div class="row">
                         <div class="col-md-12">
                             <h6 class="text-primary mb-3"><i class="fas fa-history me-2"></i>Registered Terms History</h6>
-
-                            <!-- Current Term Status -->
-                            <div class="card mb-4">
-                                <div class="card-header ${isActiveInCurrentTerm ? 'bg-success' : 'bg-warning'} text-white">
-                                    <h6 class="mb-0">Active Term Status</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <label class="form-label text-muted">System Active Term</label>
-                                            <p class="fw-bold">${systemInfo.term ? systemInfo.term.term : 'Not Set'}</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label text-muted">System Active Session</label>
-                                            <p class="fw-bold">${systemInfo.session ? systemInfo.session.session : 'Not Set'}</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label text-muted">Student Status</label>
-                                            <p class="fw-bold">
-                                                ${isActiveInCurrentTerm
-                                                    ? '<span class="badge bg-success">Registered in Active Term</span>'
-                                                    : '<span class="badge bg-warning">Not Registered in Active Term</span>'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
                             <!-- All Registered Terms -->
                             <div class="card">
@@ -3566,9 +3589,9 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, c
                                             <tbody>
                                                 ${allTerms.map(term => {
                                                     const isCurrentSystemTerm =
-                                                        systemInfo.term && systemInfo.session &&
-                                                        term.term_id == systemInfo.term.id &&
-                                                        term.session_id == systemInfo.session.id;
+                                                        systemTermId && systemSessionId &&
+                                                        term.term_id == systemTermId &&
+                                                        term.session_id == systemSessionId;
                                                     const isMarkedCurrent = term.is_current;
                                                     return `
                                                     <tr class="${isCurrentSystemTerm ? 'table-success' : isMarkedCurrent ? 'table-info' : ''}">
@@ -3598,17 +3621,6 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, c
                                     `}
                                 </div>
                             </div>
-
-                            <!-- Registration Info -->
-                            <div class="alert alert-info mt-3">
-                                <h6><i class="fas fa-info-circle me-2"></i>Term Registration Information</h6>
-                                <ul class="mb-0">
-                                    <li><strong>Active System Term:</strong> The term currently marked as "active" in the system settings</li>
-                                    <li><strong>Marked as Current:</strong> Term manually marked as current for this student</li>
-                                    <li>Students can be registered for multiple terms in the same session</li>
-                                    <li>Only one term can be marked as "current" per student at any time</li>
-                                </ul>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -3630,6 +3642,7 @@ function showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, c
         });
     });
 }
+
 
 // Show Edit Modal
 function showEditModal() {

@@ -1724,6 +1724,9 @@ public function getCurrentTerm($studentId)
     }
 }
 
+
+
+
 /**
  * Get student's active term based on system active term
  */
@@ -1757,7 +1760,32 @@ public function getActiveTerm($studentId)
 
         return response()->json([
             'success' => true,
-            'data' => $activeTermRecord
+            'data' => [
+                'id' => $activeTermRecord->id,
+                'studentId' => $activeTermRecord->studentId,
+                'schoolclassId' => $activeTermRecord->schoolclassId,
+                'termId' => $activeTermRecord->termId,
+                'sessionId' => $activeTermRecord->sessionId,
+                'is_current' => $activeTermRecord->is_current,
+                'schoolClass' => $activeTermRecord->schoolClass ? [
+                    'id' => $activeTermRecord->schoolClass->id,
+                    'schoolclass' => $activeTermRecord->schoolClass->schoolclass,
+                    'armRelation' => $activeTermRecord->schoolClass->armRelation ? [
+                        'id' => $activeTermRecord->schoolClass->armRelation->id,
+                        'arm' => $activeTermRecord->schoolClass->armRelation->arm
+                    ] : null
+                ] : null,
+                'term' => $activeTermRecord->term ? [
+                    'id' => $activeTermRecord->term->id,
+                    'term' => $activeTermRecord->term->term, // Field is 'term' not 'name'
+                    'status' => $activeTermRecord->term->status
+                ] : null,
+                'session' => $activeTermRecord->session ? [
+                    'id' => $activeTermRecord->session->id,
+                    'session' => $activeTermRecord->session->session, // Field is 'session' not 'name'
+                    'status' => $activeTermRecord->session->status
+                ] : null
+            ]
         ]);
     } catch (\Exception $e) {
         return response()->json([
@@ -1766,6 +1794,8 @@ public function getActiveTerm($studentId)
         ], 500);
     }
 }
+
+
 
 /**
  * Get current term info for a student
@@ -1792,14 +1822,14 @@ public function getCurrentInfo($id)
                 'admission_no' => $student->admissionNo,
                 'name' => $student->firstname . ' ' . $student->lastname,
                 'current_class_id' => $currentTerm->schoolclassId,
-                'current_class' => $currentTerm->schoolClass ? $currentTerm->schoolClass->schoolclass : null,
+                'current_class' => $currentTerm->schoolClass ? $currentTerm->schoolClass->schoolclass : 'N/A',
                 'current_class_arm' => $currentTerm->schoolClass && $currentTerm->schoolClass->armRelation
                     ? $currentTerm->schoolClass->armRelation->arm
-                    : null,
+                    : 'N/A',
                 'current_term_id' => $currentTerm->termId,
-                'current_term' => $currentTerm->term ? $currentTerm->term->name : null,
+                'current_term' => $currentTerm->term ? $currentTerm->term->term : 'N/A', // Field is 'term' not 'name'
                 'current_session_id' => $currentTerm->sessionId,
-                'current_session' => $currentTerm->session ? $currentTerm->session->name : null,
+                'current_session' => $currentTerm->session ? $currentTerm->session->session : 'N/A', // Field is 'session' not 'name'
                 'is_current' => $currentTerm->is_current
             ]
         ]);
@@ -1825,15 +1855,16 @@ public function getAllRegisteredTerms($id)
             ->get()
             ->map(function($term) {
                 return [
+                    'id' => $term->id,
                     'term_id' => $term->termId,
-                    'term_name' => $term->term ? $term->term->name : null,
+                    'term_name' => $term->term ? $term->term->term : 'N/A', // Field is 'term' not 'name'
                     'session_id' => $term->sessionId,
-                    'session_name' => $term->session ? $term->session->name : null,
+                    'session_name' => $term->session ? $term->session->session : 'N/A', // Field is 'session' not 'name'
                     'class_id' => $term->schoolclassId,
-                    'class_name' => $term->schoolClass ? $term->schoolClass->schoolclass : null,
+                    'class_name' => $term->schoolClass ? $term->schoolClass->schoolclass : 'N/A',
                     'arm_name' => $term->schoolClass && $term->schoolClass->armRelation
                         ? $term->schoolClass->armRelation->arm
-                        : null,
+                        : 'N/A',
                     'is_current' => $term->is_current,
                     'created_at' => $term->created_at,
                     'updated_at' => $term->updated_at
@@ -1851,7 +1882,6 @@ public function getAllRegisteredTerms($id)
         ], 500);
     }
 }
-
 /**
  * Get students by current class, term, and session
  */

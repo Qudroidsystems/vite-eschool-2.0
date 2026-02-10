@@ -295,14 +295,23 @@ Route::group(['middleware' => ['auth']], function () {
     // ================================================
     // SYSTEM INFO ROUTES
     // ================================================
+   // System Info Routes
     Route::get('/system/active-term-session', function() {
         $activeTerm = \App\Models\Schoolterm::where('status', true)->first();
         $activeSession = \App\Models\Schoolsession::where('status', 'Current')->first();
 
         return response()->json([
             'success' => true,
-            'term' => $activeTerm,
-            'session' => $activeSession
+            'term' => $activeTerm ? [
+                'id' => $activeTerm->id,
+                'term' => $activeTerm->term, // Field is 'term' not 'name'
+                'status' => $activeTerm->status
+            ] : null,
+            'session' => $activeSession ? [
+                'id' => $activeSession->id,
+                'session' => $activeSession->session, // Field is 'session' not 'name'
+                'status' => $activeSession->status
+            ] : null
         ]);
     })->name('system.active-term-session');
 
