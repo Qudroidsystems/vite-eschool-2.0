@@ -74,17 +74,16 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
         foreach ($columns as $col) {
             switch ($col) {
                 case 'photo':
-                    $row[] = ($student->picture && $student->picture !== 'unnamed.jpg') ? 'Yes' : 'No';
+                    // Show student initials or photo status
+                    if ($student->has_photo) {
+                        $row[] = $student->photo_initials ?: 'Photo Available';
+                    } else {
+                        $row[] = 'No Photo';
+                    }
                     break;
 
                 case 'admissionNo':
-                    // Debug: Check what's in the student object
                     $admissionNo = $student->admissionNo ?? $student->admission_no ?? 'N/A';
-                    \Log::info('Excel - Admission No:', [
-                        'admissionNo' => $student->admissionNo ?? 'null',
-                        'admission_no' => $student->admission_no ?? 'null',
-                        'result' => $admissionNo
-                    ]);
                     $row[] = $admissionNo;
                     break;
 
@@ -136,17 +135,14 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                     break;
 
                 case 'gender':
-                    // Debug: Check gender value
                     $gender = $student->gender ?? 'N/A';
-                    \Log::info('Excel - Gender:', [
-                        'gender' => $student->gender ?? 'null',
-                        'result' => $gender
-                    ]);
                     $row[] = $gender;
                     break;
 
                 case 'term':
-                    if ($student->termid) {
+                    if ($student->current_term_name) {
+                        $row[] = $student->current_term_name;
+                    } elseif ($student->termid) {
                         try {
                             $term = \App\Models\Schoolterm::find($student->termid);
                             $row[] = $term ? $term->term : 'N/A';
@@ -159,7 +155,9 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                     break;
 
                 case 'session':
-                    if ($student->sessionid) {
+                    if ($student->current_session_name) {
+                        $row[] = $student->current_session_name;
+                    } elseif ($student->sessionid) {
                         try {
                             $session = \App\Models\Schoolsession::find($student->sessionid);
                             $row[] = $session ? $session->session : 'N/A';

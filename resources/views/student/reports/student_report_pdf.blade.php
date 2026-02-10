@@ -386,30 +386,12 @@
 
                     @if($col == 'photo')
                     <td class="text-center {{ $widthClass }}">
-                        @if($student->picture && $student->picture !== 'unnamed.jpg')
-                            <!-- Try to get the photo from storage -->
-                            @php
-                                $photoPath = storage_path('app/public/images/student_avatars/' . $student->picture);
-                                $publicPath = public_path('storage/images/student_avatars/' . $student->picture);
-                            @endphp
-                            @if(file_exists($photoPath) || file_exists($publicPath))
-                                <img src="{{ $student->picture }}" class="student-photo" alt="Student Photo">
-                            @else
-                                <!-- Show initials as fallback -->
-                                <div class="photo-placeholder">
-                                    @php
-                                        $initials = substr($student->firstname ?? '', 0, 1) . substr($student->lastname ?? '', 0, 1);
-                                    @endphp
-                                    {{ $initials ?: '?' }}
-                                </div>
-                            @endif
+                        @if($student->picture_base64)
+                            <img src="{{ $student->picture_base64 }}" class="student-photo" alt="Student Photo">
                         @else
-                            <!-- Show initials for no photo -->
+                            <!-- Show initials as fallback -->
                             <div class="photo-placeholder">
-                                @php
-                                    $initials = substr($student->firstname ?? '', 0, 1) . substr($student->lastname ?? '', 0, 1);
-                                @endphp
-                                {{ $initials ?: '?' }}
+                                {{ $student->photo_initials ?: '?' }}
                             </div>
                         @endif
                     </td>
