@@ -276,7 +276,7 @@ Route::post('/students/destroy-multiple', [StudentController::class, 'destroyMul
 Route::put('/student/updateclass', [StudentController::class, 'updateClass'])->name('student.updateclass');
 Route::post('/generate-student-pdf', [StudentController::class, 'generateStudentPdf'])->name('student.pdf');
 Route::get('/students/last-admission-number', [StudentController::class, 'getLastAdmissionNumber'])->name('student.getLastAdmissionNumber');
-Route::get('/students/report', [StudentController::class, 'generateReport'])->name('students.report'); // FIXED SYNTAX
+Route::get('/students/report', [StudentController::class, 'generateReport'])->name('students.report');
 
 // System Info Routes
 Route::get('/system/active-term-session', function() {
@@ -292,8 +292,8 @@ Route::get('/system/active-term-session', function() {
 
 // Student Current Term Routes
 Route::prefix('student-current-term')->group(function () {
-    Route::get('/student/{studentId}', [StudentController::class, 'getCurrentTerm']);
-    Route::get('/student/{studentId}/active', [StudentController::class, 'getActiveTerm']); // ADDED THIS MISSING ROUTE
+    Route::get('/student/{studentId}', [StudentController::class, 'getCurrentTerm']); // For current marked term
+    Route::get('/student/{studentId}/active', [StudentController::class, 'getActiveTerm']); // For system active term
     Route::put('/student/{studentId}', [StudentController::class, 'updateCurrentTerm']);
     Route::post('/bulk-update', [StudentController::class, 'bulkUpdateCurrentTerm'])->name('student.current-term.bulk-update');
     Route::get('/students', [StudentController::class, 'getStudentsByCurrentFilters']);
@@ -302,10 +302,6 @@ Route::prefix('student-current-term')->group(function () {
 // Student Term History Routes
 Route::get('/student/{id}/current-info', [StudentController::class, 'getCurrentInfo'])->name('student.current-info');
 Route::get('/student/{id}/all-terms', [StudentController::class, 'getAllRegisteredTerms'])->name('student.all-terms');
-
-// REMOVE THIS DUPLICATE LINE:
-// Route::get('/students/data', [StudentController::class, 'data'])->name('students.data');
-// Route::resource('student', StudentController::class); // This is already defined above
 
 
 

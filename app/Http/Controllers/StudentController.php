@@ -1686,135 +1686,8 @@ class StudentController extends Controller
         return null;
     }
 
-    /**
-     * Get current term info for a student
-     */
-    public function getCurrentInfo($id)
-    {
-        try {
-            $student = Student::with(['currentTerm.schoolClass.armRelation', 'currentTerm.term', 'currentTerm.session'])
-                ->findOrFail($id);
-
-            if (!$student->currentTerm) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No current term assigned to this student'
-                ], 404);
-            }
-
-            $currentTerm = $student->currentTerm;
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'student_id' => $student->id,
-                    'admission_no' => $student->admissionNo,
-                    'name' => $student->firstname . ' ' . $student->lastname,
-                    'current_class_id' => $currentTerm->schoolclassId,
-                    'current_class' => $currentTerm->schoolClass ? $currentTerm->schoolClass->schoolclass : null,
-                    'current_class_arm' => $currentTerm->schoolClass && $currentTerm->schoolClass->armRelation
-                        ? $currentTerm->schoolClass->armRelation->arm
-                        : null,
-                    'current_term_id' => $currentTerm->termId,
-                    'current_term' => $currentTerm->term ? $currentTerm->term->name : null,
-                    'current_session_id' => $currentTerm->sessionId,
-                    'current_session' => $currentTerm->session ? $currentTerm->session->name : null,
-                    'is_current' => $currentTerm->is_current
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching current info: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get all registered terms for a student
-     */
-    public function getAllRegisteredTerms($id)
-    {
-        try {
-            $terms = StudentCurrentTerm::where('studentId', $id)
-                ->with(['schoolClass.armRelation', 'term', 'session'])
-                ->orderBy('sessionId', 'desc')
-                ->orderBy('termId', 'desc')
-                ->get()
-                ->map(function($term) {
-                    return [
-                        'term_id' => $term->termId,
-                        'term_name' => $term->term ? $term->term->name : null,
-                        'session_id' => $term->sessionId,
-                        'session_name' => $term->session ? $term->session->name : null,
-                        'class_id' => $term->schoolclassId,
-                        'class_name' => $term->schoolClass ? $term->schoolClass->schoolclass : null,
-                        'arm_name' => $term->schoolClass && $term->schoolClass->armRelation
-                            ? $term->schoolClass->armRelation->arm
-                            : null,
-                        'is_current' => $term->is_current,
-                        'created_at' => $term->created_at,
-                        'updated_at' => $term->updated_at
-                    ];
-                });
-
-            return response()->json([
-                'success' => true,
-                'data' => $terms
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching registered terms: ' . $e->getMessage()
-            ], 500);
-        }
-    }
 
 
-
-    /**
-     * Get students by current class, term, and session
-     */
-    public function getStudentsByCurrentFilters(Request $request)
-    {
-        $request->validate([
-            'classId' => 'nullable|exists:schoolclass,id',
-            'termId' => 'nullable|exists:schoolterm,id',
-            'sessionId' => 'nullable|exists:schoolsession,id'
-        ]);
-
-        try {
-            $query = StudentCurrentTerm::with(['student', 'schoolClass', 'term', 'session'])
-                ->where('is_current', true);
-
-            if ($request->filled('classId')) {
-                $query->where('schoolclassId', $request->classId);
-            }
-
-            if ($request->filled('termId')) {
-                $query->where('termId', $request->termId);
-            }
-
-            if ($request->filled('sessionId')) {
-                $query->where('sessionId', $request->sessionId);
-            }
-
-            $students = $query->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $students
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching students: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-  
 
 
 
@@ -1825,7 +1698,7 @@ class StudentController extends Controller
 
 
     /**
- * Get student's current term
+ * Get student's current term (marked as current in database)
  */
 public function getCurrentTerm($studentId)
 {
@@ -1857,23 +1730,165 @@ public function getCurrentTerm($studentId)
 public function getActiveTerm($studentId)
 {
     try {
-        $activeTerm = StudentCurrentTerm::getActiveTermForStudent($studentId);
+        // Get system active term and session
+        $activeTerm = Schoolterm::where('status', true)->first();
+        $activeSession = Schoolsession::where('status', 'Current')->first();
 
-        if (!$activeTerm) {
+        if (!$activeTerm || !$activeSession) {
             return response()->json([
                 'success' => false,
-                'message' => 'No active term found for student based on current system term'
+                'message' => 'No active term or session found in system'
+            ], 404);
+        }
+
+        // Find the student's term record for the active system term
+        $activeTermRecord = StudentCurrentTerm::with(['schoolClass.armRelation', 'term', 'session'])
+            ->where('studentId', $studentId)
+            ->where('termId', $activeTerm->id)
+            ->where('sessionId', $activeSession->id)
+            ->first();
+
+        if (!$activeTermRecord) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student is not registered in the current active term'
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $activeTerm
+            'data' => $activeTermRecord
         ]);
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
             'message' => 'Error fetching active term: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get current term info for a student
+ */
+public function getCurrentInfo($id)
+{
+    try {
+        $student = Student::with(['currentTerm.schoolClass.armRelation', 'currentTerm.term', 'currentTerm.session'])
+            ->findOrFail($id);
+
+        if (!$student->currentTerm) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No current term assigned to this student'
+            ], 404);
+        }
+
+        $currentTerm = $student->currentTerm;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'student_id' => $student->id,
+                'admission_no' => $student->admissionNo,
+                'name' => $student->firstname . ' ' . $student->lastname,
+                'current_class_id' => $currentTerm->schoolclassId,
+                'current_class' => $currentTerm->schoolClass ? $currentTerm->schoolClass->schoolclass : null,
+                'current_class_arm' => $currentTerm->schoolClass && $currentTerm->schoolClass->armRelation
+                    ? $currentTerm->schoolClass->armRelation->arm
+                    : null,
+                'current_term_id' => $currentTerm->termId,
+                'current_term' => $currentTerm->term ? $currentTerm->term->name : null,
+                'current_session_id' => $currentTerm->sessionId,
+                'current_session' => $currentTerm->session ? $currentTerm->session->name : null,
+                'is_current' => $currentTerm->is_current
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching current info: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get all registered terms for a student
+ */
+public function getAllRegisteredTerms($id)
+{
+    try {
+        $terms = StudentCurrentTerm::where('studentId', $id)
+            ->with(['schoolClass.armRelation', 'term', 'session'])
+            ->orderBy('sessionId', 'desc')
+            ->orderBy('termId', 'desc')
+            ->get()
+            ->map(function($term) {
+                return [
+                    'term_id' => $term->termId,
+                    'term_name' => $term->term ? $term->term->name : null,
+                    'session_id' => $term->sessionId,
+                    'session_name' => $term->session ? $term->session->name : null,
+                    'class_id' => $term->schoolclassId,
+                    'class_name' => $term->schoolClass ? $term->schoolClass->schoolclass : null,
+                    'arm_name' => $term->schoolClass && $term->schoolClass->armRelation
+                        ? $term->schoolClass->armRelation->arm
+                        : null,
+                    'is_current' => $term->is_current,
+                    'created_at' => $term->created_at,
+                    'updated_at' => $term->updated_at
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $terms
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching registered terms: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get students by current class, term, and session
+ */
+public function getStudentsByCurrentFilters(Request $request)
+{
+    $request->validate([
+        'classId' => 'nullable|exists:schoolclass,id',
+        'termId' => 'nullable|exists:schoolterm,id',
+        'sessionId' => 'nullable|exists:schoolsession,id'
+    ]);
+
+    try {
+        $query = StudentCurrentTerm::with(['student', 'schoolClass', 'term', 'session'])
+            ->where('is_current', true);
+
+        if ($request->filled('classId')) {
+            $query->where('schoolclassId', $request->classId);
+        }
+
+        if ($request->filled('termId')) {
+            $query->where('termId', $request->termId);
+        }
+
+        if ($request->filled('sessionId')) {
+            $query->where('sessionId', $request->sessionId);
+        }
+
+        $students = $query->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $students
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching students: ' . $e->getMessage()
         ], 500);
     }
 }
