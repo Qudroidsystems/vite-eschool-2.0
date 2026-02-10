@@ -1729,55 +1729,6 @@ class StudentController extends Controller
 
 
 
-    /**
-     * Get school logo as base64 string
-     */
-    private function getSchoolLogoBase64($schoolInfo)
-    {
-        try {
-            $logoUrl = $schoolInfo->getLogoUrlAttribute();
-            if ($logoUrl) {
-                if (filter_var($logoUrl, FILTER_VALIDATE_URL)) {
-                    $context = stream_context_create([
-                        'ssl' => [
-                            'verify_peer' => false,
-                            'verify_peer_name' => false,
-                        ],
-                    ]);
-
-                    $imageData = @file_get_contents($logoUrl, false, $context);
-                    if ($imageData !== false) {
-                        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-                        $mimeType = $finfo->buffer($imageData);
-
-                        if (strpos($mimeType, 'image/') === 0) {
-                            return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
-                        }
-                    }
-                }
-                elseif (file_exists(public_path($logoUrl))) {
-                    $imagePath = public_path($logoUrl);
-                    $imageData = file_get_contents($imagePath);
-                    $mimeType = mime_content_type($imagePath);
-
-                    if (strpos($mimeType, 'image/') === 0) {
-                        return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            \Log::error('Error converting logo to base64: ' . $e->getMessage());
-        }
-
-        return null;
-    }
-
-
-
-
-
-
-
 
 
 
