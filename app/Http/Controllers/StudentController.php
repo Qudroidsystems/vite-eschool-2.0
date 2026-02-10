@@ -69,7 +69,7 @@ class StudentController extends Controller
         $schoolterms = Schoolterm::select('id', 'term as name')->get();
         $schoolsessions = Schoolsession::select('id', 'session as name')->get();
         $currentSession = Schoolsession::where('status', 'Current')->first();
-        $schoolhouses = Schoolhouse::all(); // Fetch all school houses
+        $schoolhouses = Schoolhouse::all();
 
         // Status counts
         $status_counts = Student::groupBy('statusId')
@@ -120,7 +120,7 @@ class StudentController extends Controller
             $query->whereNotIn('name', ['Student']);
         })->count();
 
-        $currentTerm = Schoolterm::where('status', 'Current')->first(); // Add this
+        $currentTerm = Schoolterm::where('status', 'Current')->first();
 
         return view('student.index', compact(
             'schoolclasses',
@@ -135,7 +135,7 @@ class StudentController extends Controller
             'pagetitle',
             'total_population',
             'staff_count',
-            'currentTerm', // Add this
+            'currentTerm',
         ));
     }
 
@@ -158,7 +158,7 @@ class StudentController extends Controller
                     'max:255',
                     'unique:studentRegistration,admissionNo',
                     Rule::when($request->admissionMode === 'auto', [
-                        'regex:/^CSSK\/STD\/\d{4}\/\d{4}$/' // Ensure format like CSSK/STD/YYYY/0871
+                        'regex:/^CSSK\/STD\/\d{4}\/\d{4}$/'
                     ])
                 ],
                 'admissionYear' => 'required|integer|min:1900|max:' . date('Y'),
@@ -233,7 +233,6 @@ class StudentController extends Controller
 
             $student = new Student();
             if ($request->admissionMode === 'auto') {
-                // Call getLastAdmissionNumber to generate admission number
                 $admissionResponse = $this->getLastAdmissionNumber(new Request(['year' => $request->admissionYear]));
                 $admissionData = json_decode($admissionResponse->getContent(), true);
                 if (!$admissionData['success']) {
@@ -331,6 +330,15 @@ class StudentController extends Controller
             $studentpersonalityprofiles->termid = $request->termid;
             $studentpersonalityprofiles->sessionid = $request->sessionid;
             $studentpersonalityprofiles->save();
+
+            // NEW: Create StudentCurrentTerm record
+            $currentTerm = new StudentCurrentTerm();
+            $currentTerm->studentId = $studentId;
+            $currentTerm->schoolclassId = $request->schoolclassid;
+            $currentTerm->termId = $request->termid;
+            $currentTerm->sessionId = $request->sessionid;
+            $currentTerm->is_current = true;
+            $currentTerm->save();
 
             DB::commit();
 
@@ -682,7 +690,7 @@ class StudentController extends Controller
                         $fail('The selected local government is invalid for the chosen state.');
                     }
                 }],
-                'future_ambition' => 'required|string|max:500', // Changed from present_address
+                'future_ambition' => 'required|string|max:500',
                 'permanent_address' => 'required|string|max:255',
                 'student_category' => 'required|in:Day,Boarding',
                 'schoolclassid' => 'required|exists:schoolclass,id',
@@ -740,7 +748,7 @@ class StudentController extends Controller
             $student->local = $request->local;
             $student->nationality = $request->nationality;
             $student->placeofbirth = $request->placeofbirth;
-            $student->future_ambition = $request->future_ambition; // Changed from home_address
+            $student->future_ambition = $request->future_ambition;
             $student->home_address2 = $request->permanent_address;
             $student->student_category = $request->student_category;
             $student->statusId = $request->statusId;
@@ -800,6 +808,18 @@ class StudentController extends Controller
             $studentpersonalityprofiles->termid = $request->termid;
             $studentpersonalityprofiles->sessionid = $request->sessionid;
             $studentpersonalityprofiles->save();
+
+            // Update StudentCurrentTerm
+            $currentTerm = StudentCurrentTerm::where('studentId', $id)->first();
+            if (!$currentTerm) {
+                $currentTerm = new StudentCurrentTerm();
+                $currentTerm->studentId = $id;
+            }
+            $currentTerm->schoolclassId = $request->schoolclassid;
+            $currentTerm->termId = $request->termid;
+            $currentTerm->sessionId = $request->sessionid;
+            $currentTerm->is_current = true;
+            $currentTerm->save();
 
             DB::commit();
 
@@ -889,7 +909,6 @@ class StudentController extends Controller
             // Delete student bill payment records and related data
             $billPayments = StudentBillPayment::where('student_id', $id)->get();
             foreach ($billPayments as $billPayment) {
-                // Delete payment records
                 StudentBillPaymentRecord::where('student_bill_payment_id', $billPayment->id)->delete();
                 $billPayment->delete();
             }
@@ -916,6 +935,9 @@ class StudentController extends Controller
             SubjectRegistrationStatus::where('studentId', $id)->delete();
             Studenthouse::where('studentid', $id)->delete();
             Studentpersonalityprofile::where('studentid', $id)->delete();
+
+            // Delete StudentCurrentTerm records
+            StudentCurrentTerm::where('studentId', $id)->delete();
 
             // Finally delete the student
             $student->delete();
@@ -973,6 +995,9 @@ class StudentController extends Controller
                 SubjectRegistrationStatus::where('studentId', $id)->delete();
                 Studenthouses::where('studentid', $id)->delete();
                 Studentpersonalityprofiles::where('studentid', $id)->delete();
+
+                // Delete StudentCurrentTerm records
+                StudentCurrentTerm::where('studentId', $id)->delete();
             }
 
             Student::whereIn('id', $ids)->delete();
@@ -1055,6 +1080,9 @@ class StudentController extends Controller
                 SubjectRegistrationStatus::where('studentId', $studentId)->delete();
                 Studenthouse::where('studentid', $studentId)->delete();
                 Studentpersonalityprofile::where('studentid', $studentId)->delete();
+
+                // Delete StudentCurrentTerm records
+                StudentCurrentTerm::where('studentId', $studentId)->delete();
             }
 
             Student::where('batchid', $batch->id)->delete();
@@ -1283,7 +1311,7 @@ class StudentController extends Controller
                 ->orderBy('id', 'desc')
                 ->first();
 
-            $lastNumber = 870; // Start from 870 so next number is 871
+            $lastNumber = 870;
             if ($lastStudent && $lastStudent->admissionNo) {
                 $parts = explode('/', $lastStudent->admissionNo);
                 if (count($parts) === 4 && $parts[0] === 'TCC' && $parts[2] === $year && is_numeric($parts[3])) {
@@ -1309,341 +1337,311 @@ class StudentController extends Controller
         }
     }
 
-  /**
- * Generate student report
- */
-public function generateReport(Request $request)
-{
-    // Add memory limit for large datasets
-    ini_set('memory_limit', '256M');
-    set_time_limit(300);
+    /**
+     * Generate student report - UPDATED to use student_current_term table
+     */
+    public function generateReport(Request $request)
+    {
+        ini_set('memory_limit', '256M');
+        set_time_limit(300);
 
-    \Log::info('=== GENERATE REPORT STARTED ===');
-    \Log::info('Request parameters:', $request->all());
+        \Log::info('=== GENERATE REPORT STARTED ===');
+        \Log::info('Request parameters:', $request->all());
 
-    try {
-        $request->validate([
-            'class_id'    => 'nullable|exists:schoolclass,id',
-            'term_id'     => 'nullable|exists:schoolterm,id',
-            'session_id'  => 'nullable|exists:schoolsession,id',
-            'status'      => 'nullable|in:1,2,Active,Inactive',
-            'columns'     => 'required|string',
-            'columns_order' => 'nullable|string',
-            'format'      => 'required|in:pdf,excel',
-            'orientation' => 'nullable|in:portrait,landscape',
-            'include_header' => 'nullable|boolean',
-            'include_logo' => 'nullable|boolean',
-        ]);
+        try {
+            $request->validate([
+                'class_id'    => 'nullable|exists:schoolclass,id',
+                'term_id'     => 'nullable|exists:schoolterm,id',
+                'session_id'  => 'nullable|exists:schoolsession,id',
+                'status'      => 'nullable|in:1,2,Active,Inactive',
+                'columns'     => 'required|string',
+                'columns_order' => 'nullable|string',
+                'format'      => 'required|in:pdf,excel',
+                'orientation' => 'nullable|in:portrait,landscape',
+                'include_header' => 'nullable|boolean',
+                'include_logo' => 'nullable|boolean',
+            ]);
 
-        // Check if user is authenticated
-        $user = auth()->user();
-        if (!$user) {
-            \Log::warning('Unauthorized access attempt to generate report');
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized. Please login to generate reports.'
-            ], 401);
-        }
-
-        // Check if user has appropriate permissions
-        if (!$user->hasAnyRole(['Staff', 'Admin', 'Super Admin'])) {
-            \Log::warning('Non-staff user attempted to generate report', ['user_id' => $user->id, 'user_name' => $user->name]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Access denied. Only authorized staff members can generate reports.'
-            ], 403);
-        }
-
-        \Log::info('User generating report:', [
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'user_email' => $user->email,
-            'user_roles' => $user->getRoleNames()
-        ]);
-
-        $columns = array_filter(explode(',', $request->columns));
-        \Log::info('Columns selected:', $columns);
-
-        // Get column order if provided
-        $columnOrder = [];
-        if ($request->filled('columns_order')) {
-            $columnOrder = array_filter(explode(',', $request->columns_order));
-            \Log::info('Column order:', $columnOrder);
-
-            // Reorder columns based on user preference
-            $columns = array_values(array_intersect($columnOrder, $columns));
-        }
-
-        if (empty($columns)) {
-            \Log::warning('No columns selected');
-            return response()->json(['success' => false, 'message' => 'No columns selected'], 422);
-        }
-
-        // Get term and session names for report
-        $termName = 'All Terms';
-        $sessionName = 'All Sessions';
-
-        if ($request->filled('term_id')) {
-            $term = Schoolterm::find($request->term_id);
-            $termName = $term ? $term->name : 'Unknown Term';
-        }
-
-        if ($request->filled('session_id')) {
-            $session = Schoolsession::find($request->session_id);
-            $sessionName = $session ? $session->name : 'Unknown Session';
-        }
-
-        // Start building the query using Student model with StudentCurrentTerm relationships
-        $query = Student::with([
-            'picture',
-            'currentTerm.schoolClass.armRelation',
-            'currentTerm.term',
-            'currentTerm.session',
-            'parent'
-        ]);
-
-        // First, only include students who have a current term
-        $query->whereHas('currentTerm');
-
-        // Apply filters based on current term
-        $query->whereHas('currentTerm', function($q) use ($request) {
-            // Apply class filter
-            if ($request->filled('class_id')) {
-                \Log::info('Filtering by current class_id:', ['class_id' => $request->class_id]);
-                $q->where('schoolclassId', $request->class_id);
+            $user = auth()->user();
+            if (!$user) {
+                \Log::warning('Unauthorized access attempt to generate report');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login to generate reports.'
+                ], 401);
             }
 
-            // Apply term filter
+            if (!$user->hasAnyRole(['Staff', 'Admin', 'Super Admin'])) {
+                \Log::warning('Non-staff user attempted to generate report', ['user_id' => $user->id, 'user_name' => $user->name]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Only authorized staff members can generate reports.'
+                ], 403);
+            }
+
+            \Log::info('User generating report:', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'user_email' => $user->email,
+                'user_roles' => $user->getRoleNames()
+            ]);
+
+            $columns = array_filter(explode(',', $request->columns));
+            \Log::info('Columns selected:', $columns);
+
+            $columnOrder = [];
+            if ($request->filled('columns_order')) {
+                $columnOrder = array_filter(explode(',', $request->columns_order));
+                \Log::info('Column order:', $columnOrder);
+                $columns = array_values(array_intersect($columnOrder, $columns));
+            }
+
+            if (empty($columns)) {
+                \Log::warning('No columns selected');
+                return response()->json(['success' => false, 'message' => 'No columns selected'], 422);
+            }
+
+            $termName = 'All Terms';
+            $sessionName = 'All Sessions';
+            $selectedTerm = null;
+            $selectedSession = null;
+
             if ($request->filled('term_id')) {
-                \Log::info('Filtering by current term_id:', ['term_id' => $request->term_id]);
-                $q->where('termId', $request->term_id);
+                $selectedTerm = Schoolterm::find($request->term_id);
+                $termName = $selectedTerm ? $selectedTerm->name : 'Unknown Term';
             }
 
-            // Apply session filter
             if ($request->filled('session_id')) {
-                \Log::info('Filtering by current session_id:', ['session_id' => $request->session_id]);
-                $q->where('sessionId', $request->session_id);
+                $selectedSession = Schoolsession::find($request->session_id);
+                $sessionName = $selectedSession ? $selectedSession->name : 'Unknown Session';
             }
-        });
 
-        // Apply student status filters
-        if ($request->filled('status')) {
-            if (in_array($request->status, ['1', '2'])) {
-                \Log::info('Filtering by statusId:', ['status' => $request->status]);
-                $query->where('statusId', $request->status);
-            } else {
-                \Log::info('Filtering by student_status:', ['status' => $request->status]);
-                $query->where('student_status', $request->status);
+            // MODIFIED: Query using StudentCurrentTerm
+            $query = StudentCurrentTerm::query()
+                ->with([
+                    'student.picture',
+                    'student.parent',
+                    'schoolClass.armRelation',
+                    'term',
+                    'session'
+                ])
+                ->select('student_current_term.*');
+
+            if ($request->filled('class_id')) {
+                $query->where('schoolclassId', $request->class_id);
             }
-        }
 
-        // Execute query
-        $students = $query->get();
-        \Log::info('Students found with current term:', ['count' => $students->count()]);
+            if ($request->filled('term_id')) {
+                $query->where('termId', $request->term_id);
+            }
 
-        if ($students->isEmpty()) {
-            \Log::warning('No students found with selected filters');
-            return response()->json([
-                'success' => false,
-                'message' => 'No students found with current term assignments matching the selected filters.'
-            ], 404);
-        }
+            if ($request->filled('session_id')) {
+                $query->where('sessionId', $request->session_id);
+            }
 
-        // Transform students data for the report
-        $reportStudents = $students->map(function($student) {
-            $currentTerm = $student->currentTerm;
-            $picture = $student->picture;
-            $parent = $student->parent;
+            if ($request->filled('status')) {
+                $query->whereHas('student', function($q) use ($request) {
+                    if (in_array($request->status, ['1', '2'])) {
+                        $q->where('statusId', $request->status);
+                    } else {
+                        $q->where('student_status', $request->status);
+                    }
+                });
+            }
 
-            // Get current class info
-            $currentClass = null;
-            $currentArm = null;
-            if ($currentTerm && $currentTerm->schoolClass) {
-                $currentClass = $currentTerm->schoolClass->schoolclass;
-                if ($currentTerm->schoolClass->armRelation) {
-                    $currentArm = $currentTerm->schoolClass->armRelation->arm;
+            $currentTerms = $query->get();
+            \Log::info('Current term records found:', ['count' => $currentTerms->count()]);
+
+            if ($currentTerms->isEmpty()) {
+                \Log::warning('No students found with selected term/session filters');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No students found in the selected term and session.'
+                ], 404);
+            }
+
+            $reportStudents = $currentTerms->map(function($currentTerm) {
+                $student = $currentTerm->student;
+                $picture = $student->picture;
+                $parent = $student->parent;
+
+                $currentClass = null;
+                $currentArm = null;
+                if ($currentTerm->schoolClass) {
+                    $currentClass = $currentTerm->schoolClass->schoolclass;
+                    if ($currentTerm->schoolClass->armRelation) {
+                        $currentArm = $currentTerm->schoolClass->armRelation->arm;
+                    }
+                }
+
+                $currentTermName = null;
+                if ($currentTerm->term) {
+                    $currentTermName = $currentTerm->term->name;
+                }
+
+                $currentSessionName = null;
+                if ($currentTerm->session) {
+                    $currentSessionName = $currentTerm->session->name;
+                }
+
+                $studentData = [
+                    'id' => $student->id,
+                    'admissionNo' => $student->admissionNo,
+                    'admissionYear' => $student->admissionYear,
+                    'admission_date' => $student->admission_date,
+                    'title' => $student->title,
+                    'firstname' => $student->firstname,
+                    'lastname' => $student->lastname,
+                    'othername' => $student->othername,
+                    'gender' => $student->gender,
+                    'dateofbirth' => $student->dateofbirth,
+                    'age' => $student->age,
+                    'blood_group' => $student->blood_group,
+                    'mother_tongue' => $student->mother_tongue,
+                    'religion' => $student->religion,
+                    'schoolhouseid' => $student->sport_house,
+                    'phone_number' => $student->phone_number,
+                    'email' => $student->email,
+                    'nin_number' => $student->nin_number,
+                    'city' => $student->city,
+                    'state' => $student->state,
+                    'local' => $student->local,
+                    'nationality' => $student->nationality,
+                    'placeofbirth' => $student->placeofbirth,
+                    'future_ambition' => $student->future_ambition,
+                    'permanent_address' => $student->permanent_address,
+                    'student_category' => $student->student_category,
+                    'statusId' => $student->statusId,
+                    'student_status' => $student->student_status,
+                    'last_school' => $student->last_school,
+                    'last_class' => $student->last_class,
+                    'reason_for_leaving' => $student->reason_for_leaving,
+                    'created_at' => $student->created_at,
+
+                    'current_term_id' => $currentTerm->termId,
+                    'current_session_id' => $currentTerm->sessionId,
+                    'current_class_id' => $currentTerm->schoolclassId,
+                    'is_current' => $currentTerm->is_current,
+                    'current_class_name' => $currentClass,
+                    'current_arm' => $currentArm,
+                    'current_term_name' => $currentTermName,
+                    'current_session_name' => $currentSessionName,
+
+                    'schoolclass' => $currentClass,
+                    'arm_name' => $currentArm,
+                    'termid' => $currentTerm->termId,
+                    'sessionid' => $currentTerm->sessionId,
+
+                    'picture' => $picture ? $picture->picture : null,
+
+                    'father_name' => $parent ? $parent->father_name : null,
+                    'mother_name' => $parent ? $parent->mother_name : null,
+                    'father_phone' => $parent ? $parent->father_phone : null,
+                    'mother_phone' => $parent ? $parent->mother_phone : null,
+                    'parent_email' => $parent ? $parent->parent_email : null,
+                    'parent_address' => $parent ? $parent->parent_address : null,
+                    'father_occupation' => $parent ? $parent->father_occupation : null,
+                    'father_city' => $parent ? $parent->father_city : null,
+                ];
+
+                return (object) $studentData;
+            });
+
+            $className = 'All Classes';
+            if ($request->filled('class_id')) {
+                $class = Schoolclass::with('armRelation')
+                    ->where('schoolclass.id', $request->class_id)
+                    ->first();
+
+                if ($class) {
+                    $className = $class->schoolclass . ($class->armRelation ? ' - ' . $class->armRelation->arm : '');
                 }
             }
 
-            // Get current term info
-            $currentTermName = null;
-            if ($currentTerm && $currentTerm->term) {
-                $currentTermName = $currentTerm->term->name;
-            }
+            $format = $request->input('format');
+            $orientation = $request->query('orientation', 'portrait');
+            $includeHeader = $request->boolean('include_header', true);
+            $includeLogo = $request->boolean('include_logo', true);
 
-            // Get current session info
-            $currentSessionName = null;
-            if ($currentTerm && $currentTerm->session) {
-                $currentSessionName = $currentTerm->session->name;
-            }
-
-            // Build student data
-            $studentData = [
-                'id' => $student->id,
-                'admissionNo' => $student->admissionNo,
-                'admissionYear' => $student->admissionYear,
-                'admission_date' => $student->admission_date,
-                'title' => $student->title,
-                'firstname' => $student->firstname,
-                'lastname' => $student->lastname,
-                'othername' => $student->othername,
-                'gender' => $student->gender,
-                'dateofbirth' => $student->dateofbirth,
-                'age' => $student->age,
-                'blood_group' => $student->blood_group,
-                'mother_tongue' => $student->mother_tongue,
-                'religion' => $student->religion,
-                'schoolhouseid' => $student->sport_house,
-                'phone_number' => $student->phone_number,
-                'email' => $student->email,
-                'nin_number' => $student->nin_number,
-                'city' => $student->city,
-                'state' => $student->state,
-                'local' => $student->local,
-                'nationality' => $student->nationality,
-                'placeofbirth' => $student->placeofbirth,
-                'future_ambition' => $student->future_ambition,
-                'permanent_address' => $student->permanent_address,
-                'student_category' => $student->student_category,
-                'statusId' => $student->statusId,
-                'student_status' => $student->student_status,
-                'last_school' => $student->last_school,
-                'last_class' => $student->last_class,
-                'reason_for_leaving' => $student->reason_for_leaving,
-                'created_at' => $student->created_at,
-
-                // Current term info
-                'current_term_id' => $currentTerm ? $currentTerm->termId : null,
-                'current_session_id' => $currentTerm ? $currentTerm->sessionId : null,
-                'current_class_id' => $currentTerm ? $currentTerm->schoolclassId : null,
-                'is_current' => $currentTerm ? $currentTerm->is_current : false,
-                'current_class_name' => $currentClass,
-                'current_arm' => $currentArm,
-                'current_term_name' => $currentTermName,
-                'current_session_name' => $currentSessionName,
-
-                // For report display - use the correct property names
-                'schoolclass' => $currentClass,
-                'arm_name' => $currentArm,
-                'termid' => $currentTerm ? $currentTerm->termId : null,
-                'sessionid' => $currentTerm ? $currentTerm->sessionId : null,
-
-                // Picture
-                'picture' => $picture ? $picture->picture : null,
-
-                // Parent info
-                'father_name' => $parent ? $parent->father_name : null,
-                'mother_name' => $parent ? $parent->mother_name : null,
-                'father_phone' => $parent ? $parent->father_phone : null,
-                'mother_phone' => $parent ? $parent->mother_phone : null,
-                'parent_email' => $parent ? $parent->parent_email : null,
-                'parent_address' => $parent ? $parent->parent_address : null,
-                'father_occupation' => $parent ? $parent->father_occupation : null,
-                'father_city' => $parent ? $parent->father_city : null,
-            ];
-
-            return (object) $studentData;
-        });
-
-        // Get class name for report header
-        $className = 'All Classes';
-        if ($request->filled('class_id')) {
-            $class = Schoolclass::with('armRelation')
-                ->where('schoolclass.id', $request->class_id)
-                ->first();
-
-            if ($class) {
-                $className = $class->schoolclass . ($class->armRelation ? ' - ' . $class->armRelation->arm : '');
-            }
-        }
-
-        // Prepare report data
-        $format = $request->input('format');
-        $orientation = $request->query('orientation', 'portrait');
-        $includeHeader = $request->boolean('include_header', true);
-        $includeLogo = $request->boolean('include_logo', true);
-
-        \Log::info('Report parameters:', [
-            'format' => $format,
-            'orientation' => $orientation,
-            'className' => $className,
-            'term' => $termName,
-            'session' => $sessionName,
-            'total_students' => $reportStudents->count(),
-            'include_header' => $includeHeader,
-            'include_logo' => $includeLogo,
-            'generated_by' => $user->name
-        ]);
-
-        // Get active school information
-        $schoolInfo = SchoolInformation::where('is_active', true)->first();
-
-        // Prepare data for view
-        $data = [
-            'students'          => $reportStudents,
-            'columns'           => $columns,
-            'title'             => 'Student Master List Report',
-            'className'         => $className,
-            'termName'          => $termName,
-            'sessionName'       => $sessionName,
-            'generated'         => now()->format('d M Y h:i A'),
-            'generated_by'      => $user->name,
-            'total'             => $reportStudents->count(),
-            'males'             => $reportStudents->where('gender', 'Male')->count(),
-            'females'           => $reportStudents->where('gender', 'Female')->count(),
-            'orientation'       => $orientation,
-            'include_header'    => $includeHeader,
-            'include_logo'      => $includeLogo,
-            'school_info'       => $schoolInfo,
-            'school_logo_base64' => null, // Always initialize
-        ];
-
-        // Only add logo base64 if we have a school info and logo is requested for PDF
-        if ($includeLogo && $schoolInfo && $format === 'pdf') {
-            $schoolLogoBase64 = $this->getSchoolLogoBase64($schoolInfo);
-            if ($schoolLogoBase64) {
-                $data['school_logo_base64'] = $schoolLogoBase64;
-            }
-        }
-
-        $filename = 'student-report-' . now()->format('Y-m-d-His');
-        \Log::info('Generating report with filename:', ['filename' => $filename]);
-
-        if ($format === 'excel') {
-            \Log::info('Generating Excel export');
-            return Excel::download(new \App\Exports\StudentReportExport($data), $filename . '.xlsx');
-        }
-
-        \Log::info('Generating PDF export');
-
-        // Configure DomPDF
-        $pdf = Pdf::loadView('student.reports.student_report_pdf', $data)
-            ->setPaper('A4', $orientation)
-            ->setOptions([
-                'isRemoteEnabled' => true,
-                'isHtml5ParserEnabled' => true,
-                'defaultFont' => 'DejaVu Sans',
-                'chroot' => [public_path(), storage_path()],
+            \Log::info('Report parameters:', [
+                'format' => $format,
+                'orientation' => $orientation,
+                'className' => $className,
+                'term' => $termName,
+                'session' => $sessionName,
+                'total_students' => $reportStudents->count(),
+                'include_header' => $includeHeader,
+                'include_logo' => $includeLogo,
+                'generated_by' => $user->name
             ]);
 
-        \Log::info('=== GENERATE REPORT COMPLETED SUCCESSFULLY ===');
-        return $pdf->download($filename . '.pdf');
+            $schoolInfo = SchoolInformation::where('is_active', true)->first();
 
-    } catch (\Exception $e) {
-        \Log::error('Error generating report:', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine()
-        ]);
+            $data = [
+                'students'          => $reportStudents,
+                'columns'           => $columns,
+                'title'             => 'Student Master List Report',
+                'className'         => $className,
+                'termName'          => $termName,
+                'sessionName'       => $sessionName,
+                'generated'         => now()->format('d M Y h:i A'),
+                'generated_by'      => $user->name,
+                'total'             => $reportStudents->count(),
+                'males'             => $reportStudents->where('gender', 'Male')->count(),
+                'females'           => $reportStudents->where('gender', 'Female')->count(),
+                'orientation'       => $orientation,
+                'include_header'    => $includeHeader,
+                'include_logo'      => $includeLogo,
+                'school_info'       => $schoolInfo,
+                'school_logo_base64' => null,
+                'selected_term'     => $selectedTerm,
+                'selected_session'  => $selectedSession,
+            ];
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Server error: ' . $e->getMessage(),
-            'error' => env('APP_DEBUG') ? $e->getTraceAsString() : 'Internal server error'
-        ], 500);
+            if ($includeLogo && $schoolInfo && $format === 'pdf') {
+                $schoolLogoBase64 = $this->getSchoolLogoBase64($schoolInfo);
+                if ($schoolLogoBase64) {
+                    $data['school_logo_base64'] = $schoolLogoBase64;
+                }
+            }
+
+            $filename = 'student-report-' . now()->format('Y-m-d-His');
+            \Log::info('Generating report with filename:', ['filename' => $filename]);
+
+            if ($format === 'excel') {
+                \Log::info('Generating Excel export');
+                return Excel::download(new \App\Exports\StudentReportExport($data), $filename . '.xlsx');
+            }
+
+            \Log::info('Generating PDF export');
+
+            $pdf = Pdf::loadView('student.reports.student_report_pdf', $data)
+                ->setPaper('A4', $orientation)
+                ->setOptions([
+                    'isRemoteEnabled' => true,
+                    'isHtml5ParserEnabled' => true,
+                    'defaultFont' => 'DejaVu Sans',
+                    'chroot' => [public_path(), storage_path()],
+                ]);
+
+            \Log::info('=== GENERATE REPORT COMPLETED SUCCESSFULLY ===');
+            return $pdf->download($filename . '.pdf');
+
+        } catch (\Exception $e) {
+            \Log::error('Error generating report:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Server error: ' . $e->getMessage(),
+                'error' => env('APP_DEBUG') ? $e->getTraceAsString() : 'Internal server error'
+            ], 500);
+        }
     }
-}
 
     /**
      * Get school logo as base64 string
@@ -1653,9 +1651,7 @@ public function generateReport(Request $request)
         try {
             $logoUrl = $schoolInfo->getLogoUrlAttribute();
             if ($logoUrl) {
-                // For external URLs
                 if (filter_var($logoUrl, FILTER_VALIDATE_URL)) {
-                    // Try to fetch the image
                     $context = stream_context_create([
                         'ssl' => [
                             'verify_peer' => false,
@@ -1665,7 +1661,6 @@ public function generateReport(Request $request)
 
                     $imageData = @file_get_contents($logoUrl, false, $context);
                     if ($imageData !== false) {
-                        // Try to determine mime type
                         $finfo = new \finfo(FILEINFO_MIME_TYPE);
                         $mimeType = $finfo->buffer($imageData);
 
@@ -1674,7 +1669,6 @@ public function generateReport(Request $request)
                         }
                     }
                 }
-                // For local files
                 elseif (file_exists(public_path($logoUrl))) {
                     $imagePath = public_path($logoUrl);
                     $imageData = file_get_contents($imagePath);
@@ -1691,7 +1685,6 @@ public function generateReport(Request $request)
 
         return null;
     }
-
 
     /**
      * Get current term info for a student
@@ -1734,6 +1727,46 @@ public function generateReport(Request $request)
             return response()->json([
                 'success' => false,
                 'message' => 'Error fetching current info: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all registered terms for a student
+     */
+    public function getAllRegisteredTerms($id)
+    {
+        try {
+            $terms = StudentCurrentTerm::where('studentId', $id)
+                ->with(['schoolClass.armRelation', 'term', 'session'])
+                ->orderBy('sessionId', 'desc')
+                ->orderBy('termId', 'desc')
+                ->get()
+                ->map(function($term) {
+                    return [
+                        'term_id' => $term->termId,
+                        'term_name' => $term->term ? $term->term->name : null,
+                        'session_id' => $term->sessionId,
+                        'session_name' => $term->session ? $term->session->name : null,
+                        'class_id' => $term->schoolclassId,
+                        'class_name' => $term->schoolClass ? $term->schoolClass->schoolclass : null,
+                        'arm_name' => $term->schoolClass && $term->schoolClass->armRelation
+                            ? $term->schoolClass->armRelation->arm
+                            : null,
+                        'is_current' => $term->is_current,
+                        'created_at' => $term->created_at,
+                        'updated_at' => $term->updated_at
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $terms
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching registered terms: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -1784,6 +1817,19 @@ public function generateReport(Request $request)
                     'success' => false,
                     'message' => 'Student not found'
                 ], 404);
+            }
+
+            // Check if term already exists for this student in the same session
+            $existingTerm = StudentCurrentTerm::where('studentId', $studentId)
+                ->where('termId', $request->termId)
+                ->where('sessionId', $request->sessionId)
+                ->first();
+
+            if ($existingTerm) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This term is already registered for this student in the selected session'
+                ], 422);
             }
 
             // Create or update current term
@@ -1880,6 +1926,18 @@ public function generateReport(Request $request)
                     $student = Student::find($studentId);
                     if (!$student) {
                         $results[$studentId] = 'Student not found';
+                        $failedCount++;
+                        continue;
+                    }
+
+                    // Check if term already exists for this student in the same session
+                    $existingTerm = StudentCurrentTerm::where('studentId', $studentId)
+                        ->where('termId', $request->termId)
+                        ->where('sessionId', $request->sessionId)
+                        ->first();
+
+                    if ($existingTerm) {
+                        $results[$studentId] = 'Failed: Term already registered for this session';
                         $failedCount++;
                         continue;
                     }

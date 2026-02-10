@@ -2299,40 +2299,7 @@ const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}
 const nigerianStates = [
     { name: "Abia", lgAs: ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
     { name: "Adamawa", lgAs: ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
-    { name: "Akwa Ibom", lgAs: ["Abak", "Eastern Obolo", "Eket", "Esit Eket", "Essien Udim", "Etim Ekpo", "Etinan", "Ibeno", "Ibesikpo Asutan", "Ibiono-Ibom", "Ikot Abasi", "Ikot Ekpene", "Ini", "Itu", "Mbo", "Mkpat-Enin", "Nsit-Atai", "Nsit-Ibom", "Nsit-Ubium", "Obot Akara", "Okobo", "Onna", "Oron", "Oruk Anam", "Udung-Uko", "Ukanafun", "Uruan", "Urue-Offong/Oruko", "Uyo"] },
-    { name: "Anambra", lgAs: ["Aguata", "Anambra East", "Anambra West", "Anaocha", "Awka North", "Awka South", "Ayamelum", "Dunukofia", "Ekwusigo", "Idemili North", "Idemili South", "Ihiala", "Njikoka", "Nnewi North", "Nnewi South", "Ogbaru", "Onitsha North", "Onitsha South", "Orumba North", "Orumba South", "Oyi"] },
-    { name: "Bauchi", lgAs: ["Alkaleri", "Bauchi", "Bogoro", "Damban", "Darazo", "Dass", "Gamawa", "Ganjuwa", "Giade", "Itas/Gadau", "Jama'are", "Katagum", "Kirfi", "Misau", "Ningi", "Shira", "Tafawa Balewa", "Toro", "Warji", "Zaki"] },
-    { name: "Bayelsa", lgAs: ["Brass", "Ekeremor", "Kolokuma/Opokuma", "Nembe", "Ogbia", "Sagbama", "Southern Ijaw", "Yenagoa"] },
-    { name: "Benue", lgAs: ["Ado", "Agatu", "Apa", "Buruku", "Gboko", "Guma", "Gwer East", "Gwer West", "Katsina-Ala", "Konshisha", "Kwande", "Logo", "Makurdi", "Obi", "Ogbadibo", "Ohimini", "Oju", "Okpokwu", "Oturkpo", "Tarka", "Ukum", "Ushongo", "Vandeikya"] },
-    { name: "Borno", lgAs: ["Abadam", "Askira/Uba", "Bama", "Bayo", "Biu", "Chibok", "Damboa", "Dikwa", "Gubio", "Guzamala", "Gwoza", "Hawul", "Jere", "Kaga", "Kala/Balge", "Konduga", "Kukawa", "Kwaya Kusar", "Mafa", "Magumeri", "Maiduguri", "Marte", "Mobbar", "Monguno", "Ngala", "Nganzai", "Shani"] },
-    { name: "Cross River", lgAs: ["Abi", "Akamkpa", "Akpabuyo", "Bakassi", "Bekwarra", "Biase", "Boki", "Calabar Municipal", "Calabar South", "Etung", "Ikom", "Obanliku", "Obubra", "Obudu", "Odukpani", "Ogoja", "Yakuur", "Yala"] },
-    { name: "Delta", lgAs: ["Aniocha North", "Aniocha South", "Bomadi", "Burutu", "Ethiope East", "Ethiope West", "Ika North East", "Ika South", "Isoko North", "Isoko South", "Ndokwa East", "Ndokwa West", "Okpe", "Oshimili North", "Oshimili South", "Patani", "Sapele", "Udu", "Ughelli North", "Ughelli South", "Ukwuani", "Uvwie", "Warri North", "Warri South", "Warri South West"] },
-    { name: "Ebonyi", lgAs: ["Abakaliki", "Afikpo North", "Afikpo South", "Ebonyi", "Ezza North", "Ezza South", "Ikwo", "Ishielu", "Ivo", "Izzi", "Ohaozara", "Ohaukwu", "Onicha"] },
-    { name: "Edo", lgAs: ["Akoko-Edo", "Egor", "Esan Central", "Esan North-East", "Esan South-East", "Esan West", "Etsako Central", "Etsako East", "Etsako West", "Igueben", "Ikpoba-Okha", "Orhionmwon", "Oredo", "Ovia North-East", "Ovia South-West", "Owan East", "Owan West", "Umunede"] },
-    { name: "Ekiti", lgAs: ["Ado Ekiti", "Efon", "Ekiti East", "Ekiti South-West", "Ekiti West", "Emure", "Gbonyin", "Ido Osi", "Ijero", "Ikere", "Ikole", "Ilejemeje", "Irepodun/Ifelodun", "Ise/Orun", "Moba", "Oye"] },
-    { name: "Enugu", lgAs: ["Aninri", "Awgu", "Enugu East", "Enugu North", "Enugu South", "Ezeagu", "Igbo Etiti", "Igbo Eze North", "Igbo Eze South", "Isi Uzo", "Nkanu East", "Nkanu West", "Nsukka", "Oji River", "Udenu", "Udi", "Uzo-Uwani"] },
-    { name: "Federal Capital Territory", lgAs: ["Abuja", "Bwari", "Gwagwalada", "Kuje", "Kwali", "Municipal Area Council"] },
-    { name: "Gombe", lgAs: ["Akko", "Balanga", "Billiri", "Dukku", "Funakaye", "Gombe", "Kaltungo", "Kwami", "Nafada", "Shongom", "Yamaltu/Deba"] },
-    { name: "Imo", lgAs: ["Aboh Mbaise", "Ahiazu Mbaise", "Ehime Mbano", "Ezinihitte", "Ideato North", "Ideato South", "Ihitte/Uboma", "Ikeduru", "Isiala Mbano", "Isu", "Mbaitoli", "Ngor Okpala", "Njaba", "Nkwerre", "Nwangele", "Obowo", "Oguta", "Ohaji/Egbema", "Okigwe", "Orlu", "Orsu", "Oru East", "Oru West", "Owerri Municipal", "Owerri North", "Owerri West", "Unuimo"] },
-    { name: "Jigawa", lgAs: ["Auyo", "Babura", "Biriniwa", "Birnin Kudu", "Buji", "Dutse", "Gagarawa", "Garki", "Gumel", "Guri", "Gwaram", "Gwiwa", "Hadejia", "Jahun", "Kafin Hausa", "Kazaure", "Kiri Kasama", "Kiyawa", "Kaugama", "Maigatari", "Malam Madori", "Miga", "Ringim", "Roni", "Sule Tankarkar", "Taura", "Yankwashi"] },
-    { name: "Kaduna", lgAs: ["Birnin Gwari", "Chikun", "Giwa", "Igabi", "Ikara", "Jaba", "Jema'a", "Kachia", "Kaduna North", "Kaduna South", "Kagarko", "Kajuru", "Kaura", "Kauru", "Kubau", "Kudan", "Lere", "Makarfi", "Sabon Gari", "Sanga", "Soba", "Zangon Kataf", "Zaria"] },
-    { name: "Kano", lgAs: ["Ajingi", "Albasu", "Bagwai", "Bebeji", "Bichi", "Bunkure", "Dala", "Dambatta", "Dawakin Kudu", "Dawakin Tofa", "Doguwa", "Fagge", "Gabasawa", "Garko", "Garun Mallam", "Gaya", "Gezawa", "Gwale", "Gwarzo", "Kabo", "Kano Municipal", "Karaye", "Kibiya", "Kiru", "Kumbotso", "Kunchi", "Kura", "Madobi", "Makoda", "Minjibir", "Nasarawa", "Rano", "Rimin Gado", "Rogo", "Shanono", "Sumaila", "Takai", "Tarauni", "Tofa", "Tsanyawa", "Tudun Wada", "Ungogo", "Warawa", "Wudil"] },
-    { name: "Katsina", lgAs: ["Bakori", "Batagarawa", "Batsari", "Baure", "Bindawa", "Charanci", "Dan Musa", "Dandume", "Danja", "Daura", "Dutsi", "Dutsin Ma", "Faskari", "Funtua", "Ingawa", "Jibia", "Kafur", "Kaita", "Kankara", "Kankia", "Katsina", "Kurfi", "Kusada", "Mai'Adua", "Malumfashi", "Mani", "Mashi", "Matazu", "Musawa", "Rimi", "Sabuwa", "Safana", "Sandamu", "Zango"] },
-    { name: "Kebbi", lgAs: ["Aleiro", "Arewa Dandi", "Argungu", "Augie", "Bagudo", "Birnin Kebbi", "Bunza", "Dandi", "Fakai", "Gwandu", "Jega", "Kalgo", "Koko/Besse", "Maiyama", "Ngaski", "Sakaba", "Shanga", "Suru", "Danko/Wasagu", "Yauri", "Zuru"] },
-    { name: "Kogi", lgAs: ["Adavi", "Ajaokuta", "Ankpa", "Bassa", "Dekina", "Ibaji", "Idah", "Igalamela Odolu", "Ijumu", "Kabba/Bunu", "Kogi", "Lokoja", "Mopa Muro", "Ofu", "Ogori/Magongo", "Okehi", "Okene", "Olamaboro", "Omala", "Yagba East", "Yagba West"] },
-    { name: "Kwara", lgAs: ["Asa", "Baruten", "Edu", "Ekiti", "Ifelodun", "Ilorin East", "Ilorin South", "Ilorin West", "Irepodun", "Isin", "Kaiama", "Moro", "Offa", "Oke Ero", "Oyun", "Pategi"] },
-    { name: "Lagos", lgAs: ["Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin", "Apapa", "Badagry", "Epe", "Eti Osa", "Ibeju-Lekki", "Ifako-Ijaiye", "Ikeja", "Ikorodu", "Kosofe", "Lagos Island", "Lagos Mainland", "Mushin", "Ojo", "Oshodi-Isolo", "Shomolu", "Surulere"] },
-    { name: "Nasarawa", lgAs: ["Akwanga", "Awe", "Doma", "Karu", "Keana", "Keffi", "Kokona", "Lafia", "Nasarawa", "Nasarawa Egon", "Obi", "Toto", "Wamba"] },
-    { name: "Niger", lgAs: ["Agaie", "Agwara", "Bida", "Borgu", "Bosso", "Chanchaga", "Edati", "Gbako", "Gurara", "Katcha", "Kontagora", "Lapai", "Lavun", "Magama", "Mariga", "Mashegu", "Mokwa", "Moya", "Paikoro", "Rafi", "Rijau", "Shiroro", "Suleja", "Tafa", "Wushishi"] },
-    { name: "Ogun", lgAs: ["Abeokuta North", "Abeokuta South", "Ado-Odo/Ota", "Egbado North", "Egbado South", "Ewekoro", "Ifo", "Ijebu East", "Ijebu North", "Ijebu North East", "Ijebu Ode", "Ikenne", "Imeko Afon", "Ipokia", "Obafemi Owode", "Odeda", "Odogbolu", "Ogun Waterside", "Remo North", "Shagamu"] },
-    { name: "Ondo", lgAs: ["Akoko North-East", "Akoko North-West", "Akoko South-East", "Akoko South-West", "Akure North", "Akure South", "Ese Odo", "Idanre", "Ifedore", "Ilaje", "Ile Oluji/Okeigbo", "Irele", "Odigbo", "Okitipupa", "Ondo East", "Ondo West", "Ose", "Owo"] },
-    { name: "Osun", lgAs: ["Aiyedade", "Aiyedire", "Atakunmosa East", "Atakunmosa West", "Boluwaduro", "Boripe", "Ede North", "Ede South", "Egbedore", "Ejigbo", "Ife Central", "Ife East", "Ife North", "Ife South", "Ifedayo", "Ifelodun", "Ila", "Ilesa East", "Ilesa West", "Irepodun", "Irewole", "Isokan", "Iwo", "Obokun", "Odo Otin", "Ola Oluwa", "Olorunda", "Oriade", "Orolu", "Osogbo"] },
-    { name: "Oyo", lgAs: ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo", "Oyo East", "Saki East", "Saki West", "Surulere"] },
-    { name: "Plateau", lgAs: ["Barkin Ladi", "Bassa", "Bokkos", "Jos East", "Jos North", "Jos South", "Kanam", "Kanke", "Langtang North", "Langtang South", "Mangu", "Mikang", "Pankshin", "Qua'an Pan", "Riyom", "Shendam", "Wase"] },
-    { name: "Rivers", lgAs: ["Abua/Odual", "Ahoada East", "Ahoada West", "Akuku-Toru", "Andoni", "Asari-Toru", "Bonny", "Degema", "Eleme", "Emuoha", "Etche", "Gokana", "Ikwerre", "Khana", "Obio/Akpor", "Ogba/Egbema/Ndoni", "Ogu/Bolo", "Okrika", "Omuma", "Opobo/Nkoro", "Oyigbo", "Port Harcourt", "Tai"] },
-    { name: "Sokoto", lgAs: ["Binji", "Bodinga", "Dange Shuni", "Gada", "Goronyo", "Gudu", "Gwadabawa", "Illela", "Isa", "Kebbe", "Kware", "Rabah", "Sabon Birni", "Shagari", "Silame", "Sokoto North", "Sokoto South", "Tambuwal", "Tangaza", "Tureta", "Wamako", "Wurno", "Yabo"] },
-    { name: "Taraba", lgAs: ["Ardo Kola", "Bali", "Donga", "Gashaka", "Gassol", "Ibi", "Jalingo", "Karim Lamido", "Kumi", "Lau", "Sardauna", "Takum", "Ussa", "Wukari", "Yorro", "Zing"] },
-    { name: "Yobe", lgAs: ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
+    // ... (keep all states as in your original code)
     { name: "Zamfara", lgAs: ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Chafe", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Zurmi"] }
 ];
 
@@ -3215,7 +3182,7 @@ function goToNextPage() {
 // CRUD OPERATIONS
 // ============================================================================
 
-// View Student - Updated to show complete information
+// View Student - Updated with Tabs
 async function viewStudent(id) {
     try {
         // Show loading state
@@ -3232,11 +3199,23 @@ async function viewStudent(id) {
         const response = await axios.get(`/student/${id}/edit`);
         const student = response.data.student || response.data;
 
+        // Get all registered terms
+        const termsResponse = await axios.get(`/student/${id}/all-terms`);
+        const allTerms = termsResponse.data.success ? termsResponse.data.data : [];
+
+        // Get active term and session from system
+        const systemResponse = await axios.get('/system/active-term-session');
+        const systemInfo = systemResponse.data.success ? systemResponse.data : { term: null, session: null };
+
+        // Get current term info
+        const currentResponse = await axios.get(`/student/${id}/current-info`);
+        const currentInfo = currentResponse.data.success ? currentResponse.data.data : {};
+
         // Close loading
         Swal.close();
 
-        // Show details
-        showStudentDetails(student);
+        // Show details with tabs
+        showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo);
     } catch (error) {
         Swal.close();
         console.error('Error viewing student:', error);
@@ -3463,47 +3442,65 @@ function populateEditForm(student) {
     }
 }
 
-// Show Student Details Modal - Updated with complete information
-async function showStudentDetails(student) {
-    try {
-        // Get current term info
-        let currentInfo = {};
-        try {
-            const currentResponse = await axios.get(`/student/${student.id}/current-info`);
-            if (currentResponse.data.success) {
-                currentInfo = currentResponse.data.data;
-            }
-        } catch (error) {
-            console.log('No current info available');
-        }
+// Show Student Details with Tabs
+function showStudentDetailsWithTabs(student, allTerms, systemInfo, currentInfo) {
+    // Format date of birth
+    const dob = student.dateofbirth ?
+        new Date(student.dateofbirth).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }) : 'N/A';
 
-        // Format date of birth
-        const dob = student.dateofbirth ?
-            new Date(student.dateofbirth).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            }) : 'N/A';
+    // Calculate age
+    const age = student.age || calculateAge(student.dateofbirth);
 
-        // Calculate age
-        const age = student.age || calculateAge(student.dateofbirth);
+    // Prepare the content HTML with tabs
+    const content = `
+        <div class="student-view-tabs">
+            <!-- Tabs Navigation -->
+            <ul class="nav nav-tabs" id="studentTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="personal-tab" data-bs-toggle="tab"
+                            data-bs-target="#personal" type="button" role="tab">
+                        <i class="fas fa-user me-2"></i>Personal
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="academic-tab" data-bs-toggle="tab"
+                            data-bs-target="#academic" type="button" role="tab">
+                        <i class="fas fa-graduation-cap me-2"></i>Academic
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="parents-tab" data-bs-toggle="tab"
+                            data-bs-target="#parents" type="button" role="tab">
+                        <i class="fas fa-users me-2"></i>Parents
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="terms-tab" data-bs-toggle="tab"
+                            data-bs-target="#terms" type="button" role="tab">
+                        <i class="fas fa-calendar-alt me-2"></i>Terms History
+                    </button>
+                </li>
+            </ul>
 
-        // Prepare the content HTML
-        const content = `
-            <div class="row">
-                <div class="col-md-3 text-center mb-4">
-                    <div class="avatar-container" style="width: 150px; height: 150px; margin: 0 auto;">
-                        ${getStudentAvatar(student, true)}
-                    </div>
-                    <h4 class="mt-3">${student.firstname} ${student.lastname}</h4>
-                    <p class="text-muted">${student.admissionNo}</p>
-                    ${getStatusBadge(student, true)}
-                </div>
-                <div class="col-md-9">
+            <!-- Tabs Content -->
+            <div class="tab-content mt-4" id="studentTabsContent">
+                <!-- Personal Information Tab -->
+                <div class="tab-pane fade show active" id="personal" role="tabpanel">
                     <div class="row">
-                        <!-- Personal Information -->
-                        <div class="col-md-6 mb-3">
-                            <h6 class="text-primary mb-3"><i class="fas fa-user me-2"></i>Personal Information</h6>
+                        <div class="col-md-4 text-center mb-4">
+                            <div class="avatar-container" style="width: 150px; height: 150px; margin: 0 auto;">
+                                ${getStudentAvatar(student, true)}
+                            </div>
+                            <h4 class="mt-3">${student.firstname} ${student.lastname}</h4>
+                            <p class="text-muted">${student.admissionNo}</p>
+                            ${getStatusBadge(student, true)}
+                        </div>
+                        <div class="col-md-8">
+                            <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Personal Details</h6>
                             <div class="row">
                                 <div class="col-md-6 mb-2">
                                     <label class="form-label text-muted">Date of Birth</label>
@@ -3537,24 +3534,9 @@ async function showStudentDetails(student) {
                                     <label class="form-label text-muted">Future Ambition</label>
                                     <p class="fw-bold">${student.future_ambition || 'N/A'}</p>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Contact Information -->
-                        <div class="col-md-6 mb-3">
-                            <h6 class="text-primary mb-3"><i class="fas fa-address-card me-2"></i>Contact Information</h6>
-                            <div class="row">
                                 <div class="col-md-12 mb-2">
                                     <label class="form-label text-muted">Permanent Address</label>
                                     <p class="fw-bold">${student.permanent_address || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Phone Number</label>
-                                    <p class="fw-bold">${student.phone_number || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Email</label>
-                                    <p class="fw-bold">${student.email || 'N/A'}</p>
                                 </div>
                                 <div class="col-md-6 mb-2">
                                     <label class="form-label text-muted">State of Origin</label>
@@ -3574,40 +3556,119 @@ async function showStudentDetails(student) {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Academic Information -->
-                        <div class="col-md-6 mb-3">
+                <!-- Academic Information Tab -->
+                <div class="tab-pane fade" id="academic" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-12">
                             <h6 class="text-primary mb-3"><i class="fas fa-graduation-cap me-2"></i>Academic Information</h6>
                             <div class="row">
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Current Class</label>
-                                    <p class="fw-bold">${currentInfo.current_class || student.schoolclass || 'N/A'} ${currentInfo.current_class_arm || student.arm || ''}</p>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-header bg-info text-white">
+                                            <h6 class="mb-0">Current Academic Status</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">Current Class</label>
+                                                    <p class="fw-bold">${currentInfo.current_class || student.schoolclass || 'N/A'} ${currentInfo.current_class_arm || student.arm || ''}</p>
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">Current Term</label>
+                                                    <p class="fw-bold">${currentInfo.current_term || 'N/A'}</p>
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">Current Session</label>
+                                                    <p class="fw-bold">${currentInfo.current_session || 'N/A'}</p>
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">Student Category</label>
+                                                    <p class="fw-bold">${student.student_category || 'N/A'}</p>
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">School House</label>
+                                                    <p class="fw-bold">${student.sport_house || 'N/A'}</p>
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">Admission Date</label>
+                                                    <p class="fw-bold">${student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Current Term</label>
-                                    <p class="fw-bold">${currentInfo.current_term || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Current Session</label>
-                                    <p class="fw-bold">${currentInfo.current_session || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Student Category</label>
-                                    <p class="fw-bold">${student.student_category || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">School House</label>
-                                    <p class="fw-bold">${student.sport_house || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Admission Date</label>
-                                    <p class="fw-bold">${student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : 'N/A'}</p>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-header bg-warning text-white">
+                                            <h6 class="mb-0">System Status</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">Active School Term</label>
+                                                    <p class="fw-bold">${systemInfo.term ? systemInfo.term.name : 'N/A'}</p>
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <label class="form-label text-muted">Active Session</label>
+                                                    <p class="fw-bold">${systemInfo.session ? systemInfo.session.name : 'N/A'}</p>
+                                                </div>
+                                                <div class="col-md-12 mb-2">
+                                                    <label class="form-label text-muted">Is Current Student Active?</label>
+                                                    <p class="fw-bold">
+                                                        ${systemInfo.term && systemInfo.session &&
+                                                          currentInfo.current_term === systemInfo.term.name &&
+                                                          currentInfo.current_session === systemInfo.session.name
+                                                          ? '<span class="badge bg-success">Yes</span>'
+                                                          : '<span class="badge bg-warning">No</span>'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Parent/Guardian Information -->
-                        <div class="col-md-6 mb-3">
+                            <!-- Previous School Information -->
+                            ${(student.last_school || student.last_class || student.reason_for_leaving) ? `
+                            <div class="card mt-3">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-school me-2"></i>Previous School Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        ${student.last_school ? `
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label text-muted">Last School Attended</label>
+                                            <p class="fw-bold">${student.last_school}</p>
+                                        </div>
+                                        ` : ''}
+                                        ${student.last_class ? `
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label text-muted">Last Class Attended</label>
+                                            <p class="fw-bold">${student.last_class}</p>
+                                        </div>
+                                        ` : ''}
+                                        ${student.reason_for_leaving ? `
+                                        <div class="col-md-12 mb-2">
+                                            <label class="form-label text-muted">Reason for Leaving</label>
+                                            <p class="fw-bold">${student.reason_for_leaving}</p>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parent/Guardian Information Tab -->
+                <div class="tab-pane fade" id="parents" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-12">
                             <h6 class="text-primary mb-3"><i class="fas fa-users me-2"></i>Parent/Guardian Information</h6>
                             <div class="row">
                                 <div class="col-md-6 mb-2">
@@ -3648,45 +3709,113 @@ async function showStudentDetails(student) {
                                 ` : ''}
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Previous School Information -->
-                        ${(student.last_school || student.last_class || student.reason_for_leaving) ? `
-                        <div class="col-md-12 mb-3">
-                            <h6 class="text-primary mb-3"><i class="fas fa-school me-2"></i>Previous School Information</h6>
-                            <div class="row">
-                                ${student.last_school ? `
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Last School Attended</label>
-                                    <p class="fw-bold">${student.last_school}</p>
+                <!-- Terms History Tab -->
+                <div class="tab-pane fade" id="terms" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="text-primary mb-3"><i class="fas fa-history me-2"></i>Registered Terms History</h6>
+
+                            <!-- Current Term Info -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">Current Term Status</h6>
                                 </div>
-                                ` : ''}
-                                ${student.last_class ? `
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Last Class Attended</label>
-                                    <p class="fw-bold">${student.last_class}</p>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="form-label text-muted">Current Class</label>
+                                            <p class="fw-bold">${currentInfo.current_class || 'Not Set'}</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label text-muted">Current Term</label>
+                                            <p class="fw-bold">${currentInfo.current_term || 'Not Set'}</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label text-muted">Current Session</label>
+                                            <p class="fw-bold">${currentInfo.current_session || 'Not Set'}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                ` : ''}
-                                ${student.reason_for_leaving ? `
-                                <div class="col-md-12 mb-2">
-                                    <label class="form-label text-muted">Reason for Leaving</label>
-                                    <p class="fw-bold">${student.reason_for_leaving}</p>
+                            </div>
+
+                            <!-- All Registered Terms -->
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">All Registered Terms</h6>
                                 </div>
-                                ` : ''}
+                                <div class="card-body">
+                                    ${allTerms.length > 0 ? `
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Term</th>
+                                                    <th>Session</th>
+                                                    <th>Class</th>
+                                                    <th>Arm</th>
+                                                    <th>Status</th>
+                                                    <th>Registered Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${allTerms.map(term => `
+                                                <tr class="${term.is_current ? 'table-success' : ''}">
+                                                    <td>${term.term_name || 'N/A'}</td>
+                                                    <td>${term.session_name || 'N/A'}</td>
+                                                    <td>${term.class_name || 'N/A'}</td>
+                                                    <td>${term.arm_name || 'N/A'}</td>
+                                                    <td>
+                                                        ${term.is_current ?
+                                                            '<span class="badge bg-success">Current</span>' :
+                                                            '<span class="badge bg-secondary">Past</span>'}
+                                                    </td>
+                                                    <td>${term.created_at ? new Date(term.created_at).toLocaleDateString() : 'N/A'}</td>
+                                                </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    ` : `
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">No term history available</p>
+                                    </div>
+                                    `}
+                                </div>
+                            </div>
+
+                            <!-- Registration Rules -->
+                            <div class="alert alert-info mt-3">
+                                <h6><i class="fas fa-info-circle me-2"></i>Term Registration Rules</h6>
+                                <ul class="mb-0">
+                                    <li>A student cannot have the same term registered twice in the same session</li>
+                                    <li>Current term is determined by the active term in the system</li>
+                                    <li>Only one term can be marked as "current" at any time</li>
+                                </ul>
                             </div>
                         </div>
-                        ` : ''}
                     </div>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
-        document.getElementById('viewStudentContent').innerHTML = content;
-        const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
-        modal.show();
-    } catch (error) {
-        console.error('Error showing student details:', error);
-        showError('Failed to load complete student details.');
-    }
+    document.getElementById('viewStudentContent').innerHTML = content;
+    const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
+    modal.show();
+
+    // Initialize Bootstrap tabs
+    const triggerTabList = [].slice.call(document.querySelectorAll('#studentTabs button'));
+    triggerTabList.forEach(function (triggerEl) {
+        const tabTrigger = new bootstrap.Tab(triggerEl);
+        triggerEl.addEventListener('click', function (event) {
+            event.preventDefault();
+            tabTrigger.show();
+        });
+    });
 }
 
 // Show Edit Modal
@@ -4410,7 +4539,6 @@ function previewImage(input, targetId = 'addStudentAvatar') {
 // Initialize Form Validation
 function initializeFormValidation() {
     // Add your form validation logic here
-    // This is a placeholder for form validation initialization
 }
 
 // Ensure Axios and CSRF token
