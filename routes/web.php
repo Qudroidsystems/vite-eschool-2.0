@@ -213,10 +213,6 @@ Route::group(['middleware' => ['auth']], function () {
 
 
 
-    <?php
-
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\StudentController;
 
 Route::resource('student', StudentController::class)->except(['destroy']);
 Route::get('/students/data', [App\Http\Controllers\StudentController::class, 'data'])->name('student.data');
