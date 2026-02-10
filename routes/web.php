@@ -260,10 +260,6 @@ Route::group(['middleware' => ['auth']], function () {
 
 
 
-<?php
-
-use App\Http\Controllers\StudentController;
-use Illuminate\Support\Facades\Route;
 
 // Student Management Routes
 Route::resource('student', StudentController::class)->except(['destroy']);
