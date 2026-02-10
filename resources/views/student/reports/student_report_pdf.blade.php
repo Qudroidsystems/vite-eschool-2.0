@@ -133,6 +133,7 @@
             padding: 5px;
             border: 1px solid #dee2e6;
             line-height: 1.3;
+            vertical-align: middle;
         }
 
         .data-table tr:nth-child(even) {
@@ -157,6 +158,32 @@
 
         .wrap {
             word-wrap: break-word;
+        }
+
+        /* Student Photo Styles */
+        .student-photo {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .photo-placeholder {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
+            margin: 0 auto;
         }
 
         /* Footer */
@@ -194,25 +221,25 @@
         /* Column Width Classes */
         .col-photo { width: 5%; }
         .col-admission { width: 10%; }
-        .col-lastname { width: 15%; }
-        .col-firstname { width: 15%; }
-        .col-othername { width: 15%; }
+        .col-lastname { width: 12%; }
+        .col-firstname { width: 12%; }
+        .col-othername { width: 12%; }
         .col-gender { width: 5%; }
         .col-dob { width: 8%; }
         .col-age { width: 4%; }
-        .col-class { width: 12%; }
+        .col-class { width: 10%; }
         .col-status { width: 8%; }
         .col-admission-date { width: 8%; }
-        .col-phone { width: 10%; }
-        .col-state { width: 10%; }
-        .col-local { width: 10%; }
-        .col-religion { width: 8%; }
+        .col-phone { width: 9%; }
+        .col-state { width: 8%; }
+        .col-local { width: 8%; }
+        .col-religion { width: 7%; }
         .col-blood { width: 6%; }
-        .col-father { width: 15%; }
-        .col-mother { width: 15%; }
-        .col-guardian { width: 10%; }
-        .col-term { width: 10%; }
-        .col-session { width: 10%; }
+        .col-father { width: 12%; }
+        .col-mother { width: 12%; }
+        .col-guardian { width: 9%; }
+        .col-term { width: 8%; }
+        .col-session { width: 8%; }
     </style>
 </head>
 <body>
@@ -359,7 +386,32 @@
 
                     @if($col == 'photo')
                     <td class="text-center {{ $widthClass }}">
-                        <div style="width: 30px; height: 30px; background-color: #ddd; border-radius: 50%; margin: 0 auto;"></div>
+                        @if($student->picture && $student->picture !== 'unnamed.jpg')
+                            <!-- Try to get the photo from storage -->
+                            @php
+                                $photoPath = storage_path('app/public/images/student_avatars/' . $student->picture);
+                                $publicPath = public_path('storage/images/student_avatars/' . $student->picture);
+                            @endphp
+                            @if(file_exists($photoPath) || file_exists($publicPath))
+                                <img src="{{ $student->picture }}" class="student-photo" alt="Student Photo">
+                            @else
+                                <!-- Show initials as fallback -->
+                                <div class="photo-placeholder">
+                                    @php
+                                        $initials = substr($student->firstname ?? '', 0, 1) . substr($student->lastname ?? '', 0, 1);
+                                    @endphp
+                                    {{ $initials ?: '?' }}
+                                </div>
+                            @endif
+                        @else
+                            <!-- Show initials for no photo -->
+                            <div class="photo-placeholder">
+                                @php
+                                    $initials = substr($student->firstname ?? '', 0, 1) . substr($student->lastname ?? '', 0, 1);
+                                @endphp
+                                {{ $initials ?: '?' }}
+                            </div>
+                        @endif
                     </td>
                     @elseif($col == 'admissionNo')
                     <td class="text-left {{ $widthClass }}">{{ $student->admissionNo ?? 'N/A' }}</td>
@@ -433,11 +485,11 @@
                     </td>
                     @elseif($col == 'term')
                     <td class="text-center {{ $widthClass }}">
-                        {{ $student->current_term_name ?? ($student->termid ? \App\Models\Schoolterm::find($student->termid)->term ?? 'N/A' : 'N/A') }}
+                        {{ $student->current_term_name ?? ($student->termid && $selected_term ? $selected_term->term : 'N/A') }}
                     </td>
                     @elseif($col == 'session')
                     <td class="text-center {{ $widthClass }}">
-                        {{ $student->current_session_name ?? ($student->sessionid ? \App\Models\Schoolsession::find($student->sessionid)->session ?? 'N/A' : 'N/A') }}
+                        {{ $student->current_session_name ?? ($student->sessionid && $selected_session ? $selected_session->session : 'N/A') }}
                     </td>
                     @else
                     <td class="text-left {{ $widthClass }}">
