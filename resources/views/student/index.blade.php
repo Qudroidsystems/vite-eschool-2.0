@@ -3276,96 +3276,218 @@ use Spatie\Permission\Models\Role;
     const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
     let columnSortable = null;
 
-    // DOM Ready
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM loaded, initializing application...');
-        initializeApplication();
-    });
+    // ============================================================================
+    // NIGERIAN STATES AND LGA DATA - COMPLETE
+    // ============================================================================
 
-    // Initialize Application
-    function initializeApplication() {
-        // Initialize admission number on page load
-        updateAdmissionNumber();
-        updateAdmissionNumber('edit');
+    const nigerianStates = [
+        { name: "Abia", lgas: ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
+        { name: "Adamawa", lgas: ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
+        { name: "Akwa Ibom", lgas: ["Abak", "Eastern Obolo", "Eket", "Esit Eket", "Essien Udim", "Etim Ekpo", "Etinan", "Ibeno", "Ibesikpo Asutan", "Ibiono-Ibom", "Ika", "Ikono", "Ikot Abasi", "Ikot Ekpene", "Ini", "Itu", "Mbo", "Mkpat-Enin", "Nsit-Atai", "Nsit-Ibom", "Nsit-Ubium", "Obot Akara", "Okobo", "Onna", "Oron", "Oruk Anam", "Udung-Uko", "Ukanafun", "Uruan", "Urue-Offong/Oruko", "Uyo"] },
+        { name: "Anambra", lgas: ["Aguata", "Anambra East", "Anambra West", "Anaocha", "Awka North", "Awka South", "Ayamelum", "Dunukofia", "Ekwusigo", "Idemili North", "Idemili South", "Ihiala", "Njikoka", "Nnewi North", "Nnewi South", "Ogbaru", "Onitsha North", "Onitsha South", "Orumba North", "Orumba South", "Oyi"] },
+        { name: "Bauchi", lgas: ["Alkaleri", "Bauchi", "Bogoro", "Damban", "Darazo", "Dass", "Gamawa", "Ganjuwa", "Giade", "Itas/Gadau", "Jama'are", "Katagum", "Kirfi", "Misau", "Ningi", "Shira", "Tafawa Balewa", "Toro", "Warji", "Zaki"] },
+        { name: "Bayelsa", lgas: ["Brass", "Ekeremor", "Kolokuma/Opokuma", "Nembe", "Ogbia", "Sagbama", "Southern Ijaw", "Yenagoa"] },
+        { name: "Benue", lgas: ["Ado", "Agatu", "Apa", "Buruku", "Gboko", "Guma", "Gwer East", "Gwer West", "Katsina-Ala", "Konshisha", "Kwande", "Logo", "Makurdi", "Obi", "Ogbadibo", "Ohimini", "Oju", "Okpokwu", "Oturkpo", "Tarka", "Ukum", "Ushongo", "Vandeikya"] },
+        { name: "Borno", lgas: ["Abadam", "Askira/Uba", "Bama", "Bayo", "Biu", "Chibok", "Damboa", "Dikwa", "Gubio", "Guzamala", "Gwoza", "Hawul", "Jere", "Kaga", "Kala/Balge", "Konduga", "Kukawa", "Kwaya Kusar", "Mafa", "Magumeri", "Maiduguri", "Marte", "Mobbar", "Monguno", "Ngala", "Nganzai", "Shani"] },
+        { name: "Cross River", lgas: ["Abi", "Akamkpa", "Akpabuyo", "Bakassi", "Bekwarra", "Biase", "Boki", "Calabar Municipal", "Calabar South", "Etung", "Ikom", "Obanliku", "Obubra", "Obudu", "Odukpani", "Ogoja", "Yakuur", "Yala"] },
+        { name: "Delta", lgas: ["Aniocha North", "Aniocha South", "Bomadi", "Burutu", "Ethiope East", "Ethiope West", "Ika North East", "Ika South", "Isoko North", "Isoko South", "Ndokwa East", "Ndokwa West", "Okpe", "Oshimili North", "Oshimili South", "Patani", "Sapele", "Udu", "Ughelli North", "Ughelli South", "Ukwuani", "Uvwie", "Warri North", "Warri South", "Warri South West"] },
+        { name: "Ebonyi", lgas: ["Abakaliki", "Afikpo North", "Afikpo South", "Ebonyi", "Ezza North", "Ezza South", "Ikwo", "Ishielu", "Ivo", "Izzi", "Ohaozara", "Ohaukwu", "Onicha"] },
+        { name: "Edo", lgas: ["Akoko-Edo", "Egor", "Esan Central", "Esan North-East", "Esan South-East", "Esan West", "Etsako Central", "Etsako East", "Etsako West", "Igueben", "Ikpoba Okha", "Orhionmwon", "Oredo", "Ovia North-East", "Ovia South-West", "Owan East", "Owan West", "Uhunmwonde"] },
+        { name: "Ekiti", lgas: ["Ado Ekiti", "Efon", "Ekiti East", "Ekiti South-West", "Ekiti West", "Emure", "Gbonyin", "Ido Osi", "Ijero", "Ikere", "Ilejemeje", "Irepodun/Ifelodun", "Ise/Orun", "Moba", "Oye"] },
+        { name: "Enugu", lgas: ["Aninri", "Awgu", "Enugu East", "Enugu North", "Enugu South", "Ezeagu", "Igbo Etiti", "Igbo Eze North", "Igbo Eze South", "Isi Uzo", "Nkanu East", "Nkanu West", "Nsukka", "Oji River", "Udenu", "Udi", "Uzo Uwani"] },
+        { name: "FCT", lgas: ["Abaji", "Bwari", "Gwagwalada", "Kuje", "Kwali", "Municipal Area Council"] },
+        { name: "Gombe", lgas: ["Akko", "Balanga", "Billiri", "Dukku", "Funakaye", "Gombe", "Kaltungo", "Kwami", "Nafada", "Shongom", "Yamaltu/Deba"] },
+        { name: "Imo", lgas: ["Aboh Mbaise", "Ahiazu Mbaise", "Ehime Mbano", "Ezinihitte", "Ideato North", "Ideato South", "Ihitte/Uboma", "Ikeduru", "Isiala Mbano", "Isu", "Mbaitoli", "Ngor Okpala", "Njaba", "Nkwerre", "Nwangele", "Obowo", "Oguta", "Ohaji/Egbema", "Okigwe", "Orlu", "Orsu", "Oru East", "Oru West", "Owerri Municipal", "Owerri North", "Owerri West", "Unuimo"] },
+        { name: "Jigawa", lgas: ["Auyo", "Babura", "Biriniwa", "Birnin Kudu", "Buji", "Dutse", "Gagarawa", "Garki", "Gumel", "Guri", "Gwaram", "Gwiwa", "Hadejia", "Jahun", "Kafin Hausa", "Kazaure", "Kiri Kasama", "Kiyawa", "Kaugama", "Maigatari", "Malam Madori", "Miga", "Ringim", "Roni", "Sule Tankarkar", "Taura", "Yankwashi"] },
+        { name: "Kaduna", lgas: ["Birnin Gwari", "Chikun", "Giwa", "Igabi", "Ikara", "Jaba", "Jema'a", "Kachia", "Kaduna North", "Kaduna South", "Kagarko", "Kajuru", "Kaura", "Kauru", "Kubau", "Kudan", "Lere", "Makarfi", "Sabon Gari", "Sanga", "Soba", "Zangon Kataf", "Zaria"] },
+        { name: "Kano", lgas: ["Ajingi", "Albasu", "Bagwai", "Bebeji", "Bichi", "Bunkure", "Dala", "Dambatta", "Dawakin Kudu", "Dawakin Tofa", "Doguwa", "Fagge", "Gabasawa", "Garko", "Garun Mallam", "Gaya", "Gezawa", "Gwale", "Gwarzo", "Kabo", "Kano Municipal", "Karaye", "Kibiya", "Kiru", "Kumbotso", "Kunchi", "Kura", "Madobi", "Makoda", "Minjibir", "Nasarawa", "Rano", "Rimin Gado", "Rogo", "Shanono", "Sumaila", "Takai", "Tarauni", "Tofa", "Tsanyawa", "Tudun Wada", "Ungogo", "Warawa", "Wudil"] },
+        { name: "Katsina", lgas: ["Bakori", "Batagarawa", "Batsari", "Baure", "Bindawa", "Charanchi", "Dan Musa", "Dandume", "Danja", "Daura", "Dutsi", "Dutsin Ma", "Faskari", "Funtua", "Ingawa", "Jibia", "Kafur", "Kaita", "Kankara", "Kankia", "Katsina", "Kurfi", "Kusada", "Mai'Adua", "Malumfashi", "Mani", "Mashi", "Matazu", "Musawa", "Rimi", "Sabuwa", "Safana", "Sandamu", "Zango"] },
+        { name: "Kebbi", lgas: ["Aleiro", "Arewa Dandi", "Argungu", "Augie", "Bagudo", "Birnin Kebbi", "Bunza", "Dandi", "Fakai", "Gwandu", "Jega", "Kalgo", "Koko/Besse", "Maiyama", "Ngaski", "Sakaba", "Shanga", "Suru", "Danko/Wasagu", "Yauri", "Zuru"] },
+        { name: "Kogi", lgas: ["Adavi", "Ajaokuta", "Ankpa", "Bassa", "Dekina", "Ibaji", "Idah", "Igalamela Odolu", "Ijumu", "Kabba/Bunu", "Kogi", "Lokoja", "Mopa Muro", "Ofu", "Ogori/Magongo", "Okehi", "Okene", "Olamaboro", "Omala", "Yagba East", "Yagba West"] },
+        { name: "Kwara", lgas: ["Asa", "Baruten", "Edu", "Ekiti", "Ifelodun", "Ilorin East", "Ilorin South", "Ilorin West", "Irepodun", "Isin", "Kaiama", "Moro", "Offa", "Oke Ero", "Oyun", "Pategi"] },
+        { name: "Lagos", lgas: ["Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin", "Apapa", "Badagry", "Epe", "Eti Osa", "Ibeju-Lekki", "Ifako-Ijaiye", "Ikeja", "Ikorodu", "Kosofe", "Lagos Island", "Lagos Mainland", "Mushin", "Ojo", "Oshodi-Isolo", "Shomolu", "Surulere"] },
+        { name: "Nasarawa", lgas: ["Akwanga", "Awe", "Doma", "Karu", "Keana", "Keffi", "Kokona", "Lafia", "Nasarawa", "Nasarawa Egon", "Obi", "Toto", "Wamba"] },
+        { name: "Niger", lgas: ["Agaie", "Agwara", "Bida", "Borgu", "Bosso", "Chanchaga", "Edati", "Gbako", "Gurara", "Katcha", "Kontagora", "Lapai", "Lavun", "Magama", "Mariga", "Mashegu", "Mokwa", "Moya", "Paikoro", "Rafi", "Rijau", "Shiroro", "Suleja", "Tafa", "Wushishi"] },
+        { name: "Ogun", lgas: ["Abeokuta North", "Abeokuta South", "Ado-Odo/Ota", "Egbado North", "Egbado South", "Ewekoro", "Ifo", "Ijebu East", "Ijebu North", "Ijebu North East", "Ijebu Ode", "Ikenne", "Imeko Afon", "Ipokia", "Obafemi Owode", "Odeda", "Odogbolu", "Ogun Waterside", "Remo North", "Shagamu"] },
+        { name: "Ondo", lgas: ["Akoko North-East", "Akoko North-West", "Akoko South-East", "Akoko South-West", "Akure North", "Akure South", "Ese Odo", "Idanre", "Ifedore", "Ilaje", "Ile Oluji/Okeigbo", "Irele", "Odigbo", "Okitipupa", "Ondo East", "Ondo West", "Ose", "Owo"] },
+        { name: "Osun", lgas: ["Aiyedade", "Aiyedire", "Atakunmosa East", "Atakunmosa West", "Boluwaduro", "Boripe", "Ede North", "Ede South", "Egbedore", "Ejigbo", "Ife Central", "Ife East", "Ife North", "Ife South", "Ifedayo", "Ifelodun", "Ila", "Ilesa East", "Ilesa West", "Irepodun", "Irewole", "Isokan", "Iwo", "Obokun", "Odo Otin", "Ola Oluwa", "Olorunda", "Oriade", "Orolu", "Osogbo"] },
+        { name: "Oyo", lgas: ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo East", "Oyo West", "Saki East", "Saki West", "Surulere"] },
+        { name: "Plateau", lgas: ["Bokkos", "Barkin Ladi", "Bassa", "Jos East", "Jos North", "Jos South", "Kanam", "Kanke", "Langtang North", "Langtang South", "Mangu", "Mikang", "Pankshin", "Qua'an Pan", "Riyom", "Shendam", "Wase"] },
+        { name: "Rivers", lgas: ["Abua/Odual", "Ahoada East", "Ahoada West", "Akuku-Toru", "Andoni", "Asari-Toru", "Bonny", "Degema", "Eleme", "Emohua", "Etche", "Gokana", "Ikwerre", "Khana", "Obio/Akpor", "Ogba/Egbema/Ndoni", "Ogu/Bolo", "Okrika", "Omuma", "Opobo/Nkoro", "Oyigbo", "Port Harcourt", "Tai"] },
+        { name: "Sokoto", lgas: ["Binji", "Bodinga", "Dange Shuni", "Gada", "Goronyo", "Gudu", "Gwadabawa", "Illela", "Isa", "Kebbe", "Kware", "Rabah", "Sabon Birni", "Shagari", "Silame", "Sokoto North", "Sokoto South", "Tambuwal", "Tangaza", "Tureta", "Wamako", "Wurno", "Yabo"] },
+        { name: "Taraba", lgas: ["Ardo Kola", "Bali", "Donga", "Gashaka", "Gassol", "Ibi", "Jalingo", "Karim Lamido", "Kumi", "Lau", "Sardauna", "Takum", "Ussa", "Wukari", "Yorro", "Zing"] },
+        { name: "Yobe", lgas: ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
+        { name: "Zamfara", lgas: ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Chafe", "Zurmi"] }
+    ];
 
-        // Load initial data
-        fetchStudents();
+    // ============================================================================
+    // STATE AND LGA DROPDOWN INITIALIZATION FUNCTIONS
+    // ============================================================================
 
-        // Initialize event listeners
-        initializeEventListeners();
+    // Initialize states dropdown for add modal
+    function initializeAddStateDropdown() {
+        const stateSelect = document.getElementById('addState');
+        const lgaSelect = document.getElementById('addLocal');
+
+        if (!stateSelect || !lgaSelect) {
+            console.error('State or LGA dropdown not found for add modal');
+            return;
+        }
+
+        // Clear existing options
+        stateSelect.innerHTML = '<option value="">Select State</option>';
+        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+        lgaSelect.disabled = true;
+
+        // Populate states
+        nigerianStates.forEach(state => {
+            const option = document.createElement('option');
+            option.value = state.name;
+            option.textContent = state.name;
+            stateSelect.appendChild(option);
+        });
+
+        // Remove existing event listener by cloning and replacing
+        const newStateSelect = stateSelect.cloneNode(true);
+        stateSelect.parentNode.replaceChild(newStateSelect, stateSelect);
+
+        // Add change event listener for states
+        newStateSelect.addEventListener('change', function() {
+            const selectedState = this.value;
+            const lgaSelect = document.getElementById('addLocal');
+
+            // Clear LGA dropdown
+            lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+
+            if (selectedState) {
+                const state = nigerianStates.find(s => s.name === selectedState);
+                lgaSelect.disabled = false;
+
+                if (state) {
+                    // Populate LGAs for selected state
+                    state.lgas.forEach(lga => {
+                        const option = document.createElement('option');
+                        option.value = lga;
+                        option.textContent = lga;
+                        lgaSelect.appendChild(option);
+                    });
+                }
+            } else {
+                lgaSelect.disabled = true;
+            }
+        });
     }
 
-    // Initialize Event Listeners
-    function initializeEventListeners() {
-        // View toggle
-        document.getElementById('tableViewBtn').addEventListener('click', () => toggleView('table'));
-        document.getElementById('cardViewBtn').addEventListener('click', () => toggleView('card'));
+    // Initialize states dropdown for edit modal
+    function initializeEditStateDropdown() {
+        const stateSelect = document.getElementById('editState');
+        const lgaSelect = document.getElementById('editLocal');
 
-        // Search and filter
-        document.getElementById('search-input').addEventListener('input', debounce(filterData, 300));
-        document.getElementById('schoolclass-filter').addEventListener('change', filterData);
-        document.getElementById('status-filter').addEventListener('change', filterData);
-        document.getElementById('gender-filter').addEventListener('change', filterData);
-
-        // Checkboxes
-        document.getElementById('checkAll').addEventListener('change', toggleSelectAll);
-        document.getElementById('checkAllTable').addEventListener('change', toggleSelectAll);
-
-        // Pagination
-        document.getElementById('prevPage').addEventListener('click', goToPrevPage);
-        document.getElementById('nextPage').addEventListener('click', goToNextPage);
-
-        // Update current term
-        document.getElementById('confirmUpdateCurrentTerm').addEventListener('click', updateCurrentTerm);
-
-        // Form submissions
-        const addForm = document.getElementById('addStudentForm');
-        const editForm = document.getElementById('editStudentForm');
-
-        if (addForm) {
-            addForm.addEventListener('submit', handleAddStudent);
+        if (!stateSelect || !lgaSelect) {
+            console.error('State or LGA dropdown not found for edit modal');
+            return;
         }
 
-        if (editForm) {
-            editForm.addEventListener('submit', handleEditStudent);
-        }
+        // Clear existing options
+        stateSelect.innerHTML = '<option value="">Select State</option>';
+        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+        lgaSelect.disabled = true;
 
-        // Admission number events
-        const admissionYear = document.getElementById('admissionYear');
-        const editAdmissionYear = document.getElementById('editAdmissionYear');
+        // Populate states
+        nigerianStates.forEach(state => {
+            const option = document.createElement('option');
+            option.value = state.name;
+            option.textContent = state.name;
+            stateSelect.appendChild(option);
+        });
 
-        if (admissionYear) {
-            admissionYear.addEventListener('change', () => updateAdmissionNumber());
-        }
+        // Remove existing event listener by cloning and replacing
+        const newStateSelect = stateSelect.cloneNode(true);
+        stateSelect.parentNode.replaceChild(newStateSelect, stateSelect);
 
-        if (editAdmissionYear) {
-            editAdmissionYear.addEventListener('change', () => updateAdmissionNumber('edit'));
-        }
+        // Add change event listener for states
+        newStateSelect.addEventListener('change', function() {
+            const selectedState = this.value;
+            const lgaSelect = document.getElementById('editLocal');
 
-        // Initialize report modal when shown
-        const reportModal = document.getElementById('printStudentReportModal');
-        if (reportModal) {
-            reportModal.addEventListener('show.bs.modal', function() {
-                console.log('Report modal shown, initializing...');
-                setTimeout(initializeReportModal, 100);
-            });
+            // Clear LGA dropdown
+            lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+
+            if (selectedState) {
+                const state = nigerianStates.find(s => s.name === selectedState);
+                lgaSelect.disabled = false;
+
+                if (state) {
+                    // Populate LGAs for selected state
+                    state.lgas.forEach(lga => {
+                        const option = document.createElement('option');
+                        option.value = lga;
+                        option.textContent = lga;
+                        lgaSelect.appendChild(option);
+                    });
+                }
+            } else {
+                lgaSelect.disabled = true;
+            }
+        });
+    }
+
+    // Set selected state and LGA for edit modal
+    function setEditStateAndLGA(stateName, lgaName) {
+        const stateSelect = document.getElementById('editState');
+        const lgaSelect = document.getElementById('editLocal');
+
+        if (!stateSelect || !lgaSelect) return;
+
+        // Set state value
+        if (stateName) {
+            stateSelect.value = stateName;
+
+            // Trigger change event to populate LGAs
+            const event = new Event('change', { bubbles: true });
+            stateSelect.dispatchEvent(event);
+
+            // Set LGA value after a short delay to ensure LGAs are populated
+            setTimeout(() => {
+                if (lgaName) {
+                    lgaSelect.value = lgaName;
+                }
+            }, 100);
         }
     }
 
-    // Debounce function for search
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
+    // Reset add modal state dropdown
+    function resetAddStateDropdown() {
+        const stateSelect = document.getElementById('addState');
+        const lgaSelect = document.getElementById('addLocal');
+
+        if (stateSelect) {
+            stateSelect.value = '';
+        }
+        if (lgaSelect) {
+            lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+            lgaSelect.disabled = true;
+        }
     }
 
-    // Ensure Axios and CSRF token
+    // Reset edit modal state dropdown
+    function resetEditStateDropdown() {
+        const stateSelect = document.getElementById('editState');
+        const lgaSelect = document.getElementById('editLocal');
+
+        if (stateSelect) {
+            stateSelect.value = '';
+        }
+        if (lgaSelect) {
+            lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+            lgaSelect.disabled = true;
+        }
+    }
+
+    // ============================================================================
+    // ENSURE AXIOS AND CSRF TOKEN
+    // ============================================================================
+
     function ensureAxios() {
         if (typeof axios === 'undefined') {
             console.error('Error: Axios is not defined');
@@ -4646,6 +4768,11 @@ use Spatie\Permission\Models\Role;
             }
         }
 
+        // Set state and LGA for edit modal
+        if (student.state || student.local) {
+            setEditStateAndLGA(student.state, student.local);
+        }
+
         // Calculate age if date of birth exists
         if (student.dateofbirth) {
             calculateAge(student.dateofbirth, 'editAgeInput');
@@ -5504,8 +5631,127 @@ use Spatie\Permission\Models\Role;
     }
 
     // ============================================================================
+    // INITIALIZE APPLICATION
+    // ============================================================================
+
+    // Initialize Application
+    function initializeApplication() {
+        // Initialize admission number on page load
+        updateAdmissionNumber();
+        updateAdmissionNumber('edit');
+
+        // Initialize state dropdowns
+        initializeAddStateDropdown();
+        initializeEditStateDropdown();
+
+        // Load initial data
+        fetchStudents();
+
+        // Initialize event listeners
+        initializeEventListeners();
+    }
+
+    // Initialize Event Listeners
+    function initializeEventListeners() {
+        // View toggle
+        document.getElementById('tableViewBtn').addEventListener('click', () => toggleView('table'));
+        document.getElementById('cardViewBtn').addEventListener('click', () => toggleView('card'));
+
+        // Search and filter
+        document.getElementById('search-input').addEventListener('input', debounce(filterData, 300));
+        document.getElementById('schoolclass-filter').addEventListener('change', filterData);
+        document.getElementById('status-filter').addEventListener('change', filterData);
+        document.getElementById('gender-filter').addEventListener('change', filterData);
+
+        // Checkboxes
+        document.getElementById('checkAll').addEventListener('change', toggleSelectAll);
+        document.getElementById('checkAllTable').addEventListener('change', toggleSelectAll);
+
+        // Pagination
+        document.getElementById('prevPage').addEventListener('click', goToPrevPage);
+        document.getElementById('nextPage').addEventListener('click', goToNextPage);
+
+        // Update current term
+        document.getElementById('confirmUpdateCurrentTerm').addEventListener('click', updateCurrentTerm);
+
+        // Form submissions
+        const addForm = document.getElementById('addStudentForm');
+        const editForm = document.getElementById('editStudentForm');
+
+        if (addForm) {
+            addForm.addEventListener('submit', handleAddStudent);
+        }
+
+        if (editForm) {
+            editForm.addEventListener('submit', handleEditStudent);
+        }
+
+        // Admission number events
+        const admissionYear = document.getElementById('admissionYear');
+        const editAdmissionYear = document.getElementById('editAdmissionYear');
+
+        if (admissionYear) {
+            admissionYear.addEventListener('change', () => updateAdmissionNumber());
+        }
+
+        if (editAdmissionYear) {
+            editAdmissionYear.addEventListener('change', () => updateAdmissionNumber('edit'));
+        }
+
+        // Initialize report modal when shown
+        const reportModal = document.getElementById('printStudentReportModal');
+        if (reportModal) {
+            reportModal.addEventListener('show.bs.modal', function() {
+                console.log('Report modal shown, initializing...');
+                setTimeout(initializeReportModal, 100);
+            });
+        }
+
+        // Add modal reset listeners
+        const addModal = document.getElementById('addStudentModal');
+        if (addModal) {
+            addModal.addEventListener('hidden.bs.modal', function() {
+                resetAddStateDropdown();
+            });
+        }
+
+        const editModal = document.getElementById('editStudentModal');
+        if (editModal) {
+            editModal.addEventListener('hidden.bs.modal', function() {
+                resetEditStateDropdown();
+            });
+        }
+
+        // Initialize state dropdowns when modals are shown
+        if (addModal) {
+            addModal.addEventListener('shown.bs.modal', function() {
+                initializeAddStateDropdown();
+            });
+        }
+
+        if (editModal) {
+            editModal.addEventListener('shown.bs.modal', function() {
+                initializeEditStateDropdown();
+            });
+        }
+    }
+
+    // ============================================================================
     // HELPER FUNCTIONS
     // ============================================================================
+
+    // Debounce function for search
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
 
     // Show Loading
     function showLoading() {
@@ -5598,9 +5844,19 @@ use Spatie\Permission\Models\Role;
         });
     };
 
+    // ============================================================================
+    // DOM CONTENT LOADED EVENT
+    // ============================================================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing application...');
+
+        // Initialize student list
+        initializeApplication();
+    });
+
     // Initialize the application
     ensureAxios();
-    initializeApplication();
 </script>
 
 {{-- <!-- Include Sortable.js for drag and drop functionality -->
