@@ -11,6 +11,7 @@ use App\Models\Broadsheets;
 use App\Models\BroadsheetsMock;
 use App\Models\ParentRegistration;
 use App\Models\PromotionStatus;
+use App\Models\ReportHistory;
 use App\Models\Schoolclass;
 use App\Models\Schoolhouse;
 use App\Models\SchoolInformation;
