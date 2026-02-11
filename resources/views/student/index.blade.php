@@ -374,6 +374,313 @@ use Spatie\Permission\Models\Role;
                     border-color: #3b82f6;
                 }
 
+                /* ====== ENHANCED TABLE ACTION BUTTONS ====== */
+                .btn-soft-info {
+                    color: #0dcaf0;
+                    background-color: rgba(13, 202, 240, 0.1);
+                    border-color: transparent;
+                    transition: all 0.2s ease;
+                }
+
+                .btn-soft-info:hover {
+                    color: #fff;
+                    background-color: #0dcaf0;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(13, 202, 240, 0.2);
+                }
+
+                .btn-soft-warning {
+                    color: #ffc107;
+                    background-color: rgba(255, 193, 7, 0.1);
+                    border-color: transparent;
+                    transition: all 0.2s ease;
+                }
+
+                .btn-soft-warning:hover {
+                    color: #fff;
+                    background-color: #ffc107;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+                }
+
+                .btn-soft-danger {
+                    color: #dc3545;
+                    background-color: rgba(220, 53, 69, 0.1);
+                    border-color: transparent;
+                    transition: all 0.2s ease;
+                }
+
+                .btn-soft-danger:hover {
+                    color: #fff;
+                    background-color: #dc3545;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+                }
+
+                .btn-soft-secondary {
+                    color: #6c757d;
+                    background-color: rgba(108, 117, 125, 0.1);
+                    border-color: transparent;
+                    transition: all 0.2s ease;
+                }
+
+                .btn-soft-secondary:hover {
+                    color: #fff;
+                    background-color: #6c757d;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);
+                }
+
+                .btn-soft-success {
+                    color: #198754;
+                    background-color: rgba(25, 135, 84, 0.1);
+                    border-color: transparent;
+                    transition: all 0.2s ease;
+                }
+
+                .btn-soft-success:hover {
+                    color: #fff;
+                    background-color: #198754;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2);
+                }
+
+                .btn-soft-primary {
+                    color: #0d6efd;
+                    background-color: rgba(13, 110, 253, 0.1);
+                    border-color: transparent;
+                    transition: all 0.2s ease;
+                }
+
+                .btn-soft-primary:hover {
+                    color: #fff;
+                    background-color: #0d6efd;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+                }
+
+                /* Button groups */
+                .btn-group .btn {
+                    padding: 0.4rem 0.8rem;
+                    font-size: 0.875rem;
+                }
+
+                .btn-group .btn:first-child {
+                    border-top-left-radius: 8px;
+                    border-bottom-left-radius: 8px;
+                }
+
+                .btn-group .btn:last-child {
+                    border-top-right-radius: 8px;
+                    border-bottom-right-radius: 8px;
+                }
+
+                /* Dropdown menu styling */
+                .dropdown-menu {
+                    border: none;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+                    border-radius: 12px;
+                    padding: 8px;
+                    animation: fadeInDown 0.2s ease;
+                }
+
+                .dropdown-item {
+                    border-radius: 8px;
+                    padding: 8px 16px;
+                    font-size: 0.875rem;
+                    transition: all 0.2s ease;
+                }
+
+                .dropdown-item:hover {
+                    background-color: #f8f9fa;
+                    transform: translateX(4px);
+                }
+
+                .dropdown-item i {
+                    width: 20px;
+                    text-align: center;
+                }
+
+                .dropdown-divider {
+                    margin: 8px 0;
+                    opacity: 0.1;
+                }
+
+                /* Table row enhancements */
+                .data-table tbody tr {
+                    transition: all 0.25s ease;
+                }
+
+                .data-table tbody tr:hover {
+                    background-color: #f8f9fa;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+                }
+
+                .data-table tbody td {
+                    padding: 16px 12px;
+                    vertical-align: middle;
+                }
+
+                /* Badge enhancements */
+                .badge {
+                    font-weight: 500;
+                    letter-spacing: 0.3px;
+                }
+
+                .badge.bg-gradient {
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                }
+
+                /* Animations */
+                @keyframes fadeInDown {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                @keyframes pulse {
+                    0% {
+                        box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.4);
+                    }
+                    70% {
+                        box-shadow: 0 0 0 6px rgba(67, 97, 238, 0);
+                    }
+                    100% {
+                        box-shadow: 0 0 0 0 rgba(67, 97, 238, 0);
+                    }
+                }
+
+                /* Active status indicator */
+                .position-absolute.bg-success,
+                .position-absolute.bg-secondary {
+                    animation: pulse 2s infinite;
+                    box-shadow: 0 0 0 rgba(67, 97, 238, 0.4);
+                    border: 2px solid white;
+                }
+
+                /* Responsive adjustments */
+                @media (max-width: 768px) {
+                    .btn-group .btn {
+                        padding: 0.3rem 0.6rem;
+                    }
+
+                    .data-table tbody td {
+                        padding: 12px 8px;
+                    }
+                }
+
+                /* Color utilities */
+                .text-pink {
+                    color: #f72585;
+                }
+
+                .bg-pink {
+                    background-color: #f72585;
+                }
+
+                /* Avatar enhancements */
+                .avatar-circle {
+                    position: relative;
+                    display: inline-block;
+                }
+
+                .avatar-initials {
+                    font-family: 'Inter', sans-serif;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                    transition: all 0.3s ease;
+                }
+
+                tr:hover .avatar-initials {
+                    transform: scale(1.05);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                }
+
+                /* Quick action buttons */
+                .quick-actions {
+                    display: flex;
+                    gap: 4px;
+                }
+
+                /* Status indicators */
+                .status-dot {
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    margin-right: 6px;
+                }
+
+                .status-dot.active {
+                    background-color: #10b981;
+                    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+                }
+
+                .status-dot.inactive {
+                    background-color: #6c757d;
+                    box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.2);
+                }
+
+                /* Table action container */
+                .table-actions-container {
+                    display: flex;
+                    gap: 8px;
+                    justify-content: flex-end;
+                }
+
+                /* Student info in table */
+                .student-info-wrapper {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+
+                .student-details {
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .student-name {
+                    font-weight: 600;
+                    color: #1e293b;
+                    margin-bottom: 4px;
+                }
+
+                .student-meta {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }
+
+                .admission-badge {
+                    background-color: #f1f5f9;
+                    color: #475569;
+                    padding: 2px 8px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+
+                /* Compact status badges */
+                .compact-badge {
+                    padding: 4px 8px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    font-weight: 500;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+
                 /* ====== TABLE STYLES ====== */
                 .data-table-container {
                     background: white;
@@ -411,12 +718,6 @@ use Spatie\Permission\Models\Role;
 
                 .data-table tbody tr.selected {
                     background-color: #f0f9ff;
-                }
-
-                .data-table tbody td {
-                    padding: 16px 12px;
-                    vertical-align: middle;
-                    border: none;
                 }
 
                 /* ====== ACTION BUTTONS ====== */
@@ -1035,12 +1336,11 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                     </th>
                                     <th>Student</th>
-                                    <th>Admission No</th>
                                     <th>Class</th>
                                     <th>Status</th>
                                     <th>Gender</th>
                                     <th>Registered</th>
-                                    <th width="150">Actions</th>
+                                    <th width="180">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="studentTableBody">
@@ -1107,81 +1407,81 @@ use Spatie\Permission\Models\Role;
             </div>
         </div>
 
-       <!-- Update Current Term Modal -->
-<div id="updateCurrentTermModal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header modal-header-gradient">
-                <h5 class="modal-title">
-                    <i class="fas fa-calendar-alt me-2"></i>Register/Update Term
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <form id="updateCurrentTermForm">
-                    @csrf
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Registering/updating term for <span id="selectedStudentsCount">0</span> selected student(s).
+        <!-- Update Current Term Modal -->
+        <div id="updateCurrentTermModal" class="modal fade" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header modal-header-gradient">
+                        <h5 class="modal-title">
+                            <i class="fas fa-calendar-alt me-2"></i>Register/Update Term
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+                    <div class="modal-body p-4">
+                        <form id="updateCurrentTermForm">
+                            @csrf
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Registering/updating term for <span id="selectedStudentsCount">0</span> selected student(s).
+                            </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Class</label>
-                        <select class="form-control" name="schoolclassId" required>
-                            <option value="">Select Class</option>
-                            @foreach ($schoolclasses as $class)
-                                <option value="{{ $class->id }}">{{ $class->class_display }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                            <div class="mb-3">
+                                <label class="form-label">Class</label>
+                                <select class="form-control" name="schoolclassId" required>
+                                    <option value="">Select Class</option>
+                                    @foreach ($schoolclasses as $class)
+                                        <option value="{{ $class->id }}">{{ $class->class_display }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Term</label>
-                        <select class="form-control" name="termId" required>
-                            <option value="">Select Term</option>
-                            @foreach ($schoolterms as $term)
-                                <option value="{{ $term->id }}">{{ $term->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                            <div class="mb-3">
+                                <label class="form-label">Term</label>
+                                <select class="form-control" name="termId" required>
+                                    <option value="">Select Term</option>
+                                    @foreach ($schoolterms as $term)
+                                        <option value="{{ $term->id }}">{{ $term->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Session</label>
-                        <select class="form-control" name="sessionId" required>
-                            <option value="">Select Session</option>
-                            @foreach ($schoolsessions as $session)
-                                <option value="{{ $session->id }}">{{ $session->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                            <div class="mb-3">
+                                <label class="form-label">Session</label>
+                                <select class="form-control" name="sessionId" required>
+                                    <option value="">Select Session</option>
+                                    @foreach ($schoolsessions as $session)
+                                        <option value="{{ $session->id }}">{{ $session->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_current" id="is_current" value="1" checked>
-                            <label class="form-check-label" for="is_current">
-                                Mark as current term for student(s)
-                            </label>
-                        </div>
-                        <small class="text-muted">If checked, this will be marked as the current term. Previous current term will be unmarked.</small>
-                    </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="is_current" id="is_current" value="1" checked>
+                                    <label class="form-check-label" for="is_current">
+                                        Mark as current term for student(s)
+                                    </label>
+                                </div>
+                                <small class="text-muted">If checked, this will be marked as the current term. Previous current term will be unmarked.</small>
+                            </div>
 
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Note:</strong> Students can have multiple terms registered in the same session.
-                        If a term already exists for a student in this session, it will be updated.
-                        Otherwise, a new term registration will be created.
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Note:</strong> Students can have multiple terms registered in the same session.
+                                If a term already exists for a student in this session, it will be updated.
+                                Otherwise, a new term registration will be created.
+                            </div>
+                        </form>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary-gradient" id="confirmUpdateCurrentTerm" onclick="updateCurrentTerm()">
-                    <i class="fas fa-save me-2"></i>Register/Update Term
-                </button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary-gradient" id="confirmUpdateCurrentTerm" onclick="updateCurrentTerm()">
+                            <i class="fas fa-save me-2"></i>Register/Update Term
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
         <!-- Print/Export Report Modal -->
         <div id="printStudentReportModal" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -1369,10 +1669,6 @@ use Spatie\Permission\Models\Role;
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type="button" class="btn btn-success" id="generateReportBtn" onclick="generateReport()">
                             <i class="ri-printer-line me-1"></i> Generate & Download
-                        </button>
-                        <!-- Debug button - remove in production -->
-                        <button type="button" class="btn btn-warning btn-sm d-none" onclick="debugColumnOrdering()" id="debugBtn">
-                            <i class="ri-bug-line me-1"></i> Debug
                         </button>
                     </div>
                 </div>
@@ -1727,7 +2023,6 @@ use Spatie\Permission\Models\Role;
                                                         </select>
                                                     </div>
                                                 </div>
-
                                             </div>
                                         </div>
                                     </div>
@@ -2004,7 +2299,6 @@ use Spatie\Permission\Models\Role;
                                                     <input type="text" id="editFirstname" name="firstname" class="form-control" placeholder="First name" required>
                                                 </div>
                                             </div>
-
                                         </div>
                                         <div class="mb-3">
                                             <label for="editOthername" class="form-label">Other Names</label>
@@ -2288,1600 +2582,1919 @@ use Spatie\Permission\Models\Role;
         </div>
     </div>
 </div>
+
 <script>
     // ============================================================================
-// COMBINED STUDENT MANAGEMENT SYSTEM - ENHANCED WITH ALL FEATURES
-// ============================================================================
+    // COMBINED STUDENT MANAGEMENT SYSTEM - ENHANCED WITH ALL FEATURES
+    // ============================================================================
 
-// Global Variables
-let allStudents = [];
-let currentPage = 1;
-const itemsPerPage = 12;
-let currentView = 'table';
-let currentFilter = {
-    search: '',
-    class: 'all',
-    status: 'all',
-    gender: 'all'
-};
-const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
-
-// DOM Ready
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing application...');
-    initializeApplication();
-});
-
-// Initialize Application
-function initializeApplication() {
-    // Initialize admission number on page load
-    updateAdmissionNumber();
-    updateAdmissionNumber('edit');
-
-    // Load initial data
-    fetchStudents();
-
-    // Initialize event listeners
-    initializeEventListeners();
-}
-
-// Initialize Event Listeners
-function initializeEventListeners() {
-    // View toggle
-    document.getElementById('tableViewBtn').addEventListener('click', () => toggleView('table'));
-    document.getElementById('cardViewBtn').addEventListener('click', () => toggleView('card'));
-
-    // Search and filter
-    document.getElementById('search-input').addEventListener('input', debounce(filterData, 300));
-    document.getElementById('schoolclass-filter').addEventListener('change', filterData);
-    document.getElementById('status-filter').addEventListener('change', filterData);
-    document.getElementById('gender-filter').addEventListener('change', filterData);
-
-    // Checkboxes
-    document.getElementById('checkAll').addEventListener('change', toggleSelectAll);
-    document.getElementById('checkAllTable').addEventListener('change', toggleSelectAll);
-
-    // Pagination
-    document.getElementById('prevPage').addEventListener('click', goToPrevPage);
-    document.getElementById('nextPage').addEventListener('click', goToNextPage);
-
-    // Update current term
-    document.getElementById('confirmUpdateCurrentTerm').addEventListener('click', updateCurrentTerm);
-
-    // Form submissions
-    const addForm = document.getElementById('addStudentForm');
-    const editForm = document.getElementById('editStudentForm');
-
-    if (addForm) {
-        addForm.addEventListener('submit', handleAddStudent);
-    }
-
-    if (editForm) {
-        editForm.addEventListener('submit', handleEditStudent);
-    }
-
-    // Admission number events
-    const admissionYear = document.getElementById('admissionYear');
-    const editAdmissionYear = document.getElementById('editAdmissionYear');
-
-    if (admissionYear) {
-        admissionYear.addEventListener('change', () => updateAdmissionNumber());
-    }
-
-    if (editAdmissionYear) {
-        editAdmissionYear.addEventListener('change', () => updateAdmissionNumber('edit'));
-    }
-
-    // Initialize report modal when shown
-    const reportModal = document.getElementById('printStudentReportModal');
-    if (reportModal) {
-        reportModal.addEventListener('show.bs.modal', function() {
-            console.log('Report modal shown, initializing...');
-            setTimeout(initializeReportModal, 100);
-        });
-    }
-}
-
-// Debounce function for search
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// ============================================================================
-// ADMISSION NUMBER FUNCTIONS
-// ============================================================================
-
-// Update admission number based on year selection
-function updateAdmissionNumber(prefix = '') {
-    const yearSelect = document.getElementById(`${prefix}admissionYear`);
-    const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
-    const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
-
-    if (!yearSelect || !admissionNoInput) return;
-
-    const year = yearSelect.value;
-    const baseFormat = `TCC/${year}/`;
-
-    if (admissionMode && admissionMode.value === 'auto') {
-        admissionNoInput.readOnly = true;
-        fetch(`/students/last-admission-number?year=${year}`, {
-            method: 'GET',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                admissionNoInput.value = data.admissionNo;
-            } else {
-                showError(data.message || 'Failed to generate admission number');
-                admissionNoInput.value = `${baseFormat}0871`;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showError('Failed to generate admission number');
-            admissionNoInput.value = `${baseFormat}0871`;
-        });
-    } else {
-        admissionNoInput.readOnly = false;
-        if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
-            admissionNoInput.value = `${baseFormat}0871`;
-        } else if (!admissionNoInput.value.startsWith(baseFormat)) {
-            const numericPart = admissionNoInput.value.split('/').pop() || '0871';
-            const numericValue = Math.max(871, parseInt(numericPart) || 871);
-            admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
-        }
-    }
-}
-
-// Toggle admission input based on mode
-window.toggleAdmissionInput = function(prefix = '') {
-    const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
-    const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
-    const yearSelect = document.getElementById(`${prefix}admissionYear`);
-
-    if (!admissionMode || !admissionNoInput || !yearSelect) return;
-
-    const year = yearSelect.value;
-    const baseFormat = `TCC/${year}/`;
-
-    if (admissionMode.value === 'auto') {
-        admissionNoInput.readOnly = true;
-        fetch(`/students/last-admission-number?year=${year}`, {
-            method: 'GET',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                admissionNoInput.value = data.admissionNo;
-            } else {
-                showError(data.message || 'Failed to generate admission number');
-                admissionNoInput.value = `${baseFormat}0871`;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showError('Failed to generate admission number');
-            admissionNoInput.value = `${baseFormat}0871`;
-        });
-    } else {
-        admissionNoInput.readOnly = false;
-        if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
-            admissionNoInput.value = `${baseFormat}0871`;
-        } else if (!admissionNoInput.value.startsWith(baseFormat)) {
-            const numericPart = admissionNoInput.value.split('/').pop() || '0871';
-            const numericValue = Math.max(871, parseInt(numericPart) || 871);
-            admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
-        }
-    }
-};
-
-// ============================================================================
-// VIEW MANAGEMENT FUNCTIONS
-// ============================================================================
-
-// Toggle View Function
-function toggleView(viewType) {
-    currentView = viewType;
-    const tableView = document.getElementById('tableView');
-    const cardView = document.getElementById('cardView');
-    const tableViewBtn = document.getElementById('tableViewBtn');
-    const cardViewBtn = document.getElementById('cardViewBtn');
-
-    if (viewType === 'table') {
-        tableView.classList.remove('d-none');
-        cardView.classList.add('d-none');
-        tableViewBtn.classList.add('active');
-        cardViewBtn.classList.remove('active');
-    } else {
-        tableView.classList.add('d-none');
-        cardView.classList.remove('d-none');
-        tableViewBtn.classList.remove('active');
-        cardViewBtn.classList.add('active');
-    }
-
-    renderCurrentView();
-}
-
-// Render Current View
-function renderCurrentView() {
-    const filteredStudents = filterStudents();
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const pageStudents = filteredStudents.slice(startIndex, endIndex);
-
-    if (currentView === 'table') {
-        renderTableView(pageStudents);
-    } else {
-        renderCardView(pageStudents);
-    }
-
-    updatePagination(filteredStudents.length);
-    updateCounts(filteredStudents.length, pageStudents.length);
-}
-
-// ============================================================================
-// FILTER FUNCTIONS
-// ============================================================================
-
-// Filter Students
-function filterStudents() {
-    const searchTerm = currentFilter.search.toLowerCase();
-    const classFilter = currentFilter.class;
-    const statusFilter = currentFilter.status;
-    const genderFilter = currentFilter.gender;
-
-    return allStudents.filter(student => {
-        // Search filter
-        const searchMatch = !searchTerm ||
-            student.firstname?.toLowerCase().includes(searchTerm) ||
-            student.lastname?.toLowerCase().includes(searchTerm) ||
-            student.admissionNo?.toLowerCase().includes(searchTerm);
-
-        // Class filter
-        const classMatch = classFilter === 'all' || student.schoolclassid == classFilter;
-
-        // Status filter
-        const statusMatch = statusFilter === 'all' ||
-            (statusFilter === '1' && student.statusId == 1) ||
-            (statusFilter === '2' && student.statusId == 2) ||
-            (statusFilter === 'Active' && student.student_status === 'Active') ||
-            (statusFilter === 'Inactive' && student.student_status === 'Inactive');
-
-        // Gender filter
-        const genderMatch = genderFilter === 'all' || student.gender === genderFilter;
-
-        return searchMatch && classMatch && statusMatch && genderMatch;
-    });
-}
-
-// Filter Data
-function filterData() {
-    currentFilter = {
-        search: document.getElementById('search-input').value,
-        class: document.getElementById('schoolclass-filter').value,
-        status: document.getElementById('status-filter').value,
-        gender: document.getElementById('gender-filter').value
-    };
-
-    currentPage = 1;
-    renderCurrentView();
-}
-
-// Reset Filters
-function resetFilters() {
-    document.getElementById('search-input').value = '';
-    document.getElementById('schoolclass-filter').value = 'all';
-    document.getElementById('status-filter').value = 'all';
-    document.getElementById('gender-filter').value = 'all';
-
-    currentFilter = {
+    // Global Variables
+    let allStudents = [];
+    let currentPage = 1;
+    const itemsPerPage = 12;
+    let currentView = 'table';
+    let currentFilter = {
         search: '',
         class: 'all',
         status: 'all',
         gender: 'all'
     };
+    const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
 
-    currentPage = 1;
-    renderCurrentView();
-}
+    // DOM Ready
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing application...');
+        initializeApplication();
+    });
 
-// ============================================================================
-// STUDENT DATA FUNCTIONS
-// ============================================================================
+    // Initialize Application
+    function initializeApplication() {
+        // Initialize admission number on page load
+        updateAdmissionNumber();
+        updateAdmissionNumber('edit');
 
-// Fetch Students with proper relationships
-async function fetchStudents() {
-    showLoading();
+        // Load initial data
+        fetchStudents();
 
-    try {
-        const response = await axios.get('/students/data');
-        console.log('Full API response:', response.data);
+        // Initialize event listeners
+        initializeEventListeners();
+    }
 
-        let studentsArray = [];
+    // Initialize Event Listeners
+    function initializeEventListeners() {
+        // View toggle
+        document.getElementById('tableViewBtn').addEventListener('click', () => toggleView('table'));
+        document.getElementById('cardViewBtn').addEventListener('click', () => toggleView('card'));
 
-        if (Array.isArray(response.data)) {
-            studentsArray = response.data;
-        } else if (response.data.students && Array.isArray(response.data.students)) {
-            studentsArray = response.data.students;
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-            studentsArray = response.data.data;
-        } else if (response.data.success && Array.isArray(response.data.data)) {
-            studentsArray = response.data.data;
-        } else {
-            console.log('Unexpected response format, trying to extract students:', response.data);
-            studentsArray = Object.values(response.data).filter(item =>
-                item && (item.id || item.student_id)
-            );
+        // Search and filter
+        document.getElementById('search-input').addEventListener('input', debounce(filterData, 300));
+        document.getElementById('schoolclass-filter').addEventListener('change', filterData);
+        document.getElementById('status-filter').addEventListener('change', filterData);
+        document.getElementById('gender-filter').addEventListener('change', filterData);
+
+        // Checkboxes
+        document.getElementById('checkAll').addEventListener('change', toggleSelectAll);
+        document.getElementById('checkAllTable').addEventListener('change', toggleSelectAll);
+
+        // Pagination
+        document.getElementById('prevPage').addEventListener('click', goToPrevPage);
+        document.getElementById('nextPage').addEventListener('click', goToNextPage);
+
+        // Update current term
+        document.getElementById('confirmUpdateCurrentTerm').addEventListener('click', updateCurrentTerm);
+
+        // Form submissions
+        const addForm = document.getElementById('addStudentForm');
+        const editForm = document.getElementById('editStudentForm');
+
+        if (addForm) {
+            addForm.addEventListener('submit', handleAddStudent);
         }
 
-        console.log('Students array:', studentsArray);
+        if (editForm) {
+            editForm.addEventListener('submit', handleEditStudent);
+        }
 
-        // Process students
-        allStudents = await Promise.all(studentsArray.map(async (student) => {
-            // Get student details to fetch age
-            let completeStudent = null;
-            try {
-                const studentResponse = await axios.get(`/student/${student.id || student.student_id}/edit`);
-                completeStudent = studentResponse.data.student || studentResponse.data;
-            } catch (error) {
-                console.log(`Could not fetch complete details for student ${student.id}`);
-                completeStudent = student;
-            }
+        // Admission number events
+        const admissionYear = document.getElementById('admissionYear');
+        const editAdmissionYear = document.getElementById('editAdmissionYear');
 
-            // Calculate age
-            let age = completeStudent.age;
-            if (!age && completeStudent.dateofbirth) {
-                age = calculateAge(completeStudent.dateofbirth);
-            }
+        if (admissionYear) {
+            admissionYear.addEventListener('change', () => updateAdmissionNumber());
+        }
 
-            return {
-                id: student.id || student.student_id || '',
-                admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
-                firstname: student.firstname || student.first_name || '',
-                lastname: student.lastname || student.last_name || '',
-                othername: student.othername || student.other_name || student.middle_name || '',
-                gender: student.gender || '',
-                statusId: student.statusId || student.status_id || student.student_status_id || '',
-                student_status: student.student_status || student.status || '',
-                created_at: student.created_at || student.created_date || student.registration_date || '',
-                picture: student.picture || student.avatar || student.profile_picture || '',
-                schoolclass: student.schoolclass || student.class || student.class_name || '',
-                arm: student.arm || student.section || '',
-                schoolclassid: student.schoolclassid || student.class_id || '',
-                age: age || '',
-                dateofbirth: completeStudent.dateofbirth || student.dateofbirth || '',
-                // Other fields
-                state: student.state || '',
-                local: student.local || '',
-                placeofbirth: student.placeofbirth || '',
-                phone_number: student.phone_number || '',
-                email: student.email || '',
-                permanent_address: student.permanent_address || '',
-                future_ambition: student.future_ambition || '',
-                nationality: student.nationality || '',
-                religion: student.religion || '',
-                blood_group: student.blood_group || '',
-                mother_tongue: student.mother_tongue || '',
-                nin_number: student.nin_number || '',
-                student_category: student.student_category || '',
-                father_name: student.father_name || '',
-                mother_name: student.mother_name || '',
-                father_phone: student.father_phone || '',
-                mother_phone: student.mother_phone || '',
-                parent_email: student.parent_email || '',
-                parent_address: student.parent_address || '',
-                last_school: student.last_school || '',
-                last_class: student.last_class || '',
-                reason_for_leaving: student.reason_for_leaving || ''
+        if (editAdmissionYear) {
+            editAdmissionYear.addEventListener('change', () => updateAdmissionNumber('edit'));
+        }
+
+        // Initialize report modal when shown
+        const reportModal = document.getElementById('printStudentReportModal');
+        if (reportModal) {
+            reportModal.addEventListener('show.bs.modal', function() {
+                console.log('Report modal shown, initializing...');
+                setTimeout(initializeReportModal, 100);
+            });
+        }
+    }
+
+    // Debounce function for search
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
             };
-        }));
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
 
-        console.log('Processed students:', allStudents);
+    // ============================================================================
+    // ADMISSION NUMBER FUNCTIONS
+    // ============================================================================
+
+    // Update admission number based on year selection
+    function updateAdmissionNumber(prefix = '') {
+        const yearSelect = document.getElementById(`${prefix}admissionYear`);
+        const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+        const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
+
+        if (!yearSelect || !admissionNoInput) return;
+
+        const year = yearSelect.value;
+        const baseFormat = `TCC/${year}/`;
+
+        if (admissionMode && admissionMode.value === 'auto') {
+            admissionNoInput.readOnly = true;
+            fetch(`/students/last-admission-number?year=${year}`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    admissionNoInput.value = data.admissionNo;
+                } else {
+                    showError(data.message || 'Failed to generate admission number');
+                    admissionNoInput.value = `${baseFormat}0871`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to generate admission number');
+                admissionNoInput.value = `${baseFormat}0871`;
+            });
+        } else {
+            admissionNoInput.readOnly = false;
+            if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
+                admissionNoInput.value = `${baseFormat}0871`;
+            } else if (!admissionNoInput.value.startsWith(baseFormat)) {
+                const numericPart = admissionNoInput.value.split('/').pop() || '0871';
+                const numericValue = Math.max(871, parseInt(numericPart) || 871);
+                admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
+            }
+        }
+    }
+
+    // Toggle admission input based on mode
+    window.toggleAdmissionInput = function(prefix = '') {
+        const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
+        const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+        const yearSelect = document.getElementById(`${prefix}admissionYear`);
+
+        if (!admissionMode || !admissionNoInput || !yearSelect) return;
+
+        const year = yearSelect.value;
+        const baseFormat = `TCC/${year}/`;
+
+        if (admissionMode.value === 'auto') {
+            admissionNoInput.readOnly = true;
+            fetch(`/students/last-admission-number?year=${year}`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    admissionNoInput.value = data.admissionNo;
+                } else {
+                    showError(data.message || 'Failed to generate admission number');
+                    admissionNoInput.value = `${baseFormat}0871`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to generate admission number');
+                admissionNoInput.value = `${baseFormat}0871`;
+            });
+        } else {
+            admissionNoInput.readOnly = false;
+            if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
+                admissionNoInput.value = `${baseFormat}0871`;
+            } else if (!admissionNoInput.value.startsWith(baseFormat)) {
+                const numericPart = admissionNoInput.value.split('/').pop() || '0871';
+                const numericValue = Math.max(871, parseInt(numericPart) || 871);
+                admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
+            }
+        }
+    };
+
+    // ============================================================================
+    // VIEW MANAGEMENT FUNCTIONS
+    // ============================================================================
+
+    // Toggle View Function
+    function toggleView(viewType) {
+        currentView = viewType;
+        const tableView = document.getElementById('tableView');
+        const cardView = document.getElementById('cardView');
+        const tableViewBtn = document.getElementById('tableViewBtn');
+        const cardViewBtn = document.getElementById('cardViewBtn');
+
+        if (viewType === 'table') {
+            tableView.classList.remove('d-none');
+            cardView.classList.add('d-none');
+            tableViewBtn.classList.add('active');
+            cardViewBtn.classList.remove('active');
+        } else {
+            tableView.classList.add('d-none');
+            cardView.classList.remove('d-none');
+            tableViewBtn.classList.remove('active');
+            cardViewBtn.classList.add('active');
+        }
+
         renderCurrentView();
-    } catch (error) {
-        console.error('Error fetching students:', error);
-        showError('Failed to load students. Please try again.');
-    } finally {
-        hideLoading();
-    }
-}
-
-// ============================================================================
-// RENDER FUNCTIONS
-// ============================================================================
-
-// Render Table View
-function renderTableView(students) {
-    const tbody = document.getElementById('studentTableBody');
-
-    if (students.length === 0) {
-        tbody.innerHTML = '';
-        document.getElementById('emptyState').classList.remove('d-none');
-        return;
     }
 
-    document.getElementById('emptyState').classList.add('d-none');
+    // Render Current View
+    function renderCurrentView() {
+        const filteredStudents = filterStudents();
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageStudents = filteredStudents.slice(startIndex, endIndex);
 
-    tbody.innerHTML = students.map(student => `
-        <tr data-id="${student.id}">
-            <td>
-                <div class="form-check">
-                    <input class="form-check-input student-checkbox" type="checkbox"
-                           value="${student.id}" onchange="updateBulkActionsVisibility()">
-                </div>
-            </td>
-            <td>
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm me-3">
-                        ${getStudentAvatar(student)}
-                    </div>
-                    <div>
-                        <h6 class="mb-0">${student.firstname} ${student.lastname}</h6>
-                        <small class="text-muted">${student.othername || ''}</small>
-                    </div>
-                </div>
-            </td>
-            <td>
-                <span class="badge bg-light text-dark">${student.admissionNo}</span>
-            </td>
-            <td>${student.schoolclass || ''} ${student.arm || ''}</td>
-            <td>
-                ${getStatusBadge(student)}
-            </td>
-            <td>
-                <span class="badge bg-${student.gender === 'Male' ? 'primary' : 'pink'} bg-gradient">
-                    ${student.gender}
-                </span>
-            </td>
-            <td>${formatDate(student.created_at)}</td>
-            <td>
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary" onclick="viewStudent(${student.id})">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-outline-warning" onclick="editStudent(${student.id})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-danger" onclick="deleteStudent(${student.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+        if (currentView === 'table') {
+            renderTableView(pageStudents);
+        } else {
+            renderCardView(pageStudents);
+        }
 
-    initializeCheckboxes();
-}
-
-// Render Card View
-function renderCardView(students) {
-    const container = document.getElementById('studentsCardsContainer');
-
-    if (students.length === 0) {
-        container.innerHTML = '';
-        document.getElementById('emptyState').classList.remove('d-none');
-        return;
+        updatePagination(filteredStudents.length);
+        updateCounts(filteredStudents.length, pageStudents.length);
     }
 
-    document.getElementById('emptyState').classList.add('d-none');
+    // ============================================================================
+    // FILTER FUNCTIONS
+    // ============================================================================
 
-    container.innerHTML = students.map(student => `
-        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
-            <div class="student-profile-card" data-id="${student.id}">
-                <div class="checkbox-container">
+    // Filter Students
+    function filterStudents() {
+        const searchTerm = currentFilter.search.toLowerCase();
+        const classFilter = currentFilter.class;
+        const statusFilter = currentFilter.status;
+        const genderFilter = currentFilter.gender;
+
+        return allStudents.filter(student => {
+            // Search filter
+            const searchMatch = !searchTerm ||
+                student.firstname?.toLowerCase().includes(searchTerm) ||
+                student.lastname?.toLowerCase().includes(searchTerm) ||
+                student.admissionNo?.toLowerCase().includes(searchTerm);
+
+            // Class filter
+            const classMatch = classFilter === 'all' || student.schoolclassid == classFilter;
+
+            // Status filter
+            const statusMatch = statusFilter === 'all' ||
+                (statusFilter === '1' && student.statusId == 1) ||
+                (statusFilter === '2' && student.statusId == 2) ||
+                (statusFilter === 'Active' && student.student_status === 'Active') ||
+                (statusFilter === 'Inactive' && student.student_status === 'Inactive');
+
+            // Gender filter
+            const genderMatch = genderFilter === 'all' || student.gender === genderFilter;
+
+            return searchMatch && classMatch && statusMatch && genderMatch;
+        });
+    }
+
+    // Filter Data
+    function filterData() {
+        currentFilter = {
+            search: document.getElementById('search-input').value,
+            class: document.getElementById('schoolclass-filter').value,
+            status: document.getElementById('status-filter').value,
+            gender: document.getElementById('gender-filter').value
+        };
+
+        currentPage = 1;
+        renderCurrentView();
+    }
+
+    // Reset Filters
+    function resetFilters() {
+        document.getElementById('search-input').value = '';
+        document.getElementById('schoolclass-filter').value = 'all';
+        document.getElementById('status-filter').value = 'all';
+        document.getElementById('gender-filter').value = 'all';
+
+        currentFilter = {
+            search: '',
+            class: 'all',
+            status: 'all',
+            gender: 'all'
+        };
+
+        currentPage = 1;
+        renderCurrentView();
+    }
+
+    // ============================================================================
+    // STUDENT DATA FUNCTIONS
+    // ============================================================================
+
+    // Fetch Students with proper relationships
+    async function fetchStudents() {
+        showLoading();
+
+        try {
+            const response = await axios.get('/students/data');
+            console.log('Full API response:', response.data);
+
+            let studentsArray = [];
+
+            if (Array.isArray(response.data)) {
+                studentsArray = response.data;
+            } else if (response.data.students && Array.isArray(response.data.students)) {
+                studentsArray = response.data.students;
+            } else if (response.data.data && Array.isArray(response.data.data)) {
+                studentsArray = response.data.data;
+            } else if (response.data.success && Array.isArray(response.data.data)) {
+                studentsArray = response.data.data;
+            } else {
+                console.log('Unexpected response format, trying to extract students:', response.data);
+                studentsArray = Object.values(response.data).filter(item =>
+                    item && (item.id || item.student_id)
+                );
+            }
+
+            console.log('Students array:', studentsArray);
+
+            // Process students
+            allStudents = await Promise.all(studentsArray.map(async (student) => {
+                // Get student details to fetch age
+                let completeStudent = null;
+                try {
+                    const studentResponse = await axios.get(`/student/${student.id || student.student_id}/edit`);
+                    completeStudent = studentResponse.data.student || studentResponse.data;
+                } catch (error) {
+                    console.log(`Could not fetch complete details for student ${student.id}`);
+                    completeStudent = student;
+                }
+
+                // Calculate age
+                let age = completeStudent.age;
+                if (!age && completeStudent.dateofbirth) {
+                    age = calculateAge(completeStudent.dateofbirth);
+                }
+
+                return {
+                    id: student.id || student.student_id || '',
+                    admissionNo: student.admissionNo || student.admission_no || student.admission_number || '',
+                    firstname: student.firstname || student.first_name || '',
+                    lastname: student.lastname || student.last_name || '',
+                    othername: student.othername || student.other_name || student.middle_name || '',
+                    gender: student.gender || '',
+                    statusId: student.statusId || student.status_id || student.student_status_id || '',
+                    student_status: student.student_status || student.status || '',
+                    created_at: student.created_at || student.created_date || student.registration_date || '',
+                    picture: student.picture || student.avatar || student.profile_picture || '',
+                    schoolclass: student.schoolclass || student.class || student.class_name || '',
+                    arm: student.arm || student.section || '',
+                    schoolclassid: student.schoolclassid || student.class_id || '',
+                    age: age || '',
+                    dateofbirth: completeStudent.dateofbirth || student.dateofbirth || '',
+                    // Other fields
+                    state: student.state || '',
+                    local: student.local || '',
+                    placeofbirth: student.placeofbirth || '',
+                    phone_number: student.phone_number || '',
+                    email: student.email || '',
+                    permanent_address: student.permanent_address || '',
+                    future_ambition: student.future_ambition || '',
+                    nationality: student.nationality || '',
+                    religion: student.religion || '',
+                    blood_group: student.blood_group || '',
+                    mother_tongue: student.mother_tongue || '',
+                    nin_number: student.nin_number || '',
+                    student_category: student.student_category || '',
+                    father_name: student.father_name || '',
+                    mother_name: student.mother_name || '',
+                    father_phone: student.father_phone || '',
+                    mother_phone: student.mother_phone || '',
+                    parent_email: student.parent_email || '',
+                    parent_address: student.parent_address || '',
+                    last_school: student.last_school || '',
+                    last_class: student.last_class || '',
+                    reason_for_leaving: student.reason_for_leaving || ''
+                };
+            }));
+
+            console.log('Processed students:', allStudents);
+            renderCurrentView();
+        } catch (error) {
+            console.error('Error fetching students:', error);
+            showError('Failed to load students. Please try again.');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // ============================================================================
+    // RENDER FUNCTIONS - ENHANCED TABLE VIEW
+    // ============================================================================
+
+    // Render Table View - Enhanced UI
+    function renderTableView(students) {
+        const tbody = document.getElementById('studentTableBody');
+
+        if (students.length === 0) {
+            tbody.innerHTML = '';
+            document.getElementById('emptyState').classList.remove('d-none');
+            return;
+        }
+
+        document.getElementById('emptyState').classList.add('d-none');
+
+        tbody.innerHTML = students.map(student => `
+            <tr data-id="${student.id}" class="align-middle">
+                <td>
                     <div class="form-check">
                         <input class="form-check-input student-checkbox" type="checkbox"
                                value="${student.id}" onchange="updateBulkActionsVisibility()">
                     </div>
-                </div>
-
-                <div class="card-header">
-                    <div class="header-content">
-                        <h5 class="student-name">${student.firstname} ${student.lastname}</h5>
-                        <span class="student-admission">${student.admissionNo}</span>
-                    </div>
-                    <div class="avatar-container">
-                        ${getStudentAvatar(student, true)}
-                    </div>
-                </div>
-
-                <div class="card-body">
-                    ${getStatusBadge(student, true)}
-
-                    <div class="student-info-grid">
-                        <div class="info-item">
-                            <span class="info-label">Class</span>
-                            <span class="info-value">${student.schoolclass || ''} ${student.arm || ''}</span>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="position-relative">
+                            ${getStudentAvatarEnhanced(student)}
+                            <span class="position-absolute bottom-0 end-0 ${student.student_status === 'Active' ? 'bg-success' : 'bg-secondary'} rounded-circle p-1 border border-2 border-white"
+                                  style="width: 12px; height: 12px;"></span>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">Gender</span>
-                            <span class="info-value">${student.gender}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Age</span>
-                            <span class="info-value">${student.age || calculateAge(student.dateofbirth)}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Registered</span>
-                            <span class="info-value">${formatDate(student.created_at, 'short')}</span>
+                        <div>
+                            <h6 class="mb-1 fw-semibold">${student.firstname || ''} ${student.lastname || ''}</h6>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-dark px-2 py-1 rounded-pill">
+                                    <i class="fas fa-id-card me-1 text-muted" style="font-size: 10px;"></i>
+                                    ${student.admissionNo || 'N/A'}
+                                </span>
+                                ${student.statusId == 2 ?
+                                    '<span class="badge bg-warning bg-gradient text-dark px-2 py-1 rounded-pill"><i class="fas fa-star me-1" style="font-size: 10px;"></i>New</span>' :
+                                    student.statusId == 1 ?
+                                    '<span class="badge bg-secondary bg-gradient px-2 py-1 rounded-pill"><i class="fas fa-history me-1" style="font-size: 10px;"></i>Old</span>' : ''}
+                            </div>
                         </div>
                     </div>
+                </td>
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="fw-medium">${student.schoolclass || ''} ${student.arm || ''}</span>
+                        <small class="text-muted">${student.student_category || ''}</small>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex flex-wrap gap-1">
+                        ${getCompactStatusBadge(student)}
+                    </div>
+                </td>
+                <td>
+                    <span class="d-flex align-items-center gap-1">
+                        <i class="fas fa-${student.gender === 'Male' ? 'mars text-primary' : 'venus text-pink'}"></i>
+                        ${student.gender || 'N/A'}
+                    </span>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center gap-1">
+                        <i class="fas fa-calendar-alt text-muted" style="font-size: 12px;"></i>
+                        <span>${formatDate(student.created_at, 'short')}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <!-- Enhanced Action Buttons Group -->
+                        <div class="btn-group" role="group">
+                            <button type="button"
+                                    class="btn btn-sm btn-soft-info rounded-start"
+                                    onclick="viewStudent(${student.id})"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-placement="top"
+                                    title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-soft-warning"
+                                    onclick="editStudent(${student.id})"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-placement="top"
+                                    title="Edit Student">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-soft-danger rounded-end"
+                                    onclick="deleteStudent(${student.id})"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-placement="top"
+                                    title="Delete Student">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
 
-                    <div class="action-buttons">
-                        <button class="action-btn view-btn" onclick="viewStudent(${student.id})">
-                            <i class="fas fa-eye"></i> View
-                        </button>
-                        <button class="action-btn edit-btn" onclick="editStudent(${student.id})">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deleteStudent(${student.id})">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
+                        <!-- Quick Actions Dropdown -->
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-soft-secondary"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-placement="top"
+                                    title="More Actions">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="viewStudent(${student.id})">
+                                        <i class="fas fa-eye me-2 text-info"></i>Quick View
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="printStudentCard(${student.id})">
+                                        <i class="fas fa-id-card me-2 text-primary"></i>Print ID Card
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="printStudentDetails(${student.id})">
+                                        <i class="fas fa-print me-2 text-success"></i>Print Details
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="sendMessage(${student.id})">
+                                        <i class="fas fa-envelope me-2 text-warning"></i>Send Message
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="showUpdateCurrentTermModal(${student.id})">
+                                        <i class="fas fa-calendar-alt me-2 text-info"></i>Update Term
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteStudent(${student.id})">
+                                        <i class="fas fa-trash-alt me-2"></i>Delete
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        // Initialize tooltips
+        initializeTooltips();
+        initializeCheckboxes();
+    }
+
+    // Render Card View
+    function renderCardView(students) {
+        const container = document.getElementById('studentsCardsContainer');
+
+        if (students.length === 0) {
+            container.innerHTML = '';
+            document.getElementById('emptyState').classList.remove('d-none');
+            return;
+        }
+
+        document.getElementById('emptyState').classList.add('d-none');
+
+        container.innerHTML = students.map(student => `
+            <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                <div class="student-profile-card" data-id="${student.id}">
+                    <div class="checkbox-container">
+                        <div class="form-check">
+                            <input class="form-check-input student-checkbox" type="checkbox"
+                                   value="${student.id}" onchange="updateBulkActionsVisibility()">
+                        </div>
+                    </div>
+
+                    <div class="card-header">
+                        <div class="header-content">
+                            <h5 class="student-name">${student.firstname || ''} ${student.lastname || ''}</h5>
+                            <span class="student-admission">${student.admissionNo || 'N/A'}</span>
+                        </div>
+                        <div class="avatar-container">
+                            ${getStudentAvatarEnhanced(student, true)}
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        ${getStatusBadge(student, true)}
+
+                        <div class="student-info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Class</span>
+                                <span class="info-value">${student.schoolclass || ''} ${student.arm || ''}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Gender</span>
+                                <span class="info-value">${student.gender || 'N/A'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Age</span>
+                                <span class="info-value">${student.age || calculateAge(student.dateofbirth) || 'N/A'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Registered</span>
+                                <span class="info-value">${formatDate(student.created_at, 'short')}</span>
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="action-btn view-btn" onclick="viewStudent(${student.id})">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button class="action-btn edit-btn" onclick="editStudent(${student.id})">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="action-btn delete-btn" onclick="deleteStudent(${student.id})">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
 
-    initializeStudentCheckboxes();
-}
+        initializeStudentCheckboxes();
+    }
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
+    // Enhanced Avatar with better styling
+    function getStudentAvatarEnhanced(student, isCard = false) {
+        const initials = getStudentInitials(student.firstname, student.lastname);
+        const colors = ['#4361ee', '#3a0ca3', '#f72585', '#4cc9f0', '#7209b7', '#f8961e', '#2ec4b6', '#e71d36'];
+        const colorIndex = (student.id?.length || 0) % colors.length;
+        const bgColor = colors[colorIndex];
+        const size = isCard ? '80px' : '45px';
+        const fontSize = isCard ? '28px' : '16px';
 
-// Get Student Avatar
-function getStudentAvatar(student, isCard = false) {
-    const initials = getStudentInitials(student.firstname, student.lastname);
-    const size = isCard ? '80px' : '40px';
+        if (student.picture && student.picture !== 'unnamed.jpg') {
+            return `
+                <div class="avatar-circle" style="width: ${size}; height: ${size};">
+                    <img src="/storage/images/student_avatars/${student.picture}"
+                         alt="${student.firstname || 'Student'}"
+                         class="rounded-circle border border-2 border-white shadow-sm"
+                         style="width: ${size}; height: ${size}; object-fit: cover;"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="avatar-initials rounded-circle border border-2 border-white shadow-sm"
+                         style="width: ${size}; height: ${size}; background: ${bgColor}; color: white; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: ${fontSize};">
+                        ${initials}
+                    </div>
+                </div>
+            `;
+        }
 
-    if (student.picture && student.picture !== 'unnamed.jpg') {
         return `
-            <img src="/storage/images/student_avatars/${student.picture}"
-                 alt="${student.firstname}"
-                 class="avatar"
-                 style="width: ${size}; height: ${size}; object-fit: cover;"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="avatar-initials" style="width: ${size}; height: ${size}; display: none;">
+            <div class="avatar-initials rounded-circle border border-2 border-white shadow-sm"
+                 style="width: ${size}; height: ${size}; background: ${bgColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: ${fontSize};">
                 ${initials}
             </div>
         `;
     }
 
-    return `
-        <div class="avatar-initials" style="width: ${size}; height: ${size};">
-            ${initials}
-        </div>
-    `;
-}
-
-// Get Student Initials
-function getStudentInitials(firstName, lastName) {
-    const firstInitial = firstName && firstName.length > 0 ? firstName.charAt(0).toUpperCase() : '';
-    const lastInitial = lastName && lastName.length > 0 ? lastName.charAt(0).toUpperCase() : '';
-    return (firstInitial + lastInitial) || '??';
-}
-
-// Get Status Badge
-function getStatusBadge(student, isCard = false) {
-    let badge = '';
-
-    if (student.student_status === 'Active') {
-        badge = `<span class="status-badge status-active">
-                    <i class="fas fa-check-circle"></i> Active
-                </span>`;
-    } else if (student.student_status === 'Inactive') {
-        badge = `<span class="status-badge status-inactive">
-                    <i class="fas fa-pause-circle"></i> Inactive
-                </span>`;
+    // Get Student Initials
+    function getStudentInitials(firstName, lastName) {
+        const firstInitial = firstName && firstName.length > 0 ? firstName.charAt(0).toUpperCase() : '';
+        const lastInitial = lastName && lastName.length > 0 ? lastName.charAt(0).toUpperCase() : '';
+        return (firstInitial + lastInitial) || 'ST';
     }
 
-    if (student.statusId == 2) {
-        badge += `<span class="status-badge status-new ms-2">
-                    <i class="fas fa-star"></i> New Student
-                </span>`;
-    } else if (student.statusId == 1) {
-        badge += `<span class="status-badge status-old ms-2">
-                    <i class="fas fa-history"></i> Old Student
-                </span>`;
+    // Get Status Badge
+    function getStatusBadge(student, isCard = false) {
+        let badges = '';
+
+        if (student.student_status === 'Active') {
+            badges += `<span class="status-badge status-active">
+                        <i class="fas fa-check-circle"></i> Active
+                    </span>`;
+        } else if (student.student_status === 'Inactive') {
+            badges += `<span class="status-badge status-inactive">
+                        <i class="fas fa-pause-circle"></i> Inactive
+                    </span>`;
+        }
+
+        if (student.statusId == 2) {
+            badges += `<span class="status-badge status-new ${!isCard ? 'ms-2' : ''}">
+                        <i class="fas fa-star"></i> New Student
+                    </span>`;
+        } else if (student.statusId == 1) {
+            badges += `<span class="status-badge status-old ${!isCard ? 'ms-2' : ''}">
+                        <i class="fas fa-history"></i> Old Student
+                    </span>`;
+        }
+
+        return badges;
     }
 
-    return badge;
-}
+    // Compact status badge for table
+    function getCompactStatusBadge(student) {
+        let badges = '';
 
-// Calculate Age
-window.calculateAge = function(dateValue, targetId = null) {
-    if (!dateValue) {
-        console.error('No date value provided');
-        return 'N/A';
+        if (student.student_status === 'Active') {
+            badges += '<span class="badge bg-success bg-gradient px-2 py-1 rounded-pill"><span class="status-dot active"></span>Active</span>';
+        } else if (student.student_status === 'Inactive') {
+            badges += '<span class="badge bg-secondary bg-gradient px-2 py-1 rounded-pill"><span class="status-dot inactive"></span>Inactive</span>';
+        }
+
+        return badges;
     }
 
-    try {
-        const dateString = dateValue.includes('T') ? dateValue.split('T')[0] : dateValue;
-        const dob = new Date(dateString);
-
-        if (isNaN(dob.getTime())) {
-            console.error('Invalid date:', dateValue);
+    // Calculate Age
+    window.calculateAge = function(dateValue, targetId = null) {
+        if (!dateValue) {
+            console.error('No date value provided');
             return 'N/A';
         }
 
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const monthDiff = today.getMonth() - dob.getMonth();
+        try {
+            const dateString = dateValue.includes('T') ? dateValue.split('T')[0] : dateValue;
+            const dob = new Date(dateString);
 
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-            age--;
+            if (isNaN(dob.getTime())) {
+                console.error('Invalid date:', dateValue);
+                return 'N/A';
+            }
+
+            const today = new Date();
+            let age = today.getFullYear() - dob.getFullYear();
+            const monthDiff = today.getMonth() - dob.getMonth();
+
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                age--;
+            }
+
+            // If targetId is provided, update the input field
+            if (targetId) {
+                const ageInput = document.getElementById(targetId);
+                if (ageInput) {
+                    ageInput.value = age;
+                }
+            }
+
+            return age;
+        } catch (error) {
+            console.error('Error calculating age:', error);
+            return 'N/A';
         }
+    };
 
-        // If targetId is provided, update the input field
-        if (targetId) {
-            const ageInput = document.getElementById(targetId);
-            if (ageInput) {
-                ageInput.value = age;
+    // Format Date
+    function formatDate(dateString, format = 'long') {
+        if (!dateString) return 'N/A';
+
+        const date = new Date(dateString);
+        const options = format === 'short' ?
+            { year: 'numeric', month: 'short', day: 'numeric' } :
+            { year: 'numeric', month: 'long', day: 'numeric' };
+
+        return date.toLocaleDateString('en-US', options);
+    }
+
+    // Initialize Bootstrap tooltips
+    function initializeTooltips() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+
+    // ============================================================================
+    // CHECKBOX AND BULK ACTIONS
+    // ============================================================================
+
+    // Toggle Select All
+    function toggleSelectAll(e) {
+        const isChecked = e.target.checked;
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+            const parent = checkbox.closest('.student-profile-card, tr');
+            if (parent) {
+                parent.classList.toggle('selected', isChecked);
+            }
+        });
+
+        updateBulkActionsVisibility();
+    }
+
+    // Update Bulk Actions Visibility
+    function updateBulkActionsVisibility() {
+        const selectedCount = document.querySelectorAll('.student-checkbox:checked').length;
+        const bulkActionsDropdown = document.getElementById('bulkActionsDropdown');
+
+        if (bulkActionsDropdown) {
+            if (selectedCount > 0) {
+                bulkActionsDropdown.disabled = false;
+                bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions (${selectedCount})`;
+            } else {
+                bulkActionsDropdown.disabled = true;
+                bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions`;
             }
         }
-
-        return age;
-    } catch (error) {
-        console.error('Error calculating age:', error);
-        return 'N/A';
     }
-};
 
-// Format Date
-function formatDate(dateString, format = 'long') {
-    if (!dateString) return 'N/A';
+    // Initialize Checkboxes
+    function initializeCheckboxes() {
+        const checkAll = document.getElementById('checkAll');
+        const checkAllTable = document.getElementById('checkAllTable');
 
-    const date = new Date(dateString);
-    const options = format === 'short' ?
-        { year: 'numeric', month: 'short', day: 'numeric' } :
-        { year: 'numeric', month: 'long', day: 'numeric' };
-
-    return date.toLocaleDateString('en-US', options);
-}
-
-// ============================================================================
-// CHECKBOX AND BULK ACTIONS
-// ============================================================================
-
-// Toggle Select All
-function toggleSelectAll(e) {
-    const isChecked = e.target.checked;
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = isChecked;
-        const parent = checkbox.closest('.student-profile-card, tr');
-        if (parent) {
-            parent.classList.toggle('selected', isChecked);
+        if (checkAll) {
+            checkAll.addEventListener('change', function() {
+                document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateBulkActionsVisibility();
+            });
         }
-    });
 
-    updateBulkActionsVisibility();
-}
-
-// Update Bulk Actions Visibility
-function updateBulkActionsVisibility() {
-    const selectedCount = document.querySelectorAll('.student-checkbox:checked').length;
-    const bulkActionsDropdown = document.getElementById('bulkActionsDropdown');
-
-    if (selectedCount > 0) {
-        bulkActionsDropdown.disabled = false;
-        bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions (${selectedCount})`;
-    } else {
-        bulkActionsDropdown.disabled = true;
-        bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions`;
+        if (checkAllTable) {
+            checkAllTable.addEventListener('change', function() {
+                document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateBulkActionsVisibility();
+            });
+        }
     }
-}
 
-// Initialize Checkboxes
-function initializeCheckboxes() {
-    const checkAll = document.getElementById('checkAll');
-    const checkAllTable = document.getElementById('checkAllTable');
+    // Initialize Student Checkboxes for Card View
+    function initializeStudentCheckboxes() {
+        const checkAll = document.getElementById('checkAll');
+        if (!checkAll) return;
 
-    if (checkAll) {
         checkAll.addEventListener('change', function() {
             document.querySelectorAll('.student-checkbox').forEach(checkbox => {
                 checkbox.checked = this.checked;
             });
             updateBulkActionsVisibility();
         });
-    }
 
-    if (checkAllTable) {
-        checkAllTable.addEventListener('change', function() {
-            document.querySelectorAll('.student-checkbox').forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
-            updateBulkActionsVisibility();
-        });
-    }
-}
-
-// Initialize Student Checkboxes for Card View
-function initializeStudentCheckboxes() {
-    const checkAll = document.getElementById('checkAll');
-    if (!checkAll) return;
-
-    checkAll.addEventListener('change', function() {
         document.querySelectorAll('.student-checkbox').forEach(checkbox => {
-            checkbox.checked = this.checked;
-        });
-        updateBulkActionsVisibility();
-    });
-
-    document.querySelectorAll('.student-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const allChecked = document.querySelectorAll('.student-checkbox').length ===
-                document.querySelectorAll('.student-checkbox:checked').length;
-            checkAll.checked = allChecked;
-            updateBulkActionsVisibility();
-        });
-    });
-}
-
-// ============================================================================
-// PAGINATION FUNCTIONS
-// ============================================================================
-
-// Update Pagination
-function updatePagination(totalItems) {
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const prevBtn = document.getElementById('prevPage');
-    const nextBtn = document.getElementById('nextPage');
-    const currentPageSpan = document.getElementById('currentPage');
-
-    currentPageSpan.textContent = currentPage;
-
-    prevBtn.classList.toggle('disabled', currentPage === 1);
-    nextBtn.classList.toggle('disabled', currentPage === totalPages || totalPages === 0);
-}
-
-// Update Counts
-function updateCounts(total, showing) {
-    document.getElementById('totalStudents').textContent = total;
-    document.getElementById('totalCount').textContent = total;
-    document.getElementById('showingCount').textContent = showing;
-}
-
-// Pagination Functions
-function goToPrevPage() {
-    if (currentPage > 1) {
-        currentPage--;
-        renderCurrentView();
-    }
-}
-
-function goToNextPage() {
-    const filteredStudents = filterStudents();
-    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
-
-    if (currentPage < totalPages) {
-        currentPage++;
-        renderCurrentView();
-    }
-}
-
-// ============================================================================
-// CRUD OPERATIONS
-// ============================================================================
-
-// View Student - Updated with Active Term Detection
-async function viewStudent(id) {
-    try {
-        // Show loading state
-        Swal.fire({
-            title: 'Loading...',
-            text: 'Fetching student details',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-
-        // Fetch student data
-        const response = await axios.get(`/student/${id}/edit`);
-        const student = response.data.student || response.data;
-
-        // Get all registered terms
-        const termsResponse = await axios.get(`/student/${id}/all-terms`);
-        const allTerms = termsResponse.data.success ? termsResponse.data.data : [];
-
-        // Get ACTIVE term based on system active term
-        const activeResponse = await axios.get(`/student-current-term/student/${id}/active`);
-        const activeTerm = activeResponse.data.success ? activeResponse.data.data : null;
-
-        // Get current term info (marked as current in database)
-        const currentResponse = await axios.get(`/student/${id}/current-info`);
-        const currentInfo = currentResponse.data.success ? currentResponse.data.data : {};
-
-        // Get system info
-        const systemResponse = await axios.get('/system/active-term-session');
-        const systemInfo = systemResponse.data.success ? systemResponse.data : { term: null, session: null };
-
-        // Close loading
-        Swal.close();
-
-        // Show details with tabs
-        showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, currentInfo);
-    } catch (error) {
-        Swal.close();
-        console.error('Error viewing student:', error);
-        showError('Failed to load student details.');
-    }
-}
-
-// Edit Student
-async function editStudent(id) {
-    try {
-        const response = await axios.get(`/student/${id}/edit`);
-        const student = response.data.student || response.data;
-
-        populateEditForm(student);
-        showEditModal();
-    } catch (error) {
-        showError('Failed to load student for editing.');
-    }
-}
-
-// Delete Student
-async function deleteStudent(id) {
-    const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: 'btn btn-danger',
-            cancelButton: 'btn btn-light'
-        }
-    });
-
-    if (result.isConfirmed) {
-        try {
-            await axios.delete(`/student/${id}/destroy`);
-
-            // Remove from UI
-            allStudents = allStudents.filter(s => s.id != id);
-            renderCurrentView();
-
-            Swal.fire({
-                title: 'Deleted!',
-                text: 'Student has been deleted.',
-                icon: 'success',
-                confirmButtonText: 'OK'
+            checkbox.addEventListener('change', function() {
+                const allChecked = document.querySelectorAll('.student-checkbox').length ===
+                    document.querySelectorAll('.student-checkbox:checked').length;
+                checkAll.checked = allChecked;
+                updateBulkActionsVisibility();
             });
-        } catch (error) {
-            showError('Failed to delete student.');
+        });
+    }
+
+    // ============================================================================
+    // PAGINATION FUNCTIONS
+    // ============================================================================
+
+    // Update Pagination
+    function updatePagination(totalItems) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        const currentPageSpan = document.getElementById('currentPage');
+
+        currentPageSpan.textContent = currentPage;
+
+        prevBtn.classList.toggle('disabled', currentPage === 1);
+        nextBtn.classList.toggle('disabled', currentPage === totalPages || totalPages === 0);
+    }
+
+    // Update Counts
+    function updateCounts(total, showing) {
+        document.getElementById('totalStudents').textContent = total;
+        document.getElementById('totalCount').textContent = total;
+        document.getElementById('showingCount').textContent = showing;
+    }
+
+    // Pagination Functions
+    function goToPrevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            renderCurrentView();
         }
     }
-}
 
-// Delete Multiple Students
-async function deleteMultiple() {
-    const selectedIds = getSelectedStudentIds();
+    function goToNextPage() {
+        const filteredStudents = filterStudents();
+        const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
 
-    if (selectedIds.length === 0) {
-        Swal.fire({
-            title: 'No Selection',
-            text: 'Please select at least one student to delete.',
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderCurrentView();
+        }
+    }
+
+    // ============================================================================
+    // CRUD OPERATIONS
+    // ============================================================================
+
+    // View Student - Updated with Active Term Detection
+    async function viewStudent(id) {
+        try {
+            // Show loading state
+            Swal.fire({
+                title: 'Loading...',
+                text: 'Fetching student details',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Fetch student data
+            const response = await axios.get(`/student/${id}/edit`);
+            const student = response.data.student || response.data;
+
+            // Get all registered terms
+            const termsResponse = await axios.get(`/student/${id}/all-terms`);
+            const allTerms = termsResponse.data.success ? termsResponse.data.data : [];
+
+            // Get ACTIVE term based on system active term
+            const activeResponse = await axios.get(`/student-current-term/student/${id}/active`);
+            const activeTerm = activeResponse.data.success ? activeResponse.data.data : null;
+
+            // Get current term info (marked as current in database)
+            const currentResponse = await axios.get(`/student/${id}/current-info`);
+            const currentInfo = currentResponse.data.success ? currentResponse.data.data : {};
+
+            // Get system info
+            const systemResponse = await axios.get('/system/active-term-session');
+            const systemInfo = systemResponse.data.success ? systemResponse.data : { term: null, session: null };
+
+            // Close loading
+            Swal.close();
+
+            // Show details with tabs
+            showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, currentInfo);
+        } catch (error) {
+            Swal.close();
+            console.error('Error viewing student:', error);
+            showError('Failed to load student details.');
+        }
+    }
+
+    // Edit Student
+    async function editStudent(id) {
+        try {
+            const response = await axios.get(`/student/${id}/edit`);
+            const student = response.data.student || response.data;
+
+            populateEditForm(student);
+            showEditModal();
+        } catch (error) {
+            showError('Failed to load student for editing.');
+        }
+    }
+
+    // Delete Student
+    async function deleteStudent(id) {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
             icon: 'warning',
-            confirmButtonText: 'OK'
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                confirmButton: 'btn btn-danger',
+                cancelButton: 'btn btn-light'
+            }
         });
-        return;
+
+        if (result.isConfirmed) {
+            try {
+                await axios.delete(`/student/${id}/destroy`);
+
+                // Remove from UI
+                allStudents = allStudents.filter(s => s.id != id);
+                renderCurrentView();
+
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: 'Student has been deleted.',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+            } catch (error) {
+                showError('Failed to delete student.');
+            }
+        }
     }
 
-    const result = await Swal.fire({
-        title: `Delete ${selectedIds.length} Students?`,
-        text: "This action cannot be undone!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, delete them!',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: 'btn btn-danger',
-            cancelButton: 'btn btn-light'
-        }
-    });
+    // Delete Multiple Students
+    async function deleteMultiple() {
+        const selectedIds = getSelectedStudentIds();
 
-    if (result.isConfirmed) {
-        try {
-            const deletePromises = selectedIds.map(id =>
-                axios.delete(`/student/${id}/destroy`)
-            );
-
-            await Promise.all(deletePromises);
-
-            // Remove from UI
-            allStudents = allStudents.filter(s => !selectedIds.includes(s.id.toString()));
-            renderCurrentView();
-
+        if (selectedIds.length === 0) {
             Swal.fire({
-                title: 'Deleted!',
-                text: `${selectedIds.length} student(s) have been deleted.`,
-                icon: 'success',
+                title: 'No Selection',
+                text: 'Please select at least one student to delete.',
+                icon: 'warning',
                 confirmButtonText: 'OK'
             });
-        } catch (error) {
-            showError('Failed to delete selected students.');
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: `Delete ${selectedIds.length} Students?`,
+            text: "This action cannot be undone!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete them!',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                confirmButton: 'btn btn-danger',
+                cancelButton: 'btn btn-light'
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const deletePromises = selectedIds.map(id =>
+                    axios.delete(`/student/${id}/destroy`)
+                );
+
+                await Promise.all(deletePromises);
+
+                // Remove from UI
+                allStudents = allStudents.filter(s => !selectedIds.includes(s.id.toString()));
+                renderCurrentView();
+
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: `${selectedIds.length} student(s) have been deleted.`,
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+            } catch (error) {
+                showError('Failed to delete selected students.');
+            }
         }
     }
-}
 
-// Get Selected Student IDs
-function getSelectedStudentIds() {
-    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
-}
+    // Get Selected Student IDs
+    function getSelectedStudentIds() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
 
-// ============================================================================
-// FORM HANDLING FUNCTIONS
-// ============================================================================
+    // ============================================================================
+    // QUICK ACTION FUNCTIONS
+    // ============================================================================
 
-// Populate Edit Form
-function populateEditForm(student) {
-    console.log('Populating edit form with student:', student);
+    // Print Student Card
+    function printStudentCard(studentId) {
+        // Implement print ID card functionality
+        window.open(`/student/${studentId}/id-card`, '_blank');
+    }
 
-    const fields = [
-        { id: 'editStudentId', value: student.id },
-        { id: 'editAdmissionNo', value: student.admissionNo || student.admission_no || '' },
-        { id: 'editAdmissionYear', value: student.admissionYear || '' },
-        { id: 'editAdmissionDate', value: student.admissionDate ? student.admissionDate.split('T')[0] : '' },
-        { id: 'editTitle', value: student.title || '' },
-        { id: 'editFirstname', value: student.firstname || student.first_name || '' },
-        { id: 'editLastname', value: student.lastname || student.last_name || '' },
-        { id: 'editOthername', value: student.othername || student.other_name || student.middle_name || '' },
-        { id: 'editPermanentAddress', value: student.permanent_address || '' },
-        { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
-        { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
-        { id: 'editNationality', value: student.nationality || '' },
-        { id: 'editReligion', value: student.religion || '' },
-        { id: 'editLastSchool', value: student.last_school || '' },
-        { id: 'editLastClass', value: student.last_class || '' },
-        { id: 'editSchoolclassid', value: student.schoolclassid || student.class_id || '' },
-        { id: 'editTermid', value: student.termid || student.term_id || '' },
-        { id: 'editSessionid', value: student.sessionid || student.session_id || '' },
-        { id: 'editPhoneNumber', value: student.phone_number || student.phone || '' },
-        { id: 'editEmail', value: student.email || '' },
-        { id: 'editFutureAmbition', value: student.future_ambition || '' },
-        { id: 'editCity', value: student.city || '' },
-        { id: 'editState', value: student.state || '' },
-        { id: 'editLocal', value: student.local || '' },
-        { id: 'editNinNumber', value: student.nin_number || student.nin || '' },
-        { id: 'editBloodGroup', value: student.blood_group || '' },
-        { id: 'editMotherTongue', value: student.mother_tongue || '' },
-        { id: 'editFatherName', value: student.father_name || '' },
-        { id: 'editFatherPhone', value: student.father_phone || '' },
-        { id: 'editFatherOccupation', value: student.father_occupation || '' },
-        { id: 'editFatherCity', value: student.father_city || '' },
-        { id: 'editMotherName', value: student.mother_name || '' },
-        { id: 'editMotherPhone', value: student.mother_phone || '' },
-        { id: 'editParentEmail', value: student.parent_email || '' },
-        { id: 'editParentAddress', value: student.parent_address || '' },
-        { id: 'editStudentCategory', value: student.student_category || '' },
-        { id: 'editSchoolHouse', value: student.schoolhouse || student.school_house || student.sport_house || '' },
-        { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
-    ];
+    // Print Student Details
+    function printStudentDetails(studentId) {
+        // Implement print student details
+        window.open(`/student/${studentId}/print`, '_blank');
+    }
 
-    fields.forEach(({ id, value }) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.value = value || '';
-        }
-    });
-
-    // Set gender
-    const genderRadios = document.querySelectorAll('#editStudentModal input[name="gender"]');
-    if (genderRadios.length > 0) {
-        const studentGender = student.gender || '';
-        genderRadios.forEach(radio => {
-            radio.checked = (radio.value === studentGender);
+    // Send Message
+    function sendMessage(studentId) {
+        // Implement send message functionality
+        Swal.fire({
+            title: 'Send Message',
+            html: `
+                <div class="text-start">
+                    <label class="form-label">Message</label>
+                    <textarea id="messageText" class="form-control" rows="4" placeholder="Type your message here..."></textarea>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Send',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#4361ee',
+            preConfirm: () => {
+                const message = document.getElementById('messageText').value;
+                if (!message) {
+                    Swal.showValidationMessage('Message cannot be empty');
+                    return false;
+                }
+                return axios.post('/student/send-message', {
+                    student_id: studentId,
+                    message: message
+                });
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Message sent successfully',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+            }
         });
     }
 
-    // Set status
-    const statusRadios = document.querySelectorAll('#editStudentModal input[name="statusId"]');
-    if (statusRadios.length > 0) {
-        const studentStatusId = student.statusId || student.status_id || '';
-        statusRadios.forEach(radio => {
-            radio.checked = (parseInt(radio.value) === parseInt(studentStatusId));
+    // ============================================================================
+    // FORM HANDLING FUNCTIONS
+    // ============================================================================
+
+    // Populate Edit Form
+    function populateEditForm(student) {
+        console.log('Populating edit form with student:', student);
+
+        const fields = [
+            { id: 'editStudentId', value: student.id },
+            { id: 'editAdmissionNo', value: student.admissionNo || student.admission_no || '' },
+            { id: 'editAdmissionYear', value: student.admissionYear || '' },
+            { id: 'editAdmissionDate', value: student.admissionDate ? student.admissionDate.split('T')[0] : '' },
+            { id: 'editTitle', value: student.title || '' },
+            { id: 'editFirstname', value: student.firstname || student.first_name || '' },
+            { id: 'editLastname', value: student.lastname || student.last_name || '' },
+            { id: 'editOthername', value: student.othername || student.other_name || student.middle_name || '' },
+            { id: 'editPermanentAddress', value: student.permanent_address || '' },
+            { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
+            { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
+            { id: 'editNationality', value: student.nationality || '' },
+            { id: 'editReligion', value: student.religion || '' },
+            { id: 'editLastSchool', value: student.last_school || '' },
+            { id: 'editLastClass', value: student.last_class || '' },
+            { id: 'editSchoolclassid', value: student.schoolclassid || student.class_id || '' },
+            { id: 'editTermid', value: student.termid || student.term_id || '' },
+            { id: 'editSessionid', value: student.sessionid || student.session_id || '' },
+            { id: 'editPhoneNumber', value: student.phone_number || student.phone || '' },
+            { id: 'editEmail', value: student.email || '' },
+            { id: 'editFutureAmbition', value: student.future_ambition || '' },
+            { id: 'editCity', value: student.city || '' },
+            { id: 'editState', value: student.state || '' },
+            { id: 'editLocal', value: student.local || '' },
+            { id: 'editNinNumber', value: student.nin_number || student.nin || '' },
+            { id: 'editBloodGroup', value: student.blood_group || '' },
+            { id: 'editMotherTongue', value: student.mother_tongue || '' },
+            { id: 'editFatherName', value: student.father_name || '' },
+            { id: 'editFatherPhone', value: student.father_phone || '' },
+            { id: 'editFatherOccupation', value: student.father_occupation || '' },
+            { id: 'editFatherCity', value: student.father_city || '' },
+            { id: 'editMotherName', value: student.mother_name || '' },
+            { id: 'editMotherPhone', value: student.mother_phone || '' },
+            { id: 'editParentEmail', value: student.parent_email || '' },
+            { id: 'editParentAddress', value: student.parent_address || '' },
+            { id: 'editStudentCategory', value: student.student_category || '' },
+            { id: 'editSchoolHouse', value: student.schoolhouseid || student.school_house || student.sport_house || '' },
+            { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
+        ];
+
+        fields.forEach(({ id, value }) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value || '';
+            }
         });
-    }
 
-    // Set student activity status
-    const studentStatusRadios = document.querySelectorAll('#editStudentModal input[name="student_status"]');
-    if (studentStatusRadios.length > 0) {
-        const studentActivityStatus = student.student_status || student.status || '';
-        studentStatusRadios.forEach(radio => {
-            radio.checked = (radio.value === studentActivityStatus);
-        });
-    }
+        // Set gender
+        const genderRadios = document.querySelectorAll('#editStudentModal input[name="gender"]');
+        if (genderRadios.length > 0) {
+            const studentGender = student.gender || '';
+            genderRadios.forEach(radio => {
+                radio.checked = (radio.value === studentGender);
+            });
+        }
 
-    // Set avatar
-    const avatarElement = document.getElementById('editStudentAvatar');
-    if (avatarElement) {
-        const displayInitials = getStudentInitials(student.firstname, student.lastname);
+        // Set status
+        const statusRadios = document.querySelectorAll('#editStudentModal input[name="statusId"]');
+        if (statusRadios.length > 0) {
+            const studentStatusId = student.statusId || student.status_id || '';
+            statusRadios.forEach(radio => {
+                radio.checked = (parseInt(radio.value) === parseInt(studentStatusId));
+            });
+        }
 
-        if (student.picture && student.picture !== 'unnamed.jpg') {
-            const avatarUrl = `/storage/images/student_avatars/${student.picture}`;
-            avatarElement.src = avatarUrl;
-        } else {
-            // Show initials
-            avatarElement.src = generatePlaceholderImage(displayInitials);
+        // Set student activity status
+        const studentStatusRadios = document.querySelectorAll('#editStudentModal input[name="student_status"]');
+        if (studentStatusRadios.length > 0) {
+            const studentActivityStatus = student.student_status || student.status || '';
+            studentStatusRadios.forEach(radio => {
+                radio.checked = (radio.value === studentActivityStatus);
+            });
+        }
+
+        // Set avatar
+        const avatarElement = document.getElementById('editStudentAvatar');
+        if (avatarElement) {
+            if (student.picture && student.picture !== 'unnamed.jpg') {
+                const avatarUrl = `/storage/images/student_avatars/${student.picture}`;
+                avatarElement.src = avatarUrl;
+            } else {
+                avatarElement.src = '{{ asset("theme/layouts/assets/media/avatars/blank.png") }}';
+            }
+        }
+
+        // Calculate age if date of birth exists
+        if (student.dateofbirth) {
+            calculateAge(student.dateofbirth, 'editAgeInput');
+        }
+
+        // Update form action
+        const form = document.getElementById('editStudentForm');
+        if (form && student.id) {
+            form.action = `/student/${student.id}`;
         }
     }
 
-    // Calculate age if date of birth exists
-    if (student.dateofbirth) {
-        calculateAge(student.dateofbirth, 'editAgeInput');
-    }
+    // Show Student Details with Tabs
+    function showStudentDetailsWithTabs(student, allTerms = [], systemInfo = { term: null, session: null }, activeTerm = null, currentInfo = {}) {
+        // Format date of birth
+        const dob = student.dateofbirth ?
+            new Date(student.dateofbirth).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : 'N/A';
 
-    // Update form action
-    const form = document.getElementById('editStudentForm');
-    if (form && student.id) {
-        form.action = `/student/${student.id}`;
-    }
-}
+        // Calculate age
+        const age = student.age || calculateAge(student.dateofbirth);
 
-// Show Student Details with Tabs - UPDATED with Active Term
-function showStudentDetailsWithTabs(student, allTerms = [], systemInfo = { term: null, session: null }, activeTerm = null, currentInfo = {}) {
-    // Format date of birth
-    const dob = student.dateofbirth ?
-        new Date(student.dateofbirth).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        }) : 'N/A';
+        // Extract system term/session names
+        const systemTermName = systemInfo.term ? (systemInfo.term.term || systemInfo.term.name || 'Not Set') : 'Not Set';
+        const systemSessionName = systemInfo.session ? (systemInfo.session.session || systemInfo.session.name || 'Not Set') : 'Not Set';
+        const systemTermId = systemInfo.term ? systemInfo.term.id : null;
+        const systemSessionId = systemInfo.session ? systemInfo.session.id : null;
 
-    // Calculate age
-    const age = student.age || calculateAge(student.dateofbirth);
+        // Extract active term details
+        let activeTermName = 'N/A';
+        let activeSessionName = 'N/A';
+        let activeClassName = 'N/A';
+        let activeArmName = 'N/A';
+        let activeTermId = null;
+        let activeSessionId = null;
 
-    // Extract system term/session names
-    const systemTermName = systemInfo.term ? (systemInfo.term.term || systemInfo.term.name || 'Not Set') : 'Not Set';
-    const systemSessionName = systemInfo.session ? (systemInfo.session.session || systemInfo.session.name || 'Not Set') : 'Not Set';
-    const systemTermId = systemInfo.term ? systemInfo.term.id : null;
-    const systemSessionId = systemInfo.session ? systemInfo.session.id : null;
+        if (activeTerm) {
+            if (typeof activeTerm === 'object') {
+                if (activeTerm.term && activeTerm.term.term) {
+                    activeTermName = activeTerm.term.term;
+                    activeTermId = activeTerm.term.id;
+                } else if (activeTerm.term_name) {
+                    activeTermName = activeTerm.term_name;
+                    activeTermId = activeTerm.term_id;
+                }
 
-    // Extract active term details
-    let activeTermName = 'N/A';
-    let activeSessionName = 'N/A';
-    let activeClassName = 'N/A';
-    let activeArmName = 'N/A';
-    let activeTermId = null;
-    let activeSessionId = null;
+                if (activeTerm.session && activeTerm.session.session) {
+                    activeSessionName = activeTerm.session.session;
+                    activeSessionId = activeTerm.session.id;
+                } else if (activeTerm.session_name) {
+                    activeSessionName = activeTerm.session_name;
+                    activeSessionId = activeTerm.session_id;
+                }
 
-    if (activeTerm) {
-        if (typeof activeTerm === 'object') {
-            // Handle different response formats
-            if (activeTerm.term && activeTerm.term.term) {
-                activeTermName = activeTerm.term.term;
-                activeTermId = activeTerm.term.id;
-            } else if (activeTerm.term_name) {
-                activeTermName = activeTerm.term_name;
-                activeTermId = activeTerm.term_id;
-            }
+                if (activeTerm.schoolClass && activeTerm.schoolClass.schoolclass) {
+                    activeClassName = activeTerm.schoolClass.schoolclass;
+                } else if (activeTerm.class_name) {
+                    activeClassName = activeTerm.class_name;
+                }
 
-            if (activeTerm.session && activeTerm.session.session) {
-                activeSessionName = activeTerm.session.session;
-                activeSessionId = activeTerm.session.id;
-            } else if (activeTerm.session_name) {
-                activeSessionName = activeTerm.session_name;
-                activeSessionId = activeTerm.session_id;
-            }
-
-            if (activeTerm.schoolClass && activeTerm.schoolClass.schoolclass) {
-                activeClassName = activeTerm.schoolClass.schoolclass;
-            } else if (activeTerm.class_name) {
-                activeClassName = activeTerm.class_name;
-            }
-
-            if (activeTerm.schoolClass && activeTerm.schoolClass.armRelation && activeTerm.schoolClass.armRelation.arm) {
-                activeArmName = activeTerm.schoolClass.armRelation.arm;
-            } else if (activeTerm.arm_name) {
-                activeArmName = activeTerm.arm_name;
+                if (activeTerm.schoolClass && activeTerm.schoolClass.armRelation && activeTerm.schoolClass.armRelation.arm) {
+                    activeArmName = activeTerm.schoolClass.armRelation.arm;
+                } else if (activeTerm.arm_name) {
+                    activeArmName = activeTerm.arm_name;
+                }
             }
         }
-    }
 
-    // Get current info details
-    let currentTermName = currentInfo.current_term || 'N/A';
-    let currentSessionName = currentInfo.current_session || 'N/A';
-    let currentClassName = currentInfo.current_class || 'N/A';
-    let currentArmName = currentInfo.current_class_arm || 'N/A';
+        // Get current info details
+        let currentTermName = currentInfo.current_term || 'N/A';
+        let currentSessionName = currentInfo.current_session || 'N/A';
+        let currentClassName = currentInfo.current_class || 'N/A';
+        let currentArmName = currentInfo.current_class_arm || 'N/A';
 
-    // Determine if student is active in current system term
-    const isActiveInCurrentTerm = activeTerm !== null &&
-                                 systemTermId && systemSessionId &&
-                                 activeTermId == systemTermId &&
-                                 activeSessionId == systemSessionId;
+        // Determine if student is active in current system term
+        const isActiveInCurrentTerm = activeTerm !== null &&
+                                     systemTermId && systemSessionId &&
+                                     activeTermId == systemTermId &&
+                                     activeSessionId == systemSessionId;
 
-    const hasCurrentTermFlag = currentInfo && currentInfo.is_current;
+        const hasCurrentTermFlag = currentInfo && currentInfo.is_current;
 
-    // Prepare the content HTML with tabs
-    const content = `
-        <div class="student-view-tabs">
-            <!-- Tabs Navigation -->
-            <ul class="nav nav-tabs" id="studentTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="personal-tab" data-bs-toggle="tab"
-                            data-bs-target="#personal" type="button" role="tab">
-                        <i class="fas fa-user me-2"></i>Personal
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="academic-tab" data-bs-toggle="tab"
-                            data-bs-target="#academic" type="button" role="tab">
-                        <i class="fas fa-graduation-cap me-2"></i>Academic
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="terms-tab" data-bs-toggle="tab"
-                            data-bs-target="#terms" type="button" role="tab">
-                        <i class="fas fa-calendar-alt me-2"></i>Terms History
-                    </button>
-                </li>
-            </ul>
+        // Prepare the content HTML with tabs
+        const content = `
+            <div class="student-view-tabs">
+                <!-- Tabs Navigation -->
+                <ul class="nav nav-tabs" id="studentTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="personal-tab" data-bs-toggle="tab"
+                                data-bs-target="#personal" type="button" role="tab">
+                            <i class="fas fa-user me-2"></i>Personal
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="academic-tab" data-bs-toggle="tab"
+                                data-bs-target="#academic" type="button" role="tab">
+                            <i class="fas fa-graduation-cap me-2"></i>Academic
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="terms-tab" data-bs-toggle="tab"
+                                data-bs-target="#terms" type="button" role="tab">
+                            <i class="fas fa-calendar-alt me-2"></i>Terms History
+                        </button>
+                    </li>
+                </ul>
 
-            <!-- Tabs Content -->
-            <div class="tab-content mt-4" id="studentTabsContent">
-                <!-- Personal Information Tab -->
-                <div class="tab-pane fade show active" id="personal" role="tabpanel">
-                    <div class="row">
-                        <div class="col-md-4 text-center mb-4">
-                            <div class="avatar-container" style="width: 150px; height: 150px; margin: 0 auto;">
-                                ${getStudentAvatar(student, true)}
+                <!-- Tabs Content -->
+                <div class="tab-content mt-4" id="studentTabsContent">
+                    <!-- Personal Information Tab -->
+                    <div class="tab-pane fade show active" id="personal" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-4 text-center mb-4">
+                                <div class="avatar-container" style="width: 150px; height: 150px; margin: 0 auto;">
+                                    ${getStudentAvatarEnhanced(student, true)}
+                                </div>
+                                <h4 class="mt-3">${student.firstname || ''} ${student.lastname || ''}</h4>
+                                <p class="text-muted">${student.admissionNo || 'No admission number'}</p>
+                                ${getStatusBadge(student, true)}
                             </div>
-                            <h4 class="mt-3">${student.firstname || ''} ${student.lastname || ''}</h4>
-                            <p class="text-muted">${student.admissionNo || 'No admission number'}</p>
-                            ${getStatusBadge(student, true)}
-                        </div>
-                        <div class="col-md-8">
-                            <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Personal Details</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Date of Birth</label>
-                                    <p class="fw-bold">${dob}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Age</label>
-                                    <p class="fw-bold">${age}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Gender</label>
-                                    <p class="fw-bold">${student.gender || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <label class="form-label text-muted">Religion</label>
-                                    <p class="fw-bold">${student.religion || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-12 mb-2">
-                                    <label class="form-label text-muted">Phone Number</label>
-                                    <p class="fw-bold">${student.phone_number || 'N/A'}</p>
-                                </div>
-                                <div class="col-md-12 mb-2">
-                                    <label class="form-label text-muted">Email</label>
-                                    <p class="fw-bold">${student.email || 'N/A'}</p>
+                            <div class="col-md-8">
+                                <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Personal Details</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label text-muted">Date of Birth</label>
+                                        <p class="fw-bold">${dob}</p>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label text-muted">Age</label>
+                                        <p class="fw-bold">${age}</p>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label text-muted">Gender</label>
+                                        <p class="fw-bold">${student.gender || 'N/A'}</p>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label text-muted">Religion</label>
+                                        <p class="fw-bold">${student.religion || 'N/A'}</p>
+                                    </div>
+                                    <div class="col-md-12 mb-2">
+                                        <label class="form-label text-muted">Phone Number</label>
+                                        <p class="fw-bold">${student.phone_number || 'N/A'}</p>
+                                    </div>
+                                    <div class="col-md-12 mb-2">
+                                        <label class="form-label text-muted">Email</label>
+                                        <p class="fw-bold">${student.email || 'N/A'}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Academic Information Tab -->
-                <div class="tab-pane fade" id="academic" role="tabpanel">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <h6 class="text-primary mb-3"><i class="fas fa-graduation-cap me-2"></i>Academic Information</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="card">
-                                        <div class="card-header bg-info text-white">
-                                            <h6 class="mb-0">System Status</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="row">
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Active School Term</label>
-                                                    <p class="fw-bold">${systemTermName}</p>
-                                                </div>
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Active Session</label>
-                                                    <p class="fw-bold">${systemSessionName}</p>
-                                                </div>
-                                                <div class="col-md-12 mb-2">
-                                                    <label class="form-label text-muted">Student Status</label>
-                                                    <p class="fw-bold">
-                                                        ${isActiveInCurrentTerm
-                                                            ? '<span class="badge bg-success">Active in Current Term</span>'
-                                                            : '<span class="badge bg-warning">Not in Current Term</span>'}
-                                                    </p>
+                    <!-- Academic Information Tab -->
+                    <div class="tab-pane fade" id="academic" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6 class="text-primary mb-3"><i class="fas fa-graduation-cap me-2"></i>Academic Information</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card">
+                                            <div class="card-header bg-info text-white">
+                                                <h6 class="mb-0">System Status</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-2">
+                                                        <label class="form-label text-muted">Active School Term</label>
+                                                        <p class="fw-bold">${systemTermName}</p>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <label class="form-label text-muted">Active Session</label>
+                                                        <p class="fw-bold">${systemSessionName}</p>
+                                                    </div>
+                                                    <div class="col-md-12 mb-2">
+                                                        <label class="form-label text-muted">Student Status</label>
+                                                        <p class="fw-bold">
+                                                            ${isActiveInCurrentTerm
+                                                                ? '<span class="badge bg-success">Active in Current Term</span>'
+                                                                : '<span class="badge bg-warning">Not in Current Term</span>'}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="card">
-                                        <div class="card-header ${activeTerm ? 'bg-success' : 'bg-warning'} text-white">
-                                            <h6 class="mb-0">${activeTerm ? 'Active Term Registration' : 'No Active Term'}</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            ${activeTerm ? `
-                                            <div class="row">
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Class</label>
-                                                    <p class="fw-bold">${activeClassName} ${activeArmName}</p>
-                                                </div>
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Term</label>
-                                                    <p class="fw-bold">${activeTermName}</p>
-                                                </div>
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Session</label>
-                                                    <p class="fw-bold">${activeSessionName}</p>
-                                                </div>
-                                                <div class="col-md-6 mb-2">
-                                                    <label class="form-label text-muted">Marked as Current</label>
-                                                    <p class="fw-bold">
-                                                        ${hasCurrentTermFlag
-                                                            ? '<span class="badge bg-info">Yes</span>'
-                                                            : '<span class="badge bg-secondary">No</span>'}
-                                                    </p>
-                                                </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card">
+                                            <div class="card-header ${activeTerm ? 'bg-success' : 'bg-warning'} text-white">
+                                                <h6 class="mb-0">${activeTerm ? 'Active Term Registration' : 'No Active Term'}</h6>
                                             </div>
-                                            ` : `
-                                            <div class="text-center py-3">
-                                                <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
-                                                <p class="text-muted mb-0">Student is not registered in the current active term</p>
+                                            <div class="card-body">
+                                                ${activeTerm ? `
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-2">
+                                                        <label class="form-label text-muted">Class</label>
+                                                        <p class="fw-bold">${activeClassName} ${activeArmName}</p>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <label class="form-label text-muted">Term</label>
+                                                        <p class="fw-bold">${activeTermName}</p>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <label class="form-label text-muted">Session</label>
+                                                        <p class="fw-bold">${activeSessionName}</p>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <label class="form-label text-muted">Marked as Current</label>
+                                                        <p class="fw-bold">
+                                                            ${hasCurrentTermFlag
+                                                                ? '<span class="badge bg-info">Yes</span>'
+                                                                : '<span class="badge bg-secondary">No</span>'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                ` : `
+                                                <div class="text-center py-3">
+                                                    <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
+                                                    <p class="text-muted mb-0">Student is not registered in the current active term</p>
+                                                </div>
+                                                `}
                                             </div>
-                                            `}
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Terms History Tab -->
-                <div class="tab-pane fade" id="terms" role="tabpanel">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <h6 class="text-primary mb-3"><i class="fas fa-history me-2"></i>Registered Terms History</h6>
+                    <!-- Terms History Tab -->
+                    <div class="tab-pane fade" id="terms" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6 class="text-primary mb-3"><i class="fas fa-history me-2"></i>Registered Terms History</h6>
 
-                            <!-- All Registered Terms -->
-                            <div class="card">
-                                <div class="card-header bg-info text-white">
-                                    <h6 class="mb-0">All Registered Terms</h6>
-                                </div>
-                                <div class="card-body">
-                                    ${allTerms.length > 0 ? `
-                                    <div class="table-responsive">
-                                        <table class="table table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>Term</th>
-                                                    <th>Session</th>
-                                                    <th>Class</th>
-                                                    <th>Arm</th>
-                                                    <th>Status</th>
-                                                    <th>Registered Date</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${allTerms.map(term => {
-                                                    const isCurrentSystemTerm =
-                                                        systemTermId && systemSessionId &&
-                                                        term.term_id == systemTermId &&
-                                                        term.session_id == systemSessionId;
-                                                    const isMarkedCurrent = term.is_current;
-                                                    return `
-                                                    <tr class="${isCurrentSystemTerm ? 'table-success' : isMarkedCurrent ? 'table-info' : ''}">
-                                                        <td>${term.term_name || 'N/A'}</td>
-                                                        <td>${term.session_name || 'N/A'}</td>
-                                                        <td>${term.class_name || 'N/A'}</td>
-                                                        <td>${term.arm_name || 'N/A'}</td>
-                                                        <td>
-                                                            ${isCurrentSystemTerm
-                                                                ? '<span class="badge bg-success">Active System Term</span>'
-                                                                : isMarkedCurrent
-                                                                ? '<span class="badge bg-info">Marked as Current</span>'
-                                                                : '<span class="badge bg-secondary">Past</span>'}
-                                                        </td>
-                                                        <td>${term.created_at ? new Date(term.created_at).toLocaleDateString() : 'N/A'}</td>
+                                <!-- All Registered Terms -->
+                                <div class="card">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0">All Registered Terms</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        ${allTerms.length > 0 ? `
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Term</th>
+                                                        <th>Session</th>
+                                                        <th>Class</th>
+                                                        <th>Arm</th>
+                                                        <th>Status</th>
+                                                        <th>Registered Date</th>
                                                     </tr>
-                                                    `;
-                                                }).join('')}
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    ${allTerms.map(term => {
+                                                        const isCurrentSystemTerm =
+                                                            systemTermId && systemSessionId &&
+                                                            term.term_id == systemTermId &&
+                                                            term.session_id == systemSessionId;
+                                                        const isMarkedCurrent = term.is_current;
+                                                        return `
+                                                        <tr class="${isCurrentSystemTerm ? 'table-success' : isMarkedCurrent ? 'table-info' : ''}">
+                                                            <td>${term.term_name || 'N/A'}</td>
+                                                            <td>${term.session_name || 'N/A'}</td>
+                                                            <td>${term.class_name || 'N/A'}</td>
+                                                            <td>${term.arm_name || 'N/A'}</td>
+                                                            <td>
+                                                                ${isCurrentSystemTerm
+                                                                    ? '<span class="badge bg-success">Active System Term</span>'
+                                                                    : isMarkedCurrent
+                                                                    ? '<span class="badge bg-info">Marked as Current</span>'
+                                                                    : '<span class="badge bg-secondary">Past</span>'}
+                                                            </td>
+                                                            <td>${term.created_at ? new Date(term.created_at).toLocaleDateString() : 'N/A'}</td>
+                                                        </tr>
+                                                        `;
+                                                    }).join('')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        ` : `
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">No term history available</p>
+                                        </div>
+                                        `}
                                     </div>
-                                    ` : `
-                                    <div class="text-center py-4">
-                                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                                        <p class="text-muted">No term history available</p>
-                                    </div>
-                                    `}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    `;
+        `;
 
-    document.getElementById('viewStudentContent').innerHTML = content;
-    const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
-    modal.show();
+        document.getElementById('viewStudentContent').innerHTML = content;
+        const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
+        modal.show();
 
-    // Initialize Bootstrap tabs
-    const triggerTabList = [].slice.call(document.querySelectorAll('#studentTabs button'));
-    triggerTabList.forEach(function (triggerEl) {
-        const tabTrigger = new bootstrap.Tab(triggerEl);
-        triggerEl.addEventListener('click', function (event) {
-            event.preventDefault();
-            tabTrigger.show();
-        });
-    });
-}
-
-
-// Show Edit Modal
-function showEditModal() {
-    const modal = new bootstrap.Modal(document.getElementById('editStudentModal'));
-    modal.show();
-}
-
-// ============================================================================
-// FORM SUBMISSION HANDLERS
-// ============================================================================
-
-// Handle Add Student
-async function handleAddStudent(e) {
-    e.preventDefault();
-
-    const form = e.target;
-    const formData = new FormData(form);
-
-    try {
-        const response = await axios.post(form.action, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-
-        if (response.data.success) {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
-            modal.hide();
-
-            // Refresh student list
-            await fetchStudents();
-
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message || 'Student registered successfully.',
-                icon: 'success',
-                confirmButtonText: 'OK'
+        // Initialize Bootstrap tabs
+        const triggerTabList = [].slice.call(document.querySelectorAll('#studentTabs button'));
+        triggerTabList.forEach(function (triggerEl) {
+            const tabTrigger = new bootstrap.Tab(triggerEl);
+            triggerEl.addEventListener('click', function (event) {
+                event.preventDefault();
+                tabTrigger.show();
             });
-        }
-    } catch (error) {
-        handleFormError(error, 'add');
-    }
-}
-
-// Handle Edit Student
-async function handleEditStudent(e) {
-    e.preventDefault();
-
-    const form = e.target;
-    const formData = new FormData(form);
-
-    try {
-        const response = await axios.post(form.action, formData, {
-            headers: { 'Content-Type': 'multipart/form/form-data' }
         });
+    }
 
-        if (response.data.success) {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editStudentModal'));
-            modal.hide();
+    // Show Edit Modal
+    function showEditModal() {
+        const modal = new bootstrap.Modal(document.getElementById('editStudentModal'));
+        modal.show();
+    }
 
-            // Refresh student list
-            await fetchStudents();
+    // ============================================================================
+    // FORM SUBMISSION HANDLERS
+    // ============================================================================
 
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message || 'Student updated successfully.',
-                icon: 'success',
-                confirmButtonText: 'OK'
+    // Handle Add Student
+    async function handleAddStudent(e) {
+        e.preventDefault();
+
+        const form = e.target;
+        const formData = new FormData(form);
+
+        try {
+            const response = await axios.post(form.action, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
-        }
-    } catch (error) {
-        handleFormError(error, 'edit');
-    }
-}
 
-// Handle Form Errors
-function handleFormError(error, formType) {
-    let errorMessage = 'Failed to save student.';
+            if (response.data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
+                modal.hide();
 
-    if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-    }
+                // Refresh student list
+                await fetchStudents();
 
-    if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        let errorList = '';
-        for (const field in errors) {
-            errorList += `<li>${errors[field].join(', ')}</li>`;
-        }
-        errorMessage = `<div class="text-start">
-            <strong>Validation Errors:</strong>
-            <ul class="mb-0">${errorList}</ul>
-        </div>`;
-    }
-
-    Swal.fire({
-        title: 'Error!',
-        html: errorMessage,
-        icon: 'error',
-        confirmButtonText: 'OK'
-    });
-}
-
-// ============================================================================
-// UPDATE CURRENT TERM FUNCTIONS
-// ============================================================================
-
-// Show Update Current Term Modal
-function showUpdateCurrentTermModal() {
-    const selectedIds = getSelectedStudentIds();
-
-    if (selectedIds.length === 0) {
-        Swal.fire({
-            title: 'No Selection',
-            text: 'Please select at least one student.',
-            icon: 'warning',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
-
-    // Reset form and update count
-    const form = document.getElementById('updateCurrentTermForm');
-    if (form) {
-        form.reset();
-    }
-
-    document.getElementById('selectedStudentsCount').textContent = selectedIds.length;
-
-    const modal = new bootstrap.Modal(document.getElementById('updateCurrentTermModal'));
-    modal.show();
-}
-
-// Update Current Term
-async function updateCurrentTerm() {
-    const selectedIds = getSelectedStudentIds();
-    const form = document.getElementById('updateCurrentTermForm');
-
-    // Validate form
-    const classId = form.querySelector('[name="schoolclassId"]').value;
-    const termId = form.querySelector('[name="termId"]').value;
-    const sessionId = form.querySelector('[name="sessionId"]').value;
-
-    if (!classId || !termId || !sessionId) {
-        Swal.fire({
-            title: 'Missing Fields',
-            text: 'Please select class, term, and session.',
-            icon: 'warning',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
-
-    try {
-        // Show loading
-        Swal.fire({
-            title: 'Updating...',
-            text: 'Please wait while updating current term.',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
+                Swal.fire({
+                    title: 'Success!',
+                    text: response.data.message || 'Student registered successfully.',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
             }
-        });
+        } catch (error) {
+            handleFormError(error, 'add');
+        }
+    }
 
-        // Prepare data
-        const data = {
-            student_ids: selectedIds,
-            schoolclassId: classId,
-            termId: termId,
-            sessionId: sessionId,
-            is_current: true
-        };
+    // Handle Edit Student
+    async function handleEditStudent(e) {
+        e.preventDefault();
 
-        // Make the API call
-        const response = await axios.post('/student-current-term/bulk-update', data);
+        const form = e.target;
+        const formData = new FormData(form);
 
-        const modal = bootstrap.Modal.getInstance(document.getElementById('updateCurrentTermModal'));
-        modal.hide();
+        try {
+            const response = await axios.post(form.action, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
 
-        Swal.fire({
-            title: 'Success!',
-            text: response.data.message || `Current term updated for ${selectedIds.length} student(s).`,
-            icon: 'success',
-            confirmButtonText: 'OK'
-        });
+            if (response.data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editStudentModal'));
+                modal.hide();
 
-        // Refresh the student list
-        await fetchStudents();
+                // Refresh student list
+                await fetchStudents();
 
-    } catch (error) {
-        console.error('Error updating current term:', error);
+                Swal.fire({
+                    title: 'Success!',
+                    text: response.data.message || 'Student updated successfully.',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+            }
+        } catch (error) {
+            handleFormError(error, 'edit');
+        }
+    }
 
-        let errorMessage = 'Failed to update current term.';
+    // Handle Form Errors
+    function handleFormError(error, formType) {
+        let errorMessage = 'Failed to save student.';
+
         if (error.response?.data?.message) {
             errorMessage = error.response.data.message;
-        } else if (error.message) {
-            errorMessage = error.message;
+        }
+
+        if (error.response?.data?.errors) {
+            const errors = error.response.data.errors;
+            let errorList = '';
+            for (const field in errors) {
+                errorList += `<li>${errors[field].join(', ')}</li>`;
+            }
+            errorMessage = `<div class="text-start">
+                <strong>Validation Errors:</strong>
+                <ul class="mb-0">${errorList}</ul>
+            </div>`;
         }
 
         Swal.fire({
             title: 'Error!',
-            text: errorMessage,
+            html: errorMessage,
             icon: 'error',
             confirmButtonText: 'OK'
         });
     }
-}
 
-// ============================================================================
-// REPORT MODAL FUNCTIONS
-// ============================================================================
+    // ============================================================================
+    // UPDATE CURRENT TERM FUNCTIONS
+    // ============================================================================
 
-let columnSortable = null;
+    // Show Update Current Term Modal
+    function showUpdateCurrentTermModal(studentId = null) {
+        let selectedIds = [];
 
-// Initialize column ordering
-function initializeColumnOrdering() {
-    console.log('Initializing column ordering...');
+        if (studentId) {
+            // Single student
+            selectedIds = [studentId];
+        } else {
+            // Multiple students from checkboxes
+            selectedIds = getSelectedStudentIds();
+        }
 
-    const columnContainer = document.getElementById('columnsContainer');
-    const hiddenOrderInput = document.getElementById('columnsOrderInput');
+        if (selectedIds.length === 0) {
+            Swal.fire({
+                title: 'No Selection',
+                text: 'Please select at least one student.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
 
-    if (!columnContainer || !hiddenOrderInput) {
-        console.error('Column container or hidden input not found');
-        return;
+        // Reset form and update count
+        const form = document.getElementById('updateCurrentTermForm');
+        if (form) {
+            form.reset();
+        }
+
+        document.getElementById('selectedStudentsCount').textContent = selectedIds.length;
+
+        const modal = new bootstrap.Modal(document.getElementById('updateCurrentTermModal'));
+        modal.show();
     }
 
-    // Function to update column order
-    function updateColumnOrder() {
-        console.log('Updating column order...');
+    // Update Current Term
+    async function updateCurrentTerm() {
+        const selectedIds = getSelectedStudentIds();
+        const form = document.getElementById('updateCurrentTermForm');
 
-        // Get all checked checkboxes in their current DOM order
-        const columnItems = columnContainer.querySelectorAll('.draggable-item');
-        const order = [];
+        // Validate form
+        const classId = form.querySelector('[name="schoolclassId"]').value;
+        const termId = form.querySelector('[name="termId"]').value;
+        const sessionId = form.querySelector('[name="sessionId"]').value;
+
+        if (!classId || !termId || !sessionId) {
+            Swal.fire({
+                title: 'Missing Fields',
+                text: 'Please select class, term, and session.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
+        try {
+            // Show loading
+            Swal.fire({
+                title: 'Updating...',
+                text: 'Please wait while updating current term.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Prepare data
+            const data = {
+                student_ids: selectedIds,
+                schoolclassId: classId,
+                termId: termId,
+                sessionId: sessionId,
+                is_current: true
+            };
+
+            // Make the API call
+            const response = await axios.post('/student-current-term/bulk-update', data);
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('updateCurrentTermModal'));
+            modal.hide();
+
+            Swal.fire({
+                title: 'Success!',
+                text: response.data.message || `Current term updated for ${selectedIds.length} student(s).`,
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+
+            // Refresh the student list
+            await fetchStudents();
+
+        } catch (error) {
+            console.error('Error updating current term:', error);
+
+            let errorMessage = 'Failed to update current term.';
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            Swal.fire({
+                title: 'Error!',
+                text: errorMessage,
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+    }
+
+    // ============================================================================
+    // REPORT MODAL FUNCTIONS
+    // ============================================================================
+
+    let columnSortable = null;
+
+    // Initialize column ordering
+    function initializeColumnOrdering() {
+        console.log('Initializing column ordering...');
+
+        const columnContainer = document.getElementById('columnsContainer');
+        const hiddenOrderInput = document.getElementById('columnsOrderInput');
+
+        if (!columnContainer || !hiddenOrderInput) {
+            console.error('Column container or hidden input not found');
+            return;
+        }
+
+        // Function to update column order
+        function updateColumnOrder() {
+            console.log('Updating column order...');
+
+            // Get all checked checkboxes in their current DOM order
+            const columnItems = columnContainer.querySelectorAll('.draggable-item');
+            const order = [];
+            const selectedLabels = [];
+
+            columnItems.forEach(item => {
+                const checkbox = item.querySelector('.column-checkbox');
+                if (checkbox && checkbox.checked) {
+                    order.push(checkbox.value);
+
+                    // Get the label text
+                    const label = item.querySelector('.form-check-label');
+                    if (label) {
+                        selectedLabels.push(label.textContent.trim());
+                    }
+                }
+            });
+
+            console.log('New order:', order);
+            console.log('Selected labels:', selectedLabels);
+
+            hiddenOrderInput.value = order.join(',');
+
+            // Update preview
+            updatePreview();
+        }
+
+        // Check if Sortable.js is loaded
+        if (typeof Sortable !== 'undefined') {
+            console.log('Sortable.js loaded, version:', Sortable.version);
+
+            // Destroy existing instance if any
+            if (columnSortable) {
+                columnSortable.destroy();
+            }
+
+            // Initialize Sortable.js
+            columnSortable = new Sortable(columnContainer, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                handle: '.drag-handle',
+                filter: '.column-checkbox',
+                onStart: function() {
+                    console.log('Drag started');
+                },
+                onEnd: function() {
+                    console.log('Drag ended');
+                    updateColumnOrder();
+                },
+                onSort: function() {
+                    console.log('Items sorted');
+                }
+            });
+
+            console.log('Sortable.js initialized successfully');
+        } else {
+            console.error('Sortable.js not loaded!');
+            // Fallback to native drag and drop
+            initializeNativeDragDrop();
+        }
+
+        // Update order when checkboxes change
+        columnContainer.querySelectorAll('.column-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                console.log('Checkbox changed:', this.value, this.checked);
+                updateColumnOrder();
+            });
+        });
+
+        // Initial update
+        updateColumnOrder();
+    }
+
+    // Native drag and drop fallback
+    function initializeNativeDragDrop() {
+        console.log('Initializing native drag and drop...');
+
+        const container = document.getElementById('columnsContainer');
+        const draggables = container.querySelectorAll('.draggable-item');
+
+        let draggedItem = null;
+
+        draggables.forEach(item => {
+            item.setAttribute('draggable', 'true');
+
+            item.addEventListener('dragstart', function(e) {
+                draggedItem = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', this.dataset.column);
+            });
+
+            item.addEventListener('dragend', function(e) {
+                this.classList.remove('dragging');
+                container.querySelectorAll('.draggable-item').forEach(item => {
+                    item.classList.remove('drag-over');
+                });
+                draggedItem = null;
+            });
+
+            item.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+
+            item.addEventListener('dragenter', function(e) {
+                e.preventDefault();
+                if (this !== draggedItem) {
+                    this.classList.add('drag-over');
+                }
+            });
+
+            item.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (this !== draggedItem) {
+                    // Remove drag-over class
+                    this.classList.remove('drag-over');
+
+                    // Get all items
+                    const allItems = Array.from(container.querySelectorAll('.draggable-item'));
+                    const draggedIndex = allItems.indexOf(draggedItem);
+                    const targetIndex = allItems.indexOf(this);
+
+                    // Move the dragged item
+                    if (draggedIndex < targetIndex) {
+                        this.parentElement.after(draggedItem.parentElement);
+                    } else {
+                        this.parentElement.before(draggedItem.parentElement);
+                    }
+
+                    // Update the order
+                    updateColumnOrder();
+                }
+            });
+        });
+    }
+
+    // Update preview
+    function updatePreview() {
+        console.log('Updating preview...');
+
+        const container = document.getElementById('columnsContainer');
+        if (!container) return;
+
+        // Get selected columns in current order
+        const columnItems = container.querySelectorAll('.draggable-item');
         const selectedLabels = [];
 
         columnItems.forEach(item => {
             const checkbox = item.querySelector('.column-checkbox');
             if (checkbox && checkbox.checked) {
-                order.push(checkbox.value);
-
-                // Get the label text
                 const label = item.querySelector('.form-check-label');
                 if (label) {
                     selectedLabels.push(label.textContent.trim());
@@ -3889,478 +4502,333 @@ function initializeColumnOrdering() {
             }
         });
 
-        console.log('New order:', order);
-        console.log('Selected labels:', selectedLabels);
+        const preview = document.getElementById('columnOrderPreview');
+        if (preview) {
+            preview.textContent = selectedLabels.join(', ') || 'No columns selected';
+        }
 
-        hiddenOrderInput.value = order.join(',');
+        // Update hidden input with order
+        const hiddenInput = document.getElementById('columnsOrderInput');
+        if (hiddenInput) {
+            const order = [];
+            columnItems.forEach(item => {
+                const checkbox = item.querySelector('.column-checkbox');
+                if (checkbox && checkbox.checked) {
+                    order.push(checkbox.value);
+                }
+            });
+            hiddenInput.value = order.join(',');
+        }
+    }
 
-        // Update preview
+    // Generate Report
+    window.generateReport = function() {
+        console.log('Generate report clicked');
+
+        const form = document.getElementById('printReportForm');
+        if (!form) {
+            console.error('Report form not found');
+            return;
+        }
+
+        // Get selected columns
+        const selectedCheckboxes = form.querySelectorAll('input[name="columns[]"]:checked');
+        const selectedColumns = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+        console.log('Selected columns:', selectedColumns);
+
+        if (selectedColumns.length === 0) {
+            Swal.fire({
+                title: 'Warning!',
+                text: 'Please select at least one column to include in the report.',
+                icon: 'warning',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
+            return;
+        }
+
+        // Get form values
+        const classId = form.querySelector('[name="class_id"]').value;
+        const status = form.querySelector('[name="status"]').value;
+        const formatElements = form.querySelectorAll('[name="format"]');
+        let format = '';
+
+        formatElements.forEach(element => {
+            if (element.checked) {
+                format = element.value;
+            }
+        });
+
+        if (!format) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Please select an export format (PDF or Excel).',
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
+            return;
+        }
+
+        const columnsOrderInput = document.getElementById('columnsOrderInput');
+        const includeHeader = form.querySelector('[name="include_header"]').checked;
+        const includeLogo = form.querySelector('[name="include_logo"]').checked;
+        const orientation = form.querySelector('[name="orientation"]').value;
+        const termId = form.querySelector('[name="term_id"]')?.value || '';
+        const sessionId = form.querySelector('[name="session_id"]')?.value || '';
+
+        console.log('Generating report with:', {
+            selectedColumns: selectedColumns,
+            columnsOrder: columnsOrderInput?.value || '',
+            classId: classId,
+            status: status,
+            termId: termId,
+            sessionId: sessionId,
+            format: format,
+            orientation: orientation,
+            includeHeader: includeHeader,
+            includeLogo: includeLogo
+        });
+
+        // Show loading indicator
+        Swal.fire({
+            title: 'Generating Report...',
+            text: 'This may take a moment. Please wait...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Build query parameters
+        const params = new URLSearchParams({
+            class_id: classId || '',
+            term_id: termId,
+            session_id: sessionId,
+            status: status || '',
+            columns: selectedColumns.join(','),
+            columns_order: columnsOrderInput?.value || '',
+            format: format,
+            orientation: orientation,
+            include_header: includeHeader ? '1' : '0',
+            include_logo: includeLogo ? '1' : '0'
+        });
+
+        // Make the request
+        axios.get(`/students/report?${params.toString()}`, {
+            responseType: 'blob',
+            timeout: 120000 // 2 minutes timeout
+        })
+        .then(response => {
+            Swal.close();
+
+            // Create a blob from the response
+            const blob = new Blob([response.data], {
+                type: response.headers['content-type']
+            });
+
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // Get filename from content-disposition header or generate one
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = 'student-report.' + (format === 'pdf' ? 'pdf' : 'xlsx');
+
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+
+            // Cleanup
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }, 100);
+
+            // Close modal
+            const modalElement = document.getElementById('printStudentReportModal');
+            if (modalElement) {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+            }
+
+            // Show success message
+            Swal.fire({
+                title: 'Success!',
+                text: `Report generated successfully and downloaded as ${format.toUpperCase()}`,
+                icon: 'success',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        })
+        .catch(error => {
+            Swal.close();
+
+            console.error('Error generating report:', error);
+
+            let errorMessage = 'Failed to generate report. Please try again.';
+
+            if (error.response) {
+                if (error.response.status === 404) {
+                    errorMessage = 'No students found matching the selected filters.';
+                } else if (error.response.status === 422) {
+                    errorMessage = error.response.data.message || 'Validation error. Please check your selections.';
+                } else if (error.response.status === 500) {
+                    errorMessage = error.response.data?.message || 'Server error. Please try again later.';
+                }
+
+                if (error.response.data && typeof error.response.data === 'object') {
+                    if (error.response.data.message) {
+                        errorMessage = error.response.data.message;
+                    }
+                }
+            } else if (error.code === 'ECONNABORTED') {
+                errorMessage = 'Request timeout. The report generation is taking too long. Try with fewer students or different filters.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            Swal.fire({
+                title: 'Error!',
+                text: errorMessage,
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
+        });
+    };
+
+    // Initialize Report Modal
+    function initializeReportModal() {
+        console.log('Initializing report modal...');
+
+        // Initialize column ordering
+        initializeColumnOrdering();
+
+        // Set up event listeners for checkboxes
+        const container = document.getElementById('columnsContainer');
+        if (container) {
+            container.querySelectorAll('.column-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', updatePreview);
+            });
+        }
+
+        // Initial preview update
         updatePreview();
     }
 
-    // Check if Sortable.js is loaded
-    if (typeof Sortable !== 'undefined') {
-        console.log('Sortable.js loaded, version:', Sortable.version);
+    // ============================================================================
+    // HELPER FUNCTIONS
+    // ============================================================================
 
-        // Destroy existing instance if any
-        if (columnSortable) {
-            columnSortable.destroy();
+    // Show Loading
+    function showLoading() {
+        document.getElementById('loadingState').classList.remove('d-none');
+        document.getElementById('tableView').classList.add('d-none');
+        document.getElementById('cardView').classList.add('d-none');
+        document.getElementById('emptyState').classList.add('d-none');
+    }
+
+    // Hide Loading
+    function hideLoading() {
+        document.getElementById('loadingState').classList.add('d-none');
+        document.getElementById('tableView').classList.remove('d-none');
+        if (currentView === 'table') {
+            document.getElementById('tableView').classList.remove('d-none');
+        } else {
+            document.getElementById('cardView').classList.remove('d-none');
         }
-
-        // Initialize Sortable.js
-        columnSortable = new Sortable(columnContainer, {
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            chosenClass: 'sortable-chosen',
-            dragClass: 'sortable-drag',
-            handle: '.drag-handle',
-            filter: '.column-checkbox',
-            onStart: function() {
-                console.log('Drag started');
-            },
-            onEnd: function() {
-                console.log('Drag ended');
-                updateColumnOrder();
-            },
-            onSort: function() {
-                console.log('Items sorted');
-            }
-        });
-
-        console.log('Sortable.js initialized successfully');
-    } else {
-        console.error('Sortable.js not loaded!');
-        // Fallback to native drag and drop
-        initializeNativeDragDrop();
     }
 
-    // Update order when checkboxes change
-    columnContainer.querySelectorAll('.column-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            console.log('Checkbox changed:', this.value, this.checked);
-            updateColumnOrder();
-        });
-    });
-
-    // Initial update
-    updateColumnOrder();
-}
-
-// Native drag and drop fallback
-function initializeNativeDragDrop() {
-    console.log('Initializing native drag and drop...');
-
-    const container = document.getElementById('columnsContainer');
-    const draggables = container.querySelectorAll('.draggable-item');
-
-    let draggedItem = null;
-
-    draggables.forEach(item => {
-        item.setAttribute('draggable', 'true');
-
-        item.addEventListener('dragstart', function(e) {
-            draggedItem = this;
-            this.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', this.dataset.column);
-        });
-
-        item.addEventListener('dragend', function(e) {
-            this.classList.remove('dragging');
-            container.querySelectorAll('.draggable-item').forEach(item => {
-                item.classList.remove('drag-over');
-            });
-            draggedItem = null;
-        });
-
-        item.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        });
-
-        item.addEventListener('dragenter', function(e) {
-            e.preventDefault();
-            if (this !== draggedItem) {
-                this.classList.add('drag-over');
-            }
-        });
-
-        item.addEventListener('dragleave', function() {
-            this.classList.remove('drag-over');
-        });
-
-        item.addEventListener('drop', function(e) {
-            e.preventDefault();
-            if (this !== draggedItem) {
-                // Remove drag-over class
-                this.classList.remove('drag-over');
-
-                // Get all items
-                const allItems = Array.from(container.querySelectorAll('.draggable-item'));
-                const draggedIndex = allItems.indexOf(draggedItem);
-                const targetIndex = allItems.indexOf(this);
-
-                // Move the dragged item
-                if (draggedIndex < targetIndex) {
-                    this.parentElement.after(draggedItem.parentElement);
-                } else {
-                    this.parentElement.before(draggedItem.parentElement);
-                }
-
-                // Update the order
-                updateColumnOrder();
-            }
-        });
-    });
-}
-
-// Update preview
-function updatePreview() {
-    console.log('Updating preview...');
-
-    const container = document.getElementById('columnsContainer');
-    if (!container) return;
-
-    // Get selected columns in current order
-    const columnItems = container.querySelectorAll('.draggable-item');
-    const selectedLabels = [];
-
-    columnItems.forEach(item => {
-        const checkbox = item.querySelector('.column-checkbox');
-        if (checkbox && checkbox.checked) {
-            const label = item.querySelector('.form-check-label');
-            if (label) {
-                selectedLabels.push(label.textContent.trim());
-            }
-        }
-    });
-
-    const preview = document.getElementById('columnOrderPreview');
-    if (preview) {
-        preview.textContent = selectedLabels.join(', ') || 'No columns selected';
-    }
-
-    // Update hidden input with order
-    const hiddenInput = document.getElementById('columnsOrderInput');
-    if (hiddenInput) {
-        const order = [];
-        columnItems.forEach(item => {
-            const checkbox = item.querySelector('.column-checkbox');
-            if (checkbox && checkbox.checked) {
-                order.push(checkbox.value);
-            }
-        });
-        hiddenInput.value = order.join(',');
-    }
-}
-
-// Generate Report
-window.generateReport = function() {
-    console.log('Generate report clicked');
-
-    const form = document.getElementById('printReportForm');
-    if (!form) {
-        console.error('Report form not found');
-        return;
-    }
-
-    // Get selected columns
-    const selectedCheckboxes = form.querySelectorAll('input[name="columns[]"]:checked');
-    const selectedColumns = Array.from(selectedCheckboxes).map(cb => cb.value);
-
-    console.log('Selected columns:', selectedColumns);
-
-    if (selectedColumns.length === 0) {
-        Swal.fire({
-            title: 'Warning!',
-            text: 'Please select at least one column to include in the report.',
-            icon: 'warning',
-            customClass: { confirmButton: 'btn btn-primary' },
-            buttonsStyling: false
-        });
-        return;
-    }
-
-    // Get form values
-    const classId = form.querySelector('[name="class_id"]').value;
-    const status = form.querySelector('[name="status"]').value;
-    const formatElements = form.querySelectorAll('[name="format"]');
-    let format = '';
-
-    formatElements.forEach(element => {
-        if (element.checked) {
-            format = element.value;
-        }
-    });
-
-    if (!format) {
+    // Show Error
+    function showError(message) {
         Swal.fire({
             title: 'Error!',
-            text: 'Please select an export format (PDF or Excel).',
+            text: message,
             icon: 'error',
-            customClass: { confirmButton: 'btn btn-primary' },
-            buttonsStyling: false
-        });
-        return;
-    }
-
-    const columnsOrderInput = document.getElementById('columnsOrderInput');
-    const includeHeader = form.querySelector('[name="include_header"]').checked;
-    const includeLogo = form.querySelector('[name="include_logo"]').checked;
-    const orientation = form.querySelector('[name="orientation"]').value;
-    const termId = form.querySelector('[name="term_id"]')?.value || '';
-    const sessionId = form.querySelector('[name="session_id"]')?.value || '';
-
-    console.log('Generating report with:', {
-        selectedColumns: selectedColumns,
-        columnsOrder: columnsOrderInput?.value || '',
-        classId: classId,
-        status: status,
-        termId: termId,
-        sessionId: sessionId,
-        format: format,
-        orientation: orientation,
-        includeHeader: includeHeader,
-        includeLogo: includeLogo
-    });
-
-    // Show loading indicator
-    Swal.fire({
-        title: 'Generating Report...',
-        text: 'This may take a moment. Please wait...',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-
-    // Build query parameters
-    const params = new URLSearchParams({
-        class_id: classId || '',
-        term_id: termId,
-        session_id: sessionId,
-        status: status || '',
-        columns: selectedColumns.join(','),
-        columns_order: columnsOrderInput?.value || '',
-        format: format,
-        orientation: orientation,
-        include_header: includeHeader ? '1' : '0',
-        include_logo: includeLogo ? '1' : '0'
-    });
-
-    // Make the request
-    axios.get(`/students/report?${params.toString()}`, {
-        responseType: 'blob',
-        timeout: 120000 // 2 minutes timeout
-    })
-    .then(response => {
-        Swal.close();
-
-        // Create a blob from the response
-        const blob = new Blob([response.data], {
-            type: response.headers['content-type']
-        });
-
-        // Create download link
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-
-        // Get filename from content-disposition header or generate one
-        const contentDisposition = response.headers['content-disposition'];
-        let filename = 'student-report.' + (format === 'pdf' ? 'pdf' : 'xlsx');
-
-        if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-            if (filenameMatch && filenameMatch[1]) {
-                filename = filenameMatch[1];
+            confirmButtonText: 'OK',
+            customClass: {
+                confirmButton: 'btn btn-primary'
             }
-        }
-
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-
-        // Cleanup
-        setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        }, 100);
-
-        // Close modal
-        const modalElement = document.getElementById('printStudentReportModal');
-        if (modalElement) {
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            }
-        }
-
-        // Show success message
-        Swal.fire({
-            title: 'Success!',
-            text: `Report generated successfully and downloaded as ${format.toUpperCase()}`,
-            icon: 'success',
-            customClass: { confirmButton: 'btn btn-primary' },
-            buttonsStyling: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
-    })
-    .catch(error => {
-        Swal.close();
-
-        console.error('Error generating report:', error);
-
-        let errorMessage = 'Failed to generate report. Please try again.';
-
-        if (error.response) {
-            if (error.response.status === 404) {
-                errorMessage = 'No students found matching the selected filters.';
-            } else if (error.response.status === 422) {
-                errorMessage = error.response.data.message || 'Validation error. Please check your selections.';
-            } else if (error.response.status === 500) {
-                errorMessage = error.response.data?.message || 'Server error. Please try again later.';
-            }
-
-            if (error.response.data && typeof error.response.data === 'object') {
-                if (error.response.data.message) {
-                    errorMessage = error.response.data.message;
-                }
-            }
-        } else if (error.code === 'ECONNABORTED') {
-            errorMessage = 'Request timeout. The report generation is taking too long. Try with fewer students or different filters.';
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-
-        Swal.fire({
-            title: 'Error!',
-            text: errorMessage,
-            icon: 'error',
-            customClass: { confirmButton: 'btn btn-primary' },
-            buttonsStyling: false
-        });
-    });
-};
-
-// Initialize Report Modal
-function initializeReportModal() {
-    console.log('Initializing report modal...');
-
-    // Initialize column ordering
-    initializeColumnOrdering();
-
-    // Set up event listeners for checkboxes
-    const container = document.getElementById('columnsContainer');
-    if (container) {
-        container.querySelectorAll('.column-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', updatePreview);
         });
     }
 
-    // Initial preview update
-    updatePreview();
-}
+    // Preview Image
+    window.previewImage = function(input, targetId = 'addStudentAvatar') {
+        const file = input.files[0];
+        const reader = new FileReader();
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
+        reader.onload = function(e) {
+            document.getElementById(targetId).src = e.target.result;
+        };
 
-// Show Loading
-function showLoading() {
-    document.getElementById('loadingState').classList.remove('d-none');
-    document.getElementById('tableView').classList.add('d-none');
-    document.getElementById('cardView').classList.add('d-none');
-    document.getElementById('emptyState').classList.add('d-none');
-}
-
-// Hide Loading
-function hideLoading() {
-    document.getElementById('loadingState').classList.add('d-none');
-}
-
-// Show Error
-function showError(message) {
-    Swal.fire({
-        title: 'Error!',
-        text: message,
-        icon: 'error',
-        confirmButtonText: 'OK',
-        customClass: {
-            confirmButton: 'btn btn-primary'
+        if (file) {
+            reader.readAsDataURL(file);
         }
-    });
-}
-
-// Generate Placeholder Image
-function generatePlaceholderImage(text = 'PHOTO') {
-    const canvas = document.createElement('canvas');
-    canvas.width = 150;
-    canvas.height = 150;
-    const ctx = canvas.getContext('2d');
-
-    // Background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 150, 150);
-    gradient.addColorStop(0, '#6366f1');
-    gradient.addColorStop(1, '#8b5cf6');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 150, 150);
-
-    // Text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 75, 75);
-
-    return canvas.toDataURL();
-}
-
-// Preview Image
-window.previewImage = function(input, targetId = 'addStudentAvatar') {
-    const file = input.files[0];
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        document.getElementById(targetId).src = e.target.result;
     };
 
-    if (file) {
-        reader.readAsDataURL(file);
-    }
-};
+    // Edit Student From View
+    window.editStudentFromView = function() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('viewStudentModal'));
+        modal.hide();
+        // Get the student ID from the view content
+        // This would need to be implemented based on how you store the current student ID
+    };
 
-// Ensure Axios and CSRF token
-function ensureAxios() {
-    if (typeof axios === 'undefined') {
-        console.error('Error: Axios is not defined');
-        Swal.fire({
-            title: "Error!",
-            text: "Axios library is missing",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
-        return false;
+    // Ensure Axios and CSRF token
+    function ensureAxios() {
+        if (typeof axios === 'undefined') {
+            console.error('Error: Axios is not defined');
+            Swal.fire({
+                title: "Error!",
+                text: "Axios library is missing",
+                icon: "error",
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
+            });
+            return false;
+        }
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (!csrfToken) {
+            console.error('Error: CSRF token not found');
+            Swal.fire({
+                title: "Error!",
+                text: "CSRF token is missing",
+                icon: "error",
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
+            });
+            return false;
+        }
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+        return true;
     }
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-    if (!csrfToken) {
-        console.error('Error: CSRF token not found');
-        Swal.fire({
-            title: "Error!",
-            text: "CSRF token is missing",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
-        return false;
-    }
-    axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
-    return true;
-}
 
-// Initialize the application
-initializeApplication();
+    // Initialize the application
+    ensureAxios();
+    initializeApplication();
 </script>
+
+{{-- <!-- Include Sortable.js for drag and drop functionality -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Include Axios -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> --}}
+
 @endsection
