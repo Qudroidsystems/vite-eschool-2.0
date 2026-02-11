@@ -1037,6 +1037,118 @@ use Spatie\Permission\Models\Role;
                 .sortable-drag {
                     opacity: 0.8;
                 }
+
+                /* ====== ENHANCED VIEW MODAL STYLES ====== */
+                .modal-header-gradient {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                }
+
+                .info-card {
+                    background: white;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                    overflow: hidden;
+                    height: 100%;
+                }
+
+                .info-card-header {
+                    padding: 12px 16px;
+                    background: #f8fafc;
+                    border-bottom: 1px solid #e9ecef;
+                }
+
+                .info-card-header h6 {
+                    margin: 0;
+                    color: #1e293b;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                }
+
+                .info-card-body {
+                    padding: 16px;
+                }
+
+                .bg-soft-primary {
+                    background-color: rgba(13, 110, 253, 0.05);
+                }
+
+                .bg-soft-pink {
+                    background-color: rgba(244, 67, 149, 0.05);
+                }
+
+                .bg-soft-success {
+                    background-color: rgba(40, 167, 69, 0.05);
+                }
+
+                .bg-soft-warning {
+                    background-color: rgba(255, 193, 7, 0.05);
+                }
+
+                .bg-soft-info {
+                    background-color: rgba(23, 162, 184, 0.05);
+                }
+
+                .bg-danger-light {
+                    background-color: rgba(220, 53, 69, 0.1);
+                    color: #dc3545;
+                    padding: 4px 8px;
+                    border-radius: 20px;
+                }
+
+                /* Profile header */
+                .student-profile-header {
+                    background: linear-gradient(to bottom, #f8fafc, #fff);
+                    border-bottom: 1px solid #e9ecef;
+                }
+
+                .profile-avatar {
+                    border-radius: 50%;
+                    display: inline-block;
+                    position: relative;
+                }
+
+                /* Nav tabs customization */
+                .nav-tabs-custom {
+                    border-bottom: 2px solid #e9ecef;
+                }
+
+                .nav-tabs-custom .nav-link {
+                    border: none;
+                    padding: 12px 20px;
+                    color: #6c757d;
+                    font-weight: 500;
+                    position: relative;
+                }
+
+                .nav-tabs-custom .nav-link.active {
+                    color: #405189;
+                    background: transparent;
+                }
+
+                .nav-tabs-custom .nav-link.active::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -2px;
+                    left: 0;
+                    right: 0;
+                    height: 2px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                }
+
+                /* Table improvements */
+                .table-sm td, .table-sm th {
+                    padding: 8px 8px;
+                }
+
+                .table tr {
+                    transition: background-color 0.2s ease;
+                }
+
+                .table tr:hover {
+                    background-color: rgba(64, 81, 137, 0.02);
+                }
             </style>
 
             <!-- Dashboard Statistics -->
@@ -1340,7 +1452,7 @@ use Spatie\Permission\Models\Role;
                                     <th>Status</th>
                                     <th>Gender</th>
                                     <th>Registered</th>
-                                    <th width="180">Actions</th>
+                                    <th width="250">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="studentTableBody">
@@ -2532,7 +2644,7 @@ use Spatie\Permission\Models\Role;
                                             </div>
                                             <div class="mb-3">
                                                 <label for="editReasonForLeaving" class="form-label">Reason for Leaving</label>
-                                                <textarea id="editReasonForLeaving" name="reason_for_leaving" class="form-control" rows="2" placeholder="Reason for leaving previous school"></textarea>
+                                                <textarea id="editReasonForLeaving" name="reason_for_leaving" class="form-control" rows="2" placeholder="Reason for leaving previous school" required></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -2557,25 +2669,584 @@ use Spatie\Permission\Models\Role;
             </div>
         </div>
 
-        <!-- View Student Modal -->
-        <div id="viewStudentModal" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-centered">
+        <!-- ===== ENHANCED VIEW STUDENT MODAL WITH COMPLETE PARENT INFORMATION ===== -->
+        <div id="viewStudentModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
                 <div class="modal-content">
+                    <!-- Modern Gradient Header -->
                     <div class="modal-header modal-header-gradient">
-                        <h5 class="modal-title">
-                            <i class="fas fa-eye me-2"></i>Student Details
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="d-flex align-items-center">
+                            <div class="header-icon-wrapper me-3">
+                                <i class="fas fa-graduation-cap fa-2x"></i>
+                            </div>
+                            <div>
+                                <h4 class="modal-title mb-1">Student Profile</h4>
+                                <p class="text-white-50 mb-0">Complete student information and records</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body p-4">
-                        <!-- Student details will be populated by JavaScript -->
-                        <div id="viewStudentContent"></div>
+
+                    <div class="modal-body p-0">
+                        <!-- Student Header with Profile Image and Basic Info -->
+                        <div class="student-profile-header bg-light p-4 border-bottom">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div class="position-relative">
+                                        <div class="profile-avatar" id="viewStudentAvatarContainer">
+                                            <img id="viewStudentPhoto"
+                                                 src="{{ asset('theme/layouts/assets/media/avatars/blank.png') }}"
+                                                 alt="Student Photo"
+                                                 class="rounded-circle border border-4 border-white shadow"
+                                                 style="width: 120px; height: 120px; object-fit: cover;">
+                                            <span class="position-absolute bottom-0 end-0 bg-success rounded-circle p-2 border border-2 border-white"
+                                                  style="width: 20px; height: 20px;"
+                                                  id="studentStatusIndicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="d-flex flex-column">
+                                        <h2 class="mb-2 fw-bold" id="viewFullName">-</h2>
+                                        <div class="d-flex flex-wrap gap-3 mb-2">
+                                            <span class="badge bg-primary bg-gradient px-3 py-2">
+                                                <i class="fas fa-id-card me-1"></i>
+                                                <span id="viewAdmissionNumber">-</span>
+                                            </span>
+                                            <span class="badge bg-info bg-gradient px-3 py-2" id="viewClassBadge">
+                                                <i class="fas fa-school me-1"></i>
+                                                <span id="viewClassDisplay">-</span>
+                                            </span>
+                                            <span class="badge bg-success bg-gradient px-3 py-2" id="viewStudentTypeBadge">
+                                                <i class="fas fa-user-tag me-1"></i>
+                                                <span id="viewStudentType">-</span>
+                                            </span>
+                                        </div>
+                                        <div class="d-flex gap-4 text-muted">
+                                            <div><i class="fas fa-calendar-alt me-1"></i> Admitted: <span id="viewAdmittedDate">-</span></div>
+                                            <div><i class="fas fa-venus-mars me-1"></i> <span id="viewGenderText">-</span></div>
+                                            <div><i class="fas fa-birthday-cake me-1"></i> Age: <span id="viewAge">-</span> years</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modern Tab Navigation -->
+                        <div class="px-4 pt-4">
+                            <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" data-bs-toggle="tab" href="#personalInfo" role="tab">
+                                        <i class="fas fa-user-circle me-2"></i>Personal Details
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#academicInfo" role="tab">
+                                        <i class="fas fa-graduation-cap me-2"></i>Academic Info
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#familyInfo" role="tab">
+                                        <i class="fas fa-users me-2"></i>Family & Guardian
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#additionalInfo" role="tab">
+                                        <i class="fas fa-info-circle me-2"></i>Additional Info
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#termHistory" role="tab">
+                                        <i class="fas fa-history me-2"></i>Term History
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Tab Content -->
+                        <div class="tab-content p-4">
+                            <!-- 1. PERSONAL DETAILS TAB -->
+                            <div class="tab-pane fade show active" id="personalInfo" role="tabpanel">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="info-card mb-3">
+                                            <div class="info-card-header">
+                                                <h6 class="mb-0"><i class="fas fa-id-badge me-2 text-primary"></i>Basic Information</h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tr>
+                                                        <th width="40%">Full Name:</th>
+                                                        <td class="fw-semibold" id="viewFullNameDetail">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Title:</th>
+                                                        <td id="viewTitle">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Date of Birth:</th>
+                                                        <td><span id="viewDOB">-</span> (<span id="viewAgeDetail">-</span> years)</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Place of Birth:</th>
+                                                        <td id="viewPlaceOfBirth">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Gender:</th>
+                                                        <td><span id="viewGenderDetail">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Blood Group:</th>
+                                                        <td><span class="badge bg-danger-light" id="viewBloodGroupDetail">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Religion:</th>
+                                                        <td id="viewReligionDetail">-</td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-card mb-3">
+                                            <div class="info-card-header">
+                                                <h6 class="mb-0"><i class="fas fa-address-card me-2 text-primary"></i>Contact Information</h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tr>
+                                                        <th width="40%">Phone Number:</th>
+                                                        <td><i class="fas fa-phone-alt me-1 text-muted"></i> <span id="viewPhoneNumber">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Email Address:</th>
+                                                        <td><i class="fas fa-envelope me-1 text-muted"></i> <span id="viewEmailAddress">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Permanent Address:</th>
+                                                        <td><i class="fas fa-map-marker-alt me-1 text-muted"></i> <span id="viewPermanentAddress">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>City:</th>
+                                                        <td id="viewCity">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>State of Origin:</th>
+                                                        <td id="viewStateOrigin">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>LGA:</th>
+                                                        <td id="viewLGA">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Nationality:</th>
+                                                        <td id="viewNationality">-</td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <div class="info-card">
+                                            <div class="info-card-header">
+                                                <h6 class="mb-0"><i class="fas fa-rocket me-2 text-primary"></i>Future Ambition</h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <p class="mb-0 fst-italic" id="viewFutureAmbition">-</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. ACADEMIC INFORMATION TAB -->
+                            <div class="tab-pane fade" id="academicInfo" role="tabpanel">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="info-card mb-3">
+                                            <div class="info-card-header">
+                                                <h6 class="mb-0"><i class="fas fa-graduation-cap me-2 text-success"></i>Current Academic Status</h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tr>
+                                                        <th width="40%">Admission No:</th>
+                                                        <td class="fw-bold text-primary" id="viewAdmissionNo">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Admission Date:</th>
+                                                        <td id="viewAdmissionDate">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Class:</th>
+                                                        <td><span class="badge bg-info" id="viewCurrentClass">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Arm:</th>
+                                                        <td id="viewArm">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Student Category:</th>
+                                                        <td><span class="badge bg-secondary" id="viewStudentCategory">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Student Status:</th>
+                                                        <td><span id="viewStudentStatus">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>School House:</th>
+                                                        <td id="viewSchoolHouse">-</td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-card mb-3">
+                                            <div class="info-card-header">
+                                                <h6 class="mb-0"><i class="fas fa-calendar-alt me-2 text-success"></i>Current Term Information</h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <div class="text-center mb-3" id="currentTermAlert">
+                                                    <!-- Will be populated by JS -->
+                                                </div>
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tr>
+                                                        <th width="40%">Current Term:</th>
+                                                        <td><span id="viewCurrentTerm">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Current Session:</th>
+                                                        <td id="viewCurrentSession">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Status in Current Term:</th>
+                                                        <td><span id="viewCurrentTermStatus">-</span></td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="info-card">
+                                            <div class="info-card-header">
+                                                <h6 class="mb-0"><i class="fas fa-school me-2 text-success"></i>Previous School</h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tr>
+                                                        <th width="40%">Last School:</th>
+                                                        <td id="viewLastSchool">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Last Class:</th>
+                                                        <td id="viewLastClass">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Reason for Leaving:</th>
+                                                        <td><em id="viewReasonForLeaving">-</em></td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. FAMILY & GUARDIAN INFORMATION TAB - ENHANCED -->
+                            <div class="tab-pane fade" id="familyInfo" role="tabpanel">
+                                <div class="row">
+                                    <!-- Father's Information -->
+                                    <div class="col-md-6">
+                                        <div class="info-card mb-3">
+                                            <div class="info-card-header bg-soft-primary">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-user-tie me-2 text-primary"></i>Father's Information
+                                                    <span class="badge bg-primary ms-2" id="fatherStatusBadge"></span>
+                                                </h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <div class="text-center mb-3" id="fatherPhotoSection" style="display: none;">
+                                                    <img id="viewFatherPhoto" src="" alt="Father" class="rounded-circle border" style="width: 80px; height: 80px; object-fit: cover;">
+                                                </div>
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tr>
+                                                        <th width="40%"><i class="fas fa-user me-1 text-muted"></i>Full Name:</th>
+                                                        <td class="fw-semibold" id="viewFatherFullName">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-phone me-1 text-muted"></i>Phone Number:</th>
+                                                        <td>
+                                                            <span id="viewFatherPhone">-</span>
+                                                            <a href="javascript:void(0)" onclick="callNumber('viewFatherPhone')" class="ms-2 text-success" title="Call">
+                                                                <i class="fas fa-phone-alt"></i>
+                                                            </a>
+                                                            <a href="javascript:void(0)" onclick="sendSMS('viewFatherPhone')" class="ms-2 text-info" title="SMS">
+                                                                <i class="fas fa-comment"></i>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-briefcase me-1 text-muted"></i>Occupation:</th>
+                                                        <td><span class="badge bg-soft-success" id="viewFatherOccupation">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-building me-1 text-muted"></i>Employer:</th>
+                                                        <td id="viewFatherEmployer">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-map-marker-alt me-1 text-muted"></i>City/State:</th>
+                                                        <td id="viewFatherCityState">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-envelope me-1 text-muted"></i>Email:</th>
+                                                        <td>
+                                                            <span id="viewFatherEmail">-</span>
+                                                            <a href="javascript:void(0)" onclick="sendEmail('viewFatherEmail')" class="ms-2 text-info" title="Send Email">
+                                                                <i class="fas fa-envelope"></i>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-address-card me-1 text-muted"></i>Address:</th>
+                                                        <td id="viewFatherAddress">-</td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Mother's Information -->
+                                    <div class="col-md-6">
+                                        <div class="info-card mb-3">
+                                            <div class="info-card-header bg-soft-pink">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-user-tie me-2 text-danger"></i>Mother's Information
+                                                    <span class="badge bg-danger ms-2" id="motherStatusBadge"></span>
+                                                </h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <div class="text-center mb-3" id="motherPhotoSection" style="display: none;">
+                                                    <img id="viewMotherPhoto" src="" alt="Mother" class="rounded-circle border" style="width: 80px; height: 80px; object-fit: cover;">
+                                                </div>
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tr>
+                                                        <th width="40%"><i class="fas fa-user me-1 text-muted"></i>Full Name:</th>
+                                                        <td class="fw-semibold" id="viewMotherFullName">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-phone me-1 text-muted"></i>Phone Number:</th>
+                                                        <td>
+                                                            <span id="viewMotherPhone">-</span>
+                                                            <a href="javascript:void(0)" onclick="callNumber('viewMotherPhone')" class="ms-2 text-success" title="Call">
+                                                                <i class="fas fa-phone-alt"></i>
+                                                            </a>
+                                                            <a href="javascript:void(0)" onclick="sendSMS('viewMotherPhone')" class="ms-2 text-info" title="SMS">
+                                                                <i class="fas fa-comment"></i>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-briefcase me-1 text-muted"></i>Occupation:</th>
+                                                        <td><span class="badge bg-soft-success" id="viewMotherOccupation">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-building me-1 text-muted"></i>Employer:</th>
+                                                        <td id="viewMotherEmployer">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-map-marker-alt me-1 text-muted"></i>City/State:</th>
+                                                        <td id="viewMotherCityState">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-envelope me-1 text-muted"></i>Email:</th>
+                                                        <td>
+                                                            <span id="viewMotherEmail">-</span>
+                                                            <a href="javascript:void(0)" onclick="sendEmail('viewMotherEmail')" class="ms-2 text-info" title="Send Email">
+                                                                <i class="fas fa-envelope"></i>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><i class="fas fa-address-card me-1 text-muted"></i>Address:</th>
+                                                        <td id="viewMotherAddress">-</td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Guardian Information (if different from parents) -->
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <div class="info-card">
+                                            <div class="info-card-header bg-soft-warning">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-user-shield me-2 text-warning"></i>Emergency Contact / Guardian
+                                                </h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <table class="table table-borderless table-sm mb-0">
+                                                            <tr>
+                                                                <th width="40%">Guardian Name:</th>
+                                                                <td class="fw-semibold" id="viewGuardianName">-</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Relationship:</th>
+                                                                <td id="viewGuardianRelation">-</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Phone Number:</th>
+                                                                <td>
+                                                                    <span id="viewGuardianPhone">-</span>
+                                                                    <a href="javascript:void(0)" onclick="callNumber('viewGuardianPhone')" class="ms-2 text-success" title="Call">
+                                                                        <i class="fas fa-phone-alt"></i>
+                                                                    </a>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <table class="table table-borderless table-sm mb-0">
+                                                            <tr>
+                                                                <th width="40%">Parent's Email:</th>
+                                                                <td id="viewParentEmail">-</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Parent's Address:</th>
+                                                                <td id="viewParentAddress">-</td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. ADDITIONAL INFORMATION TAB -->
+                            <div class="tab-pane fade" id="additionalInfo" role="tabpanel">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="info-card mb-3">
+                                            <div class="info-card-header">
+                                                <h6 class="mb-0"><i class="fas fa-notes-medical me-2 text-info"></i>Medical & Personal</h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tr>
+                                                        <th width="40%">Blood Group:</th>
+                                                        <td><span class="badge bg-danger-light" id="viewBloodGroupAdditional">-</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Genotype:</th>
+                                                        <td id="viewGenotype">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Allergies:</th>
+                                                        <td id="viewAllergies">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Medical Conditions:</th>
+                                                        <td id="viewMedicalConditions">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Disabilities:</th>
+                                                        <td id="viewDisabilities">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>NIN Number:</th>
+                                                        <td id="viewNIN">-</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Mother Tongue:</th>
+                                                        <td id="viewMotherTongue">-</td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-card mb-3">
+                                            <div class="info-card-header">
+                                                <h6 class="mb-0"><i class="fas fa-certificate me-2 text-info"></i>Identification</h6>
+                                            </div>
+                                            <div class="info-card-body">
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tr>
+                                                        <th width="40%">Birth Certificate:</th>
+                                                        <td><span id="viewBirthCertificate">Not Uploaded</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Previous School Report:</th>
+                                                        <td><span id="viewPreviousReport">Not Uploaded</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Health Report:</th>
+                                                        <td><span id="viewHealthReport">Not Uploaded</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Immunization Record:</th>
+                                                        <td><span id="viewImmunization">Not Uploaded</span></td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 5. TERM HISTORY TAB -->
+                            <div class="tab-pane fade" id="termHistory" role="tabpanel">
+                                <div class="info-card">
+                                    <div class="info-card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0"><i class="fas fa-history me-2 text-primary"></i>Term Registration History</h6>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="refreshTermHistory()">
+                                            <i class="fas fa-sync-alt me-1"></i> Refresh
+                                        </button>
+                                    </div>
+                                    <div class="info-card-body">
+                                        <div id="termHistoryLoading" class="text-center py-4">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <p class="mt-2 text-muted">Loading term history...</p>
+                                        </div>
+                                        <div id="termHistoryContent" style="display: none;">
+                                            <!-- Term history table will be inserted here by JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary-gradient" onclick="editStudentFromView()">
-                            <i class="fas fa-edit me-2"></i>Edit Student
-                        </button>
+
+                    <!-- Modal Footer -->
+                    <div class="modal-footer bg-light">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div>
+                                <span class="text-muted" id="studentProfileLastUpdated"></span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                                    <i class="fas fa-times me-1"></i> Close
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="editStudentFromView()">
+                                    <i class="fas fa-edit me-1"></i> Edit Student
+                                </button>
+                                <button type="button" class="btn btn-success" onclick="printStudentProfile()">
+                                    <i class="fas fa-print me-1"></i> Print Profile
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2585,10 +3256,13 @@ use Spatie\Permission\Models\Role;
 
 <script>
     // ============================================================================
-    // COMBINED STUDENT MANAGEMENT SYSTEM - ENHANCED WITH ALL FEATURES
+    // COMPLETE STUDENT MANAGEMENT SYSTEM - ENHANCED VERSION
     // ============================================================================
 
-    // Global Variables
+    // ============================================================================
+    // GLOBAL VARIABLES AND INITIALIZATION
+    // ============================================================================
+
     let allStudents = [];
     let currentPage = 1;
     const itemsPerPage = 12;
@@ -2600,6 +3274,7 @@ use Spatie\Permission\Models\Role;
         gender: 'all'
     };
     const defaultAvatar = '{{ asset("storage/images/student_avatars/unnamed.jpg") }}';
+    let columnSortable = null;
 
     // DOM Ready
     document.addEventListener('DOMContentLoaded', function() {
@@ -2688,6 +3363,35 @@ use Spatie\Permission\Models\Role;
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    }
+
+    // Ensure Axios and CSRF token
+    function ensureAxios() {
+        if (typeof axios === 'undefined') {
+            console.error('Error: Axios is not defined');
+            Swal.fire({
+                title: "Error!",
+                text: "Axios library is missing",
+                icon: "error",
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
+            });
+            return false;
+        }
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (!csrfToken) {
+            console.error('Error: CSRF token not found');
+            Swal.fire({
+                title: "Error!",
+                text: "CSRF token is missing",
+                icon: "error",
+                customClass: { confirmButton: "btn btn-primary" },
+                buttonsStyling: false
+            });
+            return false;
+        }
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+        return true;
     }
 
     // ============================================================================
@@ -2961,29 +3665,57 @@ use Spatie\Permission\Models\Role;
                     schoolclassid: student.schoolclassid || student.class_id || '',
                     age: age || '',
                     dateofbirth: completeStudent.dateofbirth || student.dateofbirth || '',
-                    // Other fields
-                    state: student.state || '',
-                    local: student.local || '',
+                    // Academic fields
+                    admissionDate: student.admissionDate || student.admission_date || '',
+                    admissionYear: student.admissionYear || student.admission_year || '',
+                    termid: student.termid || student.term_id || '',
+                    sessionid: student.sessionid || student.session_id || '',
+                    student_category: student.student_category || '',
+                    schoolhouseid: student.schoolhouseid || student.school_house || '',
+                    // Personal fields
+                    title: student.title || '',
                     placeofbirth: student.placeofbirth || '',
                     phone_number: student.phone_number || '',
                     email: student.email || '',
                     permanent_address: student.permanent_address || '',
                     future_ambition: student.future_ambition || '',
                     nationality: student.nationality || '',
+                    state: student.state || '',
+                    local: student.local || '',
+                    city: student.city || '',
                     religion: student.religion || '',
                     blood_group: student.blood_group || '',
                     mother_tongue: student.mother_tongue || '',
                     nin_number: student.nin_number || '',
-                    student_category: student.student_category || '',
+                    // Parent fields
                     father_name: student.father_name || '',
-                    mother_name: student.mother_name || '',
                     father_phone: student.father_phone || '',
+                    father_occupation: student.father_occupation || '',
+                    father_city: student.father_city || '',
+                    father_email: student.father_email || '',
+                    father_address: student.father_address || '',
+                    father_employer: student.father_employer || '',
+                    mother_name: student.mother_name || '',
                     mother_phone: student.mother_phone || '',
+                    mother_occupation: student.mother_occupation || '',
+                    mother_city: student.mother_city || '',
+                    mother_email: student.mother_email || '',
+                    mother_address: student.mother_address || '',
+                    mother_employer: student.mother_employer || '',
                     parent_email: student.parent_email || '',
                     parent_address: student.parent_address || '',
+                    guardian_name: student.guardian_name || '',
+                    guardian_relation: student.guardian_relation || '',
+                    guardian_phone: student.guardian_phone || '',
+                    // Previous school
                     last_school: student.last_school || '',
                     last_class: student.last_class || '',
-                    reason_for_leaving: student.reason_for_leaving || ''
+                    reason_for_leaving: student.reason_for_leaving || '',
+                    // Medical
+                    genotype: student.genotype || '',
+                    allergies: student.allergies || '',
+                    medical_conditions: student.medical_conditions || '',
+                    disabilities: student.disabilities || ''
                 };
             }));
 
@@ -2998,10 +3730,10 @@ use Spatie\Permission\Models\Role;
     }
 
     // ============================================================================
-    // RENDER FUNCTIONS - ENHANCED TABLE VIEW
+    // RENDER FUNCTIONS - ENHANCED TABLE VIEW WITH IMPROVED ACTION BUTTONS
     // ============================================================================
 
-    // Render Table View - Enhanced UI
+    // Render Table View - Enhanced UI with Improved Action Buttons
     function renderTableView(students) {
         const tbody = document.getElementById('studentTableBody');
 
@@ -3029,7 +3761,7 @@ use Spatie\Permission\Models\Role;
                                   style="width: 12px; height: 12px;"></span>
                         </div>
                         <div>
-                            <h6 class="mb-1 fw-semibold">${student.firstname || ''} ${student.lastname || ''}</h6>
+                            <h6 class="mb-1 fw-semibold">${student.lastname || ''} ${student.firstname || ''}</h6>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-light text-dark px-2 py-1 rounded-pill">
                                     <i class="fas fa-id-card me-1 text-muted" style="font-size: 10px;"></i>
@@ -3068,16 +3800,18 @@ use Spatie\Permission\Models\Role;
                 </td>
                 <td>
                     <div class="d-flex gap-2 justify-content-end">
-                        <!-- Enhanced Action Buttons Group -->
+                        <!-- ENHANCED ACTION BUTTONS GROUP -->
                         <div class="btn-group" role="group">
                             <button type="button"
                                     class="btn btn-sm btn-soft-info rounded-start"
                                     onclick="viewStudent(${student.id})"
                                     data-bs-toggle="tooltip"
                                     data-bs-placement="top"
-                                    title="View Details">
+                                    title="View Student Details">
                                 <i class="fas fa-eye"></i>
+                                <span class="d-none d-xl-inline-block ms-1">View</span>
                             </button>
+
                             <button type="button"
                                     class="btn btn-sm btn-soft-warning"
                                     onclick="editStudent(${student.id})"
@@ -3085,7 +3819,9 @@ use Spatie\Permission\Models\Role;
                                     data-bs-placement="top"
                                     title="Edit Student">
                                 <i class="fas fa-edit"></i>
+                                <span class="d-none d-xl-inline-block ms-1">Edit</span>
                             </button>
+
                             <button type="button"
                                     class="btn btn-sm btn-soft-danger rounded-end"
                                     onclick="deleteStudent(${student.id})"
@@ -3093,6 +3829,7 @@ use Spatie\Permission\Models\Role;
                                     data-bs-placement="top"
                                     title="Delete Student">
                                 <i class="fas fa-trash-alt"></i>
+                                <span class="d-none d-xl-inline-block ms-1">Delete</span>
                             </button>
                         </div>
 
@@ -3123,15 +3860,9 @@ use Spatie\Permission\Models\Role;
                                         <i class="fas fa-print me-2 text-success"></i>Print Details
                                     </a>
                                 </li>
-                                <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="javascript:void(0)" onclick="sendMessage(${student.id})">
                                         <i class="fas fa-envelope me-2 text-warning"></i>Send Message
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="javascript:void(0)" onclick="showUpdateCurrentTermModal(${student.id})">
-                                        <i class="fas fa-calendar-alt me-2 text-info"></i>Update Term
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
@@ -3176,7 +3907,7 @@ use Spatie\Permission\Models\Role;
 
                     <div class="card-header">
                         <div class="header-content">
-                            <h5 class="student-name">${student.firstname || ''} ${student.lastname || ''}</h5>
+                            <h5 class="student-name">${student.lastname || ''} ${student.firstname || ''}</h5>
                             <span class="student-admission">${student.admissionNo || 'N/A'}</span>
                         </div>
                         <div class="avatar-container">
@@ -3365,6 +4096,671 @@ use Spatie\Permission\Models\Role;
     }
 
     // ============================================================================
+    // ENHANCED VIEW STUDENT MODAL FUNCTIONS WITH COMPLETE PARENT INFORMATION
+    // ============================================================================
+
+    // View student with enhanced modal
+    async function viewStudent(id) {
+        console.log('View student:', id);
+        if (!ensureAxios()) return;
+
+        Swal.fire({
+            title: 'Loading...',
+            text: 'Fetching student details',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        try {
+            const response = await axios.get(`/student/${id}/edit`);
+            Swal.close();
+
+            console.log('Student data received for view:', response.data);
+            let student = response.data.student || response.data;
+
+            if (!student) {
+                throw new Error('Student data is empty');
+            }
+
+            // Use the enhanced modal population
+            populateEnhancedViewModal(student);
+
+            const viewModalElement = document.getElementById('viewStudentModal');
+            if (viewModalElement) {
+                const viewModal = new bootstrap.Modal(viewModalElement);
+                viewModal.show();
+
+                // Fetch term history after modal is shown
+                viewModalElement.addEventListener('shown.bs.modal', function onShown() {
+                    fetchStudentTermInfo(student.id);
+                    this.removeEventListener('shown.bs.modal', onShown);
+                });
+            }
+        } catch (error) {
+            Swal.close();
+            console.error('Error fetching student for view:', error);
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to load student data. Please try again.',
+                icon: 'error',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false
+            });
+        }
+    }
+
+    // Enhanced view modal population with complete parent information
+    function populateEnhancedViewModal(student) {
+        console.log('Populating enhanced view modal with student:', student);
+
+        // Helper function to safely set text content
+        const setText = (id, value, defaultValue = '-') => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value || defaultValue;
+        };
+
+        // Helper function to safely set HTML content
+        const setHtml = (id, html) => {
+            const element = document.getElementById(id);
+            if (element) element.innerHTML = html;
+        };
+
+        // Set student photo
+        const photoElement = document.getElementById('viewStudentPhoto');
+        if (photoElement) {
+            if (student.picture && student.picture !== 'unnamed.jpg') {
+                photoElement.src = `/storage/images/student_avatars/${student.picture}`;
+                photoElement.onerror = function() {
+                    this.src = '{{ asset("theme/layouts/assets/media/avatars/blank.png") }}';
+                };
+            } else {
+                photoElement.src = '{{ asset("theme/layouts/assets/media/avatars/blank.png") }}';
+            }
+        }
+
+        // Set status indicator
+        const statusIndicator = document.getElementById('studentStatusIndicator');
+        if (statusIndicator) {
+            const isActive = student.student_status === 'Active';
+            statusIndicator.className = `position-absolute bottom-0 end-0 rounded-circle p-2 border border-2 border-white ${isActive ? 'bg-success' : 'bg-secondary'}`;
+            statusIndicator.title = isActive ? 'Active Student' : 'Inactive Student';
+        }
+
+        // Basic Information
+        const fullName = `${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}`.trim();
+        setText('viewFullName', fullName);
+        setText('viewFullNameDetail', fullName);
+        setText('viewAdmissionNumber', student.admissionNo || student.admission_no);
+        setText('viewAdmissionNo', student.admissionNo || student.admission_no);
+
+        // Class Display
+        const classDisplay = `${student.schoolclass || ''} ${student.arm ? '- ' + student.arm : ''}`.trim();
+        setText('viewClassDisplay', classDisplay);
+        setText('viewCurrentClass', classDisplay);
+        setHtml('viewClassBadge', `<i class="fas fa-school me-1"></i>${classDisplay || 'Not Assigned'}`);
+
+        // Student Type
+        const studentType = student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : 'N/A';
+        setText('viewStudentType', studentType);
+        setHtml('viewStudentTypeBadge', `<i class="fas fa-user-tag me-1"></i>${studentType}`);
+
+        // Admission Date
+        if (student.admissionDate || student.admission_date) {
+            const admDate = new Date(student.admissionDate || student.admission_date);
+            setText('viewAdmittedDate', admDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+            setText('viewAdmissionDate', admDate.toLocaleDateString());
+        }
+
+        // Gender
+        const gender = student.gender || '-';
+        const genderIcon = gender === 'Male' ? 'mars' : gender === 'Female' ? 'venus' : 'genderless';
+        setText('viewGenderText', gender);
+        setHtml('viewGenderDetail', `<i class="fas fa-${genderIcon} me-1"></i>${gender}`);
+
+        // Age
+        const age = student.age || calculateAge(student.dateofbirth) || 'N/A';
+        setText('viewAge', age);
+        setText('viewAgeDetail', age);
+
+        // Title
+        setText('viewTitle', student.title || '-');
+
+        // Date of Birth
+        if (student.dateofbirth) {
+            const dob = new Date(student.dateofbirth);
+            setText('viewDOB', dob.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+        } else {
+            setText('viewDOB', '-');
+        }
+
+        // Place of Birth
+        setText('viewPlaceOfBirth', student.placeofbirth || '-');
+
+        // Blood Group
+        setText('viewBloodGroupDetail', student.blood_group || '-');
+        setText('viewBloodGroupAdditional', student.blood_group || '-');
+
+        // Religion
+        setText('viewReligionDetail', student.religion || '-');
+
+        // Contact Information
+        setText('viewPhoneNumber', student.phone_number || '-');
+        setText('viewEmailAddress', student.email || '-');
+        setText('viewPermanentAddress', student.permanent_address || '-');
+        setText('viewCity', student.city || '-');
+        setText('viewStateOrigin', student.state || '-');
+        setText('viewLGA', student.local || '-');
+        setText('viewNationality', student.nationality || '-');
+
+        // Future Ambition
+        setText('viewFutureAmbition', student.future_ambition || '-');
+
+        // Academic Information
+        setText('viewArm', student.arm || '-');
+        setText('viewStudentCategory', student.student_category || '-');
+
+        // Student Status Badge
+        const studentStatus = student.student_status || 'Inactive';
+        const statusBadgeClass = studentStatus === 'Active' ? 'bg-success' : 'bg-secondary';
+        const statusIcon = studentStatus === 'Active' ? 'check-circle' : 'pause-circle';
+        setHtml('viewStudentStatus', `<span class="badge ${statusBadgeClass}"><i class="fas fa-${statusIcon} me-1"></i>${studentStatus}</span>`);
+
+        // School House
+        setText('viewSchoolHouse', student.school_house || student.sport_house || '-');
+
+        // Previous School
+        setText('viewLastSchool', student.last_school || '-');
+        setText('viewLastClass', student.last_class || '-');
+        setText('viewReasonForLeaving', student.reason_for_leaving || '-');
+
+        // =========================================
+        // PARENT / GUARDIAN INFORMATION - ENHANCED
+        // =========================================
+
+        // Father's Information
+        setText('viewFatherFullName', student.father_name || '-');
+        setText('viewFatherPhone', student.father_phone || '-');
+        setText('viewFatherOccupation', student.father_occupation || '-');
+        setText('viewFatherEmployer', student.father_employer || '-');
+        setText('viewFatherCityState', student.father_city || '-');
+        setText('viewFatherEmail', student.father_email || '-');
+        setText('viewFatherAddress', student.father_address || '-');
+
+        // Father Status Badge
+        const fatherStatusBadge = document.getElementById('fatherStatusBadge');
+        if (fatherStatusBadge) {
+            if (student.father_name) {
+                fatherStatusBadge.textContent = 'Active Contact';
+                fatherStatusBadge.className = 'badge bg-success ms-2';
+            } else {
+                fatherStatusBadge.textContent = 'Not Provided';
+                fatherStatusBadge.className = 'badge bg-secondary ms-2';
+            }
+        }
+
+        // Mother's Information
+        setText('viewMotherFullName', student.mother_name || '-');
+        setText('viewMotherPhone', student.mother_phone || '-');
+        setText('viewMotherOccupation', student.mother_occupation || '-');
+        setText('viewMotherEmployer', student.mother_employer || '-');
+        setText('viewMotherCityState', student.mother_city || '-');
+        setText('viewMotherEmail', student.mother_email || '-');
+        setText('viewMotherAddress', student.mother_address || '-');
+
+        // Mother Status Badge
+        const motherStatusBadge = document.getElementById('motherStatusBadge');
+        if (motherStatusBadge) {
+            if (student.mother_name) {
+                motherStatusBadge.textContent = 'Active Contact';
+                motherStatusBadge.className = 'badge bg-danger ms-2';
+            } else {
+                motherStatusBadge.textContent = 'Not Provided';
+                motherStatusBadge.className = 'badge bg-secondary ms-2';
+            }
+        }
+
+        // Guardian/Emergency Contact
+        setText('viewGuardianName', student.guardian_name || student.parent_guardian || '-');
+        setText('viewGuardianRelation', student.guardian_relation || '-');
+        setText('viewGuardianPhone', student.guardian_phone || student.parent_phone || '-');
+        setText('viewParentEmail', student.parent_email || '-');
+        setText('viewParentAddress', student.parent_address || '-');
+
+        // Additional Information
+        setText('viewGenotype', student.genotype || 'Not Specified');
+        setText('viewAllergies', student.allergies || 'None');
+        setText('viewMedicalConditions', student.medical_conditions || 'None');
+        setText('viewDisabilities', student.disabilities || 'None');
+        setText('viewNIN', student.nin_number || '-');
+        setText('viewMotherTongue', student.mother_tongue || '-');
+
+        // Set last updated timestamp
+        const now = new Date();
+        setText('studentProfileLastUpdated', `Last updated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`);
+    }
+
+    // Fetch student term information
+    async function fetchStudentTermInfo(studentId) {
+        try {
+            // Get current active term from system
+            const systemResponse = await axios.get('/system/active-term-session');
+            const systemInfo = systemResponse.data.success ? systemResponse.data : { term: null, session: null };
+
+            // Get student's active term
+            const activeResponse = await axios.get(`/student-current-term/student/${studentId}/active`);
+            const activeTerm = activeResponse.data.success ? activeResponse.data.data : null;
+
+            // Update UI with term information
+            const setText = (id, value) => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = value || '-';
+            };
+
+            const setHtml = (id, html) => {
+                const element = document.getElementById(id);
+                if (element) element.innerHTML = html;
+            };
+
+            if (systemInfo.term) {
+                setText('viewCurrentTerm', systemInfo.term.term || systemInfo.term.name || 'Not Set');
+                setText('viewCurrentSession', systemInfo.session?.session || systemInfo.session?.name || 'Not Set');
+
+                const isActiveInCurrentTerm = activeTerm &&
+                    activeTerm.term_id == systemInfo.term.id &&
+                    activeTerm.session_id == systemInfo.session.id;
+
+                const alertElement = document.getElementById('currentTermAlert');
+                if (alertElement) {
+                    if (isActiveInCurrentTerm) {
+                        alertElement.innerHTML = `
+                            <div class="alert alert-success py-2 px-3 mb-3">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Active in Current Term</strong>
+                                <p class="mb-0 small">Student is registered and active in the current academic term.</p>
+                            </div>
+                        `;
+                        setHtml('viewCurrentTermStatus', '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>');
+                    } else {
+                        alertElement.innerHTML = `
+                            <div class="alert alert-warning py-2 px-3 mb-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Not in Current Term</strong>
+                                <p class="mb-0 small">Student is not registered for the current academic term.</p>
+                            </div>
+                        `;
+                        setHtml('viewCurrentTermStatus', '<span class="badge bg-warning"><i class="fas fa-pause-circle me-1"></i>Not Registered</span>');
+                    }
+                }
+            }
+
+            // Fetch term history
+            await fetchTermHistory(studentId);
+
+        } catch (error) {
+            console.error('Error fetching term information:', error);
+        }
+    }
+
+    // Fetch term history
+    async function fetchTermHistory(studentId) {
+        try {
+            const response = await axios.get(`/student/${studentId}/all-terms`);
+            const terms = response.data.success ? response.data.data : [];
+
+            const loadingElement = document.getElementById('termHistoryLoading');
+            const contentElement = document.getElementById('termHistoryContent');
+
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (contentElement) contentElement.style.display = 'block';
+
+            if (terms.length === 0) {
+                document.getElementById('termHistoryContent').innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No term registration history found.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHtml = `
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>S/N</th>
+                                <th>Term</th>
+                                <th>Session</th>
+                                <th>Class</th>
+                                <th>Arm</th>
+                                <th>Status</th>
+                                <th>Registered Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            terms.forEach((term, index) => {
+                const isCurrent = term.is_current ?
+                    '<span class="badge bg-info"><i class="fas fa-star me-1"></i>Current</span>' :
+                    '<span class="badge bg-secondary">Past</span>';
+
+                const regDate = term.created_at ? new Date(term.created_at).toLocaleDateString() : 'N/A';
+
+                tableHtml += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><span class="fw-semibold">${term.term_name || 'N/A'}</span></td>
+                        <td>${term.session_name || 'N/A'}</td>
+                        <td>${term.class_name || 'N/A'}</td>
+                        <td>${term.arm_name || 'N/A'}</td>
+                        <td>${isCurrent}</td>
+                        <td>${regDate}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('termHistoryContent').innerHTML = tableHtml;
+
+        } catch (error) {
+            console.error('Error fetching term history:', error);
+            const loadingElement = document.getElementById('termHistoryLoading');
+            const contentElement = document.getElementById('termHistoryContent');
+
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (contentElement) {
+                contentElement.style.display = 'block';
+                contentElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Failed to load term history. Please try again.
+                    </div>
+                `;
+            }
+        }
+    }
+
+    // Helper functions for contact actions
+    function callNumber(elementId) {
+        const phone = document.getElementById(elementId)?.textContent;
+        if (phone && phone !== '-') {
+            window.location.href = `tel:${phone.replace(/\s+/g, '')}`;
+        }
+    }
+
+    function sendSMS(elementId) {
+        const phone = document.getElementById(elementId)?.textContent;
+        if (phone && phone !== '-') {
+            window.location.href = `sms:${phone.replace(/\s+/g, '')}`;
+        }
+    }
+
+    function sendEmail(elementId) {
+        const email = document.getElementById(elementId)?.textContent;
+        if (email && email !== '-') {
+            window.location.href = `mailto:${email}`;
+        }
+    }
+
+    function printStudentProfile() {
+        const studentId = document.getElementById('viewAdmissionNo')?.textContent;
+        if (studentId) {
+            window.open(`/student/profile/print/${studentId}`, '_blank');
+        }
+    }
+
+    function refreshTermHistory() {
+        const studentId = document.getElementById('viewAdmissionNo')?.textContent;
+        if (studentId) {
+            fetchTermHistory(studentId);
+        }
+    }
+
+    function editStudentFromView() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('viewStudentModal'));
+        modal.hide();
+
+        // Extract student ID from the view
+        const admissionNo = document.getElementById('viewAdmissionNo')?.textContent;
+        if (admissionNo) {
+            // Find student in allStudents array
+            const student = allStudents.find(s => s.admissionNo === admissionNo || s.admission_no === admissionNo);
+            if (student) {
+                setTimeout(() => editStudent(student.id), 500);
+            }
+        }
+    }
+
+    // ============================================================================
+    // EDIT STUDENT FUNCTION
+    // ============================================================================
+
+    // Edit Student
+    async function editStudent(id) {
+        try {
+            const response = await axios.get(`/student/${id}/edit`);
+            const student = response.data.student || response.data;
+
+            populateEditForm(student);
+            showEditModal();
+        } catch (error) {
+            showError('Failed to load student for editing.');
+        }
+    }
+
+    // Populate Edit Form
+    function populateEditForm(student) {
+        console.log('Populating edit form with student:', student);
+
+        const fields = [
+            { id: 'editStudentId', value: student.id },
+            { id: 'editAdmissionNo', value: student.admissionNo || student.admission_no || '' },
+            { id: 'editAdmissionYear', value: student.admissionYear || '' },
+            { id: 'editAdmissionDate', value: student.admissionDate ? student.admissionDate.split('T')[0] : '' },
+            { id: 'editTitle', value: student.title || '' },
+            { id: 'editFirstname', value: student.firstname || student.first_name || '' },
+            { id: 'editLastname', value: student.lastname || student.last_name || '' },
+            { id: 'editOthername', value: student.othername || student.other_name || student.middle_name || '' },
+            { id: 'editPermanentAddress', value: student.permanent_address || '' },
+            { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
+            { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
+            { id: 'editNationality', value: student.nationality || '' },
+            { id: 'editReligion', value: student.religion || '' },
+            { id: 'editLastSchool', value: student.last_school || '' },
+            { id: 'editLastClass', value: student.last_class || '' },
+            { id: 'editSchoolclassid', value: student.schoolclassid || student.class_id || '' },
+            { id: 'editTermid', value: student.termid || student.term_id || '' },
+            { id: 'editSessionid', value: student.sessionid || student.session_id || '' },
+            { id: 'editPhoneNumber', value: student.phone_number || student.phone || '' },
+            { id: 'editEmail', value: student.email || '' },
+            { id: 'editFutureAmbition', value: student.future_ambition || '' },
+            { id: 'editCity', value: student.city || '' },
+            { id: 'editState', value: student.state || '' },
+            { id: 'editLocal', value: student.local || '' },
+            { id: 'editNinNumber', value: student.nin_number || student.nin || '' },
+            { id: 'editBloodGroup', value: student.blood_group || '' },
+            { id: 'editMotherTongue', value: student.mother_tongue || '' },
+            { id: 'editFatherName', value: student.father_name || '' },
+            { id: 'editFatherPhone', value: student.father_phone || '' },
+            { id: 'editFatherOccupation', value: student.father_occupation || '' },
+            { id: 'editFatherCity', value: student.father_city || '' },
+            { id: 'editMotherName', value: student.mother_name || '' },
+            { id: 'editMotherPhone', value: student.mother_phone || '' },
+            { id: 'editParentEmail', value: student.parent_email || '' },
+            { id: 'editParentAddress', value: student.parent_address || '' },
+            { id: 'editStudentCategory', value: student.student_category || '' },
+            { id: 'editSchoolHouse', value: student.schoolhouseid || student.school_house || student.sport_house || '' },
+            { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
+        ];
+
+        fields.forEach(({ id, value }) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value || '';
+            }
+        });
+
+        // Set gender
+        const genderRadios = document.querySelectorAll('#editStudentModal input[name="gender"]');
+        if (genderRadios.length > 0) {
+            const studentGender = student.gender || '';
+            genderRadios.forEach(radio => {
+                radio.checked = (radio.value === studentGender);
+            });
+        }
+
+        // Set status
+        const statusRadios = document.querySelectorAll('#editStudentModal input[name="statusId"]');
+        if (statusRadios.length > 0) {
+            const studentStatusId = student.statusId || student.status_id || '';
+            statusRadios.forEach(radio => {
+                radio.checked = (parseInt(radio.value) === parseInt(studentStatusId));
+            });
+        }
+
+        // Set student activity status
+        const studentStatusRadios = document.querySelectorAll('#editStudentModal input[name="student_status"]');
+        if (studentStatusRadios.length > 0) {
+            const studentActivityStatus = student.student_status || student.status || '';
+            studentStatusRadios.forEach(radio => {
+                radio.checked = (radio.value === studentActivityStatus);
+            });
+        }
+
+        // Set avatar
+        const avatarElement = document.getElementById('editStudentAvatar');
+        if (avatarElement) {
+            if (student.picture && student.picture !== 'unnamed.jpg') {
+                const avatarUrl = `/storage/images/student_avatars/${student.picture}`;
+                avatarElement.src = avatarUrl;
+            } else {
+                avatarElement.src = '{{ asset("theme/layouts/assets/media/avatars/blank.png") }}';
+            }
+        }
+
+        // Calculate age if date of birth exists
+        if (student.dateofbirth) {
+            calculateAge(student.dateofbirth, 'editAgeInput');
+        }
+
+        // Update form action
+        const form = document.getElementById('editStudentForm');
+        if (form && student.id) {
+            form.action = `/student/${student.id}`;
+        }
+    }
+
+    // Show Edit Modal
+    function showEditModal() {
+        const modal = new bootstrap.Modal(document.getElementById('editStudentModal'));
+        modal.show();
+    }
+
+    // ============================================================================
+    // DELETE FUNCTIONS
+    // ============================================================================
+
+    // Delete Student
+    async function deleteStudent(id) {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                confirmButton: 'btn btn-danger',
+                cancelButton: 'btn btn-light'
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await axios.delete(`/student/${id}/destroy`);
+
+                // Remove from UI
+                allStudents = allStudents.filter(s => s.id != id);
+                renderCurrentView();
+
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: 'Student has been deleted.',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+            } catch (error) {
+                showError('Failed to delete student.');
+            }
+        }
+    }
+
+    // Delete Multiple Students
+    async function deleteMultiple() {
+        const selectedIds = getSelectedStudentIds();
+
+        if (selectedIds.length === 0) {
+            Swal.fire({
+                title: 'No Selection',
+                text: 'Please select at least one student to delete.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: `Delete ${selectedIds.length} Students?`,
+            text: "This action cannot be undone!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete them!',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                confirmButton: 'btn btn-danger',
+                cancelButton: 'btn btn-light'
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const deletePromises = selectedIds.map(id =>
+                    axios.delete(`/student/${id}/destroy`)
+                );
+
+                await Promise.all(deletePromises);
+
+                // Remove from UI
+                allStudents = allStudents.filter(s => !selectedIds.includes(s.id.toString()));
+                renderCurrentView();
+
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: `${selectedIds.length} student(s) have been deleted.`,
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+            } catch (error) {
+                showError('Failed to delete selected students.');
+            }
+        }
+    }
+
+    // Get Selected Student IDs
+    function getSelectedStudentIds() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    // ============================================================================
     // CHECKBOX AND BULK ACTIONS
     // ============================================================================
 
@@ -3486,627 +4882,6 @@ use Spatie\Permission\Models\Role;
             currentPage++;
             renderCurrentView();
         }
-    }
-
-    // ============================================================================
-    // CRUD OPERATIONS
-    // ============================================================================
-
-    // View Student - Updated with Active Term Detection
-    async function viewStudent(id) {
-        try {
-            // Show loading state
-            Swal.fire({
-                title: 'Loading...',
-                text: 'Fetching student details',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            // Fetch student data
-            const response = await axios.get(`/student/${id}/edit`);
-            const student = response.data.student || response.data;
-
-            // Get all registered terms
-            const termsResponse = await axios.get(`/student/${id}/all-terms`);
-            const allTerms = termsResponse.data.success ? termsResponse.data.data : [];
-
-            // Get ACTIVE term based on system active term
-            const activeResponse = await axios.get(`/student-current-term/student/${id}/active`);
-            const activeTerm = activeResponse.data.success ? activeResponse.data.data : null;
-
-            // Get current term info (marked as current in database)
-            const currentResponse = await axios.get(`/student/${id}/current-info`);
-            const currentInfo = currentResponse.data.success ? currentResponse.data.data : {};
-
-            // Get system info
-            const systemResponse = await axios.get('/system/active-term-session');
-            const systemInfo = systemResponse.data.success ? systemResponse.data : { term: null, session: null };
-
-            // Close loading
-            Swal.close();
-
-            // Show details with tabs
-            showStudentDetailsWithTabs(student, allTerms, systemInfo, activeTerm, currentInfo);
-        } catch (error) {
-            Swal.close();
-            console.error('Error viewing student:', error);
-            showError('Failed to load student details.');
-        }
-    }
-
-    // Edit Student
-    async function editStudent(id) {
-        try {
-            const response = await axios.get(`/student/${id}/edit`);
-            const student = response.data.student || response.data;
-
-            populateEditForm(student);
-            showEditModal();
-        } catch (error) {
-            showError('Failed to load student for editing.');
-        }
-    }
-
-    // Delete Student
-    async function deleteStudent(id) {
-        const result = await Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, delete it!',
-            cancelButtonText: 'Cancel',
-            customClass: {
-                confirmButton: 'btn btn-danger',
-                cancelButton: 'btn btn-light'
-            }
-        });
-
-        if (result.isConfirmed) {
-            try {
-                await axios.delete(`/student/${id}/destroy`);
-
-                // Remove from UI
-                allStudents = allStudents.filter(s => s.id != id);
-                renderCurrentView();
-
-                Swal.fire({
-                    title: 'Deleted!',
-                    text: 'Student has been deleted.',
-                    icon: 'success',
-                    confirmButtonText: 'OK'
-                });
-            } catch (error) {
-                showError('Failed to delete student.');
-            }
-        }
-    }
-
-    // Delete Multiple Students
-    async function deleteMultiple() {
-        const selectedIds = getSelectedStudentIds();
-
-        if (selectedIds.length === 0) {
-            Swal.fire({
-                title: 'No Selection',
-                text: 'Please select at least one student to delete.',
-                icon: 'warning',
-                confirmButtonText: 'OK'
-            });
-            return;
-        }
-
-        const result = await Swal.fire({
-            title: `Delete ${selectedIds.length} Students?`,
-            text: "This action cannot be undone!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, delete them!',
-            cancelButtonText: 'Cancel',
-            customClass: {
-                confirmButton: 'btn btn-danger',
-                cancelButton: 'btn btn-light'
-            }
-        });
-
-        if (result.isConfirmed) {
-            try {
-                const deletePromises = selectedIds.map(id =>
-                    axios.delete(`/student/${id}/destroy`)
-                );
-
-                await Promise.all(deletePromises);
-
-                // Remove from UI
-                allStudents = allStudents.filter(s => !selectedIds.includes(s.id.toString()));
-                renderCurrentView();
-
-                Swal.fire({
-                    title: 'Deleted!',
-                    text: `${selectedIds.length} student(s) have been deleted.`,
-                    icon: 'success',
-                    confirmButtonText: 'OK'
-                });
-            } catch (error) {
-                showError('Failed to delete selected students.');
-            }
-        }
-    }
-
-    // Get Selected Student IDs
-    function getSelectedStudentIds() {
-        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
-        return Array.from(checkboxes).map(cb => cb.value);
-    }
-
-    // ============================================================================
-    // QUICK ACTION FUNCTIONS
-    // ============================================================================
-
-    // Print Student Card
-    function printStudentCard(studentId) {
-        // Implement print ID card functionality
-        window.open(`/student/${studentId}/id-card`, '_blank');
-    }
-
-    // Print Student Details
-    function printStudentDetails(studentId) {
-        // Implement print student details
-        window.open(`/student/${studentId}/print`, '_blank');
-    }
-
-    // Send Message
-    function sendMessage(studentId) {
-        // Implement send message functionality
-        Swal.fire({
-            title: 'Send Message',
-            html: `
-                <div class="text-start">
-                    <label class="form-label">Message</label>
-                    <textarea id="messageText" class="form-control" rows="4" placeholder="Type your message here..."></textarea>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Send',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#4361ee',
-            preConfirm: () => {
-                const message = document.getElementById('messageText').value;
-                if (!message) {
-                    Swal.showValidationMessage('Message cannot be empty');
-                    return false;
-                }
-                return axios.post('/student/send-message', {
-                    student_id: studentId,
-                    message: message
-                });
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: 'Success!',
-                    text: 'Message sent successfully',
-                    icon: 'success',
-                    confirmButtonText: 'OK'
-                });
-            }
-        });
-    }
-
-    // ============================================================================
-    // FORM HANDLING FUNCTIONS
-    // ============================================================================
-
-    // Populate Edit Form
-    function populateEditForm(student) {
-        console.log('Populating edit form with student:', student);
-
-        const fields = [
-            { id: 'editStudentId', value: student.id },
-            { id: 'editAdmissionNo', value: student.admissionNo || student.admission_no || '' },
-            { id: 'editAdmissionYear', value: student.admissionYear || '' },
-            { id: 'editAdmissionDate', value: student.admissionDate ? student.admissionDate.split('T')[0] : '' },
-            { id: 'editTitle', value: student.title || '' },
-            { id: 'editFirstname', value: student.firstname || student.first_name || '' },
-            { id: 'editLastname', value: student.lastname || student.last_name || '' },
-            { id: 'editOthername', value: student.othername || student.other_name || student.middle_name || '' },
-            { id: 'editPermanentAddress', value: student.permanent_address || '' },
-            { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
-            { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
-            { id: 'editNationality', value: student.nationality || '' },
-            { id: 'editReligion', value: student.religion || '' },
-            { id: 'editLastSchool', value: student.last_school || '' },
-            { id: 'editLastClass', value: student.last_class || '' },
-            { id: 'editSchoolclassid', value: student.schoolclassid || student.class_id || '' },
-            { id: 'editTermid', value: student.termid || student.term_id || '' },
-            { id: 'editSessionid', value: student.sessionid || student.session_id || '' },
-            { id: 'editPhoneNumber', value: student.phone_number || student.phone || '' },
-            { id: 'editEmail', value: student.email || '' },
-            { id: 'editFutureAmbition', value: student.future_ambition || '' },
-            { id: 'editCity', value: student.city || '' },
-            { id: 'editState', value: student.state || '' },
-            { id: 'editLocal', value: student.local || '' },
-            { id: 'editNinNumber', value: student.nin_number || student.nin || '' },
-            { id: 'editBloodGroup', value: student.blood_group || '' },
-            { id: 'editMotherTongue', value: student.mother_tongue || '' },
-            { id: 'editFatherName', value: student.father_name || '' },
-            { id: 'editFatherPhone', value: student.father_phone || '' },
-            { id: 'editFatherOccupation', value: student.father_occupation || '' },
-            { id: 'editFatherCity', value: student.father_city || '' },
-            { id: 'editMotherName', value: student.mother_name || '' },
-            { id: 'editMotherPhone', value: student.mother_phone || '' },
-            { id: 'editParentEmail', value: student.parent_email || '' },
-            { id: 'editParentAddress', value: student.parent_address || '' },
-            { id: 'editStudentCategory', value: student.student_category || '' },
-            { id: 'editSchoolHouse', value: student.schoolhouseid || student.school_house || student.sport_house || '' },
-            { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
-        ];
-
-        fields.forEach(({ id, value }) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.value = value || '';
-            }
-        });
-
-        // Set gender
-        const genderRadios = document.querySelectorAll('#editStudentModal input[name="gender"]');
-        if (genderRadios.length > 0) {
-            const studentGender = student.gender || '';
-            genderRadios.forEach(radio => {
-                radio.checked = (radio.value === studentGender);
-            });
-        }
-
-        // Set status
-        const statusRadios = document.querySelectorAll('#editStudentModal input[name="statusId"]');
-        if (statusRadios.length > 0) {
-            const studentStatusId = student.statusId || student.status_id || '';
-            statusRadios.forEach(radio => {
-                radio.checked = (parseInt(radio.value) === parseInt(studentStatusId));
-            });
-        }
-
-        // Set student activity status
-        const studentStatusRadios = document.querySelectorAll('#editStudentModal input[name="student_status"]');
-        if (studentStatusRadios.length > 0) {
-            const studentActivityStatus = student.student_status || student.status || '';
-            studentStatusRadios.forEach(radio => {
-                radio.checked = (radio.value === studentActivityStatus);
-            });
-        }
-
-        // Set avatar
-        const avatarElement = document.getElementById('editStudentAvatar');
-        if (avatarElement) {
-            if (student.picture && student.picture !== 'unnamed.jpg') {
-                const avatarUrl = `/storage/images/student_avatars/${student.picture}`;
-                avatarElement.src = avatarUrl;
-            } else {
-                avatarElement.src = '{{ asset("theme/layouts/assets/media/avatars/blank.png") }}';
-            }
-        }
-
-        // Calculate age if date of birth exists
-        if (student.dateofbirth) {
-            calculateAge(student.dateofbirth, 'editAgeInput');
-        }
-
-        // Update form action
-        const form = document.getElementById('editStudentForm');
-        if (form && student.id) {
-            form.action = `/student/${student.id}`;
-        }
-    }
-
-    // Show Student Details with Tabs
-    function showStudentDetailsWithTabs(student, allTerms = [], systemInfo = { term: null, session: null }, activeTerm = null, currentInfo = {}) {
-        // Format date of birth
-        const dob = student.dateofbirth ?
-            new Date(student.dateofbirth).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            }) : 'N/A';
-
-        // Calculate age
-        const age = student.age || calculateAge(student.dateofbirth);
-
-        // Extract system term/session names
-        const systemTermName = systemInfo.term ? (systemInfo.term.term || systemInfo.term.name || 'Not Set') : 'Not Set';
-        const systemSessionName = systemInfo.session ? (systemInfo.session.session || systemInfo.session.name || 'Not Set') : 'Not Set';
-        const systemTermId = systemInfo.term ? systemInfo.term.id : null;
-        const systemSessionId = systemInfo.session ? systemInfo.session.id : null;
-
-        // Extract active term details
-        let activeTermName = 'N/A';
-        let activeSessionName = 'N/A';
-        let activeClassName = 'N/A';
-        let activeArmName = 'N/A';
-        let activeTermId = null;
-        let activeSessionId = null;
-
-        if (activeTerm) {
-            if (typeof activeTerm === 'object') {
-                if (activeTerm.term && activeTerm.term.term) {
-                    activeTermName = activeTerm.term.term;
-                    activeTermId = activeTerm.term.id;
-                } else if (activeTerm.term_name) {
-                    activeTermName = activeTerm.term_name;
-                    activeTermId = activeTerm.term_id;
-                }
-
-                if (activeTerm.session && activeTerm.session.session) {
-                    activeSessionName = activeTerm.session.session;
-                    activeSessionId = activeTerm.session.id;
-                } else if (activeTerm.session_name) {
-                    activeSessionName = activeTerm.session_name;
-                    activeSessionId = activeTerm.session_id;
-                }
-
-                if (activeTerm.schoolClass && activeTerm.schoolClass.schoolclass) {
-                    activeClassName = activeTerm.schoolClass.schoolclass;
-                } else if (activeTerm.class_name) {
-                    activeClassName = activeTerm.class_name;
-                }
-
-                if (activeTerm.schoolClass && activeTerm.schoolClass.armRelation && activeTerm.schoolClass.armRelation.arm) {
-                    activeArmName = activeTerm.schoolClass.armRelation.arm;
-                } else if (activeTerm.arm_name) {
-                    activeArmName = activeTerm.arm_name;
-                }
-            }
-        }
-
-        // Get current info details
-        let currentTermName = currentInfo.current_term || 'N/A';
-        let currentSessionName = currentInfo.current_session || 'N/A';
-        let currentClassName = currentInfo.current_class || 'N/A';
-        let currentArmName = currentInfo.current_class_arm || 'N/A';
-
-        // Determine if student is active in current system term
-        const isActiveInCurrentTerm = activeTerm !== null &&
-                                     systemTermId && systemSessionId &&
-                                     activeTermId == systemTermId &&
-                                     activeSessionId == systemSessionId;
-
-        const hasCurrentTermFlag = currentInfo && currentInfo.is_current;
-
-        // Prepare the content HTML with tabs
-        const content = `
-            <div class="student-view-tabs">
-                <!-- Tabs Navigation -->
-                <ul class="nav nav-tabs" id="studentTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="personal-tab" data-bs-toggle="tab"
-                                data-bs-target="#personal" type="button" role="tab">
-                            <i class="fas fa-user me-2"></i>Personal
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="academic-tab" data-bs-toggle="tab"
-                                data-bs-target="#academic" type="button" role="tab">
-                            <i class="fas fa-graduation-cap me-2"></i>Academic
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="terms-tab" data-bs-toggle="tab"
-                                data-bs-target="#terms" type="button" role="tab">
-                            <i class="fas fa-calendar-alt me-2"></i>Terms History
-                        </button>
-                    </li>
-                </ul>
-
-                <!-- Tabs Content -->
-                <div class="tab-content mt-4" id="studentTabsContent">
-                    <!-- Personal Information Tab -->
-                    <div class="tab-pane fade show active" id="personal" role="tabpanel">
-                        <div class="row">
-                            <div class="col-md-4 text-center mb-4">
-                                <div class="avatar-container" style="width: 150px; height: 150px; margin: 0 auto;">
-                                    ${getStudentAvatarEnhanced(student, true)}
-                                </div>
-                                <h4 class="mt-3">${student.firstname || ''} ${student.lastname || ''}</h4>
-                                <p class="text-muted">${student.admissionNo || 'No admission number'}</p>
-                                ${getStatusBadge(student, true)}
-                            </div>
-                            <div class="col-md-8">
-                                <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Personal Details</h6>
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label text-muted">Date of Birth</label>
-                                        <p class="fw-bold">${dob}</p>
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label text-muted">Age</label>
-                                        <p class="fw-bold">${age}</p>
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label text-muted">Gender</label>
-                                        <p class="fw-bold">${student.gender || 'N/A'}</p>
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label text-muted">Religion</label>
-                                        <p class="fw-bold">${student.religion || 'N/A'}</p>
-                                    </div>
-                                    <div class="col-md-12 mb-2">
-                                        <label class="form-label text-muted">Phone Number</label>
-                                        <p class="fw-bold">${student.phone_number || 'N/A'}</p>
-                                    </div>
-                                    <div class="col-md-12 mb-2">
-                                        <label class="form-label text-muted">Email</label>
-                                        <p class="fw-bold">${student.email || 'N/A'}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Academic Information Tab -->
-                    <div class="tab-pane fade" id="academic" role="tabpanel">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <h6 class="text-primary mb-3"><i class="fas fa-graduation-cap me-2"></i>Academic Information</h6>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <div class="card">
-                                            <div class="card-header bg-info text-white">
-                                                <h6 class="mb-0">System Status</h6>
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="row">
-                                                    <div class="col-md-6 mb-2">
-                                                        <label class="form-label text-muted">Active School Term</label>
-                                                        <p class="fw-bold">${systemTermName}</p>
-                                                    </div>
-                                                    <div class="col-md-6 mb-2">
-                                                        <label class="form-label text-muted">Active Session</label>
-                                                        <p class="fw-bold">${systemSessionName}</p>
-                                                    </div>
-                                                    <div class="col-md-12 mb-2">
-                                                        <label class="form-label text-muted">Student Status</label>
-                                                        <p class="fw-bold">
-                                                            ${isActiveInCurrentTerm
-                                                                ? '<span class="badge bg-success">Active in Current Term</span>'
-                                                                : '<span class="badge bg-warning">Not in Current Term</span>'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <div class="card">
-                                            <div class="card-header ${activeTerm ? 'bg-success' : 'bg-warning'} text-white">
-                                                <h6 class="mb-0">${activeTerm ? 'Active Term Registration' : 'No Active Term'}</h6>
-                                            </div>
-                                            <div class="card-body">
-                                                ${activeTerm ? `
-                                                <div class="row">
-                                                    <div class="col-md-6 mb-2">
-                                                        <label class="form-label text-muted">Class</label>
-                                                        <p class="fw-bold">${activeClassName} ${activeArmName}</p>
-                                                    </div>
-                                                    <div class="col-md-6 mb-2">
-                                                        <label class="form-label text-muted">Term</label>
-                                                        <p class="fw-bold">${activeTermName}</p>
-                                                    </div>
-                                                    <div class="col-md-6 mb-2">
-                                                        <label class="form-label text-muted">Session</label>
-                                                        <p class="fw-bold">${activeSessionName}</p>
-                                                    </div>
-                                                    <div class="col-md-6 mb-2">
-                                                        <label class="form-label text-muted">Marked as Current</label>
-                                                        <p class="fw-bold">
-                                                            ${hasCurrentTermFlag
-                                                                ? '<span class="badge bg-info">Yes</span>'
-                                                                : '<span class="badge bg-secondary">No</span>'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                ` : `
-                                                <div class="text-center py-3">
-                                                    <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
-                                                    <p class="text-muted mb-0">Student is not registered in the current active term</p>
-                                                </div>
-                                                `}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Terms History Tab -->
-                    <div class="tab-pane fade" id="terms" role="tabpanel">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <h6 class="text-primary mb-3"><i class="fas fa-history me-2"></i>Registered Terms History</h6>
-
-                                <!-- All Registered Terms -->
-                                <div class="card">
-                                    <div class="card-header bg-info text-white">
-                                        <h6 class="mb-0">All Registered Terms</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        ${allTerms.length > 0 ? `
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Term</th>
-                                                        <th>Session</th>
-                                                        <th>Class</th>
-                                                        <th>Arm</th>
-                                                        <th>Status</th>
-                                                        <th>Registered Date</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    ${allTerms.map(term => {
-                                                        const isCurrentSystemTerm =
-                                                            systemTermId && systemSessionId &&
-                                                            term.term_id == systemTermId &&
-                                                            term.session_id == systemSessionId;
-                                                        const isMarkedCurrent = term.is_current;
-                                                        return `
-                                                        <tr class="${isCurrentSystemTerm ? 'table-success' : isMarkedCurrent ? 'table-info' : ''}">
-                                                            <td>${term.term_name || 'N/A'}</td>
-                                                            <td>${term.session_name || 'N/A'}</td>
-                                                            <td>${term.class_name || 'N/A'}</td>
-                                                            <td>${term.arm_name || 'N/A'}</td>
-                                                            <td>
-                                                                ${isCurrentSystemTerm
-                                                                    ? '<span class="badge bg-success">Active System Term</span>'
-                                                                    : isMarkedCurrent
-                                                                    ? '<span class="badge bg-info">Marked as Current</span>'
-                                                                    : '<span class="badge bg-secondary">Past</span>'}
-                                                            </td>
-                                                            <td>${term.created_at ? new Date(term.created_at).toLocaleDateString() : 'N/A'}</td>
-                                                        </tr>
-                                                        `;
-                                                    }).join('')}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        ` : `
-                                        <div class="text-center py-4">
-                                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                                            <p class="text-muted">No term history available</p>
-                                        </div>
-                                        `}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.getElementById('viewStudentContent').innerHTML = content;
-        const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
-        modal.show();
-
-        // Initialize Bootstrap tabs
-        const triggerTabList = [].slice.call(document.querySelectorAll('#studentTabs button'));
-        triggerTabList.forEach(function (triggerEl) {
-            const tabTrigger = new bootstrap.Tab(triggerEl);
-            triggerEl.addEventListener('click', function (event) {
-                event.preventDefault();
-                tabTrigger.show();
-            });
-        });
-    }
-
-    // Show Edit Modal
-    function showEditModal() {
-        const modal = new bootstrap.Modal(document.getElementById('editStudentModal'));
-        modal.show();
     }
 
     // ============================================================================
@@ -4319,8 +5094,6 @@ use Spatie\Permission\Models\Role;
     // ============================================================================
     // REPORT MODAL FUNCTIONS
     // ============================================================================
-
-    let columnSortable = null;
 
     // Initialize column ordering
     function initializeColumnOrdering() {
@@ -4780,42 +5553,50 @@ use Spatie\Permission\Models\Role;
         }
     };
 
-    // Edit Student From View
-    window.editStudentFromView = function() {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('viewStudentModal'));
-        modal.hide();
-        // Get the student ID from the view content
-        // This would need to be implemented based on how you store the current student ID
+    // Quick action functions
+    window.printStudentCard = function(studentId) {
+        window.open(`/student/${studentId}/id-card`, '_blank');
     };
 
-    // Ensure Axios and CSRF token
-    function ensureAxios() {
-        if (typeof axios === 'undefined') {
-            console.error('Error: Axios is not defined');
-            Swal.fire({
-                title: "Error!",
-                text: "Axios library is missing",
-                icon: "error",
-                customClass: { confirmButton: "btn btn-primary" },
-                buttonsStyling: false
-            });
-            return false;
-        }
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        if (!csrfToken) {
-            console.error('Error: CSRF token not found');
-            Swal.fire({
-                title: "Error!",
-                text: "CSRF token is missing",
-                icon: "error",
-                customClass: { confirmButton: "btn btn-primary" },
-                buttonsStyling: false
-            });
-            return false;
-        }
-        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
-        return true;
-    }
+    window.printStudentDetails = function(studentId) {
+        window.open(`/student/${studentId}/print`, '_blank');
+    };
+
+    window.sendMessage = function(studentId) {
+        Swal.fire({
+            title: 'Send Message',
+            html: `
+                <div class="text-start">
+                    <label class="form-label">Message</label>
+                    <textarea id="messageText" class="form-control" rows="4" placeholder="Type your message here..."></textarea>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Send',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#4361ee',
+            preConfirm: () => {
+                const message = document.getElementById('messageText').value;
+                if (!message) {
+                    Swal.showValidationMessage('Message cannot be empty');
+                    return false;
+                }
+                return axios.post('/student/send-message', {
+                    student_id: studentId,
+                    message: message
+                });
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Message sent successfully',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+    };
 
     // Initialize the application
     ensureAxios();
