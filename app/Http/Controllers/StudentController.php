@@ -1340,9 +1340,8 @@ class StudentController extends Controller
 
 
 
-
- /**
-     * Generate student report - UPDATED to use student_current_term table
+  /**
+     * Generate student report - Complete version with all improvements
      */
     public function generateReport(Request $request)
     {
@@ -1364,6 +1363,11 @@ class StudentController extends Controller
                 'orientation' => 'nullable|in:portrait,landscape',
                 'include_header' => 'nullable|boolean',
                 'include_logo' => 'nullable|boolean',
+                'exclude_photos' => 'nullable|boolean',
+                'template'    => 'nullable|in:default,detailed,simple',
+                'confidential' => 'nullable|boolean',
+                'preview'     => 'nullable|boolean',
+                'optimize_large_reports' => 'nullable|boolean',
             ]);
 
             $user = auth()->user();
@@ -1398,6 +1402,23 @@ class StudentController extends Controller
                 $columnOrder = array_filter(explode(',', $request->columns_order));
                 Log::info('Column order:', $columnOrder);
                 $columns = array_values(array_intersect($columnOrder, $columns));
+            }
+
+            // Apply template-based column adjustments
+            $template = $request->input('template', 'default');
+            if ($template === 'detailed') {
+                $defaultColumns = ['photo', 'admissionNo', 'firstname', 'lastname', 'othername', 'gender', 'dateofbirth', 'age', 'class', 'status'];
+                $columns = array_unique(array_merge($columns, $defaultColumns));
+            } elseif ($template === 'simple') {
+                $simpleColumns = ['photo', 'admissionNo', 'firstname', 'lastname', 'class', 'status'];
+                $columns = array_values(array_intersect($columns, $simpleColumns));
+            }
+
+            // Handle photo exclusion
+            if ($request->boolean('exclude_photos')) {
+                $columns = array_filter($columns, function($col) {
+                    return $col !== 'photo';
+                });
             }
 
             if (empty($columns)) {
@@ -1465,7 +1486,27 @@ class StudentController extends Controller
                 ], 404);
             }
 
-            $reportStudents = $currentTerms->map(function($currentTerm) {
+            // Check if report is large and optimize if needed
+            $isLargeReport = $currentTerms->count() > 100;
+            $optimizeLarge = $request->boolean('optimize_large_reports', true);
+
+            if ($isLargeReport && $optimizeLarge && !$request->boolean('exclude_photos')) {
+                Log::info('Large report detected, optimizing photo processing');
+                $columns = array_filter($columns, function($col) {
+                    return $col !== 'photo';
+                });
+            }
+
+            // Start progress tracking
+            $reportId = uniqid('report_');
+            Cache::put($reportId, [
+                'status' => 'processing',
+                'progress' => 0,
+                'total' => $currentTerms->count(),
+                'message' => 'Processing students...'
+            ], now()->addMinutes(10));
+
+            $reportStudents = $currentTerms->map(function($currentTerm, $index) use ($reportId, $isLargeReport) {
                 $student = $currentTerm->student;
                 $picture = $student->picture;
                 $parent = $student->parent;
@@ -1476,7 +1517,9 @@ class StudentController extends Controller
 
                 if ($picture && $picture->picture && $picture->picture !== 'unnamed.jpg') {
                     $hasPhoto = true;
-                    $photoBase64 = $this->getImageBase64($picture->picture);
+                    if (!$isLargeReport) {
+                        $photoBase64 = $this->getOptimizedImageForPDF($picture->picture);
+                    }
                 }
 
                 $currentClass = null;
@@ -1564,8 +1607,26 @@ class StudentController extends Controller
                     'father_city' => $parent ? $parent->father_city : null,
                 ];
 
+                // Update progress every 10 records
+                if ($index % 10 === 0) {
+                    Cache::put($reportId, [
+                        'status' => 'processing',
+                        'progress' => $index + 1,
+                        'total' => $currentTerms->count(),
+                        'message' => 'Processing student ' . ($index + 1) . ' of ' . $currentTerms->count()
+                    ], now()->addMinutes(10));
+                }
+
                 return (object) $studentData;
             });
+
+            // Mark progress as complete
+            Cache::put($reportId, [
+                'status' => 'complete',
+                'progress' => $currentTerms->count(),
+                'total' => $currentTerms->count(),
+                'message' => 'Report generation complete'
+            ], now()->addMinutes(10));
 
             $className = 'All Classes';
             if ($request->filled('class_id')) {
@@ -1582,6 +1643,7 @@ class StudentController extends Controller
             $orientation = $request->query('orientation', 'portrait');
             $includeHeader = $request->boolean('include_header', true);
             $includeLogo = $request->boolean('include_logo', true);
+            $confidential = $request->boolean('confidential', false);
 
             Log::info('Report parameters:', [
                 'format' => $format,
@@ -1592,6 +1654,8 @@ class StudentController extends Controller
                 'total_students' => $reportStudents->count(),
                 'include_header' => $includeHeader,
                 'include_logo' => $includeLogo,
+                'template' => $template,
+                'confidential' => $confidential,
                 'generated_by' => $user->name
             ]);
 
@@ -1600,7 +1664,7 @@ class StudentController extends Controller
             $data = [
                 'students'          => $reportStudents,
                 'columns'           => $columns,
-                'title'             => 'Student Master List Report',
+                'title'             => $confidential ? 'CONFIDENTIAL - Student Master List Report' : 'Student Master List Report',
                 'className'         => $className,
                 'termName'          => $termName,
                 'sessionName'       => $sessionName,
@@ -1616,6 +1680,11 @@ class StudentController extends Controller
                 'school_logo_base64' => null,
                 'selected_term'     => $selectedTerm,
                 'selected_session'  => $selectedSession,
+                'template'          => $template,
+                'confidential'      => $confidential,
+                'report_id'         => $reportId,
+                'is_large_report'   => $isLargeReport,
+                'warning'           => $isLargeReport ? 'Large report detected. Photos may be excluded for performance.' : null,
             ];
 
             if ($includeLogo && $schoolInfo && $format === 'pdf') {
@@ -1625,8 +1694,39 @@ class StudentController extends Controller
                 }
             }
 
-            $filename = 'student-report-' . now()->format('Y-m-d-His');
+            // Log report generation for audit trail
+            ReportHistory::create([
+                'user_id' => $user->id,
+                'report_type' => 'student_list',
+                'parameters' => json_encode($request->all()),
+                'student_count' => $reportStudents->count(),
+                'format' => $format,
+                'template' => $template,
+                'generated_at' => now(),
+            ]);
+
+            $filename = 'student-report-' . now()->format('Y-m-d-His') . ($confidential ? '-CONFIDENTIAL' : '');
             Log::info('Generating report with filename:', ['filename' => $filename]);
+
+            // Handle preview request
+            if ($request->boolean('preview')) {
+                Log::info('Generating preview');
+                $previewStudents = $reportStudents->take(5);
+                $data['students'] = $previewStudents;
+                $data['is_preview'] = true;
+                $data['warning'] = 'PREVIEW - Showing first 5 records only';
+
+                $pdf = Pdf::loadView('student.reports.student_report_pdf', $data)
+                    ->setPaper('A4', $orientation)
+                    ->setOptions([
+                        'isRemoteEnabled' => true,
+                        'isHtml5ParserEnabled' => true,
+                        'defaultFont' => 'DejaVu Sans',
+                        'chroot' => [public_path(), storage_path()],
+                    ]);
+
+                return $pdf->stream('preview-report.pdf');
+            }
 
             if ($format === 'excel') {
                 Log::info('Generating Excel export');
@@ -1635,7 +1735,15 @@ class StudentController extends Controller
 
             Log::info('Generating PDF export');
 
-            $pdf = Pdf::loadView('student.reports.student_report_pdf', $data)
+            // Select appropriate view based on template
+            $view = 'student.reports.student_report_pdf';
+            if ($template === 'detailed') {
+                $view = 'student.reports.detailed_report_pdf';
+            } elseif ($template === 'simple') {
+                $view = 'student.reports.simple_report_pdf';
+            }
+
+            $pdf = Pdf::loadView($view, $data)
                 ->setPaper('A4', $orientation)
                 ->setOptions([
                     'isRemoteEnabled' => true,
@@ -1655,6 +1763,16 @@ class StudentController extends Controller
                 'line' => $e->getLine()
             ]);
 
+            // Mark report as failed
+            if (isset($reportId)) {
+                Cache::put($reportId, [
+                    'status' => 'failed',
+                    'progress' => 0,
+                    'total' => 0,
+                    'message' => 'Report generation failed: ' . $e->getMessage()
+                ], now()->addMinutes(10));
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Server error: ' . $e->getMessage(),
@@ -1664,12 +1782,42 @@ class StudentController extends Controller
     }
 
     /**
-     * Get image as base64 for PDF
+     * Get report generation progress
      */
-    private function getImageBase64($imagePath)
+    public function getReportProgress(Request $request)
+    {
+        $request->validate([
+            'report_id' => 'required|string'
+        ]);
+
+        $progress = Cache::get($request->report_id, [
+            'status' => 'unknown',
+            'progress' => 0,
+            'total' => 0,
+            'message' => 'Report not found'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'progress' => $progress
+        ]);
+    }
+
+    /**
+     * Get optimized image as base64 for PDF
+     */
+    private function getOptimizedImageForPDF($imagePath, $maxWidth = 100)
     {
         if (!$imagePath) {
             return null;
+        }
+
+        // Generate cache key
+        $cacheKey = 'optimized_image_' . md5($imagePath . '_' . $maxWidth);
+
+        // Check cache first
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
         }
 
         $possiblePaths = [
@@ -1677,22 +1825,115 @@ class StudentController extends Controller
             public_path('storage/images/student_avatars/' . $imagePath),
             storage_path('app/public/student_avatars/' . $imagePath),
             public_path('storage/student_avatars/' . $imagePath),
-            $imagePath, // In case it's already a full path
+            $imagePath,
         ];
 
+        $foundPath = null;
         foreach ($possiblePaths as $path) {
             if (file_exists($path)) {
-                try {
-                    $imageData = base64_encode(file_get_contents($path));
-                    $mimeType = mime_content_type($path);
-                    return 'data:' . $mimeType . ';base64,' . $imageData;
-                } catch (\Exception $e) {
-                    Log::warning('Failed to encode image at ' . $path . ': ' . $e->getMessage());
-                }
+                $foundPath = $path;
+                break;
             }
         }
 
-        return null;
+        if (!$foundPath) {
+            return null;
+        }
+
+        try {
+            // Check if GD is available
+            if (extension_loaded('gd') && function_exists('imagecreatefromjpeg')) {
+                $imageInfo = @getimagesize($foundPath);
+                if (!$imageInfo) {
+                    throw new \Exception('Invalid image file');
+                }
+
+                $mimeType = $imageInfo['mime'];
+
+                switch ($mimeType) {
+                    case 'image/jpeg':
+                        $image = @imagecreatefromjpeg($foundPath);
+                        break;
+                    case 'image/png':
+                        $image = @imagecreatefrompng($foundPath);
+                        // Preserve transparency
+                        imagealphablending($image, false);
+                        imagesavealpha($image, true);
+                        break;
+                    case 'image/gif':
+                        $image = @imagecreatefromgif($foundPath);
+                        break;
+                    default:
+                        // For unsupported types, return base64 without optimization
+                        $imageData = base64_encode(file_get_contents($foundPath));
+                        $result = 'data:' . $mimeType . ';base64,' . $imageData;
+                        Cache::put($cacheKey, $result, now()->addHours(24));
+                        return $result;
+                }
+
+                if (!$image) {
+                    throw new \Exception('Failed to create image from file');
+                }
+
+                // Resize if too large
+                $width = imagesx($image);
+                if ($width > $maxWidth) {
+                    $ratio = $maxWidth / $width;
+                    $newWidth = $maxWidth;
+                    $newHeight = (int)(imagesy($image) * $ratio);
+
+                    $resized = imagecreatetruecolor($newWidth, $newHeight);
+
+                    // Preserve transparency for PNG
+                    if ($mimeType === 'image/png') {
+                        imagealphablending($resized, false);
+                        imagesavealpha($resized, true);
+                        $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
+                        imagefill($resized, 0, 0, $transparent);
+                    }
+
+                    imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, imagesy($image));
+                    imagedestroy($image);
+                    $image = $resized;
+                }
+
+                // Output to buffer
+                ob_start();
+                if ($mimeType === 'image/png') {
+                    imagepng($image, null, 9); // Maximum compression for PNG
+                } else {
+                    imagejpeg($image, null, 85); // 85% quality for JPEG
+                }
+                $imageData = ob_get_clean();
+                imagedestroy($image);
+
+                $result = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            } else {
+                // GD not available, use simple base64 encoding
+                $imageData = base64_encode(file_get_contents($foundPath));
+                $mimeType = mime_content_type($foundPath);
+                $result = 'data:' . $mimeType . ';base64,' . $imageData;
+            }
+
+            // Cache the result
+            Cache::put($cacheKey, $result, now()->addHours(24));
+            return $result;
+
+        } catch (\Exception $e) {
+            Log::warning('Failed to optimize image at ' . $foundPath . ': ' . $e->getMessage());
+
+            // Fallback to simple base64 encoding
+            try {
+                $imageData = base64_encode(file_get_contents($foundPath));
+                $mimeType = mime_content_type($foundPath);
+                $result = 'data:' . $mimeType . ';base64,' . $imageData;
+                Cache::put($cacheKey, $result, now()->addHours(24));
+                return $result;
+            } catch (\Exception $e2) {
+                Log::error('Failed even with fallback: ' . $e2->getMessage());
+                return null;
+            }
+        }
     }
 
     /**
@@ -1702,6 +1943,12 @@ class StudentController extends Controller
     {
         if (!$schoolInfo || !$schoolInfo->school_logo) {
             return null;
+        }
+
+        $cacheKey = 'school_logo_' . md5($schoolInfo->school_logo);
+
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
         }
 
         $possiblePaths = [
@@ -1717,7 +1964,9 @@ class StudentController extends Controller
                 try {
                     $imageData = base64_encode(file_get_contents($path));
                     $mimeType = mime_content_type($path);
-                    return 'data:' . $mimeType . ';base64,' . $imageData;
+                    $result = 'data:' . $mimeType . ';base64,' . $imageData;
+                    Cache::put($cacheKey, $result, now()->addHours(24));
+                    return $result;
                 } catch (\Exception $e) {
                     Log::warning('Failed to encode school logo at ' . $path . ': ' . $e->getMessage());
                 }
@@ -1727,8 +1976,45 @@ class StudentController extends Controller
         return null;
     }
 
+    /**
+     * Get simple image as base64 (for non-GD environments)
+     */
+    private function getImageBase64($imagePath)
+    {
+        if (!$imagePath) {
+            return null;
+        }
 
+        $cacheKey = 'image_base64_' . md5($imagePath);
 
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        $possiblePaths = [
+            storage_path('app/public/images/student_avatars/' . $imagePath),
+            public_path('storage/images/student_avatars/' . $imagePath),
+            storage_path('app/public/student_avatars/' . $imagePath),
+            public_path('storage/student_avatars/' . $imagePath),
+            $imagePath,
+        ];
+
+        foreach ($possiblePaths as $path) {
+            if (file_exists($path)) {
+                try {
+                    $imageData = base64_encode(file_get_contents($path));
+                    $mimeType = mime_content_type($path);
+                    $result = 'data:' . $mimeType . ';base64,' . $imageData;
+                    Cache::put($cacheKey, $result, now()->addHours(24));
+                    return $result;
+                } catch (\Exception $e) {
+                    Log::warning('Failed to encode image at ' . $path . ': ' . $e->getMessage());
+                }
+            }
+        }
+
+        return null;
+    }
 
 
 

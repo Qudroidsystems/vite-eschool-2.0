@@ -8,21 +8,26 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithColumnGrouping;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Carbon\Carbon;
 
-class StudentReportExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithEvents
+class StudentReportExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithEvents, WithColumnGrouping
 {
     protected $data;
+    protected $groupedColumns = [];
 
     public function __construct(array $data)
     {
         $this->data = $data;
+        $this->groupedColumns = $this->determineColumnGroups();
     }
 
     public function collection()
@@ -244,34 +249,65 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
         return null;
     }
 
+    /**
+     * Determine column groups for better organization
+     */
+    private function determineColumnGroups()
+    {
+        $columns = $this->data['columns'];
+        $groups = [];
+
+        $groupDefinitions = [
+            'Student Information' => ['photo', 'admissionNo', 'firstname', 'lastname', 'othername', 'gender', 'dateofbirth', 'age'],
+            'Academic Information' => ['class', 'status', 'term', 'session', 'admission_date'],
+            'Personal Information' => ['phone_number', 'email', 'blood_group', 'religion', 'mother_tongue'],
+            'Geographical Information' => ['state', 'local', 'city', 'nationality', 'placeofbirth'],
+            'Parent Information' => ['father_name', 'mother_name', 'guardian_phone', 'parent_email', 'parent_address'],
+            'Additional Information' => ['student_category', 'future_ambition', 'last_school', 'last_class'],
+        ];
+
+        foreach ($groupDefinitions as $groupName => $groupColumns) {
+            $foundColumns = array_intersect($columns, $groupColumns);
+            if (!empty($foundColumns)) {
+                $groups[$groupName] = $foundColumns;
+            }
+        }
+
+        return $groups;
+    }
+
     public function styles(Worksheet $sheet)
     {
         $totalRows = $this->data['students']->count() + 6; // Added extra rows for metadata
+        $startRow = 7; // Header row starts here
 
-        return [
-            7 => [ // Header row is now row 7 (after metadata)
+        $styles = [
+            $startRow => [ // Header row
                 'font' => [
                     'bold' => true,
                     'color' => ['rgb' => 'FFFFFF']
                 ],
                 'fill' => [
                     'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => '1E40AF']
+                    'startColor' => [
+                        'rgb' => $this->data['confidential'] ? 'DC3545' : '1E40AF'
+                    ]
                 ],
                 'alignment' => [
                     'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical' => Alignment::VERTICAL_CENTER
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                    'wrapText' => true
                 ]
             ],
 
-            'A8:A' . $totalRows => [
+            'A' . ($startRow + 1) . ':A' . $totalRows => [
                 'fill' => [
                     'fillType' => Fill::FILL_SOLID,
                     'startColor' => ['rgb' => 'F8FAFC']
                 ]
             ],
 
-            'A7:' . $sheet->getHighestColumn() . $totalRows => [
+            'A' . $startRow . ':' . $sheet->getHighestColumn() . $totalRows => [
                 'borders' => [
                     'allBorders' => [
                         'borderStyle' => Border::BORDER_THIN,
@@ -280,6 +316,20 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                 ]
             ]
         ];
+
+        // Alternate row coloring
+        for ($i = $startRow + 1; $i <= $totalRows; $i++) {
+            if ($i % 2 == 0) {
+                $styles['A' . $i . ':' . $sheet->getHighestColumn() . $i] = [
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'F8FAFC']
+                    ]
+                ];
+            }
+        }
+
+        return $styles;
     }
 
     public function registerEvents(): array
@@ -291,18 +341,24 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                 // Insert title rows at the top
                 $sheet->insertNewRowBefore(1, 6);
 
+                // Get highest column letter
+                $highestColumn = $sheet->getHighestColumn();
+                $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+
                 // School header if included
                 if ($this->data['include_header'] ?? true) {
                     $schoolInfo = $this->data['school_info'] ?? null;
 
                     if ($schoolInfo) {
                         $sheet->setCellValue('A1', $schoolInfo->school_name ?? 'STUDENT MASTER LIST REPORT');
-                        $sheet->mergeCells('A1:' . $sheet->getHighestColumn() . '1');
+                        $sheet->mergeCells('A1:' . $highestColumn . '1');
                         $sheet->getStyle('A1')->applyFromArray([
                             'font' => [
                                 'bold' => true,
                                 'size' => 16,
-                                'color' => ['rgb' => '1E40AF']
+                                'color' => [
+                                    'rgb' => $this->data['confidential'] ? 'DC3545' : '1E40AF'
+                                ]
                             ],
                             'alignment' => [
                                 'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -312,7 +368,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
 
                         if ($schoolInfo->school_motto) {
                             $sheet->setCellValue('A2', $schoolInfo->school_motto);
-                            $sheet->mergeCells('A2:' . $sheet->getHighestColumn() . '2');
+                            $sheet->mergeCells('A2:' . $highestColumn . '2');
                             $sheet->getStyle('A2')->applyFromArray([
                                 'font' => [
                                     'italic' => true,
@@ -329,20 +385,32 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                                   ' | Session: ' . $this->data['sessionName'] .
                                   ' | Generated: ' . $this->data['generated'] .
                                   ' | Total Students: ' . $this->data['total'];
+
+                        if ($this->data['confidential']) {
+                            $details .= ' | CONFIDENTIAL';
+                        }
+
                         $sheet->setCellValue('A3', $details);
-                        $sheet->mergeCells('A3:' . $sheet->getHighestColumn() . '3');
+                        $sheet->mergeCells('A3:' . $highestColumn . '3');
                         $sheet->getStyle('A3')->applyFromArray([
                             'font' => ['size' => 10],
                             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
                         ]);
                     } else {
-                        $sheet->setCellValue('A1', 'STUDENT MASTER LIST REPORT');
-                        $sheet->mergeCells('A1:' . $sheet->getHighestColumn() . '1');
+                        $title = 'STUDENT MASTER LIST REPORT';
+                        if ($this->data['confidential']) {
+                            $title = 'CONFIDENTIAL - ' . $title;
+                        }
+
+                        $sheet->setCellValue('A1', $title);
+                        $sheet->mergeCells('A1:' . $highestColumn . '1');
                         $sheet->getStyle('A1')->applyFromArray([
                             'font' => [
                                 'bold' => true,
                                 'size' => 16,
-                                'color' => ['rgb' => '1E40AF']
+                                'color' => [
+                                    'rgb' => $this->data['confidential'] ? 'DC3545' : '1E40AF'
+                                ]
                             ],
                             'alignment' => [
                                 'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -356,20 +424,27 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                                   ' | Generated: ' . $this->data['generated'] .
                                   ' | Total Students: ' . $this->data['total'];
                         $sheet->setCellValue('A2', $details);
-                        $sheet->mergeCells('A2:' . $sheet->getHighestColumn() . '2');
+                        $sheet->mergeCells('A2:' . $highestColumn . '2');
                         $sheet->getStyle('A2')->applyFromArray([
                             'font' => ['size' => 11],
                             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
                         ]);
                     }
                 } else {
-                    $sheet->setCellValue('A1', 'STUDENT MASTER LIST REPORT - ' . $this->data['className']);
-                    $sheet->mergeCells('A1:' . $sheet->getHighestColumn() . '1');
+                    $title = 'STUDENT MASTER LIST REPORT - ' . $this->data['className'];
+                    if ($this->data['confidential']) {
+                        $title = 'CONFIDENTIAL - ' . $title;
+                    }
+
+                    $sheet->setCellValue('A1', $title);
+                    $sheet->mergeCells('A1:' . $highestColumn . '1');
                     $sheet->getStyle('A1')->applyFromArray([
                         'font' => [
                             'bold' => true,
                             'size' => 16,
-                            'color' => ['rgb' => '1E40AF']
+                            'color' => [
+                                'rgb' => $this->data['confidential'] ? 'DC3545' : '1E40AF'
+                            ]
                         ],
                         'alignment' => [
                             'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -384,17 +459,35 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                               ' | Term: ' . $this->data['termName'] .
                               ' | Session: ' . $this->data['sessionName'];
                     $sheet->setCellValue('A2', $details);
-                    $sheet->mergeCells('A2:' . $sheet->getHighestColumn() . '2');
+                    $sheet->mergeCells('A2:' . $highestColumn . '2');
                     $sheet->getStyle('A2')->applyFromArray([
                         'font' => ['size' => 11],
                         'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
                     ]);
                 }
 
+                // Add warning message if large report
+                if ($this->data['is_large_report'] ?? false) {
+                    $sheet->setCellValue('A3', '⚠️ Large report detected. Photos excluded for performance.');
+                    $sheet->mergeCells('A3:' . $highestColumn . '3');
+                    $sheet->getStyle('A3')->applyFromArray([
+                        'font' => [
+                            'italic' => true,
+                            'color' => ['rgb' => '721C24']
+                        ],
+                        'fill' => [
+                            'fillType' => Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => 'F8D7DA']
+                        ],
+                        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+                    ]);
+                }
+
                 // Add generated by information
-                $generatedBy = 'Generated by: ' . ($this->data['generated_by'] ?? 'System');
+                $generatedBy = 'Generated by: ' . ($this->data['generated_by'] ?? 'System') .
+                              ' | Template: ' . ucfirst($this->data['template'] ?? 'default');
                 $sheet->setCellValue('A4', $generatedBy);
-                $sheet->mergeCells('A4:' . $sheet->getHighestColumn() . '4');
+                $sheet->mergeCells('A4:' . $highestColumn . '4');
                 $sheet->getStyle('A4')->applyFromArray([
                     'font' => [
                         'italic' => true,
@@ -408,7 +501,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                 // Add timestamp
                 $timestamp = 'Generated on: ' . date('d/m/Y H:i:s');
                 $sheet->setCellValue('A5', $timestamp);
-                $sheet->mergeCells('A5:' . $sheet->getHighestColumn() . '5');
+                $sheet->mergeCells('A5:' . $highestColumn . '5');
                 $sheet->getStyle('A5')->applyFromArray([
                     'font' => [
                         'italic' => true,
@@ -423,7 +516,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                 $sheet->setCellValue('A6', '');
 
                 // Auto-size columns
-                foreach (range('A', $sheet->getHighestColumn()) as $column) {
+                foreach (range('A', $highestColumn) as $column) {
                     $sheet->getColumnDimension($column)->setAutoSize(true);
                 }
 
@@ -434,21 +527,145 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                 $sheet->freezePane('A8');
 
                 // Add filter to header row
-                $sheet->setAutoFilter('A7:' . $sheet->getHighestColumn() . '7');
+                $sheet->setAutoFilter('A7:' . $highestColumn . '7');
+
+                // Add column groups headers
+                $this->addColumnGroups($sheet, 6, $highestColumnIndex);
 
                 // Add page setup for printing
                 $sheet->getPageSetup()->setFitToWidth(1);
                 $sheet->getPageSetup()->setFitToHeight(0);
 
                 // Add header and footer
-                $sheet->getHeaderFooter()
-                    ->setOddHeader('&C&"Arial,Bold"STUDENT MASTER LIST REPORT&RPage &P of &N');
+                $headerText = '&C&"Arial,Bold"STUDENT MASTER LIST REPORT';
+                if ($this->data['confidential']) {
+                    $headerText .= ' - CONFIDENTIAL';
+                }
+                $headerText .= '&RPage &P of &N';
 
                 $sheet->getHeaderFooter()
-                    ->setOddFooter('&LGenerated by: ' . ($this->data['generated_by'] ?? 'System') .
-                                  '&CGenerated on: ' . date('d/m/Y H:i:s') .
-                                  '&RPage &P of &N');
+                    ->setOddHeader($headerText);
+
+                $footerText = '&LGenerated by: ' . ($this->data['generated_by'] ?? 'System') .
+                             '&CGenerated on: ' . date('d/m/Y H:i:s') .
+                             '&RPage &P of &N';
+
+                if ($this->data['confidential']) {
+                    $footerText .= '&X&"Arial,Bold"CONFIDENTIAL';
+                }
+
+                $sheet->getHeaderFooter()
+                    ->setOddFooter($footerText);
+
+                // Add confidential watermark
+                if ($this->data['confidential']) {
+                    $this->addConfidentialWatermark($sheet);
+                }
             }
         ];
+    }
+
+    /**
+     * Add column group headers for better organization
+     */
+    private function addColumnGroups($sheet, $rowIndex, $highestColumnIndex)
+    {
+        $currentColumn = 1;
+        $groupRow = $rowIndex; // Row 6 for group headers
+
+        foreach ($this->groupedColumns as $groupName => $columns) {
+            $groupColumns = $this->getColumnIndicesForGroup($columns);
+            if (empty($groupColumns)) continue;
+
+            $startColumn = $groupColumns[0];
+            $endColumn = end($groupColumns);
+
+            // Merge cells for the group header
+            if ($startColumn <= $endColumn) {
+                $startCell = Coordinate::stringFromColumnIndex($startColumn);
+                $endCell = Coordinate::stringFromColumnIndex($endColumn);
+
+                $sheet->mergeCells($startCell . $groupRow . ':' . $endCell . $groupRow);
+                $sheet->setCellValue($startCell . $groupRow, $groupName);
+                $sheet->getStyle($startCell . $groupRow)->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                        'size' => 11,
+                        'color' => ['rgb' => '333333']
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'E5E7EB']
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER
+                    ],
+                    'borders' => [
+                        'top' => [
+                            'borderStyle' => Border::BORDER_MEDIUM,
+                            'color' => ['rgb' => '9CA3AF']
+                        ],
+                        'bottom' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => 'D1D5DB']
+                        ]
+                    ]
+                ]);
+            }
+        }
+
+        // Set group header row height
+        $sheet->getRowDimension($groupRow)->setRowHeight(20);
+    }
+
+    /**
+     * Get column indices for a group of columns
+     */
+    private function getColumnIndicesForGroup($columns)
+    {
+        $indices = [];
+        $headerColumns = $this->data['columns'];
+
+        foreach ($columns as $column) {
+            $index = array_search($column, $headerColumns);
+            if ($index !== false) {
+                // Add 1 because Excel columns are 1-indexed
+                $indices[] = $index + 1;
+            }
+        }
+
+        sort($indices);
+        return $indices;
+    }
+
+    /**
+     * Add confidential watermark to the sheet
+     */
+    private function addConfidentialWatermark($sheet)
+    {
+        // Add a background text effect
+        $highestRow = $sheet->getHighestRow();
+        $highestColumn = $sheet->getHighestColumn();
+
+        // Add a shape/text box with watermark
+        $sheet->getPageSetup()->setRowsToRepeatAtTopToStart(1);
+
+        // Alternative: Add a header/footer watermark
+        $sheet->getHeaderFooter()
+            ->setOddHeader('&C&"Arial,Bold"&44&KFF0000CONFIDENTIAL');
+    }
+
+    public function columnGroupings(): array
+    {
+        $groupings = [];
+
+        foreach ($this->groupedColumns as $groupName => $columns) {
+            if (!empty($columns)) {
+                $groupings[] = new \Maatwebsite\Excel\Sheet\Group($columns, $groupName);
+            }
+        }
+
+        return $groupings;
     }
 }

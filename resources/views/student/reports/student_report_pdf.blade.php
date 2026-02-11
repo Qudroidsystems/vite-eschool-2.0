@@ -11,6 +11,44 @@
             padding: 0;
         }
 
+        /* Watermark for confidential reports */
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 60px;
+            color: rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            pointer-events: none;
+            font-weight: bold;
+        }
+
+        /* Warning message */
+        .warning-message {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 8px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        /* Preview indicator */
+        .preview-indicator {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 8px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+
         /* School Header Styles */
         .school-header {
             margin-bottom: 15px;
@@ -50,6 +88,12 @@
             line-height: 1.2;
         }
 
+        .confidential-title {
+            color: #dc3545 !important;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 5px;
+        }
+
         .school-motto {
             font-size: 12px;
             color: #666;
@@ -75,7 +119,7 @@
         .report-title {
             font-size: 14px;
             font-weight: bold;
-            color: #1E40AF;
+            color: {{ $confidential ? '#dc3545' : '#1E40AF' }};
             margin: 0;
             line-height: 1.2;
         }
@@ -120,7 +164,7 @@
         }
 
         .data-table th {
-            background-color: #405189;
+            background-color: {{ $confidential ? '#dc3545' : '#405189' }};
             color: white;
             padding: 6px;
             text-align: left;
@@ -240,9 +284,50 @@
         .col-guardian { width: 9%; }
         .col-term { width: 8%; }
         .col-session { width: 8%; }
+
+        /* Performance warning */
+        .performance-warning {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 8px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 10px;
+            text-align: center;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
+    <!-- Watermark for confidential reports -->
+    @if($confidential)
+    <div class="watermark">
+        CONFIDENTIAL
+    </div>
+    @endif
+
+    <!-- Preview Indicator -->
+    @if($is_preview ?? false)
+    <div class="preview-indicator">
+        PREVIEW - Showing first 5 records only
+    </div>
+    @endif
+
+    <!-- Performance Warning -->
+    @if($is_large_report ?? false)
+    <div class="performance-warning">
+        ⚠️ Large report detected. Photos excluded for performance.
+    </div>
+    @endif
+
+    <!-- Custom Warning Message -->
+    @if($warning ?? false)
+    <div class="warning-message">
+        ⚠️ {{ $warning }}
+    </div>
+    @endif
+
     @if($include_header)
     <div class="school-header">
         @if($include_logo && $school_info)
@@ -262,7 +347,12 @@
                 @endif
             </div>
             <div class="school-info">
-                <h1 class="school-name">{{ $school_info->school_name ?? 'School Name' }}</h1>
+                <h1 class="school-name {{ $confidential ? 'confidential-title' : '' }}">
+                    {{ $school_info->school_name ?? 'School Name' }}
+                    @if($confidential)
+                    <br><small style="font-size: 12px;">(CONFIDENTIAL)</small>
+                    @endif
+                </h1>
                 @if($school_info && $school_info->school_motto)
                 <p class="school-motto">{{ $school_info->school_motto }}</p>
                 @endif
@@ -280,7 +370,12 @@
         </div>
         @else
         <div class="school-info">
-            <h1 class="school-name">{{ $school_info->school_name ?? 'School Name' }}</h1>
+            <h1 class="school-name {{ $confidential ? 'confidential-title' : '' }}">
+                {{ $school_info->school_name ?? 'School Name' }}
+                @if($confidential)
+                <br><small style="font-size: 12px;">(CONFIDENTIAL)</small>
+                @endif
+            </h1>
             @if($school_info && $school_info->school_address)
             <p class="school-contact">{{ $school_info->school_address }}</p>
             @endif
@@ -292,7 +387,8 @@
     <div class="report-header">
         <h2 class="report-title">{{ $title }}</h2>
         <div class="report-subtitle">
-            Class: {{ $className }} | Term: {{ $termName }} | Session: {{ $sessionName }} | Generated: {{ $generated }}
+            Class: {{ $className }} | Term: {{ $termName }} | Session: {{ $sessionName }} |
+            Generated: {{ $generated }} | Template: {{ ucfirst($template) }}
         </div>
     </div>
 
@@ -310,6 +406,13 @@
                 <td class="label">Generated By:</td>
                 <td>{{ $generated_by ?? 'System' }}</td>
             </tr>
+            @if($is_preview ?? false)
+            <tr>
+                <td class="label" colspan="4" style="background-color: #d1ecf1; text-align: center;">
+                    ⚠️ PREVIEW MODE - Showing limited records
+                </td>
+            </tr>
+            @endif
         </table>
     </div>
 
@@ -488,16 +591,28 @@
         <div class="footer-info">
             <div class="footer-generated">
                 Generated on: {{ date('d/m/Y H:i:s') }}
+                @if($confidential)
+                <br><span style="color: #dc3545; font-weight: bold;">CONFIDENTIAL</span>
+                @endif
             </div>
             <div class="footer-user">
                 Generated by: {{ $generated_by ?? 'System' }}
+                @if($template != 'default')
+                <br>Template: {{ ucfirst($template) }}
+                @endif
             </div>
             <div class="footer-pages">
                 Page <span class="page-number">1</span> of <span class="page-count">1</span>
+                @if($is_preview ?? false)
+                <br><span style="color: #0c5460;">(PREVIEW)</span>
+                @endif
             </div>
         </div>
         <div class="footer-note">
             {{ $school_info->school_name ?? 'School Name' }} - Student Report
+            @if($confidential)
+            | <span style="color: #dc3545;">CONFIDENTIAL DOCUMENT</span>
+            @endif
         </div>
     </div>
 
@@ -514,6 +629,17 @@
             // Add generated date at bottom left
             $date_text = "Generated on: {{ date('d/m/Y H:i:s') }}";
             $pdf->page_text(25, $pdf->get_height() - 25, $date_text, $font, $size);
+
+            // Add confidential watermark to all pages
+            @if($confidential)
+                $confidential_text = "CONFIDENTIAL";
+                $confidential_font = $fontMetrics->getFont("DejaVu Sans");
+                $confidential_size = 40;
+                $confidential_width = $fontMetrics->get_text_width($confidential_text, $confidential_font, $confidential_size);
+                $confidential_x = ($pdf->get_width() - $confidential_width) / 2;
+                $confidential_y = $pdf->get_height() / 2;
+                $pdf->page_text($confidential_x, $confidential_y, $confidential_text, $confidential_font, $confidential_size, array(0,0,0,0.1), 0, 0, -45);
+            @endif
         }
     </script>
 </body>

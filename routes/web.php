@@ -357,6 +357,15 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('studentresults', StudentResultsController::class);
 
 
+
+
+    // Route for checking report generation progress
+    Route::get('/reports/progress', [StudentResultsController::class, 'getReportProgress'])->name('reports.progress');
+
+    // Route for generating report
+    Route::post('/reports/generate', [StudentResultsController::class, 'generateReport'])->name('reports.generate');
+
+
     // Terminal Scoresheet Routes
     // Route::resource('subjectscoresheet', MyScoreSheetController::class);
     Route::get('subjectscoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}', [MyScoreSheetController::class, 'subjectscoresheet'])->name('subjectscoresheet');
