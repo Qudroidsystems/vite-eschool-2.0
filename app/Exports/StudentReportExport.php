@@ -8,7 +8,6 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\WithColumnGrouping;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -19,7 +18,7 @@ use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Carbon\Carbon;
 
-class StudentReportExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithEvents, WithColumnGrouping
+class StudentReportExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithEvents
 {
     protected $data;
     protected $groupedColumns = [];
@@ -62,6 +61,22 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
             'guardian_phone' => 'Guardian Contact Phone',
             'term'           => 'Term',
             'session'        => 'Session',
+            'email'          => 'Email Address',
+            'city'           => 'City',
+            'nationality'    => 'Nationality',
+            'placeofbirth'   => 'Place of Birth',
+            'mother_tongue'  => 'Mother Tongue',
+            'student_category' => 'Student Category',
+            'future_ambition' => 'Future Ambition',
+            'last_school'    => 'Last School',
+            'last_class'     => 'Last Class',
+            'father_occupation' => 'Father\'s Occupation',
+            'mother_occupation' => 'Mother\'s Occupation',
+            'father_city'    => 'Father\'s City',
+            'parent_email'   => 'Parent Email',
+            'parent_address' => 'Parent Address',
+            'nin_number'     => 'NIN Number',
+            'school_house'   => 'School House',
         ];
 
         foreach ($columns as $col) {
@@ -80,10 +95,10 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
             switch ($col) {
                 case 'photo':
                     // Show student initials or photo status
-                    if ($student->has_photo) {
-                        $row[] = $student->photo_initials ?: 'Photo Available';
+                    if (isset($student->picture) && $student->picture !== 'unnamed.jpg') {
+                        $row[] = '✓ Photo';
                     } else {
-                        $row[] = 'No Photo';
+                        $row[] = $this->getStudentInitials($student) ?: 'No Photo';
                     }
                     break;
 
@@ -94,21 +109,27 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
 
                 case 'class':
                     $class = $student->schoolclass ?? 'N/A';
-                    $arm = $student->arm_name ?? '';
+                    $arm = $student->arm_name ?? $student->arm ?? '';
                     $row[] = $arm ? "$class - $arm" : $class;
                     break;
 
                 case 'guardian_phone':
-                    $phone = $student->father_phone ?? $student->mother_phone ?? '';
+                    $phone = $student->father_phone ?? $student->mother_phone ?? $student->guardian_phone ?? '';
                     $row[] = $phone ?: 'N/A';
                     break;
 
                 case 'admission_date':
-                    if ($student->admission_date) {
+                    if (isset($student->admission_date) && $student->admission_date) {
                         try {
                             $row[] = Carbon::parse($student->admission_date)->format('d/m/Y');
                         } catch (\Exception $e) {
                             $row[] = $student->admission_date;
+                        }
+                    } elseif (isset($student->admissionDate) && $student->admissionDate) {
+                        try {
+                            $row[] = Carbon::parse($student->admissionDate)->format('d/m/Y');
+                        } catch (\Exception $e) {
+                            $row[] = $student->admissionDate;
                         }
                     } else {
                         $row[] = 'N/A';
@@ -116,11 +137,26 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                     break;
 
                 case 'dateofbirth':
-                    if ($student->dateofbirth) {
+                    if (isset($student->dateofbirth) && $student->dateofbirth) {
                         try {
                             $row[] = Carbon::parse($student->dateofbirth)->format('d/m/Y');
                         } catch (\Exception $e) {
                             $row[] = $student->dateofbirth;
+                        }
+                    } else {
+                        $row[] = 'N/A';
+                    }
+                    break;
+
+                case 'age':
+                    if (isset($student->age) && $student->age) {
+                        $row[] = $student->age;
+                    } elseif (isset($student->dateofbirth) && $student->dateofbirth) {
+                        try {
+                            $dob = Carbon::parse($student->dateofbirth);
+                            $row[] = $dob->age;
+                        } catch (\Exception $e) {
+                            $row[] = 'N/A';
                         }
                     } else {
                         $row[] = 'N/A';
@@ -133,8 +169,8 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                         if ($student->statusId == 1) $status = 'Old Student';
                         if ($student->statusId == 2) $status = 'New Student';
                     }
-                    if ($student->student_status) {
-                        $status .= ($status ? ' (' . $student->student_status . ')' : $student->student_status);
+                    if (isset($student->student_status) && $student->student_status) {
+                        $status .= ($status ? ' - ' . $student->student_status : $student->student_status);
                     }
                     $row[] = $status ?: 'N/A';
                     break;
@@ -145,46 +181,142 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                     break;
 
                 case 'term':
-                    if ($student->current_term_name) {
+                    if (isset($student->current_term_name) && $student->current_term_name) {
                         $row[] = $student->current_term_name;
-                    } elseif ($student->termid) {
+                    } elseif (isset($student->term_name) && $student->term_name) {
+                        $row[] = $student->term_name;
+                    } elseif (isset($student->termid) && $student->termid) {
                         try {
                             $term = \App\Models\Schoolterm::find($student->termid);
-                            $row[] = $term ? $term->term : 'N/A';
+                            $row[] = $term ? $term->name : 'N/A';
                         } catch (\Exception $e) {
                             $row[] = 'N/A';
                         }
                     } else {
-                        $row[] = 'N/A';
+                        $row[] = $this->data['termName'] ?? 'N/A';
                     }
                     break;
 
                 case 'session':
-                    if ($student->current_session_name) {
+                    if (isset($student->current_session_name) && $student->current_session_name) {
                         $row[] = $student->current_session_name;
-                    } elseif ($student->sessionid) {
+                    } elseif (isset($student->session_name) && $student->session_name) {
+                        $row[] = $student->session_name;
+                    } elseif (isset($student->sessionid) && $student->sessionid) {
                         try {
                             $session = \App\Models\Schoolsession::find($student->sessionid);
-                            $row[] = $session ? $session->session : 'N/A';
+                            $row[] = $session ? $session->name : 'N/A';
                         } catch (\Exception $e) {
                             $row[] = 'N/A';
                         }
                     } else {
-                        $row[] = 'N/A';
+                        $row[] = $this->data['sessionName'] ?? 'N/A';
                     }
+                    break;
+
+                case 'email':
+                    $row[] = $student->email ?? 'N/A';
+                    break;
+
+                case 'city':
+                    $row[] = $student->city ?? 'N/A';
+                    break;
+
+                case 'nationality':
+                    $row[] = $student->nationality ?? 'N/A';
+                    break;
+
+                case 'placeofbirth':
+                    $row[] = $student->placeofbirth ?? 'N/A';
+                    break;
+
+                case 'mother_tongue':
+                    $row[] = $student->mother_tongue ?? 'N/A';
+                    break;
+
+                case 'student_category':
+                    $row[] = $student->student_category ?? 'N/A';
+                    break;
+
+                case 'future_ambition':
+                    $row[] = $student->future_ambition ?? 'N/A';
+                    break;
+
+                case 'last_school':
+                    $row[] = $student->last_school ?? 'N/A';
+                    break;
+
+                case 'last_class':
+                    $row[] = $student->last_class ?? 'N/A';
+                    break;
+
+                case 'father_occupation':
+                    $row[] = $student->father_occupation ?? 'N/A';
+                    break;
+
+                case 'mother_occupation':
+                    $row[] = $student->mother_occupation ?? 'N/A';
+                    break;
+
+                case 'father_city':
+                    $row[] = $student->father_city ?? 'N/A';
+                    break;
+
+                case 'parent_email':
+                    $row[] = $student->parent_email ?? 'N/A';
+                    break;
+
+                case 'parent_address':
+                    $row[] = $student->parent_address ?? 'N/A';
+                    break;
+
+                case 'nin_number':
+                    $row[] = $student->nin_number ?? 'N/A';
+                    break;
+
+                case 'school_house':
+                    $row[] = $student->school_house ?? $student->sport_house ?? 'N/A';
+                    break;
+
+                case 'blood_group':
+                    $row[] = $student->blood_group ?? 'N/A';
+                    break;
+
+                case 'religion':
+                    $row[] = $student->religion ?? 'N/A';
+                    break;
+
+                case 'state':
+                    $row[] = $student->state ?? 'N/A';
+                    break;
+
+                case 'local':
+                    $row[] = $student->local ?? 'N/A';
+                    break;
+
+                case 'phone_number':
+                    $row[] = $student->phone_number ?? 'N/A';
                     break;
 
                 // Handle separate name fields
                 case 'lastname':
-                    $row[] = $student->lastname ?? 'N/A';
+                    $row[] = $student->lastname ?? $student->last_name ?? 'N/A';
                     break;
 
                 case 'firstname':
-                    $row[] = $student->firstname ?? 'N/A';
+                    $row[] = $student->firstname ?? $student->first_name ?? 'N/A';
                     break;
 
                 case 'othername':
-                    $row[] = $student->othername ?? 'N/A';
+                    $row[] = $student->othername ?? $student->other_name ?? $student->middle_name ?? 'N/A';
+                    break;
+
+                case 'father_name':
+                    $row[] = $student->father_name ?? 'N/A';
+                    break;
+
+                case 'mother_name':
+                    $row[] = $student->mother_name ?? 'N/A';
                     break;
 
                 default:
@@ -196,6 +328,20 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
         }
 
         return $row;
+    }
+
+    /**
+     * Get student initials for photo placeholder
+     */
+    private function getStudentInitials($student)
+    {
+        $first = $student->firstname ?? $student->first_name ?? '';
+        $last = $student->lastname ?? $student->last_name ?? '';
+
+        $firstInitial = !empty($first) ? strtoupper(substr($first, 0, 1)) : '';
+        $lastInitial = !empty($last) ? strtoupper(substr($last, 0, 1)) : '';
+
+        return $firstInitial . $lastInitial ?: 'ST';
     }
 
     /**
@@ -220,9 +366,19 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
             return $student->$camelCase;
         }
 
+        // Try as method
+        if (method_exists($student, $property)) {
+            try {
+                return $student->$property();
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+
         // Common property mappings
         $mappings = [
-            'phone_number' => ['phone_number', 'phone'],
+            'admissionNo' => ['admissionNo', 'admission_no', 'admission_number'],
+            'phone_number' => ['phone_number', 'phone', 'mobile'],
             'blood_group' => ['blood_group', 'bloodgroup'],
             'mother_tongue' => ['mother_tongue', 'mothertongue'],
             'father_name' => ['father_name', 'father'],
@@ -236,12 +392,28 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
             'last_school' => ['last_school', 'lastschool'],
             'last_class' => ['last_class', 'lastclass'],
             'reason_for_leaving' => ['reason_for_leaving', 'reasonforleaving'],
+            'school_house' => ['school_house', 'schoolhouse', 'sport_house', 'house'],
+            'student_category' => ['student_category', 'category'],
+            'future_ambition' => ['future_ambition', 'ambition'],
+            'nin_number' => ['nin_number', 'nin', 'national_id'],
+            'admission_date' => ['admission_date', 'admissionDate'],
+            'dateofbirth' => ['dateofbirth', 'dob', 'birth_date'],
+            'placeofbirth' => ['placeofbirth', 'birth_place'],
+            'student_status' => ['student_status', 'status'],
+            'statusId' => ['statusId', 'status_id', 'student_status_id'],
         ];
 
         if (isset($mappings[$property])) {
             foreach ($mappings[$property] as $mappedProperty) {
                 if (property_exists($student, $mappedProperty)) {
                     return $student->$mappedProperty;
+                }
+                if (method_exists($student, $mappedProperty)) {
+                    try {
+                        return $student->$mappedProperty();
+                    } catch (\Exception $e) {
+                        continue;
+                    }
                 }
             }
         }
@@ -259,11 +431,12 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
 
         $groupDefinitions = [
             'Student Information' => ['photo', 'admissionNo', 'firstname', 'lastname', 'othername', 'gender', 'dateofbirth', 'age'],
-            'Academic Information' => ['class', 'status', 'term', 'session', 'admission_date'],
-            'Personal Information' => ['phone_number', 'email', 'blood_group', 'religion', 'mother_tongue'],
+            'Academic Information' => ['class', 'status', 'term', 'session', 'admission_date', 'student_category'],
+            'Contact Information' => ['phone_number', 'email', 'parent_email', 'parent_address', 'guardian_phone'],
             'Geographical Information' => ['state', 'local', 'city', 'nationality', 'placeofbirth'],
-            'Parent Information' => ['father_name', 'mother_name', 'guardian_phone', 'parent_email', 'parent_address'],
-            'Additional Information' => ['student_category', 'future_ambition', 'last_school', 'last_class'],
+            'Parent Information' => ['father_name', 'mother_name', 'father_phone', 'mother_phone', 'father_occupation', 'mother_occupation', 'father_city'],
+            'Personal Information' => ['blood_group', 'religion', 'mother_tongue', 'nin_number', 'school_house'],
+            'Additional Information' => ['future_ambition', 'last_school', 'last_class', 'reason_for_leaving'],
         ];
 
         foreach ($groupDefinitions as $groupName => $groupColumns) {
@@ -290,7 +463,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                 'fill' => [
                     'fillType' => Fill::FILL_SOLID,
                     'startColor' => [
-                        'rgb' => $this->data['confidential'] ? 'DC3545' : '1E40AF'
+                        'rgb' => isset($this->data['confidential']) && $this->data['confidential'] ? 'DC3545' : '1E40AF'
                     ]
                 ],
                 'alignment' => [
@@ -357,7 +530,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                                 'bold' => true,
                                 'size' => 16,
                                 'color' => [
-                                    'rgb' => $this->data['confidential'] ? 'DC3545' : '1E40AF'
+                                    'rgb' => isset($this->data['confidential']) && $this->data['confidential'] ? 'DC3545' : '1E40AF'
                                 ]
                             ],
                             'alignment' => [
@@ -366,7 +539,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                             ]
                         ]);
 
-                        if ($schoolInfo->school_motto) {
+                        if (isset($schoolInfo->school_motto) && $schoolInfo->school_motto) {
                             $sheet->setCellValue('A2', $schoolInfo->school_motto);
                             $sheet->mergeCells('A2:' . $highestColumn . '2');
                             $sheet->getStyle('A2')->applyFromArray([
@@ -380,13 +553,13 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                             ]);
                         }
 
-                        $details = 'Class: ' . $this->data['className'] .
-                                  ' | Term: ' . $this->data['termName'] .
-                                  ' | Session: ' . $this->data['sessionName'] .
-                                  ' | Generated: ' . $this->data['generated'] .
-                                  ' | Total Students: ' . $this->data['total'];
+                        $details = 'Class: ' . ($this->data['className'] ?? 'All Classes') .
+                                  ' | Term: ' . ($this->data['termName'] ?? 'All Terms') .
+                                  ' | Session: ' . ($this->data['sessionName'] ?? 'All Sessions') .
+                                  ' | Generated: ' . ($this->data['generated'] ?? now()->format('d/m/Y H:i:s')) .
+                                  ' | Total Students: ' . ($this->data['total'] ?? 0);
 
-                        if ($this->data['confidential']) {
+                        if (isset($this->data['confidential']) && $this->data['confidential']) {
                             $details .= ' | CONFIDENTIAL';
                         }
 
@@ -398,7 +571,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                         ]);
                     } else {
                         $title = 'STUDENT MASTER LIST REPORT';
-                        if ($this->data['confidential']) {
+                        if (isset($this->data['confidential']) && $this->data['confidential']) {
                             $title = 'CONFIDENTIAL - ' . $title;
                         }
 
@@ -409,7 +582,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                                 'bold' => true,
                                 'size' => 16,
                                 'color' => [
-                                    'rgb' => $this->data['confidential'] ? 'DC3545' : '1E40AF'
+                                    'rgb' => isset($this->data['confidential']) && $this->data['confidential'] ? 'DC3545' : '1E40AF'
                                 ]
                             ],
                             'alignment' => [
@@ -418,11 +591,11 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                             ]
                         ]);
 
-                        $details = 'Class: ' . $this->data['className'] .
-                                  ' | Term: ' . $this->data['termName'] .
-                                  ' | Session: ' . $this->data['sessionName'] .
-                                  ' | Generated: ' . $this->data['generated'] .
-                                  ' | Total Students: ' . $this->data['total'];
+                        $details = 'Class: ' . ($this->data['className'] ?? 'All Classes') .
+                                  ' | Term: ' . ($this->data['termName'] ?? 'All Terms') .
+                                  ' | Session: ' . ($this->data['sessionName'] ?? 'All Sessions') .
+                                  ' | Generated: ' . ($this->data['generated'] ?? now()->format('d/m/Y H:i:s')) .
+                                  ' | Total Students: ' . ($this->data['total'] ?? 0);
                         $sheet->setCellValue('A2', $details);
                         $sheet->mergeCells('A2:' . $highestColumn . '2');
                         $sheet->getStyle('A2')->applyFromArray([
@@ -431,8 +604,8 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                         ]);
                     }
                 } else {
-                    $title = 'STUDENT MASTER LIST REPORT - ' . $this->data['className'];
-                    if ($this->data['confidential']) {
+                    $title = 'STUDENT MASTER LIST REPORT - ' . ($this->data['className'] ?? 'All Classes');
+                    if (isset($this->data['confidential']) && $this->data['confidential']) {
                         $title = 'CONFIDENTIAL - ' . $title;
                     }
 
@@ -443,7 +616,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                             'bold' => true,
                             'size' => 16,
                             'color' => [
-                                'rgb' => $this->data['confidential'] ? 'DC3545' : '1E40AF'
+                                'rgb' => isset($this->data['confidential']) && $this->data['confidential'] ? 'DC3545' : '1E40AF'
                             ]
                         ],
                         'alignment' => [
@@ -452,12 +625,12 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                         ]
                     ]);
 
-                    $details = 'Generated: ' . $this->data['generated'] .
-                              ' | Total Students: ' . $this->data['total'] .
-                              ' | Males: ' . $this->data['males'] .
-                              ' | Females: ' . $this->data['females'] .
-                              ' | Term: ' . $this->data['termName'] .
-                              ' | Session: ' . $this->data['sessionName'];
+                    $details = 'Generated: ' . ($this->data['generated'] ?? now()->format('d/m/Y H:i:s')) .
+                              ' | Total Students: ' . ($this->data['total'] ?? 0) .
+                              ' | Males: ' . ($this->data['males'] ?? 0) .
+                              ' | Females: ' . ($this->data['females'] ?? 0) .
+                              ' | Term: ' . ($this->data['termName'] ?? 'All Terms') .
+                              ' | Session: ' . ($this->data['sessionName'] ?? 'All Sessions');
                     $sheet->setCellValue('A2', $details);
                     $sheet->mergeCells('A2:' . $highestColumn . '2');
                     $sheet->getStyle('A2')->applyFromArray([
@@ -515,6 +688,9 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                 // Empty row before header
                 $sheet->setCellValue('A6', '');
 
+                // Add column group headers (custom implementation)
+                $this->addColumnGroups($sheet, 6, $highestColumnIndex);
+
                 // Auto-size columns
                 foreach (range('A', $highestColumn) as $column) {
                     $sheet->getColumnDimension($column)->setAutoSize(true);
@@ -529,16 +705,18 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                 // Add filter to header row
                 $sheet->setAutoFilter('A7:' . $highestColumn . '7');
 
-                // Add column groups headers
-                $this->addColumnGroups($sheet, 6, $highestColumnIndex);
-
                 // Add page setup for printing
                 $sheet->getPageSetup()->setFitToWidth(1);
                 $sheet->getPageSetup()->setFitToHeight(0);
+                $sheet->getPageSetup()->setOrientation(
+                    ($this->data['orientation'] ?? 'portrait') === 'landscape'
+                        ? \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE
+                        : \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT
+                );
 
                 // Add header and footer
                 $headerText = '&C&"Arial,Bold"STUDENT MASTER LIST REPORT';
-                if ($this->data['confidential']) {
+                if (isset($this->data['confidential']) && $this->data['confidential']) {
                     $headerText .= ' - CONFIDENTIAL';
                 }
                 $headerText .= '&RPage &P of &N';
@@ -550,7 +728,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                              '&CGenerated on: ' . date('d/m/Y H:i:s') .
                              '&RPage &P of &N';
 
-                if ($this->data['confidential']) {
+                if (isset($this->data['confidential']) && $this->data['confidential']) {
                     $footerText .= '&X&"Arial,Bold"CONFIDENTIAL';
                 }
 
@@ -558,7 +736,7 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
                     ->setOddFooter($footerText);
 
                 // Add confidential watermark
-                if ($this->data['confidential']) {
+                if (isset($this->data['confidential']) && $this->data['confidential']) {
                     $this->addConfidentialWatermark($sheet);
                 }
             }
@@ -644,28 +822,20 @@ class StudentReportExport implements FromCollection, WithHeadings, WithMapping, 
      */
     private function addConfidentialWatermark($sheet)
     {
-        // Add a background text effect
-        $highestRow = $sheet->getHighestRow();
-        $highestColumn = $sheet->getHighestColumn();
-
-        // Add a shape/text box with watermark
-        $sheet->getPageSetup()->setRowsToRepeatAtTopToStart(1);
-
-        // Alternative: Add a header/footer watermark
+        // Add a background text effect using header/footer
         $sheet->getHeaderFooter()
             ->setOddHeader('&C&"Arial,Bold"&44&KFF0000CONFIDENTIAL');
-    }
 
-    public function columnGroupings(): array
-    {
-        $groupings = [];
-
-        foreach ($this->groupedColumns as $groupName => $columns) {
-            if (!empty($columns)) {
-                $groupings[] = new \Maatwebsite\Excel\Sheet\Group($columns, $groupName);
-            }
-        }
-
-        return $groupings;
+        // Alternative: Add text box watermark
+        $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
+        $drawing->setName('Watermark');
+        $drawing->setDescription('Watermark');
+        $drawing->setPath(null); // No image
+        $drawing->setCoordinates('A1');
+        $drawing->setOffsetX(100);
+        $drawing->setOffsetY(100);
+        $drawing->setWidth(400);
+        $drawing->setHeight(200);
+        $drawing->setWorksheet($sheet);
     }
 }
