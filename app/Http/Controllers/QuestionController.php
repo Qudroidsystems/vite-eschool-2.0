@@ -297,6 +297,7 @@ class QuestionController extends Controller
             'image' => $question->image,
             'marks' => $question->marks,
             'is_reusable' => $question->is_reusable,
+            'created_at' => $question->created_at,
             'options' => $question->options->map(function($option) {
                 return [
                     'option_text' => $option->option_text,
@@ -334,31 +335,29 @@ class QuestionController extends Controller
 
     public function update(Request $request, Question $question)
     {
-        $type = $question->type; // Use model's fixed type
+        \Log::info('=== UPDATING QUESTION ===');
+        \Log::info('Question ID: ' . $question->id);
+        \Log::info('Request data: ' . json_encode($request->all()));
+
+        // Get the original question type - don't allow type change on update
+        $type = $question->type;
 
         $rules = [
             'question_text' => 'required|string',
-            'correct_option' => [
-                'required',
-                function ($attribute, $value, $fail) use ($type) {
-                    if ($type === 'mcq' && !in_array($value, ['a', 'b', 'c', 'd', 'e'])) {
-                        $fail("The selected correct option for MCQ must be one of A, B, C, D, or E. Received: '$value'");
-                    } elseif ($type === 'true_false' && !in_array($value, ['true', 'false'])) {
-                        $fail("The selected correct option for True/False must be True or False. Received: '$value'");
-                    } elseif ($type === 'short_answer' && $value !== 'answer') {
-                        $fail("The selected correct option for Short Answer must be 'answer'. Received: '$value'");
-                    }
-                },
-            ],
             'exam_id' => 'required|exists:exams,id',
             'marks' => 'nullable|numeric|min:0.1',
             'is_reusable' => 'nullable|boolean',
         ];
 
+        // Add correct_option validation based on type
         if ($type === 'mcq') {
+            $rules['correct_option'] = 'required|in:a,b,c,d,e';
             $rules['options'] = 'required|array';
             $rules['options.*.option_text'] = 'nullable|string';
+        } elseif ($type === 'true_false') {
+            $rules['correct_option'] = 'required|in:true,false';
         } elseif ($type === 'short_answer') {
+            $rules['correct_option'] = 'required|in:answer';
             $rules['options.answer.option_text'] = 'required|string';
         }
 
@@ -380,15 +379,16 @@ class QuestionController extends Controller
         }
 
         if ($validator->fails()) {
+            \Log::error('Validation failed: ' . json_encode($validator->errors()->all()));
             return response()->json([
                 'success' => false,
                 'errors' => $validator->errors()->all()
-            ]);
+            ], 422);
         }
 
         $validated = $validator->validated();
 
-        // Update question (no type change)
+        // Update question (don't change type)
         $question->update([
             'question_text' => $validated['question_text'],
             'exam_id' => $validated['exam_id'],
@@ -398,44 +398,65 @@ class QuestionController extends Controller
 
         // Handle image upload
         if ($request->hasFile('image')) {
+            // Delete old image
             if ($question->image) {
                 Storage::disk('public')->delete($question->image);
             }
-            $question->update([
-                'image' => $request->file('image')->store('question_images', 'public')
-            ]);
-        } elseif ($request->has('remove_image')) {
+            // Upload new image
+            $imagePath = $request->file('image')->store('question_images', 'public');
+            $question->update(['image' => $imagePath]);
+        }
+
+        // Handle image removal
+        if ($request->has('remove_image') && $request->remove_image == '1') {
             if ($question->image) {
                 Storage::disk('public')->delete($question->image);
             }
             $question->update(['image' => null]);
         }
 
-        // Update options
+        // Delete all existing options and recreate them
         $question->options()->delete();
 
+        // Create new options based on type
         if ($type === 'mcq') {
+            \Log::info('Updating MCQ options');
+            \Log::info('Correct option from request: ' . $request->correct_option);
+
             foreach ($request->options as $key => $option) {
                 if (!empty(trim($option['option_text'] ?? ''))) {
+                    $isCorrect = ($request->correct_option === $key);
+                    \Log::info("Option {$key}: is_correct=" . ($isCorrect ? 'true' : 'false'));
+
                     $question->options()->create([
                         'option_text' => $option['option_text'],
-                        'is_correct' => $request->correct_option === $key,
-                        'label' => $key,
+                        'is_correct' => $isCorrect,
+                        'label' => $key, // 'a', 'b', 'c', 'd', 'e'
                     ]);
                 }
             }
         } elseif ($type === 'true_false') {
-            $question->options()->createMany([
-                ['option_text' => 'True', 'is_correct' => $request->correct_option === 'true', 'label' => 'true'],
-                ['option_text' => 'False', 'is_correct' => $request->correct_option === 'false', 'label' => 'false']
+            \Log::info('Updating True/False options. Correct option: ' . $request->correct_option);
+            $question->options()->create([
+                'option_text' => 'True',
+                'is_correct' => $request->correct_option === 'true',
+                'label' => 'true',
+            ]);
+            $question->options()->create([
+                'option_text' => 'False',
+                'is_correct' => $request->correct_option === 'false',
+                'label' => 'false',
             ]);
         } elseif ($type === 'short_answer') {
+            \Log::info('Updating Short Answer option');
             $question->options()->create([
                 'option_text' => $request->input('options.answer.option_text'),
                 'is_correct' => true,
                 'label' => 'answer',
             ]);
         }
+
+        \Log::info('Question updated successfully');
 
         return response()->json([
             'success' => true,
@@ -470,24 +491,6 @@ class QuestionController extends Controller
         ->get();
 
         \Log::info('Total exams found: ' . $exams->count());
-
-        // Debug each exam
-        $exams->each(function($exam, $index) {
-            \Log::info("Exam #{$index}:");
-            \Log::info("  ID: {$exam->id}");
-            \Log::info("  Title: {$exam->title}");
-            \Log::info("  Subject ID: " . ($exam->subject_id ?: 'NULL'));
-            \Log::info("  Has Subject Relation: " . ($exam->relationLoaded('subject') ? 'YES' : 'NO'));
-
-            if ($exam->subject) {
-                \Log::info("  Subject Object: " . json_encode($exam->subject->toArray()));
-                \Log::info("  Subject Name: " . $exam->subject->subject);
-            } else {
-                \Log::info("  Subject Object: NULL");
-            }
-
-            \Log::info("  Class: " . ($exam->schoolclass ? $exam->schoolclass->schoolclass : 'No Class'));
-        });
 
         $formattedExams = $exams->map(function($exam) {
             return [

@@ -323,8 +323,7 @@
                                                             <i class="ri-eye-line"></i>
                                                         </button>
                                                         <button type="button" class="btn btn-outline-warning edit-question"
-                                                                data-id="{{ $question->id }}"
-                                                                data-exam-id="{{ $question->exam_id }}">
+                                                                data-id="{{ $question->id }}">
                                                             <i class="ri-edit-line"></i>
                                                         </button>
                                                         <button type="button" class="btn btn-outline-info duplicate-question"
@@ -1378,7 +1377,7 @@ $(document).ready(function() {
 
         // Clear previous form
         $('#question-form')[0].reset();
-        $('#method-field').html('');
+        $('#method-field').empty();
         $('#question_id_field').val('');
         $('#selected-exams-field').empty();
         $('#form-errors').addClass('d-none').find('#error-list').empty();
@@ -1387,6 +1386,25 @@ $(document).ready(function() {
         $('#image').val('');
         $('#image-preview').hide();
         $('#preview-img').attr('src', '#');
+
+        // Clear Quill editors
+        if (questionTextEditor) {
+            questionTextEditor = null;
+        }
+        if (shortAnswerEditor) {
+            shortAnswerEditor = null;
+        }
+
+        // Reset editor containers
+        const editorContainer = document.getElementById('question-text-editor');
+        if (editorContainer) {
+            editorContainer.innerHTML = '';
+        }
+
+        const saEditorContainer = document.getElementById('short-answer-editor');
+        if (saEditorContainer) {
+            saEditorContainer.innerHTML = '';
+        }
 
         // Set modal title
         if (isEditMode) {
@@ -1443,12 +1461,16 @@ $(document).ready(function() {
         loadQuestionTypeOptions('mcq');
 
         // Initialize Quill editor for question text
-        initializeQuestionTextEditor();
+        setTimeout(function() {
+            initializeQuestionTextEditor(null);
+        }, 200);
     }
 
-    // Function to load question type options
+    // Function to load question type options - FIXED
     function loadQuestionTypeOptions(type, options = null) {
         console.log('Loading question type options for:', type, 'with options:', options);
+
+        // Clear the container first
         $('#question-options-container').empty();
 
         let templateId = '';
@@ -1470,52 +1492,63 @@ $(document).ready(function() {
             $('#question-options-container').append(content);
 
             // Populate options if provided (for edit mode)
-            if (options && type === 'mcq') {
-                populateMCQOptions(options);
-            } else if (options && type === 'true_false') {
-                populateTrueFalseOptions(options);
-            } else if (options && type === 'short_answer') {
-                populateShortAnswerOptions(options);
+            if (options && options.length > 0) {
+                setTimeout(function() {
+                    if (type === 'mcq') {
+                        populateMCQOptions(options);
+                    } else if (type === 'true_false') {
+                        populateTrueFalseOptions(options);
+                    } else if (type === 'short_answer') {
+                        populateShortAnswerOptions(options);
+                    }
+                }, 100);
             }
 
             // Initialize specific options
             if (type === 'short_answer') {
-                initializeShortAnswerEditor();
-                if (options && options[0]) {
-                    shortAnswerEditor.root.innerHTML = options[0].option_text;
-                    $('#short_answer_text').val(options[0].option_text);
-                }
+                setTimeout(function() {
+                    initializeShortAnswerEditor();
+                    if (options && options[0]) {
+                        shortAnswerEditor.root.innerHTML = options[0].option_text;
+                        $('#short_answer_text').val(options[0].option_text);
+                    }
+                }, 150);
             }
         }
     }
 
-    // Function to populate MCQ options
+    // Function to populate MCQ options - FIXED
     function populateMCQOptions(options) {
         console.log('Populating MCQ options:', options);
 
-        // Find correct option
-        let correctOption = '';
+        // Find which option is correct
+        let correctOptionLabel = '';
         options.forEach(option => {
             if (option.is_correct) {
-                correctOption = option.label;
+                correctOptionLabel = option.label ? option.label.toLowerCase() : '';
+                console.log('Correct option label:', correctOptionLabel);
             }
         });
 
         // Populate each option field
         options.forEach(option => {
-            const label = option.label;
-            const fieldName = label.toLowerCase();
-            const $optionField = $(`input[name="options[${fieldName}][option_text]"]`);
+            const label = option.label ? option.label.toLowerCase() : '';
+            const $optionField = $(`input[name="options[${label}][option_text]"]`);
 
             if ($optionField.length) {
                 $optionField.val(option.option_text);
-            }
-
-            // Check the correct option radio button
-            if (option.is_correct) {
-                $(`input[name="correct_option"][value="${fieldName}"]`).prop('checked', true);
+                console.log(`Set option ${label} to:`, option.option_text);
             }
         });
+
+        // Check the correct option radio button
+        if (correctOptionLabel) {
+            console.log('Setting correct option to:', correctOptionLabel);
+            $(`input[name="correct_option"][value="${correctOptionLabel}"]`).prop('checked', true);
+
+            // Also check the "is-correct" class if using that approach
+            $(`input.is-correct[value="${correctOptionLabel}"]`).prop('checked', true);
+        }
     }
 
     // Function to populate True/False options
@@ -1526,12 +1559,14 @@ $(document).ready(function() {
         let correctOption = '';
         options.forEach(option => {
             if (option.is_correct) {
-                correctOption = option.label;
+                correctOption = option.label ? option.label.toLowerCase() : '';
             }
         });
 
         // Check the correct radio button
-        $(`input[name="correct_option"][value="${correctOption}"]`).prop('checked', true);
+        if (correctOption) {
+            $(`input[name="correct_option"][value="${correctOption}"]`).prop('checked', true);
+        }
     }
 
     // Function to populate Short Answer options
@@ -1540,17 +1575,19 @@ $(document).ready(function() {
 
         if (options && options[0]) {
             // The answer is stored in option_text for short answer
-            if (shortAnswerEditor) {
-                shortAnswerEditor.root.innerHTML = options[0].option_text;
-                $('#short_answer_text').val(options[0].option_text);
-            }
+            setTimeout(function() {
+                if (shortAnswerEditor) {
+                    shortAnswerEditor.root.innerHTML = options[0].option_text;
+                    $('#short_answer_text').val(options[0].option_text);
+                }
 
-            // Check the correct option (should always be 'answer' for short answer)
-            $('input[name="correct_option"][value="answer"]').prop('checked', true);
+                // Check the correct option (should always be 'answer' for short answer)
+                $('input[name="correct_option"][value="answer"]').prop('checked', true);
+            }, 100);
         }
     }
 
-    // Initialize Quill editor for question text
+    // Initialize Quill editor for question text - FIXED
     function initializeQuestionTextEditor(initialContent = null) {
         console.log('Initializing Quill editor with content:', initialContent);
 
@@ -1561,46 +1598,62 @@ $(document).ready(function() {
             return;
         }
 
-        // Clear the container first
-        editorContainer.innerHTML = '';
-
-        // Initialize new editor
-        questionTextEditor = new Quill('#question-text-editor', {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    [{ 'script': 'sub'}, { 'script': 'super' }],
-                    [{ 'indent': '-1'}, { 'indent': '+1' }],
-                    [{ 'direction': 'rtl' }],
-                    [{ 'size': ['small', false, 'large', 'huge'] }],
-                    [{ 'color': [] }, { 'background': [] }],
-                    [{ 'font': [] }],
-                    [{ 'align': [] }],
-                    ['clean']
-                ]
-            },
-            placeholder: 'Enter your question here...'
-        });
-
-        // Set initial content if provided
-        if (initialContent) {
-            console.log('Setting initial content for Quill editor');
-            questionTextEditor.root.innerHTML = initialContent;
-            $('#question_text').val(initialContent);
+        // Destroy existing Quill instance if it exists
+        if (questionTextEditor) {
+            try {
+                questionTextEditor = null;
+            } catch(e) {
+                console.error('Error destroying Quill:', e);
+            }
         }
 
-        // Update hidden textarea with editor content
-        questionTextEditor.on('text-change', function() {
-            $('#question_text').val(questionTextEditor.root.innerHTML);
-        });
+        // Clear the container completely
+        editorContainer.innerHTML = '';
 
-        console.log('Quill editor initialized successfully');
+        // Small delay to ensure DOM is ready
+        setTimeout(function() {
+            try {
+                // Initialize new editor
+                questionTextEditor = new Quill('#question-text-editor', {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            [{ 'script': 'sub'}, { 'script': 'super' }],
+                            [{ 'indent': '-1'}, { 'indent': '+1' }],
+                            [{ 'direction': 'rtl' }],
+                            [{ 'size': ['small', false, 'large', 'huge'] }],
+                            [{ 'color': [] }, { 'background': [] }],
+                            [{ 'font': [] }],
+                            [{ 'align': [] }],
+                            ['clean']
+                        ]
+                    },
+                    placeholder: 'Enter your question here...'
+                });
+
+                // Set initial content if provided
+                if (initialContent) {
+                    console.log('Setting initial content for Quill editor');
+                    questionTextEditor.root.innerHTML = initialContent;
+                    $('#question_text').val(initialContent);
+                }
+
+                // Update hidden textarea with editor content
+                questionTextEditor.on('text-change', function() {
+                    $('#question_text').val(questionTextEditor.root.innerHTML);
+                });
+
+                console.log('Quill editor initialized successfully');
+            } catch (e) {
+                console.error('Error initializing Quill:', e);
+            }
+        }, 100);
     }
 
-    // Initialize Quill editor for short answer
+    // Initialize Quill editor for short answer - FIXED
     function initializeShortAnswerEditor() {
         // Check if editor container exists
         const editorContainer = document.getElementById('short-answer-editor');
@@ -1609,26 +1662,41 @@ $(document).ready(function() {
             return;
         }
 
-        // Clear the container first
+        // Destroy existing instance
+        if (shortAnswerEditor) {
+            try {
+                shortAnswerEditor = null;
+            } catch(e) {
+                console.error('Error destroying short answer editor:', e);
+            }
+        }
+
+        // Clear the container
         editorContainer.innerHTML = '';
 
-        // Initialize new editor
-        shortAnswerEditor = new Quill('#short-answer-editor', {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['clean']
-                ]
-            },
-            placeholder: 'Enter the correct answer...'
-        });
+        setTimeout(function() {
+            try {
+                // Initialize new editor
+                shortAnswerEditor = new Quill('#short-answer-editor', {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            ['bold', 'italic', 'underline'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['clean']
+                        ]
+                    },
+                    placeholder: 'Enter the correct answer...'
+                });
 
-        // Update hidden textarea with editor content
-        shortAnswerEditor.on('text-change', function() {
-            $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
-        });
+                // Update hidden textarea with editor content
+                shortAnswerEditor.on('text-change', function() {
+                    $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
+                });
+            } catch (e) {
+                console.error('Error initializing short answer editor:', e);
+            }
+        }, 100);
     }
 
     // Handle question type change
@@ -1663,9 +1731,14 @@ $(document).ready(function() {
         $('#image').val('');
         $('#image-preview').hide();
         $('#preview-img').attr('src', '#');
+
+        // Add hidden field to indicate image removal in edit mode
+        if ($('#question_id_field').val()) {
+            $('#question-form').append('<input type="hidden" name="remove_image" value="1">');
+        }
     });
 
-    // Handle form submission
+    // Handle form submission - FIXED
     $('#question-form').submit(function(e) {
         e.preventDefault();
 
@@ -1680,11 +1753,15 @@ $(document).ready(function() {
 
         // Update hidden textareas with editor content
         if (questionTextEditor) {
-            $('#question_text').val(questionTextEditor.root.innerHTML);
+            const questionText = questionTextEditor.root.innerHTML;
+            $('#question_text').val(questionText);
+            console.log('Question text from editor:', questionText.substring(0, 100));
         }
 
         if (shortAnswerEditor) {
-            $('#short_answer_text').val(shortAnswerEditor.root.innerHTML);
+            const answerText = shortAnswerEditor.root.innerHTML;
+            $('#short_answer_text').val(answerText);
+            console.log('Short answer from editor:', answerText.substring(0, 100));
         }
 
         // Validate form
@@ -1697,7 +1774,13 @@ $(document).ready(function() {
             formData.append('_method', 'PUT');
         }
 
-        console.log('Form data:', Object.fromEntries(formData));
+        // Log form data for debugging
+        console.log('Submitting form data:');
+        for (let pair of formData.entries()) {
+            if (pair[0].includes('options') || pair[0].includes('correct_option')) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+        }
 
         $('#save-question-btn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
         $('#form-errors').addClass('d-none');
@@ -1726,7 +1809,11 @@ $(document).ready(function() {
                 console.error('Error response:', xhr.responseText);
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON.errors;
-                    showFormErrors(Object.values(errors).flat());
+                    const errorMessages = [];
+                    for (let key in errors) {
+                        errorMessages.push(...errors[key]);
+                    }
+                    showFormErrors(errorMessages);
                 } else if (xhr.status === 500) {
                     showFormErrors(['Server error. Please check the logs for details.']);
                 } else {
@@ -1763,7 +1850,7 @@ $(document).ready(function() {
         console.log('Submitting to:', url);
 
         $('#save-and-add-another-btn, #save-question-btn').prop('disabled', true)
-            .find('.spinner-border').removeClass('d-none');
+            .html('<span class="spinner-border spinner-border-sm"></span> Saving...');
         $('#form-errors').addClass('d-none');
 
         $.ajax({
@@ -1782,25 +1869,29 @@ $(document).ready(function() {
 
                     // Re-enable buttons
                     $('#save-and-add-another-btn, #save-question-btn').prop('disabled', false)
-                        .find('.spinner-border').addClass('d-none');
+                        .html('<i class="ri-save-line me-1"></i> Save Question');
                 } else {
                     showFormErrors(response.errors || ['An error occurred']);
                     $('#save-and-add-another-btn, #save-question-btn').prop('disabled', false)
-                        .find('.spinner-border').addClass('d-none');
+                        .html('<i class="ri-save-line me-1"></i> Save Question');
                 }
             },
             error: function(xhr) {
                 console.error('Error response:', xhr.responseText);
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON.errors;
-                    showFormErrors(Object.values(errors).flat());
+                    const errorMessages = [];
+                    for (let key in errors) {
+                        errorMessages.push(...errors[key]);
+                    }
+                    showFormErrors(errorMessages);
                 } else if (xhr.status === 500) {
                     showFormErrors(['Server error. Please check the logs for details.']);
                 } else {
                     showFormErrors(['An unexpected error occurred. Please try again.']);
                 }
                 $('#save-and-add-another-btn, #save-question-btn').prop('disabled', false)
-                    .find('.spinner-border').addClass('d-none');
+                    .html('<i class="ri-save-line me-1"></i> Save Question');
             }
         });
     });
@@ -1835,9 +1926,11 @@ $(document).ready(function() {
         loadQuestionTypeOptions('mcq');
 
         // Focus on question text editor
-        if (questionTextEditor) {
-            questionTextEditor.focus();
-        }
+        setTimeout(function() {
+            if (questionTextEditor) {
+                questionTextEditor.focus();
+            }
+        }, 200);
     }
 
     // Validate question form
@@ -1864,7 +1957,7 @@ $(document).ready(function() {
                 return $(this).val().trim() !== '';
             }).length;
 
-            const correctSelected = $('.is-correct:checked').length;
+            const correctSelected = $('input[name="correct_option"]:checked').length;
 
             if (filledOptions < 2) {
                 errors.push('At least 2 MCQ options must be filled');
@@ -1875,7 +1968,7 @@ $(document).ready(function() {
                 isValid = false;
             }
         } else if (type === 'true_false') {
-            const correctSelected = $('.is-correct:checked').length;
+            const correctSelected = $('input[name="correct_option"]:checked').length;
             if (correctSelected === 0) {
                 errors.push('Please select correct answer for True/False');
                 isValid = false;
@@ -2106,10 +2199,10 @@ $(document).ready(function() {
         const questionId = $(this).data('id');
         console.log('EDITING QUESTION ID:', questionId);
 
-        // Show the modal first (empty)
-        $('#questionFormModal').modal('show');
+        // Store the question ID for later use
+        window.currentEditQuestionId = questionId;
 
-        // Show loading state
+        // Show loading state in the modal
         $('#question-options-container').html(`
             <div class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
@@ -2119,6 +2212,32 @@ $(document).ready(function() {
             </div>
         `);
 
+        // Clear any existing Quill instances
+        if (questionTextEditor) {
+            try {
+                questionTextEditor = null;
+            } catch(e) {}
+        }
+        if (shortAnswerEditor) {
+            try {
+                shortAnswerEditor = null;
+            } catch(e) {}
+        }
+
+        // Reset the editor container
+        const editorContainer = document.getElementById('question-text-editor');
+        if (editorContainer) {
+            editorContainer.innerHTML = '';
+        }
+
+        const saEditorContainer = document.getElementById('short-answer-editor');
+        if (saEditorContainer) {
+            saEditorContainer.innerHTML = '';
+        }
+
+        // Show the modal first
+        $('#questionFormModal').modal('show');
+
         // Load question data via AJAX
         $.ajax({
             url: '{{ url("questions") }}/' + questionId + '/edit',
@@ -2127,6 +2246,9 @@ $(document).ready(function() {
                 console.log('EDIT RESPONSE:', response);
 
                 if (response.success) {
+                    // Remove any existing event handlers to prevent duplication
+                    $('#questionFormModal').off('shown.bs.modal');
+
                     // Populate the modal with question data
                     populateEditForm(response);
                 } else {
@@ -2146,14 +2268,15 @@ $(document).ready(function() {
     function populateEditForm(data) {
         console.log('POPULATING EDIT FORM WITH DATA:', data);
 
-        // Clear form
+        // Clear form completely
         $('#question-form')[0].reset();
-        $('#method-field').html('');
-        $('#question_id_field').val('');
+
+        // Clear hidden fields
+        $('#method-field').empty();
         $('#selected-exams-field').empty();
         $('#form-errors').addClass('d-none').find('#error-list').empty();
 
-        // Set modal title
+        // Set modal title and hide unnecessary buttons
         $('#modal-title-text').text('Edit');
         $('#selected-exam-title').text('');
         $('#multiple-exams-badge').hide();
@@ -2167,6 +2290,8 @@ $(document).ready(function() {
             <input type="hidden" name="_method" value="PUT">
             <input type="hidden" name="_token" value="{{ csrf_token() }}">
         `);
+
+        // Set question ID
         $('#question_id_field').val(data.question.id);
 
         // Add exam_id field
@@ -2175,41 +2300,28 @@ $(document).ready(function() {
         // Populate basic fields
         $('#type').val(data.question.type);
         $('#marks').val(data.question.marks);
-        $('#is_reusable').prop('checked', data.question.is_reusable);
+        $('#is_reusable').prop('checked', data.question.is_reusable == 1);
 
-        // DEBUG: Check if we have question text
-        console.log('QUESTION TEXT TO SET:', data.question.question_text);
-        console.log('Quill container exists:', $('#question-text-editor').length > 0);
+        // First, load the options template based on type
+        loadQuestionTypeOptions(data.question.type, data.options);
 
-        // Initialize Quill editor WITH the content
-        // Wait for modal to be fully shown
-        $('#questionFormModal').on('shown.bs.modal', function() {
-            console.log('Modal fully shown, initializing Quill...');
+        // Then initialize the Quill editor with the question text
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(function() {
             initializeQuestionTextEditor(data.question.question_text);
-
-            // Load question type options with existing data
-            setTimeout(() => {
-                loadQuestionTypeOptions(data.question.type, data.options);
-            }, 100);
-        });
+        }, 200);
 
         // Set image preview if exists
         if (data.question.image) {
-            $('#preview-img').attr('src', '{{ asset('storage/') }}/' + data.question.image);
+            $('#preview-img').attr('src', '{{ asset("storage/") }}/' + data.question.image);
             $('#image-preview').show();
         } else {
             $('#image-preview').hide();
+            $('#preview-img').attr('src', '#');
         }
 
-        // One-time handler for modal shown event
-        $('#questionFormModal').off('shown.bs.modal').on('shown.bs.modal', function() {
-            console.log('Modal shown callback triggered');
-            initializeQuestionTextEditor(data.question.question_text);
-
-            setTimeout(() => {
-                loadQuestionTypeOptions(data.question.type, data.options);
-            }, 100);
-        });
+        // Remove any remove_image flag
+        $('input[name="remove_image"]').remove();
     }
 
     // Duplicate question (quick)
@@ -2346,7 +2458,7 @@ $(document).ready(function() {
                                        type="checkbox"
                                        value="${question.id}"
                                        id="reusable-${question.id}">
-                                <label class="form-check-label w-100" for="reusable-${index}">
+                                <label class="form-check-label w-100" for="reusable-${question.id}">
                                     <div class="d-flex justify-content-between">
                                         <div>
                                             <strong>${question.text}</strong>
