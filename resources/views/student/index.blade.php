@@ -4088,6 +4088,7 @@ function initializeStudentCheckboxes() {
 // VIEW MODAL FUNCTIONS
 // ============================================================================
 
+// Enhanced view modal population with correct parent field names
 function populateEnhancedViewModal(student) {
     console.log('Populating enhanced view modal with student:', student);
 
@@ -4211,19 +4212,23 @@ function populateEnhancedViewModal(student) {
     setText('viewLastClass', student.last_class || '-');
     setText('viewReasonForLeaving', student.reason_for_leaving || '-');
 
-    // Father's Information
-    setText('viewFatherFullName', student.father_name || '-');
+    // =========================================
+    // PARENT / GUARDIAN INFORMATION - CORRECTED FIELD NAMES
+    // =========================================
+
+    // Father's Information - using father (not father_name)
+    setText('viewFatherFullName', student.father || student.father_name || '-');
     setText('viewFatherPhone', student.father_phone || '-');
     setText('viewFatherOccupation', student.father_occupation || '-');
-    setText('viewFatherEmployer', student.father_employer || '-');
+    setText('viewFatherEmployer', '-'); // Not in your table
     setText('viewFatherCityState', student.father_city || '-');
-    setText('viewFatherEmail', student.father_email || '-');
-    setText('viewFatherAddress', student.father_address || '-');
+    setText('viewFatherEmail', '-'); // Not in your table
+    setText('viewFatherAddress', student.office_address || '-');
 
     // Father Status Badge
     const fatherStatusBadge = document.getElementById('fatherStatusBadge');
     if (fatherStatusBadge) {
-        if (student.father_name) {
+        if (student.father || student.father_name) {
             fatherStatusBadge.textContent = 'Active Contact';
             fatherStatusBadge.className = 'badge bg-success ms-2';
         } else {
@@ -4232,19 +4237,19 @@ function populateEnhancedViewModal(student) {
         }
     }
 
-    // Mother's Information
-    setText('viewMotherFullName', student.mother_name || '-');
+    // Mother's Information - using mother (not mother_name)
+    setText('viewMotherFullName', student.mother || student.mother_name || '-');
     setText('viewMotherPhone', student.mother_phone || '-');
-    setText('viewMotherOccupation', student.mother_occupation || '-');
-    setText('viewMotherEmployer', student.mother_employer || '-');
-    setText('viewMotherCityState', student.mother_city || '-');
-    setText('viewMotherEmail', student.mother_email || '-');
-    setText('viewMotherAddress', student.mother_address || '-');
+    setText('viewMotherOccupation', '-'); // Not in your table
+    setText('viewMotherEmployer', '-'); // Not in your table
+    setText('viewMotherCityState', '-'); // Not in your table
+    setText('viewMotherEmail', '-'); // Not in your table
+    setText('viewMotherAddress', '-'); // Not in your table
 
     // Mother Status Badge
     const motherStatusBadge = document.getElementById('motherStatusBadge');
     if (motherStatusBadge) {
-        if (student.mother_name) {
+        if (student.mother || student.mother_name) {
             motherStatusBadge.textContent = 'Active Contact';
             motherStatusBadge.className = 'badge bg-danger ms-2';
         } else {
@@ -4253,18 +4258,18 @@ function populateEnhancedViewModal(student) {
         }
     }
 
-    // Guardian/Emergency Contact
-    setText('viewGuardianName', student.guardian_name || '-');
-    setText('viewGuardianRelation', student.guardian_relation || '-');
-    setText('viewGuardianPhone', student.guardian_phone || '-');
+    // Guardian/Emergency Contact - using available fields
+    setText('viewGuardianName', '-');
+    setText('viewGuardianRelation', '-');
+    setText('viewGuardianPhone', '-');
     setText('viewParentEmail', student.parent_email || '-');
     setText('viewParentAddress', student.parent_address || '-');
 
     // Additional Information
-    setText('viewGenotype', student.genotype || 'Not Specified');
-    setText('viewAllergies', student.allergies || 'None');
-    setText('viewMedicalConditions', student.medical_conditions || 'None');
-    setText('viewDisabilities', student.disabilities || 'None');
+    setText('viewGenotype', '-');
+    setText('viewAllergies', '-');
+    setText('viewMedicalConditions', '-');
+    setText('viewDisabilities', '-');
     setText('viewNIN', student.nin_number || '-');
     setText('viewMotherTongue', student.mother_tongue || '-');
 
@@ -4272,6 +4277,8 @@ function populateEnhancedViewModal(student) {
     const now = new Date();
     setText('studentProfileLastUpdated', `Last updated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`);
 }
+
+
 
 async function fetchStudentTermInfo(studentId) {
     try {
@@ -4453,11 +4460,12 @@ function populateEditForm(student) {
         { id: 'editNinNumber', value: student.nin_number || '' },
         { id: 'editBloodGroup', value: student.blood_group || '' },
         { id: 'editMotherTongue', value: student.mother_tongue || '' },
-        { id: 'editFatherName', value: student.father_name || '' },
+        // Parent fields - using correct column names
+        { id: 'editFatherName', value: student.father || student.father_name || '' },
         { id: 'editFatherPhone', value: student.father_phone || '' },
         { id: 'editFatherOccupation', value: student.father_occupation || '' },
         { id: 'editFatherCity', value: student.father_city || '' },
-        { id: 'editMotherName', value: student.mother_name || '' },
+        { id: 'editMotherName', value: student.mother || student.mother_name || '' },
         { id: 'editMotherPhone', value: student.mother_phone || '' },
         { id: 'editParentEmail', value: student.parent_email || '' },
         { id: 'editParentAddress', value: student.parent_address || '' },
