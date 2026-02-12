@@ -3607,7 +3607,7 @@ use Spatie\Permission\Models\Role;
                 if (response.data.success && response.data.student) {
                     // Log specific fields to verify they're coming through
                     Utils.log('Student dateofbirth:', response.data.student.dateofbirth);
-                    Utils.log('Student sport_house:', response.data.student.sport_house);
+                    Utils.log('Student schoolhouseid:', response.data.student.schoolhouseid);
                     Utils.log('Student schoolhouse:', response.data.student.schoolhouse);
                     Utils.log('Student school_house:', response.data.student.school_house);
 
@@ -4261,9 +4261,10 @@ use Spatie\Permission\Models\Role;
 
             // Log specific fields we care about
             Utils.log('Student dateofbirth field:', student.dateofbirth);
-            Utils.log('Student sport_house field:', student.sport_house);
+            Utils.log('Student schoolhouseid field:', student.schoolhouseid);
             Utils.log('Student schoolhouse field:', student.schoolhouse);
             Utils.log('Student school_house field:', student.school_house);
+            Utils.log('Student sport_house field:', student.sport_house);
 
             // Set student ID
             const studentIdField = document.getElementById('editStudentId');
@@ -4277,7 +4278,6 @@ use Spatie\Permission\Models\Role;
             if (admissionNoInput) admissionNoInput.value = student.admissionNo || '';
             if (admissionYearSelect) admissionYearSelect.value = student.admissionYear || new Date().getFullYear();
             if (admissionDateInput) {
-                // FIXED: Use admissionDate or admission_date
                 const admissionDate = student.admissionDate || student.admission_date || '';
                 if (admissionDate) {
                     admissionDateInput.value = admissionDate.split(' ')[0];
@@ -4363,10 +4363,9 @@ use Spatie\Permission\Models\Role;
             }
 
             // ===== CRITICAL FIX: DATE OF BIRTH =====
-            // The field name in database is 'dateofbirth' (all lowercase, no camelCase)
+            // The field name in database is 'dateofbirth' (all lowercase)
             const dobInput = document.getElementById('editDOB');
             if (dobInput) {
-                // Check both possible field names - use exact field name from database
                 const dobValue = student.dateofbirth || '';
 
                 Utils.log('Setting date of birth - raw value:', dobValue);
@@ -4379,11 +4378,14 @@ use Spatie\Permission\Models\Role;
                         if (dobValue.includes(' ')) {
                             formattedDate = dobValue.split(' ')[0];
                         }
+                        // If it's in format "YYYY-MM-DDTHH:MM:SS.000000Z" (ISO format)
+                        else if (dobValue.includes('T')) {
+                            formattedDate = dobValue.split('T')[0];
+                        }
                         // If it's in format "DD/MM/YYYY", convert to YYYY-MM-DD
                         else if (dobValue.includes('/')) {
                             const parts = dobValue.split('/');
                             if (parts.length === 3) {
-                                // Check if it's DD/MM/YYYY
                                 if (parts[2].length === 4) {
                                     formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
                                 }
@@ -4433,16 +4435,16 @@ use Spatie\Permission\Models\Role;
             }
 
             // ===== CRITICAL FIX: SCHOOL HOUSE =====
-            // The field name in database is 'sport_house' (from your controller)
+            // From your controller, the field is 'schoolhouseid' which is stored in the 'studenthouses' table
             const houseSelect = document.getElementById('editSchoolHouse');
             if (houseSelect) {
-                // Check all possible field names - sport_house is the actual database field
-                let houseValue = student.sport_house || student.schoolhouse || student.school_house || null;
+                // The student object should contain schoolhouseid from the edit method
+                let houseValue = student.schoolhouseid || student.schoolhouse || student.school_house || null;
 
                 Utils.log('Setting school house - raw values:', {
-                    sport_house: student.sport_house,    // This is the actual database field
-                    schoolhouse: student.schoolhouse,    // From the join
-                    school_house: student.school_house,  // Aliased field
+                    schoolhouseid: student.schoolhouseid,  // This is the ID from the studenthouses table
+                    schoolhouse: student.schoolhouse,      // From the join in edit method
+                    school_house: student.school_house,    // Aliased field name
                     selected: houseValue
                 });
 
@@ -4457,18 +4459,18 @@ use Spatie\Permission\Models\Role;
                     }
                     Utils.log('Available house options:', options);
 
-                    // Try to find by exact value
+                    // Try to find by exact value (ID)
                     let optionFound = false;
                     for (let i = 0; i < houseSelect.options.length; i++) {
                         if (houseSelect.options[i].value == houseValue) {
                             houseSelect.selectedIndex = i;
                             optionFound = true;
-                            Utils.log('School house set by value:', houseValue);
+                            Utils.log('School house set by ID:', houseValue);
                             break;
                         }
                     }
 
-                    // If not found by value, try by text content
+                    // If not found by ID, try by text content
                     if (!optionFound) {
                         for (let i = 0; i < houseSelect.options.length; i++) {
                             if (houseSelect.options[i].text.toLowerCase().includes(String(houseValue).toLowerCase())) {
@@ -4480,21 +4482,14 @@ use Spatie\Permission\Models\Role;
                         }
                     }
 
-                    // If still not found and it's a number, try direct assignment
-                    if (!optionFound && !isNaN(parseInt(houseValue))) {
-                        try {
-                            houseSelect.value = houseValue;
-                            Utils.log('School house set by direct value:', houseValue);
-                        } catch (e) {
-                            Utils.log('Could not set school house by direct value', e);
-                        }
-                    }
-
                     if (!optionFound) {
                         Utils.log('WARNING: Could not set school house value:', houseValue);
                     }
                 } else {
                     Utils.log('No school house value found in student object');
+                    Utils.log('Available fields containing "house":', Object.keys(student).filter(k =>
+                        k.toLowerCase().includes('house')
+                    ));
                 }
             }
 
@@ -4694,8 +4689,8 @@ use Spatie\Permission\Models\Role;
 
             this.safeSetText('viewStudentStatus', student.student_status || '-');
 
-            // School house in view modal
-            const schoolHouseValue = student.school_house || student.schoolhouse || student.sport_house || '-';
+            // School house in view modal - get from the join
+            const schoolHouseValue = student.school_house || student.schoolhouse || student.house || '-';
             this.safeSetText('viewSchoolHouse', schoolHouseValue);
 
             this.safeSetText('viewAdmittedDate', Utils.formatDate(student.admission_date, 'short'));
@@ -6197,8 +6192,8 @@ use Spatie\Permission\Models\Role;
     }
 
 })();
-</script>
 
+</script>
 
 <!-- Include Sortable.js for drag and drop functionality -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
