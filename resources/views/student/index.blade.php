@@ -1390,13 +1390,15 @@ use Spatie\Permission\Models\Role;
                 </div>
 
                 <!-- Filter Bar -->
+
+                <!-- Filter Bar - UPDATED WITH SESSION FILTER -->
                 <div class="filter-bar">
                     <div class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="search-box">
                                 <i class="fas fa-search search-icon"></i>
                                 <input type="text" class="form-control" id="search-input"
-                                       placeholder="Search name or admission number...">
+                                    placeholder="Search name or admission...">
                             </div>
                         </div>
                         <div class="col-md-2">
@@ -1423,7 +1425,16 @@ use Spatie\Permission\Models\Role;
                                 <option value="Female">Female</option>
                             </select>
                         </div>
+                        <!-- NEW: Session Filter -->
                         <div class="col-md-2">
+                            <select class="form-control" id="session-filter">
+                                <option value="all">All Sessions</option>
+                                @foreach ($schoolsessions as $session)
+                                    <option value="{{ $session->id }}">{{ $session->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-1">
                             <button type="button" class="btn btn-primary w-100" onclick="filterData()">
                                 <i class="fas fa-filter me-2"></i>Filter
                             </button>
