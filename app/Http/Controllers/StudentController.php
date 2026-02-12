@@ -143,7 +143,7 @@ class StudentController extends Controller
 
 
     /**
- * Get paginated students data with filters
+ * Get paginated students data with filters - OPTIMIZED FOR 1500+ RECORDS
  */
 public function dataPaginated(Request $request): JsonResponse
 {
@@ -206,7 +206,7 @@ public function dataPaginated(Request $request): JsonResponse
         // Order by latest first
         $query->latest('studentRegistration.created_at');
 
-        // Pagination
+        // Pagination - DEFAULT 20 RECORDS PER PAGE
         $perPage = $request->input('per_page', 20);
         $students = $query->paginate($perPage);
 
@@ -235,6 +235,7 @@ public function dataPaginated(Request $request): JsonResponse
         ], 500);
     }
 }
+
 
 
     public function store(Request $request)
