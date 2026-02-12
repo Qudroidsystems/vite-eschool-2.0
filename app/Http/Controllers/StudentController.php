@@ -142,7 +142,178 @@ class StudentController extends Controller
     }
 
 
-    
+    /**
+ * Get students optimized with server-side pagination and filtering
+ */
+public function getStudentsOptimized(Request $request)
+{
+    try {
+        $perPage = $request->get('per_page', 12);
+        $search = $request->get('search', '');
+        $classId = $request->get('class_id', 'all');
+        $status = $request->get('status', 'all');
+        $gender = $request->get('gender', 'all');
+
+        $query = Student::query()
+            ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
+            ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
+            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->leftJoin('parentRegistration', 'parentRegistration.studentId', '=', 'studentRegistration.id')
+            ->leftJoin('studenthouses', 'studenthouses.studentid', '=', 'studentRegistration.id')
+            ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
+            ->select([
+                'studentRegistration.*',
+                'studentpicture.picture',
+                'schoolclass.schoolclass',
+                'schoolarm.arm',
+                'studentclass.schoolclassid',
+                'studentclass.termid',
+                'studentclass.sessionid',
+                'parentRegistration.father_name',
+                'parentRegistration.father_phone',
+                'parentRegistration.father_occupation',
+                'parentRegistration.father_city',
+                'parentRegistration.father_email',
+                'parentRegistration.father_address',
+                'parentRegistration.father_employer',
+                'parentRegistration.mother_name',
+                'parentRegistration.mother_phone',
+                'parentRegistration.mother_occupation',
+                'parentRegistration.mother_city',
+                'parentRegistration.mother_email',
+                'parentRegistration.mother_address',
+                'parentRegistration.mother_employer',
+                'parentRegistration.parent_email',
+                'parentRegistration.parent_address',
+                'parentRegistration.guardian_name',
+                'parentRegistration.guardian_relation',
+                'parentRegistration.guardian_phone',
+                'schoolhouses.house as school_house',
+            ]);
+
+        // Apply search filter
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('studentRegistration.firstname', 'LIKE', "%{$search}%")
+                  ->orWhere('studentRegistration.lastname', 'LIKE', "%{$search}%")
+                  ->orWhere('studentRegistration.admissionNo', 'LIKE', "%{$search}%")
+                  ->orWhere('studentRegistration.othername', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Apply class filter
+        if ($classId !== 'all' && !empty($classId)) {
+            $query->where('studentclass.schoolclassid', $classId);
+        }
+
+        // Apply status filter
+        if ($status !== 'all' && !empty($status)) {
+            if ($status === '1' || $status === '2') {
+                $query->where('studentRegistration.statusId', $status);
+            } else {
+                $query->where('studentRegistration.student_status', $status);
+            }
+        }
+
+        // Apply gender filter
+        if ($gender !== 'all' && !empty($gender)) {
+            $query->where('studentRegistration.gender', $gender);
+        }
+
+        // Get paginated results
+        $students = $query->orderBy('studentRegistration.created_at', 'desc')
+                         ->paginate($perPage);
+
+        // Process each student to add calculated fields
+        $students->getCollection()->transform(function($student) {
+            // Calculate age if dateofbirth exists
+            $age = null;
+            if ($student->dateofbirth) {
+                $dob = new \Carbon\Carbon($student->dateofbirth);
+                $age = $dob->age;
+            }
+
+            return [
+                'id' => $student->id,
+                'admissionNo' => $student->admissionNo,
+                'admission_date' => $student->admission_date,
+                'admissionYear' => $student->admissionYear,
+                'firstname' => $student->firstname,
+                'lastname' => $student->lastname,
+                'othername' => $student->othername,
+                'fullname' => trim($student->lastname . ' ' . $student->firstname . ' ' . $student->othername),
+                'gender' => $student->gender,
+                'statusId' => $student->statusId,
+                'student_status' => $student->student_status,
+                'created_at' => $student->created_at,
+                'updated_at' => $student->updated_at,
+                'picture' => $student->picture,
+                'schoolclass' => $student->schoolclass,
+                'arm' => $student->arm,
+                'schoolclassid' => $student->schoolclassid,
+                'age' => $age,
+                'dateofbirth' => $student->dateofbirth,
+                'title' => $student->title,
+                'placeofbirth' => $student->placeofbirth,
+                'phone_number' => $student->phone_number,
+                'email' => $student->email,
+                'permanent_address' => $student->home_address2,
+                'future_ambition' => $student->future_ambition,
+                'nationality' => $student->nationality,
+                'state' => $student->state,
+                'local' => $student->local,
+                'city' => $student->city,
+                'religion' => $student->religion,
+                'blood_group' => $student->blood_group,
+                'mother_tongue' => $student->mother_tongue,
+                'nin_number' => $student->nin_number,
+                'student_category' => $student->student_category,
+                'termid' => $student->termid,
+                'sessionid' => $student->sessionid,
+                'last_school' => $student->last_school,
+                'last_class' => $student->last_class,
+                'reason_for_leaving' => $student->reason_for_leaving,
+
+                // Parent fields
+                'father_name' => $student->father_name,
+                'father_phone' => $student->father_phone,
+                'father_occupation' => $student->father_occupation,
+                'father_city' => $student->father_city,
+                'father_email' => $student->father_email,
+                'father_address' => $student->father_address,
+                'father_employer' => $student->father_employer,
+                'mother_name' => $student->mother_name,
+                'mother_phone' => $student->mother_phone,
+                'mother_occupation' => $student->mother_occupation,
+                'mother_city' => $student->mother_city,
+                'mother_email' => $student->mother_email,
+                'mother_address' => $student->mother_address,
+                'mother_employer' => $student->mother_employer,
+                'parent_email' => $student->parent_email,
+                'parent_address' => $student->parent_address,
+                'guardian_name' => $student->guardian_name,
+                'guardian_relation' => $student->guardian_relation,
+                'guardian_phone' => $student->guardian_phone,
+                'school_house' => $student->school_house,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $students
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error fetching optimized students: ' . $e->getMessage());
+        \Log::error($e->getTraceAsString());
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch students: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
     public function store(Request $request)
     {
