@@ -3255,2379 +3255,2861 @@ use Spatie\Permission\Models\Role;
 </div>
 
 <script>
+ // ============================================================================
+// STUDENT MANAGEMENT SYSTEM - COMPLETE OPTIMIZED VERSION
+// ============================================================================
+// This comprehensive solution includes:
+// 1. Server-side pagination with user-controlled items per page
+// 2. Enhanced filtering with debouncing
+// 3. Working column sorting in Generate Report modal
+// 4. Optimized for 5000+ student records
+// ============================================================================
+
+(function() {
+    'use strict';
+
     // ============================================================================
-// OPTIMIZED STUDENT MANAGEMENT SYSTEM - COMPLETE VERSION
-// ============================================================================
+    // GLOBAL CONFIGURATION
+    // ============================================================================
+    const CONFIG = {
+        DEFAULT_PER_PAGE: 12,
+        PER_PAGE_OPTIONS: [12, 25, 50, 100, 250, 500],
+        DEBOUNCE_DELAY: 500,
+        MAX_API_RETRIES: 3,
+        CACHE_DURATION: 300000, // 5 minutes
+        LAZY_LOAD_IMAGES: true,
+        ENABLE_LOGGING: false
+    };
 
-// ============================================================================
-// GLOBAL VARIABLES
-// ============================================================================
+    // ============================================================================
+    // STATE MANAGEMENT - Single source of truth
+    // ============================================================================
+    const AppState = {
+        // Pagination state
+        pagination: {
+            currentPage: 1,
+            perPage: CONFIG.DEFAULT_PER_PAGE,
+            total: 0,
+            lastPage: 1,
+            data: []
+        },
 
-let paginationData = null;
-let currentPage = 1;
-const itemsPerPage = 12;
-let currentView = 'table';
-let currentFilters = {
-    search: '',
-    class: 'all',
-    status: 'all',
-    gender: 'all'
-};
-let debounceTimer = null;
-let columnSortable = null;
+        // Filter state
+        filters: {
+            search: '',
+            class: 'all',
+            status: 'all',
+            gender: 'all'
+        },
 
-// Nigerian States and LGA Data
-const nigerianStates = [
-    { name: "Abia", lgas: ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
-    { name: "Adamawa", lgas: ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
-    { name: "Akwa Ibom", lgas: ["Abak", "Eastern Obolo", "Eket", "Esit Eket", "Essien Udim", "Etim Ekpo", "Etinan", "Ibeno", "Ibesikpo Asutan", "Ibiono-Ibom", "Ika", "Ikono", "Ikot Abasi", "Ikot Ekpene", "Ini", "Itu", "Mbo", "Mkpat-Enin", "Nsit-Atai", "Nsit-Ibom", "Nsit-Ubium", "Obot Akara", "Okobo", "Onna", "Oron", "Oruk Anam", "Udung-Uko", "Ukanafun", "Uruan", "Urue-Offong/Oruko", "Uyo"] },
-    { name: "Anambra", lgas: ["Aguata", "Anambra East", "Anambra West", "Anaocha", "Awka North", "Awka South", "Ayamelum", "Dunukofia", "Ekwusigo", "Idemili North", "Idemili South", "Ihiala", "Njikoka", "Nnewi North", "Nnewi South", "Ogbaru", "Onitsha North", "Onitsha South", "Orumba North", "Orumba South", "Oyi"] },
-    { name: "Bauchi", lgas: ["Alkaleri", "Bauchi", "Bogoro", "Damban", "Darazo", "Dass", "Gamawa", "Ganjuwa", "Giade", "Itas/Gadau", "Jama'are", "Katagum", "Kirfi", "Misau", "Ningi", "Shira", "Tafawa Balewa", "Toro", "Warji", "Zaki"] },
-    { name: "Bayelsa", lgas: ["Brass", "Ekeremor", "Kolokuma/Opokuma", "Nembe", "Ogbia", "Sagbama", "Southern Ijaw", "Yenagoa"] },
-    { name: "Benue", lgas: ["Ado", "Agatu", "Apa", "Buruku", "Gboko", "Guma", "Gwer East", "Gwer West", "Katsina-Ala", "Konshisha", "Kwande", "Logo", "Makurdi", "Obi", "Ogbadibo", "Ohimini", "Oju", "Okpokwu", "Oturkpo", "Tarka", "Ukum", "Ushongo", "Vandeikya"] },
-    { name: "Borno", lgas: ["Abadam", "Askira/Uba", "Bama", "Bayo", "Biu", "Chibok", "Damboa", "Dikwa", "Gubio", "Guzamala", "Gwoza", "Hawul", "Jere", "Kaga", "Kala/Balge", "Konduga", "Kukawa", "Kwaya Kusar", "Mafa", "Magumeri", "Maiduguri", "Marte", "Mobbar", "Monguno", "Ngala", "Nganzai", "Shani"] },
-    { name: "Cross River", lgas: ["Abi", "Akamkpa", "Akpabuyo", "Bakassi", "Bekwarra", "Biase", "Boki", "Calabar Municipal", "Calabar South", "Etung", "Ikom", "Obanliku", "Obubra", "Obudu", "Odukpani", "Ogoja", "Yakuur", "Yala"] },
-    { name: "Delta", lgas: ["Aniocha North", "Aniocha South", "Bomadi", "Burutu", "Ethiope East", "Ethiope West", "Ika North East", "Ika South", "Isoko North", "Isoko South", "Ndokwa East", "Ndokwa West", "Okpe", "Oshimili North", "Oshimili South", "Patani", "Sapele", "Udu", "Ughelli North", "Ughelli South", "Ukwuani", "Uvwie", "Warri North", "Warri South", "Warri South West"] },
-    { name: "Ebonyi", lgas: ["Abakaliki", "Afikpo North", "Afikpo South", "Ebonyi", "Ezza North", "Ezza South", "Ikwo", "Ishielu", "Ivo", "Izzi", "Ohaozara", "Ohaukwu", "Onicha"] },
-    { name: "Edo", lgas: ["Akoko-Edo", "Egor", "Esan Central", "Esan North-East", "Esan South-East", "Esan West", "Etsako Central", "Etsako East", "Etsako West", "Igueben", "Ikpoba Okha", "Orhionmwon", "Oredo", "Ovia North-East", "Ovia South-West", "Owan East", "Owan West", "Uhunmwonde"] },
-    { name: "Ekiti", lgas: ["Ado Ekiti", "Efon", "Ekiti East", "Ekiti South-West", "Ekiti West", "Emure", "Gbonyin", "Ido Osi", "Ijero", "Ikere", "Ilejemeje", "Irepodun/Ifelodun", "Ise/Orun", "Moba", "Oye"] },
-    { name: "Enugu", lgas: ["Aninri", "Awgu", "Enugu East", "Enugu North", "Enugu South", "Ezeagu", "Igbo Etiti", "Igbo Eze North", "Igbo Eze South", "Isi Uzo", "Nkanu East", "Nkanu West", "Nsukka", "Oji River", "Udenu", "Udi", "Uzo Uwani"] },
-    { name: "FCT", lgas: ["Abaji", "Bwari", "Gwagwalada", "Kuje", "Kwali", "Municipal Area Council"] },
-    { name: "Gombe", lgas: ["Akko", "Balanga", "Billiri", "Dukku", "Funakaye", "Gombe", "Kaltungo", "Kwami", "Nafada", "Shongom", "Yamaltu/Deba"] },
-    { name: "Imo", lgas: ["Aboh Mbaise", "Ahiazu Mbaise", "Ehime Mbano", "Ezinihitte", "Ideato North", "Ideato South", "Ihitte/Uboma", "Ikeduru", "Isiala Mbano", "Isu", "Mbaitoli", "Ngor Okpala", "Njaba", "Nkwerre", "Nwangele", "Obowo", "Oguta", "Ohaji/Egbema", "Okigwe", "Orlu", "Orsu", "Oru East", "Oru West", "Owerri Municipal", "Owerri North", "Owerri West", "Unuimo"] },
-    { name: "Jigawa", lgas: ["Auyo", "Babura", "Biriniwa", "Birnin Kudu", "Buji", "Dutse", "Gagarawa", "Garki", "Gumel", "Guri", "Gwaram", "Gwiwa", "Hadejia", "Jahun", "Kafin Hausa", "Kazaure", "Kiri Kasama", "Kiyawa", "Kaugama", "Maigatari", "Malam Madori", "Miga", "Ringim", "Roni", "Sule Tankarkar", "Taura", "Yankwashi"] },
-    { name: "Kaduna", lgas: ["Birnin Gwari", "Chikun", "Giwa", "Igabi", "Ikara", "Jaba", "Jema'a", "Kachia", "Kaduna North", "Kaduna South", "Kagarko", "Kajuru", "Kaura", "Kauru", "Kubau", "Kudan", "Lere", "Makarfi", "Sabon Gari", "Sanga", "Soba", "Zangon Kataf", "Zaria"] },
-    { name: "Kano", lgas: ["Ajingi", "Albasu", "Bagwai", "Bebeji", "Bichi", "Bunkure", "Dala", "Dambatta", "Dawakin Kudu", "Dawakin Tofa", "Doguwa", "Fagge", "Gabasawa", "Garko", "Garun Mallam", "Gaya", "Gezawa", "Gwale", "Gwarzo", "Kabo", "Kano Municipal", "Karaye", "Kibiya", "Kiru", "Kumbotso", "Kunchi", "Kura", "Madobi", "Makoda", "Minjibir", "Nasarawa", "Rano", "Rimin Gado", "Rogo", "Shanono", "Sumaila", "Takai", "Tarauni", "Tofa", "Tsanyawa", "Tudun Wada", "Ungogo", "Warawa", "Wudil"] },
-    { name: "Katsina", lgas: ["Bakori", "Batagarawa", "Batsari", "Baure", "Bindawa", "Charanchi", "Dan Musa", "Dandume", "Danja", "Daura", "Dutsi", "Dutsin Ma", "Faskari", "Funtua", "Ingawa", "Jibia", "Kafur", "Kaita", "Kankara", "Kankia", "Katsina", "Kurfi", "Kusada", "Mai'Adua", "Malumfashi", "Mani", "Mashi", "Matazu", "Musawa", "Rimi", "Sabuwa", "Safana", "Sandamu", "Zango"] },
-    { name: "Kebbi", lgas: ["Aleiro", "Arewa Dandi", "Argungu", "Augie", "Bagudo", "Birnin Kebbi", "Bunza", "Dandi", "Fakai", "Gwandu", "Jega", "Kalgo", "Koko/Besse", "Maiyama", "Ngaski", "Sakaba", "Shanga", "Suru", "Danko/Wasagu", "Yauri", "Zuru"] },
-    { name: "Kogi", lgas: ["Adavi", "Ajaokuta", "Ankpa", "Bassa", "Dekina", "Ibaji", "Idah", "Igalamela Odolu", "Ijumu", "Kabba/Bunu", "Kogi", "Lokoja", "Mopa Muro", "Ofu", "Ogori/Magongo", "Okehi", "Okene", "Olamaboro", "Omala", "Yagba East", "Yagba West"] },
-    { name: "Kwara", lgas: ["Asa", "Baruten", "Edu", "Ekiti", "Ifelodun", "Ilorin East", "Ilorin South", "Ilorin West", "Irepodun", "Isin", "Kaiama", "Moro", "Offa", "Oke Ero", "Oyun", "Pategi"] },
-    { name: "Lagos", lgas: ["Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin", "Apapa", "Badagry", "Epe", "Eti Osa", "Ibeju-Lekki", "Ifako-Ijaiye", "Ikeja", "Ikorodu", "Kosofe", "Lagos Island", "Lagos Mainland", "Mushin", "Ojo", "Oshodi-Isolo", "Shomolu", "Surulere"] },
-    { name: "Nasarawa", lgas: ["Akwanga", "Awe", "Doma", "Karu", "Keana", "Keffi", "Kokona", "Lafia", "Nasarawa", "Nasarawa Egon", "Obi", "Toto", "Wamba"] },
-    { name: "Niger", lgas: ["Agaie", "Agwara", "Bida", "Borgu", "Bosso", "Chanchaga", "Edati", "Gbako", "Gurara", "Katcha", "Kontagora", "Lapai", "Lavun", "Magama", "Mariga", "Mashegu", "Mokwa", "Moya", "Paikoro", "Rafi", "Rijau", "Shiroro", "Suleja", "Tafa", "Wushishi"] },
-    { name: "Ogun", lgas: ["Abeokuta North", "Abeokuta South", "Ado-Odo/Ota", "Egbado North", "Egbado South", "Ewekoro", "Ifo", "Ijebu East", "Ijebu North", "Ijebu North East", "Ijebu Ode", "Ikenne", "Imeko Afon", "Ipokia", "Obafemi Owode", "Odeda", "Odogbolu", "Ogun Waterside", "Remo North", "Shagamu"] },
-    { name: "Ondo", lgas: ["Akoko North-East", "Akoko North-West", "Akoko South-East", "Akoko South-West", "Akure North", "Akure South", "Ese Odo", "Idanre", "Ifedore", "Ilaje", "Ile Oluji/Okeigbo", "Irele", "Odigbo", "Okitipupa", "Ondo East", "Ondo West", "Ose", "Owo"] },
-    { name: "Osun", lgas: ["Aiyedade", "Aiyedire", "Atakunmosa East", "Atakunmosa West", "Boluwaduro", "Boripe", "Ede North", "Ede South", "Egbedore", "Ejigbo", "Ife Central", "Ife East", "Ife North", "Ife South", "Ifedayo", "Ifelodun", "Ila", "Ilesa East", "Ilesa West", "Irepodun", "Irewole", "Isokan", "Iwo", "Obokun", "Odo Otin", "Ola Oluwa", "Olorunda", "Oriade", "Orolu", "Osogbo"] },
-    { name: "Oyo", lgas: ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo East", "Oyo West", "Saki East", "Saki West", "Surulere"] },
-    { name: "Plateau", lgas: ["Bokkos", "Barkin Ladi", "Bassa", "Jos East", "Jos North", "Jos South", "Kanam", "Kanke", "Langtang North", "Langtang South", "Mangu", "Mikang", "Pankshin", "Qua'an Pan", "Riyom", "Shendam", "Wase"] },
-    { name: "Rivers", lgas: ["Abua/Odual", "Ahoada East", "Ahoada West", "Akuku-Toru", "Andoni", "Asari-Toru", "Bonny", "Degema", "Eleme", "Emohua", "Etche", "Gokana", "Ikwerre", "Khana", "Obio/Akpor", "Ogba/Egbema/Ndoni", "Ogu/Bolo", "Okrika", "Omuma", "Opobo/Nkoro", "Oyigbo", "Port Harcourt", "Tai"] },
-    { name: "Sokoto", lgas: ["Binji", "Bodinga", "Dange Shuni", "Gada", "Goronyo", "Gudu", "Gwadabawa", "Illela", "Isa", "Kebbe", "Kware", "Rabah", "Sabon Birni", "Shagari", "Silame", "Sokoto North", "Sokoto South", "Tambuwal", "Tangaza", "Tureta", "Wamako", "Wurno", "Yabo"] },
-    { name: "Taraba", lgas: ["Ardo Kola", "Bali", "Donga", "Gashaka", "Gassol", "Ibi", "Jalingo", "Karim Lamido", "Kumi", "Lau", "Sardauna", "Takum", "Ussa", "Wukari", "Yorro", "Zing"] },
-    { name: "Yobe", lgas: ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
-    { name: "Zamfara", lgas: ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Chafe", "Zurmi"] }
-];
+        // UI state
+        ui: {
+            currentView: 'table',
+            isLoading: false,
+            selectedStudents: new Set(),
+            lastUpdated: null
+        },
 
-// ============================================================================
-// ENSURE AXIOS AND CSRF TOKEN
-// ============================================================================
+        // Cache for frequently accessed data
+        cache: {
+            students: new Map(),
+            stats: null,
+            classes: null
+        },
 
-function ensureAxios() {
-    if (typeof axios === 'undefined') {
-        console.error('Error: Axios is not defined');
-        Swal.fire({
-            title: "Error!",
-            text: "Axios library is missing",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
-        return false;
-    }
+        // Report column state
+        report: {
+            columns: [],
+            columnOrder: [],
+            sortField: null,
+            sortDirection: 'asc'
+        }
+    };
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (!csrfToken) {
-        console.error('Error: CSRF token not found');
-        Swal.fire({
-            title: "Error!",
-            text: "CSRF token is missing",
-            icon: "error",
-            customClass: { confirmButton: "btn btn-primary" },
-            buttonsStyling: false
-        });
-        return false;
-    }
+    // ============================================================================
+    // NIGERIAN STATES AND LGAS - Complete dataset
+    // ============================================================================
+    const NIGERIAN_STATES = [
+        { name: "Abia", lgas: ["Aba North", "Aba South", "Arochukwu", "Bende", "Ikwuano", "Isiala Ngwa North", "Isiala Ngwa South", "Isuikwuato", "Obi Ngwa", "Ohafia", "Osisioma", "Ugwunagbo", "Ukwa East", "Ukwa West", "Umuahia North", "Umuahia South", "Umu Nneochi"] },
+        { name: "Adamawa", lgas: ["Demsa", "Fufure", "Ganye", "Gayuk", "Gombi", "Grie", "Hong", "Jada", "Lamurde", "Madagali", "Maiha", "Mayo Belwa", "Michika", "Mubi North", "Mubi South", "Numan", "Shelleng", "Song", "Toungo", "Yola North", "Yola South"] },
+        { name: "Akwa Ibom", lgas: ["Abak", "Eastern Obolo", "Eket", "Esit Eket", "Essien Udim", "Etim Ekpo", "Etinan", "Ibeno", "Ibesikpo Asutan", "Ibiono-Ibom", "Ika", "Ikono", "Ikot Abasi", "Ikot Ekpene", "Ini", "Itu", "Mbo", "Mkpat-Enin", "Nsit-Atai", "Nsit-Ibom", "Nsit-Ubium", "Obot Akara", "Okobo", "Onna", "Oron", "Oruk Anam", "Udung-Uko", "Ukanafun", "Uruan", "Urue-Offong/Oruko", "Uyo"] },
+        { name: "Anambra", lgas: ["Aguata", "Anambra East", "Anambra West", "Anaocha", "Awka North", "Awka South", "Ayamelum", "Dunukofia", "Ekwusigo", "Idemili North", "Idemili South", "Ihiala", "Njikoka", "Nnewi North", "Nnewi South", "Ogbaru", "Onitsha North", "Onitsha South", "Orumba North", "Orumba South", "Oyi"] },
+        { name: "Bauchi", lgas: ["Alkaleri", "Bauchi", "Bogoro", "Damban", "Darazo", "Dass", "Gamawa", "Ganjuwa", "Giade", "Itas/Gadau", "Jama'are", "Katagum", "Kirfi", "Misau", "Ningi", "Shira", "Tafawa Balewa", "Toro", "Warji", "Zaki"] },
+        { name: "Bayelsa", lgas: ["Brass", "Ekeremor", "Kolokuma/Opokuma", "Nembe", "Ogbia", "Sagbama", "Southern Ijaw", "Yenagoa"] },
+        { name: "Benue", lgas: ["Ado", "Agatu", "Apa", "Buruku", "Gboko", "Guma", "Gwer East", "Gwer West", "Katsina-Ala", "Konshisha", "Kwande", "Logo", "Makurdi", "Obi", "Ogbadibo", "Ohimini", "Oju", "Okpokwu", "Oturkpo", "Tarka", "Ukum", "Ushongo", "Vandeikya"] },
+        { name: "Borno", lgas: ["Abadam", "Askira/Uba", "Bama", "Bayo", "Biu", "Chibok", "Damboa", "Dikwa", "Gubio", "Guzamala", "Gwoza", "Hawul", "Jere", "Kaga", "Kala/Balge", "Konduga", "Kukawa", "Kwaya Kusar", "Mafa", "Magumeri", "Maiduguri", "Marte", "Mobbar", "Monguno", "Ngala", "Nganzai", "Shani"] },
+        { name: "Cross River", lgas: ["Abi", "Akamkpa", "Akpabuyo", "Bakassi", "Bekwarra", "Biase", "Boki", "Calabar Municipal", "Calabar South", "Etung", "Ikom", "Obanliku", "Obubra", "Obudu", "Odukpani", "Ogoja", "Yakuur", "Yala"] },
+        { name: "Delta", lgas: ["Aniocha North", "Aniocha South", "Bomadi", "Burutu", "Ethiope East", "Ethiope West", "Ika North East", "Ika South", "Isoko North", "Isoko South", "Ndokwa East", "Ndokwa West", "Okpe", "Oshimili North", "Oshimili South", "Patani", "Sapele", "Udu", "Ughelli North", "Ughelli South", "Ukwuani", "Uvwie", "Warri North", "Warri South", "Warri South West"] },
+        { name: "Ebonyi", lgas: ["Abakaliki", "Afikpo North", "Afikpo South", "Ebonyi", "Ezza North", "Ezza South", "Ikwo", "Ishielu", "Ivo", "Izzi", "Ohaozara", "Ohaukwu", "Onicha"] },
+        { name: "Edo", lgas: ["Akoko-Edo", "Egor", "Esan Central", "Esan North-East", "Esan South-East", "Esan West", "Etsako Central", "Etsako East", "Etsako West", "Igueben", "Ikpoba Okha", "Orhionmwon", "Oredo", "Ovia North-East", "Ovia South-West", "Owan East", "Owan West", "Uhunmwonde"] },
+        { name: "Ekiti", lgas: ["Ado Ekiti", "Efon", "Ekiti East", "Ekiti South-West", "Ekiti West", "Emure", "Gbonyin", "Ido Osi", "Ijero", "Ikere", "Ilejemeje", "Irepodun/Ifelodun", "Ise/Orun", "Moba", "Oye"] },
+        { name: "Enugu", lgas: ["Aninri", "Awgu", "Enugu East", "Enugu North", "Enugu South", "Ezeagu", "Igbo Etiti", "Igbo Eze North", "Igbo Eze South", "Isi Uzo", "Nkanu East", "Nkanu West", "Nsukka", "Oji River", "Udenu", "Udi", "Uzo Uwani"] },
+        { name: "FCT", lgas: ["Abaji", "Bwari", "Gwagwalada", "Kuje", "Kwali", "Municipal Area Council"] },
+        { name: "Gombe", lgas: ["Akko", "Balanga", "Billiri", "Dukku", "Funakaye", "Gombe", "Kaltungo", "Kwami", "Nafada", "Shongom", "Yamaltu/Deba"] },
+        { name: "Imo", lgas: ["Aboh Mbaise", "Ahiazu Mbaise", "Ehime Mbano", "Ezinihitte", "Ideato North", "Ideato South", "Ihitte/Uboma", "Ikeduru", "Isiala Mbano", "Isu", "Mbaitoli", "Ngor Okpala", "Njaba", "Nkwerre", "Nwangele", "Obowo", "Oguta", "Ohaji/Egbema", "Okigwe", "Orlu", "Orsu", "Oru East", "Oru West", "Owerri Municipal", "Owerri North", "Owerri West", "Unuimo"] },
+        { name: "Jigawa", lgas: ["Auyo", "Babura", "Biriniwa", "Birnin Kudu", "Buji", "Dutse", "Gagarawa", "Garki", "Gumel", "Guri", "Gwaram", "Gwiwa", "Hadejia", "Jahun", "Kafin Hausa", "Kazaure", "Kiri Kasama", "Kiyawa", "Kaugama", "Maigatari", "Malam Madori", "Miga", "Ringim", "Roni", "Sule Tankarkar", "Taura", "Yankwashi"] },
+        { name: "Kaduna", lgas: ["Birnin Gwari", "Chikun", "Giwa", "Igabi", "Ikara", "Jaba", "Jema'a", "Kachia", "Kaduna North", "Kaduna South", "Kagarko", "Kajuru", "Kaura", "Kauru", "Kubau", "Kudan", "Lere", "Makarfi", "Sabon Gari", "Sanga", "Soba", "Zangon Kataf", "Zaria"] },
+        { name: "Kano", lgas: ["Ajingi", "Albasu", "Bagwai", "Bebeji", "Bichi", "Bunkure", "Dala", "Dambatta", "Dawakin Kudu", "Dawakin Tofa", "Doguwa", "Fagge", "Gabasawa", "Garko", "Garun Mallam", "Gaya", "Gezawa", "Gwale", "Gwarzo", "Kabo", "Kano Municipal", "Karaye", "Kibiya", "Kiru", "Kumbotso", "Kunchi", "Kura", "Madobi", "Makoda", "Minjibir", "Nasarawa", "Rano", "Rimin Gado", "Rogo", "Shanono", "Sumaila", "Takai", "Tarauni", "Tofa", "Tsanyawa", "Tudun Wada", "Ungogo", "Warawa", "Wudil"] },
+        { name: "Katsina", lgas: ["Bakori", "Batagarawa", "Batsari", "Baure", "Bindawa", "Charanchi", "Dan Musa", "Dandume", "Danja", "Daura", "Dutsi", "Dutsin Ma", "Faskari", "Funtua", "Ingawa", "Jibia", "Kafur", "Kaita", "Kankara", "Kankia", "Katsina", "Kurfi", "Kusada", "Mai'Adua", "Malumfashi", "Mani", "Mashi", "Matazu", "Musawa", "Rimi", "Sabuwa", "Safana", "Sandamu", "Zango"] },
+        { name: "Kebbi", lgas: ["Aleiro", "Arewa Dandi", "Argungu", "Augie", "Bagudo", "Birnin Kebbi", "Bunza", "Dandi", "Fakai", "Gwandu", "Jega", "Kalgo", "Koko/Besse", "Maiyama", "Ngaski", "Sakaba", "Shanga", "Suru", "Danko/Wasagu", "Yauri", "Zuru"] },
+        { name: "Kogi", lgas: ["Adavi", "Ajaokuta", "Ankpa", "Bassa", "Dekina", "Ibaji", "Idah", "Igalamela Odolu", "Ijumu", "Kabba/Bunu", "Kogi", "Lokoja", "Mopa Muro", "Ofu", "Ogori/Magongo", "Okehi", "Okene", "Olamaboro", "Omala", "Yagba East", "Yagba West"] },
+        { name: "Kwara", lgas: ["Asa", "Baruten", "Edu", "Ekiti", "Ifelodun", "Ilorin East", "Ilorin South", "Ilorin West", "Irepodun", "Isin", "Kaiama", "Moro", "Offa", "Oke Ero", "Oyun", "Pategi"] },
+        { name: "Lagos", lgas: ["Agege", "Ajeromi-Ifelodun", "Alimosho", "Amuwo-Odofin", "Apapa", "Badagry", "Epe", "Eti Osa", "Ibeju-Lekki", "Ifako-Ijaiye", "Ikeja", "Ikorodu", "Kosofe", "Lagos Island", "Lagos Mainland", "Mushin", "Ojo", "Oshodi-Isolo", "Shomolu", "Surulere"] },
+        { name: "Nasarawa", lgas: ["Akwanga", "Awe", "Doma", "Karu", "Keana", "Keffi", "Kokona", "Lafia", "Nasarawa", "Nasarawa Egon", "Obi", "Toto", "Wamba"] },
+        { name: "Niger", lgas: ["Agaie", "Agwara", "Bida", "Borgu", "Bosso", "Chanchaga", "Edati", "Gbako", "Gurara", "Katcha", "Kontagora", "Lapai", "Lavun", "Magama", "Mariga", "Mashegu", "Mokwa", "Moya", "Paikoro", "Rafi", "Rijau", "Shiroro", "Suleja", "Tafa", "Wushishi"] },
+        { name: "Ogun", lgas: ["Abeokuta North", "Abeokuta South", "Ado-Odo/Ota", "Egbado North", "Egbado South", "Ewekoro", "Ifo", "Ijebu East", "Ijebu North", "Ijebu North East", "Ijebu Ode", "Ikenne", "Imeko Afon", "Ipokia", "Obafemi Owode", "Odeda", "Odogbolu", "Ogun Waterside", "Remo North", "Shagamu"] },
+        { name: "Ondo", lgas: ["Akoko North-East", "Akoko North-West", "Akoko South-East", "Akoko South-West", "Akure North", "Akure South", "Ese Odo", "Idanre", "Ifedore", "Ilaje", "Ile Oluji/Okeigbo", "Irele", "Odigbo", "Okitipupa", "Ondo East", "Ondo West", "Ose", "Owo"] },
+        { name: "Osun", lgas: ["Aiyedade", "Aiyedire", "Atakunmosa East", "Atakunmosa West", "Boluwaduro", "Boripe", "Ede North", "Ede South", "Egbedore", "Ejigbo", "Ife Central", "Ife East", "Ife North", "Ife South", "Ifedayo", "Ifelodun", "Ila", "Ilesa East", "Ilesa West", "Irepodun", "Irewole", "Isokan", "Iwo", "Obokun", "Odo Otin", "Ola Oluwa", "Olorunda", "Oriade", "Orolu", "Osogbo"] },
+        { name: "Oyo", lgas: ["Afijio", "Akinyele", "Atiba", "Atisbo", "Egbeda", "Ibadan North", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East", "Ibadan South-West", "Ibarapa Central", "Ibarapa East", "Ibarapa North", "Ido", "Irepo", "Iseyin", "Itesiwaju", "Iwajowa", "Kajola", "Lagelu", "Ogbomosho North", "Ogbomosho South", "Ogo Oluwa", "Olorunsogo", "Oluyole", "Ona Ara", "Orelope", "Ori Ire", "Oyo East", "Oyo West", "Saki East", "Saki West", "Surulere"] },
+        { name: "Plateau", lgas: ["Bokkos", "Barkin Ladi", "Bassa", "Jos East", "Jos North", "Jos South", "Kanam", "Kanke", "Langtang North", "Langtang South", "Mangu", "Mikang", "Pankshin", "Qua'an Pan", "Riyom", "Shendam", "Wase"] },
+        { name: "Rivers", lgas: ["Abua/Odual", "Ahoada East", "Ahoada West", "Akuku-Toru", "Andoni", "Asari-Toru", "Bonny", "Degema", "Eleme", "Emohua", "Etche", "Gokana", "Ikwerre", "Khana", "Obio/Akpor", "Ogba/Egbema/Ndoni", "Ogu/Bolo", "Okrika", "Omuma", "Opobo/Nkoro", "Oyigbo", "Port Harcourt", "Tai"] },
+        { name: "Sokoto", lgas: ["Binji", "Bodinga", "Dange Shuni", "Gada", "Goronyo", "Gudu", "Gwadabawa", "Illela", "Isa", "Kebbe", "Kware", "Rabah", "Sabon Birni", "Shagari", "Silame", "Sokoto North", "Sokoto South", "Tambuwal", "Tangaza", "Tureta", "Wamako", "Wurno", "Yabo"] },
+        { name: "Taraba", lgas: ["Ardo Kola", "Bali", "Donga", "Gashaka", "Gassol", "Ibi", "Jalingo", "Karim Lamido", "Kumi", "Lau", "Sardauna", "Takum", "Ussa", "Wukari", "Yorro", "Zing"] },
+        { name: "Yobe", lgas: ["Bade", "Bursari", "Damaturu", "Fika", "Fune", "Geidam", "Gujba", "Gulani", "Jakusko", "Karasuwa", "Machina", "Nangere", "Nguru", "Potiskum", "Tarmuwa", "Yunusari", "Yusufari"] },
+        { name: "Zamfara", lgas: ["Anka", "Bakura", "Birnin Magaji/Kiyaw", "Bukkuyum", "Bungudu", "Gummi", "Gusau", "Kaura Namoda", "Maradun", "Maru", "Shinkafi", "Talata Mafara", "Chafe", "Zurmi"] }
+    ];
 
-    axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
-    return true;
-}
+    // ============================================================================
+    // AVAILABLE COLUMNS FOR REPORTING - Complete list
+    // ============================================================================
+    const AVAILABLE_COLUMNS = {
+        'photo': 'Photo',
+        'admissionNo': 'Admission No',
+        'lastname': 'Last Name',
+        'firstname': 'First Name',
+        'othername': 'Other Name',
+        'gender': 'Gender',
+        'dateofbirth': 'Date of Birth',
+        'age': 'Age',
+        'class': 'Class / Arm',
+        'status': 'Student Status',
+        'admission_date': 'Admission Date',
+        'phone_number': 'Phone Number',
+        'email': 'Email',
+        'state': 'State of Origin',
+        'local': 'LGA',
+        'religion': 'Religion',
+        'blood_group': 'Blood Group',
+        'father_name': "Father's Name",
+        'mother_name': "Mother's Name",
+        'father_phone': "Father's Phone",
+        'mother_phone': "Mother's Phone",
+        'parent_email': 'Parent Email',
+        'guardian_phone': 'Guardian Phone',
+        'student_category': 'Student Category',
+        'school_house': 'School House',
+        'nin_number': 'NIN Number',
+        'term': 'Term',
+        'session': 'Session'
+    };
 
-// ============================================================================
-// FETCH STUDENTS - OPTIMIZED WITH SERVER-SIDE PAGINATION
-// ============================================================================
-
-async function fetchStudents(page = 1, filters = currentFilters) {
-    showLoading();
-
-    try {
-        const params = new URLSearchParams({
-            per_page: itemsPerPage,
-            page: page,
-            search: filters.search || '',
-            class_id: filters.class || 'all',
-            status: filters.status || 'all',
-            gender: filters.gender || 'all'
-        });
-
-        const response = await axios.get(`/students/optimized?${params.toString()}`);
-
-        if (response.data.success) {
-            paginationData = response.data.data;
-            currentPage = paginationData.current_page;
-
-            // Render the current view with the data
-            if (currentView === 'table') {
-                renderTableView(paginationData.data);
+    // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
+    const Utils = {
+        log: function(message, data = null, level = 'info') {
+            if (!CONFIG.ENABLE_LOGGING) return;
+            const timestamp = new Date().toISOString();
+            const logFn = level === 'error' ? console.error : console.log;
+            if (data) {
+                logFn(`[${timestamp}] ${message}:`, data);
             } else {
-                renderCardView(paginationData.data);
+                logFn(`[${timestamp}] ${message}`);
+            }
+        },
+
+        escapeHtml: function(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+        },
+
+        formatDate: function(dateString, format = 'short') {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return 'N/A';
+
+                if (format === 'short') {
+                    return date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                } else if (format === 'long') {
+                    return date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                }
+                return date.toLocaleDateString();
+            } catch (e) {
+                return 'N/A';
+            }
+        },
+
+        calculateAge: function(dateOfBirth) {
+            if (!dateOfBirth) return 'N/A';
+            try {
+                const dob = new Date(dateOfBirth);
+                if (isNaN(dob.getTime())) return 'N/A';
+
+                const today = new Date();
+                let age = today.getFullYear() - dob.getFullYear();
+                const monthDiff = today.getMonth() - dob.getMonth();
+
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                }
+                return age;
+            } catch (e) {
+                return 'N/A';
+            }
+        },
+
+        getInitials: function(firstName, lastName) {
+            const first = firstName && firstName.length > 0 ? firstName.charAt(0).toUpperCase() : '';
+            const last = lastName && lastName.length > 0 ? lastName.charAt(0).toUpperCase() : '';
+            return (first + last) || 'ST';
+        },
+
+        debounce: function(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        },
+
+        throttle: function(func, limit) {
+            let inThrottle;
+            return function(...args) {
+                if (!inThrottle) {
+                    func.apply(this, args);
+                    inThrottle = setTimeout(() => inThrottle = false, limit);
+                }
+            };
+        },
+
+        showLoading: function() {
+            const loadingEl = document.getElementById('loadingState');
+            const tableView = document.getElementById('tableView');
+            const cardView = document.getElementById('cardView');
+            const emptyState = document.getElementById('emptyState');
+
+            if (loadingEl) loadingEl.classList.remove('d-none');
+            if (tableView) tableView.classList.add('d-none');
+            if (cardView) cardView.classList.add('d-none');
+            if (emptyState) emptyState.classList.add('d-none');
+
+            AppState.ui.isLoading = true;
+        },
+
+        hideLoading: function() {
+            const loadingEl = document.getElementById('loadingState');
+            if (loadingEl) loadingEl.classList.add('d-none');
+
+            const tableView = document.getElementById('tableView');
+            const cardView = document.getElementById('cardView');
+
+            if (tableView && AppState.ui.currentView === 'table') {
+                tableView.classList.remove('d-none');
             }
 
-            // Update pagination UI
-            updatePaginationUI(paginationData);
-            updateCounts(paginationData.total, paginationData.data.length);
-
-            // Update total students badge
-            const totalStudentsEl = document.getElementById('totalStudents');
-            if (totalStudentsEl) totalStudentsEl.textContent = paginationData.total;
-        }
-    } catch (error) {
-        console.error('Error fetching students:', error);
-        showError('Failed to load students. Please try again.');
-
-        // Show empty state
-        const emptyState = document.getElementById('emptyState');
-        const tableView = document.getElementById('tableView');
-        const cardView = document.getElementById('cardView');
-
-        if (emptyState) emptyState.classList.remove('d-none');
-        if (tableView) tableView.classList.add('d-none');
-        if (cardView) cardView.classList.add('d-none');
-    } finally {
-        hideLoading();
-    }
-}
-
-// ============================================================================
-// RENDER TABLE VIEW - OPTIMIZED
-// ============================================================================
-
-function renderTableView(students) {
-    const tbody = document.getElementById('studentTableBody');
-
-    if (!tbody) return;
-
-    if (!students || students.length === 0) {
-        tbody.innerHTML = '';
-        const emptyState = document.getElementById('emptyState');
-        if (emptyState) emptyState.classList.remove('d-none');
-        return;
-    }
-
-    const emptyState = document.getElementById('emptyState');
-    if (emptyState) emptyState.classList.add('d-none');
-
-    tbody.innerHTML = students.map(student => `
-        <tr data-id="${student.id}" class="align-middle">
-            <td>
-                <div class="form-check">
-                    <input class="form-check-input student-checkbox" type="checkbox"
-                           value="${student.id}" onchange="updateBulkActionsVisibility()">
-                </div>
-            </td>
-            <td>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="position-relative">
-                        ${getStudentAvatarOptimized(student)}
-                        <span class="position-absolute bottom-0 end-0 ${student.student_status === 'Active' ? 'bg-success' : 'bg-secondary'} rounded-circle p-1 border border-2 border-white"
-                              style="width: 12px; height: 12px;"></span>
-                    </div>
-                    <div>
-                        <h6 class="mb-1 fw-semibold">${escapeHtml(student.lastname || '')} ${escapeHtml(student.firstname || '')}</h6>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-light text-dark px-2 py-1 rounded-pill">
-                                <i class="fas fa-id-card me-1 text-muted" style="font-size: 10px;"></i>
-                                ${escapeHtml(student.admissionNo || 'N/A')}
-                            </span>
-                            ${student.statusId == 2 ?
-                                '<span class="badge bg-warning bg-gradient text-dark px-2 py-1 rounded-pill"><i class="fas fa-star me-1" style="font-size: 10px;"></i>New</span>' :
-                                student.statusId == 1 ?
-                                '<span class="badge bg-secondary bg-gradient px-2 py-1 rounded-pill"><i class="fas fa-history me-1" style="font-size: 10px;"></i>Old</span>' : ''}
-                        </div>
-                    </div>
-                </div>
-            </td>
-            <td>
-                <div class="d-flex flex-column">
-                    <span class="fw-medium">${escapeHtml(student.schoolclass || '')} ${escapeHtml(student.arm || '')}</span>
-                    <small class="text-muted">${escapeHtml(student.student_category || '')}</small>
-                </div>
-            </td>
-            <td>
-                <div class="d-flex flex-wrap gap-1">
-                    ${getCompactStatusBadge(student)}
-                </div>
-            </td>
-            <td>
-                <span class="d-flex align-items-center gap-1">
-                    <i class="fas fa-${student.gender === 'Male' ? 'mars text-primary' : 'venus text-pink'}"></i>
-                    ${escapeHtml(student.gender || 'N/A')}
-                </span>
-            </td>
-            <td>
-                <div class="d-flex align-items-center gap-1">
-                    <i class="fas fa-calendar-alt text-muted" style="font-size: 12px;"></i>
-                    <span>${formatDate(student.created_at, 'short')}</span>
-                </div>
-            </td>
-            <td>
-                <div class="d-flex gap-2 justify-content-end">
-                    <div class="btn-group" role="group">
-                        <button type="button"
-                                class="btn btn-sm btn-soft-info rounded-start"
-                                onclick="viewStudent(${student.id})"
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="top"
-                                title="View Student Details">
-                            <i class="fas fa-eye"></i>
-                            <span class="d-none d-xl-inline-block ms-1">View</span>
-                        </button>
-                        <button type="button"
-                                class="btn btn-sm btn-soft-warning"
-                                onclick="editStudent(${student.id})"
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="top"
-                                title="Edit Student">
-                            <i class="fas fa-edit"></i>
-                            <span class="d-none d-xl-inline-block ms-1">Edit</span>
-                        </button>
-                        <button type="button"
-                                class="btn btn-sm btn-soft-danger rounded-end"
-                                onclick="deleteStudent(${student.id})"
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="top"
-                                title="Delete Student">
-                            <i class="fas fa-trash-alt"></i>
-                            <span class="d-none d-xl-inline-block ms-1">Delete</span>
-                        </button>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-
-    // Initialize tooltips
-    initializeTooltips();
-    initializeCheckboxes();
-}
-
-// ============================================================================
-// RENDER CARD VIEW - OPTIMIZED
-// ============================================================================
-
-function renderCardView(students) {
-    const container = document.getElementById('studentsCardsContainer');
-
-    if (!container) return;
-
-    if (!students || students.length === 0) {
-        container.innerHTML = '';
-        const emptyState = document.getElementById('emptyState');
-        if (emptyState) emptyState.classList.remove('d-none');
-        return;
-    }
-
-    const emptyState = document.getElementById('emptyState');
-    if (emptyState) emptyState.classList.add('d-none');
-
-    container.innerHTML = students.map(student => `
-        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
-            <div class="student-profile-card" data-id="${student.id}">
-                <div class="checkbox-container">
-                    <div class="form-check">
-                        <input class="form-check-input student-checkbox" type="checkbox"
-                               value="${student.id}" onchange="updateBulkActionsVisibility()">
-                    </div>
-                </div>
-                <div class="card-header">
-                    <div class="header-content">
-                        <h5 class="student-name">${escapeHtml(student.lastname || '')} ${escapeHtml(student.firstname || '')}</h5>
-                        <span class="student-admission">${escapeHtml(student.admissionNo || 'N/A')}</span>
-                    </div>
-                    <div class="avatar-container">
-                        ${getStudentAvatarOptimized(student, true)}
-                    </div>
-                </div>
-                <div class="card-body">
-                    ${getStatusBadge(student, true)}
-                    <div class="student-info-grid">
-                        <div class="info-item">
-                            <span class="info-label">Class</span>
-                            <span class="info-value">${escapeHtml(student.schoolclass || '')} ${escapeHtml(student.arm || '')}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Gender</span>
-                            <span class="info-value">${escapeHtml(student.gender || 'N/A')}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Age</span>
-                            <span class="info-value">${escapeHtml(student.age || 'N/A')}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Registered</span>
-                            <span class="info-value">${formatDate(student.created_at, 'short')}</span>
-                        </div>
-                    </div>
-                    <div class="action-buttons">
-                        <button class="action-btn view-btn" onclick="viewStudent(${student.id})">
-                            <i class="fas fa-eye"></i> View
-                        </button>
-                        <button class="action-btn edit-btn" onclick="editStudent(${student.id})">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deleteStudent(${student.id})">
-                            <i class="fas fa-trash-alt"></i> Delete
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-
-    initializeStudentCheckboxes();
-}
-
-// ============================================================================
-// OPTIMIZED AVATAR FUNCTION - NO DUPLICATE REQUESTS
-// ============================================================================
-
-function getStudentAvatarOptimized(student, isCard = false) {
-    const initials = getStudentInitials(student.firstname, student.lastname);
-    const colors = ['#4361ee', '#3a0ca3', '#f72585', '#4cc9f0', '#7209b7', '#f8961e', '#2ec4b6', '#e71d36'];
-    const colorIndex = (student.id?.toString().length || 0) % colors.length;
-    const bgColor = colors[colorIndex];
-    const size = isCard ? '80px' : '45px';
-    const fontSize = isCard ? '28px' : '16px';
-
-    if (student.picture && student.picture !== 'unnamed.jpg') {
-        return `
-            <div class="avatar-circle" style="width: ${size}; height: ${size};">
-                <img src="/storage/images/student_avatars/${escapeHtml(student.picture)}"
-                     alt="${escapeHtml(student.firstname || 'Student')}"
-                     class="rounded-circle border border-2 border-white shadow-sm"
-                     style="width: ${size}; height: ${size}; object-fit: cover;"
-                     loading="lazy"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="avatar-initials rounded-circle border border-2 border-white shadow-sm"
-                     style="width: ${size}; height: ${size}; background: ${bgColor}; color: white; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: ${fontSize};">
-                    ${initials}
-                </div>
-            </div>
-        `;
-    }
-
-    return `
-        <div class="avatar-initials rounded-circle border border-2 border-white shadow-sm"
-             style="width: ${size}; height: ${size}; background: ${bgColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: ${fontSize};">
-            ${initials}
-        </div>
-    `;
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-function getStudentInitials(firstName, lastName) {
-    const firstInitial = firstName && firstName.length > 0 ? firstName.charAt(0).toUpperCase() : '';
-    const lastInitial = lastName && lastName.length > 0 ? lastName.charAt(0).toUpperCase() : '';
-    return (firstInitial + lastInitial) || 'ST';
-}
-
-function getStatusBadge(student, isCard = false) {
-    let badges = '';
-
-    if (student.student_status === 'Active') {
-        badges += `<span class="status-badge status-active">
-                    <i class="fas fa-check-circle"></i> Active
-                </span>`;
-    } else if (student.student_status === 'Inactive') {
-        badges += `<span class="status-badge status-inactive">
-                    <i class="fas fa-pause-circle"></i> Inactive
-                </span>`;
-    }
-
-    if (student.statusId == 2) {
-        badges += `<span class="status-badge status-new ${!isCard ? 'ms-2' : ''}">
-                    <i class="fas fa-star"></i> New Student
-                </span>`;
-    } else if (student.statusId == 1) {
-        badges += `<span class="status-badge status-old ${!isCard ? 'ms-2' : ''}">
-                    <i class="fas fa-history"></i> Old Student
-                </span>`;
-    }
-
-    return badges;
-}
-
-function getCompactStatusBadge(student) {
-    let badges = '';
-
-    if (student.student_status === 'Active') {
-        badges += '<span class="badge bg-success bg-gradient px-2 py-1 rounded-pill"><span class="status-dot active"></span>Active</span>';
-    } else if (student.student_status === 'Inactive') {
-        badges += '<span class="badge bg-secondary bg-gradient px-2 py-1 rounded-pill"><span class="status-dot inactive"></span>Inactive</span>';
-    }
-
-    return badges;
-}
-
-function formatDate(dateString, format = 'long') {
-    if (!dateString) return 'N/A';
-
-    try {
-        const date = new Date(dateString);
-        const options = format === 'short' ?
-            { year: 'numeric', month: 'short', day: 'numeric' } :
-            { year: 'numeric', month: 'long', day: 'numeric' };
-
-        return date.toLocaleDateString('en-US', options);
-    } catch (e) {
-        return 'N/A';
-    }
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
-}
-
-// ============================================================================
-// PAGINATION UI
-// ============================================================================
-
-function updatePaginationUI(pagination) {
-    const paginationContainer = document.querySelector('.pagination');
-    if (!paginationContainer) return;
-
-    const currentPageSpan = document.getElementById('currentPage');
-    const prevBtn = document.getElementById('prevPage');
-    const nextBtn = document.getElementById('nextPage');
-
-    // Update current page display
-    if (currentPageSpan) {
-        currentPageSpan.textContent = pagination.current_page;
-    }
-
-    // Enable/disable prev button
-    if (prevBtn) {
-        if (pagination.current_page > 1) {
-            prevBtn.classList.remove('disabled');
-            prevBtn.onclick = (e) => {
-                e.preventDefault();
-                fetchStudents(pagination.current_page - 1, currentFilters);
-            };
-        } else {
-            prevBtn.classList.add('disabled');
-            prevBtn.onclick = null;
-        }
-    }
-
-    // Enable/disable next button
-    if (nextBtn) {
-        if (pagination.current_page < pagination.last_page) {
-            nextBtn.classList.remove('disabled');
-            nextBtn.onclick = (e) => {
-                e.preventDefault();
-                fetchStudents(pagination.current_page + 1, currentFilters);
-            };
-        } else {
-            nextBtn.classList.add('disabled');
-            nextBtn.onclick = null;
-        }
-    }
-
-    // Update page numbers
-    updatePageNumbers(pagination);
-}
-
-function updatePageNumbers(pagination) {
-    const paginationNav = document.querySelector('.pagination');
-    if (!paginationNav) return;
-
-    // Remove existing page number buttons (keep first, prev, next, last)
-    const pageItems = paginationNav.querySelectorAll('.page-item:not(:first-child):not(:last-child)');
-    pageItems.forEach(item => item.remove());
-
-    // Calculate which page numbers to show
-    let startPage = Math.max(1, pagination.current_page - 2);
-    let endPage = Math.min(pagination.last_page, pagination.current_page + 2);
-
-    // Insert page numbers before the next button
-    const nextButton = paginationNav.querySelector('.page-item:last-child');
-
-    for (let i = startPage; i <= endPage; i++) {
-        const li = document.createElement('li');
-        li.className = `page-item ${i === pagination.current_page ? 'active' : ''}`;
-
-        const a = document.createElement('a');
-        a.className = 'page-link';
-        a.href = 'javascript:void(0);';
-        a.textContent = i;
-        a.onclick = (e) => {
-            e.preventDefault();
-            fetchStudents(i, currentFilters);
-        };
-
-        li.appendChild(a);
-        paginationNav.insertBefore(li, nextButton);
-    }
-}
-
-function updateCounts(total, showing) {
-    const totalStudentsEl = document.getElementById('totalStudents');
-    const totalCountEl = document.getElementById('totalCount');
-    const showingCountEl = document.getElementById('showingCount');
-
-    if (totalStudentsEl) totalStudentsEl.textContent = total;
-    if (totalCountEl) totalCountEl.textContent = total;
-    if (showingCountEl) showingCountEl.textContent = showing;
-}
-
-// ============================================================================
-// FILTER FUNCTIONS
-// ============================================================================
-
-function filterData(resetPage = true) {
-    // Update current filters
-    const searchInput = document.getElementById('search-input');
-    const classFilter = document.getElementById('schoolclass-filter');
-    const statusFilter = document.getElementById('status-filter');
-    const genderFilter = document.getElementById('gender-filter');
-
-    currentFilters = {
-        search: searchInput ? searchInput.value : '',
-        class: classFilter ? classFilter.value : 'all',
-        status: statusFilter ? statusFilter.value : 'all',
-        gender: genderFilter ? genderFilter.value : 'all'
-    };
-
-    // Fetch with page 1 (or reset to first page)
-    fetchStudents(resetPage ? 1 : currentPage, currentFilters);
-}
-
-function resetFilters() {
-    // Reset input fields
-    const searchInput = document.getElementById('search-input');
-    const classFilter = document.getElementById('schoolclass-filter');
-    const statusFilter = document.getElementById('status-filter');
-    const genderFilter = document.getElementById('gender-filter');
-
-    if (searchInput) searchInput.value = '';
-    if (classFilter) classFilter.value = 'all';
-    if (statusFilter) statusFilter.value = 'all';
-    if (genderFilter) genderFilter.value = 'all';
-
-    // Reset filters object
-    currentFilters = {
-        search: '',
-        class: 'all',
-        status: 'all',
-        gender: 'all'
-    };
-
-    // Fetch first page with no filters
-    fetchStudents(1, currentFilters);
-}
-
-function debouncedSearch() {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-        filterData(true);
-    }, 500);
-}
-
-// ============================================================================
-// VIEW, EDIT, DELETE FUNCTIONS
-// ============================================================================
-
-async function viewStudent(id) {
-    if (!ensureAxios()) return;
-
-    Swal.fire({
-        title: 'Loading...',
-        text: 'Fetching student details',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
-
-    try {
-        // Try to find student from existing data first (faster)
-        let student = null;
-        if (paginationData && paginationData.data) {
-            student = paginationData.data.find(s => s.id == id);
-        }
-
-        // If not found in current page or need full details, fetch from API
-        if (!student) {
-            const response = await axios.get(`/student/${id}/edit`);
-            student = response.data.student || response.data;
-        }
-
-        Swal.close();
-
-        if (student) {
-            populateEnhancedViewModal(student);
-            const viewModalElement = document.getElementById('viewStudentModal');
-            if (viewModalElement) {
-                const viewModal = new bootstrap.Modal(viewModalElement);
-                viewModal.show();
-
-                // Fetch term history after modal is shown
-                viewModalElement.addEventListener('shown.bs.modal', function onShown() {
-                    fetchStudentTermInfo(student.id);
-                    this.removeEventListener('shown.bs.modal', onShown);
+            if (cardView && AppState.ui.currentView === 'card') {
+                cardView.classList.remove('d-none');
+            }
+
+            AppState.ui.isLoading = false;
+        },
+
+        showError: function(message, title = 'Error') {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: title,
+                    text: message,
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: { confirmButton: 'btn btn-primary' }
+                });
+            } else {
+                alert(`${title}: ${message}`);
+            }
+        },
+
+        showSuccess: function(message, title = 'Success') {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: title,
+                    text: message,
+                    icon: 'success',
+                    confirmButtonText: 'OK',
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+            } else {
+                alert(`${title}: ${message}`);
+            }
+        },
+
+        showConfirm: async function(title, text, confirmText = 'Yes', cancelText = 'Cancel') {
+            if (typeof Swal !== 'undefined') {
+                const result = await Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: confirmText,
+                    cancelButtonText: cancelText,
+                    customClass: {
+                        confirmButton: 'btn btn-danger',
+                        cancelButton: 'btn btn-light'
+                    }
+                });
+                return result.isConfirmed;
+            }
+            return confirm(`${title}: ${text}`);
+        },
+
+        initializeTooltips: function() {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function(tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
                 });
             }
+        },
+
+        ensureAxios: function() {
+            if (typeof axios === 'undefined') {
+                Utils.showError('Axios library is missing. Please refresh the page or contact support.');
+                return false;
+            }
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (!csrfToken) {
+                Utils.showError('CSRF token not found. Please refresh the page.');
+                return false;
+            }
+
+            axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+            axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+            return true;
         }
-    } catch (error) {
-        Swal.close();
-        console.error('Error fetching student:', error);
-        showError('Failed to load student data.');
-    }
-}
-
-async function editStudent(id) {
-    if (!ensureAxios()) return;
-
-    Swal.fire({
-        title: 'Loading...',
-        text: 'Preparing edit form',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
-
-    try {
-        const response = await axios.get(`/student/${id}/edit`);
-        const student = response.data.student || response.data;
-
-        Swal.close();
-
-        populateEditForm(student);
-
-        const editModalElement = document.getElementById('editStudentModal');
-        if (editModalElement) {
-            const editModal = new bootstrap.Modal(editModalElement);
-            editModal.show();
-        }
-    } catch (error) {
-        Swal.close();
-        console.error('Error fetching student for edit:', error);
-        showError('Failed to load student for editing.');
-    }
-}
-
-async function deleteStudent(id) {
-    const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: 'btn btn-danger',
-            cancelButton: 'btn btn-light'
-        }
-    });
-
-    if (result.isConfirmed) {
-        try {
-            await axios.delete(`/student/${id}/destroy`);
-
-            // Refresh current page
-            fetchStudents(currentPage, currentFilters);
-
-            Swal.fire({
-                title: 'Deleted!',
-                text: 'Student has been deleted.',
-                icon: 'success',
-                confirmButtonText: 'OK',
-                timer: 2000,
-                timerProgressBar: true
-            });
-        } catch (error) {
-            console.error('Error deleting student:', error);
-            showError('Failed to delete student.');
-        }
-    }
-}
-
-async function deleteMultiple() {
-    const selectedIds = getSelectedStudentIds();
-
-    if (selectedIds.length === 0) {
-        Swal.fire({
-            title: 'No Selection',
-            text: 'Please select at least one student to delete.',
-            icon: 'warning',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
-
-    const result = await Swal.fire({
-        title: `Delete ${selectedIds.length} Students?`,
-        text: "This action cannot be undone!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, delete them!',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            confirmButton: 'btn btn-danger',
-            cancelButton: 'btn btn-light'
-        }
-    });
-
-    if (result.isConfirmed) {
-        try {
-            await axios.post('/student/destroy-multiple', { ids: selectedIds });
-
-            // Refresh current page
-            fetchStudents(currentPage, currentFilters);
-
-            Swal.fire({
-                title: 'Deleted!',
-                text: `${selectedIds.length} student(s) have been deleted.`,
-                icon: 'success',
-                confirmButtonText: 'OK',
-                timer: 2000,
-                timerProgressBar: true
-            });
-        } catch (error) {
-            console.error('Error deleting multiple students:', error);
-            showError('Failed to delete selected students.');
-        }
-    }
-}
-
-function getSelectedStudentIds() {
-    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
-}
-
-// ============================================================================
-// CHECKBOX AND BULK ACTIONS
-// ============================================================================
-
-function toggleSelectAll(e) {
-    const isChecked = e.target.checked;
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = isChecked;
-        const parent = checkbox.closest('.student-profile-card, tr');
-        if (parent) {
-            parent.classList.toggle('selected', isChecked);
-        }
-    });
-
-    updateBulkActionsVisibility();
-}
-
-function updateBulkActionsVisibility() {
-    const selectedCount = document.querySelectorAll('.student-checkbox:checked').length;
-    const bulkActionsDropdown = document.getElementById('bulkActionsDropdown');
-
-    if (bulkActionsDropdown) {
-        if (selectedCount > 0) {
-            bulkActionsDropdown.disabled = false;
-            bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions (${selectedCount})`;
-        } else {
-            bulkActionsDropdown.disabled = true;
-            bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions`;
-        }
-    }
-}
-
-function initializeCheckboxes() {
-    const checkAll = document.getElementById('checkAll');
-    const checkAllTable = document.getElementById('checkAllTable');
-
-    if (checkAll) {
-        checkAll.addEventListener('change', toggleSelectAll);
-    }
-
-    if (checkAllTable) {
-        checkAllTable.addEventListener('change', toggleSelectAll);
-    }
-}
-
-function initializeStudentCheckboxes() {
-    const checkAll = document.getElementById('checkAll');
-    if (!checkAll) return;
-
-    checkAll.addEventListener('change', toggleSelectAll);
-
-    document.querySelectorAll('.student-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const allChecked = document.querySelectorAll('.student-checkbox').length ===
-                document.querySelectorAll('.student-checkbox:checked').length;
-            checkAll.checked = allChecked;
-            updateBulkActionsVisibility();
-        });
-    });
-}
-
-// ============================================================================
-// VIEW MODAL FUNCTIONS
-// ============================================================================
-
-// Enhanced view modal population with correct parent field names
-function populateEnhancedViewModal(student) {
-    console.log('Populating enhanced view modal with student:', student);
-
-    // Helper function to safely set text content
-    const setText = (id, value, defaultValue = '-') => {
-        const element = document.getElementById(id);
-        if (element) element.textContent = value || defaultValue;
     };
 
-    // Helper function to safely set HTML content
-    const setHtml = (id, html) => {
-        const element = document.getElementById(id);
-        if (element) element.innerHTML = html;
-    };
+    // ============================================================================
+    // API SERVICE - Centralized API calls
+    // ============================================================================
+    const ApiService = {
+        async getStudents(page = 1, perPage = null, filters = null) {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
 
-    // Set student photo
-    const photoElement = document.getElementById('viewStudentPhoto');
-    if (photoElement) {
-        if (student.picture && student.picture !== 'unnamed.jpg') {
-            photoElement.src = `/storage/images/student_avatars/${student.picture}`;
-            photoElement.onerror = function() {
-                this.src = '/theme/layouts/assets/media/avatars/blank.png';
-            };
-        } else {
-            photoElement.src = '/theme/layouts/assets/media/avatars/blank.png';
-        }
-    }
+            const params = new URLSearchParams();
+            params.append('page', page);
+            params.append('per_page', perPage || AppState.pagination.perPage);
 
-    // Set status indicator
-    const statusIndicator = document.getElementById('studentStatusIndicator');
-    if (statusIndicator) {
-        const isActive = student.student_status === 'Active';
-        statusIndicator.className = `position-absolute bottom-0 end-0 rounded-circle p-2 border border-2 border-white ${isActive ? 'bg-success' : 'bg-secondary'}`;
-        statusIndicator.title = isActive ? 'Active Student' : 'Inactive Student';
-    }
+            const currentFilters = filters || AppState.filters;
+            if (currentFilters.search) params.append('search', currentFilters.search);
+            if (currentFilters.class && currentFilters.class !== 'all') params.append('class_id', currentFilters.class);
+            if (currentFilters.status && currentFilters.status !== 'all') params.append('status', currentFilters.status);
+            if (currentFilters.gender && currentFilters.gender !== 'all') params.append('gender', currentFilters.gender);
 
-    // Basic Information
-    const fullName = `${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}`.trim();
-    setText('viewFullName', fullName);
-    setText('viewFullNameDetail', fullName);
-    setText('viewAdmissionNumber', student.admissionNo);
-    setText('viewAdmissionNo', student.admissionNo);
+            try {
+                Utils.log('Fetching students', { page, perPage, params: params.toString() });
+                const response = await axios.get(`/students/optimized?${params.toString()}`);
 
-    // Class Display
-    const classDisplay = `${student.schoolclass || ''} ${student.arm ? '- ' + student.arm : ''}`.trim();
-    setText('viewClassDisplay', classDisplay);
-    setText('viewCurrentClass', classDisplay);
-    setHtml('viewClassBadge', `<i class="fas fa-school me-1"></i>${classDisplay || 'Not Assigned'}`);
-
-    // Student Type
-    const studentType = student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : 'N/A';
-    setText('viewStudentType', studentType);
-    setHtml('viewStudentTypeBadge', `<i class="fas fa-user-tag me-1"></i>${studentType}`);
-
-    // Admission Date
-    if (student.admission_date) {
-        const admDate = new Date(student.admission_date);
-        setText('viewAdmittedDate', admDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
-        setText('viewAdmissionDate', admDate.toLocaleDateString());
-    }
-
-    // Gender
-    const gender = student.gender || '-';
-    const genderIcon = gender === 'Male' ? 'mars' : gender === 'Female' ? 'venus' : 'genderless';
-    setText('viewGenderText', gender);
-    setHtml('viewGenderDetail', `<i class="fas fa-${genderIcon} me-1"></i>${gender}`);
-
-    // Age
-    const age = student.age || 'N/A';
-    setText('viewAge', age);
-    setText('viewAgeDetail', age);
-
-    // Title
-    setText('viewTitle', student.title || '-');
-
-    // Date of Birth
-    if (student.dateofbirth) {
-        const dob = new Date(student.dateofbirth);
-        setText('viewDOB', dob.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
-    } else {
-        setText('viewDOB', '-');
-    }
-
-    // Place of Birth
-    setText('viewPlaceOfBirth', student.placeofbirth || '-');
-
-    // Blood Group
-    setText('viewBloodGroupDetail', student.blood_group || '-');
-    setText('viewBloodGroupAdditional', student.blood_group || '-');
-
-    // Religion
-    setText('viewReligionDetail', student.religion || '-');
-
-    // Contact Information
-    setText('viewPhoneNumber', student.phone_number || '-');
-    setText('viewEmailAddress', student.email || '-');
-    setText('viewPermanentAddress', student.permanent_address || '-');
-    setText('viewCity', student.city || '-');
-    setText('viewStateOrigin', student.state || '-');
-    setText('viewLGA', student.local || '-');
-    setText('viewNationality', student.nationality || '-');
-
-    // Future Ambition
-    setText('viewFutureAmbition', student.future_ambition || '-');
-
-    // Academic Information
-    setText('viewArm', student.arm || '-');
-    setText('viewStudentCategory', student.student_category || '-');
-
-    // Student Status Badge
-    const studentStatus = student.student_status || 'Inactive';
-    const statusBadgeClass = studentStatus === 'Active' ? 'bg-success' : 'bg-secondary';
-    const statusIcon = studentStatus === 'Active' ? 'check-circle' : 'pause-circle';
-    setHtml('viewStudentStatus', `<span class="badge ${statusBadgeClass}"><i class="fas fa-${statusIcon} me-1"></i>${studentStatus}</span>`);
-
-    // School House
-    setText('viewSchoolHouse', student.school_house || student.sport_house || '-');
-
-    // Previous School
-    setText('viewLastSchool', student.last_school || '-');
-    setText('viewLastClass', student.last_class || '-');
-    setText('viewReasonForLeaving', student.reason_for_leaving || '-');
-
-    // =========================================
-    // PARENT / GUARDIAN INFORMATION - CORRECTED FIELD NAMES
-    // =========================================
-
-    // Father's Information - using father (not father_name)
-    setText('viewFatherFullName', student.father || student.father_name || '-');
-    setText('viewFatherPhone', student.father_phone || '-');
-    setText('viewFatherOccupation', student.father_occupation || '-');
-    setText('viewFatherEmployer', '-'); // Not in your table
-    setText('viewFatherCityState', student.father_city || '-');
-    setText('viewFatherEmail', '-'); // Not in your table
-    setText('viewFatherAddress', student.office_address || '-');
-
-    // Father Status Badge
-    const fatherStatusBadge = document.getElementById('fatherStatusBadge');
-    if (fatherStatusBadge) {
-        if (student.father || student.father_name) {
-            fatherStatusBadge.textContent = 'Active Contact';
-            fatherStatusBadge.className = 'badge bg-success ms-2';
-        } else {
-            fatherStatusBadge.textContent = 'Not Provided';
-            fatherStatusBadge.className = 'badge bg-secondary ms-2';
-        }
-    }
-
-    // Mother's Information - using mother (not mother_name)
-    setText('viewMotherFullName', student.mother || student.mother_name || '-');
-    setText('viewMotherPhone', student.mother_phone || '-');
-    setText('viewMotherOccupation', '-'); // Not in your table
-    setText('viewMotherEmployer', '-'); // Not in your table
-    setText('viewMotherCityState', '-'); // Not in your table
-    setText('viewMotherEmail', '-'); // Not in your table
-    setText('viewMotherAddress', '-'); // Not in your table
-
-    // Mother Status Badge
-    const motherStatusBadge = document.getElementById('motherStatusBadge');
-    if (motherStatusBadge) {
-        if (student.mother || student.mother_name) {
-            motherStatusBadge.textContent = 'Active Contact';
-            motherStatusBadge.className = 'badge bg-danger ms-2';
-        } else {
-            motherStatusBadge.textContent = 'Not Provided';
-            motherStatusBadge.className = 'badge bg-secondary ms-2';
-        }
-    }
-
-    // Guardian/Emergency Contact - using available fields
-    setText('viewGuardianName', '-');
-    setText('viewGuardianRelation', '-');
-    setText('viewGuardianPhone', '-');
-    setText('viewParentEmail', student.parent_email || '-');
-    setText('viewParentAddress', student.parent_address || '-');
-
-    // Additional Information
-    setText('viewGenotype', '-');
-    setText('viewAllergies', '-');
-    setText('viewMedicalConditions', '-');
-    setText('viewDisabilities', '-');
-    setText('viewNIN', student.nin_number || '-');
-    setText('viewMotherTongue', student.mother_tongue || '-');
-
-    // Set last updated timestamp
-    const now = new Date();
-    setText('studentProfileLastUpdated', `Last updated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`);
-}
-
-
-
-async function fetchStudentTermInfo(studentId) {
-    try {
-        // Get current active term from system
-        const systemResponse = await axios.get('/system/active-term-session');
-        const systemInfo = systemResponse.data.success ? systemResponse.data : { term: null, session: null };
-
-        // Get student's active term
-        const activeResponse = await axios.get(`/student-current-term/student/${studentId}/active`);
-        const activeTerm = activeResponse.data.success ? activeResponse.data.data : null;
-
-        // Update UI with term information
-        const setText = (id, value) => {
-            const element = document.getElementById(id);
-            if (element) element.textContent = value || '-';
-        };
-
-        const setHtml = (id, html) => {
-            const element = document.getElementById(id);
-            if (element) element.innerHTML = html;
-        };
-
-        if (systemInfo.term) {
-            setText('viewCurrentTerm', systemInfo.term.term || systemInfo.term.name || 'Not Set');
-            setText('viewCurrentSession', systemInfo.session?.session || systemInfo.session?.name || 'Not Set');
-
-            const isActiveInCurrentTerm = activeTerm &&
-                activeTerm.term_id == systemInfo.term.id &&
-                activeTerm.session_id == systemInfo.session.id;
-
-            const alertElement = document.getElementById('currentTermAlert');
-            if (alertElement) {
-                if (isActiveInCurrentTerm) {
-                    alertElement.innerHTML = `
-                        <div class="alert alert-success py-2 px-3 mb-3">
-                            <i class="fas fa-check-circle me-2"></i>
-                            <strong>Active in Current Term</strong>
-                            <p class="mb-0 small">Student is registered and active in the current academic term.</p>
-                        </div>
-                    `;
-                    setHtml('viewCurrentTermStatus', '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>');
+                if (response.data.success) {
+                    return response.data.data;
                 } else {
-                    alertElement.innerHTML = `
-                        <div class="alert alert-warning py-2 px-3 mb-3">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Not in Current Term</strong>
-                            <p class="mb-0 small">Student is not registered for the current academic term.</p>
-                        </div>
-                    `;
-                    setHtml('viewCurrentTermStatus', '<span class="badge bg-warning"><i class="fas fa-pause-circle me-1"></i>Not Registered</span>');
+                    throw new Error(response.data.message || 'Failed to fetch students');
+                }
+            } catch (error) {
+                Utils.log('API Error - getStudents', error, 'error');
+                throw error;
+            }
+        },
+
+        async getStudent(id) {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.get(`/student/${id}/edit`);
+                return response.data.student || response.data;
+            } catch (error) {
+                Utils.log('API Error - getStudent', error, 'error');
+                throw error;
+            }
+        },
+
+        async deleteStudent(id) {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.delete(`/student/${id}/destroy`);
+                return response.data;
+            } catch (error) {
+                Utils.log('API Error - deleteStudent', error, 'error');
+                throw error;
+            }
+        },
+
+        async deleteMultipleStudents(ids) {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.post('/students/destroy-multiple', { ids });
+                return response.data;
+            } catch (error) {
+                Utils.log('API Error - deleteMultipleStudents', error, 'error');
+                throw error;
+            }
+        },
+
+        async getActiveTermSystem() {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.get('/system/active-term-session');
+                return response.data;
+            } catch (error) {
+                Utils.log('API Error - getActiveTermSystem', error, 'error');
+                return { success: false, term: null, session: null };
+            }
+        },
+
+        async getStudentActiveTerm(studentId) {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.get(`/student-current-term/student/${studentId}/active`);
+                return response.data;
+            } catch (error) {
+                Utils.log('API Error - getStudentActiveTerm', error, 'error');
+                return { success: false, data: null };
+            }
+        },
+
+        async getStudentAllTerms(studentId) {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.get(`/student/${studentId}/all-terms`);
+                return response.data;
+            } catch (error) {
+                Utils.log('API Error - getStudentAllTerms', error, 'error');
+                return { success: false, data: [] };
+            }
+        },
+
+        async updateBulkCurrentTerm(data) {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.post('/student-current-term/bulk-update', data);
+                return response.data;
+            } catch (error) {
+                Utils.log('API Error - updateBulkCurrentTerm', error, 'error');
+                throw error;
+            }
+        },
+
+        async generateReport(params) {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.get('/students/report', {
+                    params: params,
+                    responseType: 'blob',
+                    timeout: 120000
+                });
+                return response;
+            } catch (error) {
+                Utils.log('API Error - generateReport', error, 'error');
+                throw error;
+            }
+        }
+    };
+
+    // ============================================================================
+    // PAGINATION MANAGER - User-controlled items per page
+    // ============================================================================
+    const PaginationManager = {
+        initializePerPageSelector: function() {
+            const container = document.querySelector('.pagination-container');
+            if (!container) return;
+
+            // Check if per page selector already exists
+            if (document.getElementById('perPageSelector')) return;
+
+            const perPageHtml = `
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted">Show:</span>
+                    <select id="perPageSelector" class="form-select form-select-sm" style="width: auto;">
+                        ${CONFIG.PER_PAGE_OPTIONS.map(option =>
+                            `<option value="${option}" ${AppState.pagination.perPage === option ? 'selected' : ''}>${option}</option>`
+                        ).join('')}
+                    </select>
+                    <span class="text-muted">entries</span>
+                </div>
+            `;
+
+            const paginationNav = container.querySelector('nav');
+            if (paginationNav) {
+                container.insertAdjacentHTML('afterbegin', perPageHtml);
+            } else {
+                container.insertAdjacentHTML('beforeend', perPageHtml);
+            }
+
+            const selector = document.getElementById('perPageSelector');
+            if (selector) {
+                selector.addEventListener('change', function(e) {
+                    const newPerPage = parseInt(e.target.value, 10);
+                    AppState.pagination.perPage = newPerPage;
+                    AppState.pagination.currentPage = 1;
+                    StudentManager.fetchStudents();
+                });
+            }
+        },
+
+        updatePaginationUI: function(pagination) {
+            const paginationContainer = document.querySelector('.pagination');
+            if (!paginationContainer) return;
+
+            const currentPageSpan = document.getElementById('currentPage');
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+
+            if (currentPageSpan) {
+                currentPageSpan.textContent = pagination.current_page;
+            }
+
+            // Update prev button
+            if (prevBtn) {
+                if (pagination.current_page > 1) {
+                    prevBtn.classList.remove('disabled');
+                    prevBtn.onclick = (e) => {
+                        e.preventDefault();
+                        AppState.pagination.currentPage = pagination.current_page - 1;
+                        StudentManager.fetchStudents();
+                    };
+                } else {
+                    prevBtn.classList.add('disabled');
+                    prevBtn.onclick = null;
+                }
+            }
+
+            // Update next button
+            if (nextBtn) {
+                if (pagination.current_page < pagination.last_page) {
+                    nextBtn.classList.remove('disabled');
+                    nextBtn.onclick = (e) => {
+                        e.preventDefault();
+                        AppState.pagination.currentPage = pagination.current_page + 1;
+                        StudentManager.fetchStudents();
+                    };
+                } else {
+                    nextBtn.classList.add('disabled');
+                    nextBtn.onclick = null;
+                }
+            }
+
+            this.updatePageNumbers(pagination);
+            this.updateCounts(pagination.total, pagination.data.length);
+        },
+
+        updatePageNumbers: function(pagination) {
+            const paginationNav = document.querySelector('.pagination');
+            if (!paginationNav) return;
+
+            // Remove existing page number buttons
+            const pageItems = paginationNav.querySelectorAll('.page-item:not(:first-child):not(:last-child)');
+            pageItems.forEach(item => item.remove());
+
+            // Calculate which page numbers to show
+            let startPage = Math.max(1, pagination.current_page - 2);
+            let endPage = Math.min(pagination.last_page, pagination.current_page + 2);
+
+            // Insert page numbers before the next button
+            const nextButton = paginationNav.querySelector('.page-item:last-child');
+
+            for (let i = startPage; i <= endPage; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === pagination.current_page ? 'active' : ''}`;
+
+                const a = document.createElement('a');
+                a.className = 'page-link';
+                a.href = 'javascript:void(0);';
+                a.textContent = i;
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    AppState.pagination.currentPage = i;
+                    StudentManager.fetchStudents();
+                };
+
+                li.appendChild(a);
+                paginationNav.insertBefore(li, nextButton);
+            }
+
+            // Add ellipsis if needed
+            if (pagination.last_page > 5 && endPage < pagination.last_page) {
+                const ellipsisLi = document.createElement('li');
+                ellipsisLi.className = 'page-item disabled';
+                ellipsisLi.innerHTML = '<span class="page-link">...</span>';
+                paginationNav.insertBefore(ellipsisLi, nextButton);
+            }
+
+            if (pagination.last_page > 5 && startPage > 1) {
+                // Add ellipsis at beginning
+                const firstPage = paginationNav.querySelector('.page-item:first-child');
+                const ellipsisLi = document.createElement('li');
+                ellipsisLi.className = 'page-item disabled';
+                ellipsisLi.innerHTML = '<span class="page-link">...</span>';
+                paginationNav.insertBefore(ellipsisLi, paginationNav.children[1]);
+            }
+        },
+
+        updateCounts: function(total, showing) {
+            const totalStudentsEl = document.getElementById('totalStudents');
+            const totalCountEl = document.getElementById('totalCount');
+            const showingCountEl = document.getElementById('showingCount');
+
+            if (totalStudentsEl) totalStudentsEl.textContent = total;
+            if (totalCountEl) totalCountEl.textContent = total;
+            if (showingCountEl) showingCountEl.textContent = showing;
+        }
+    };
+
+    // ============================================================================
+    // FILTER MANAGER - Enhanced filtering with debouncing
+    // ============================================================================
+    const FilterManager = {
+        debouncedSearch: Utils.debounce(function() {
+            AppState.pagination.currentPage = 1;
+            StudentManager.fetchStudents();
+        }, CONFIG.DEBOUNCE_DELAY),
+
+        initializeFilters: function() {
+            const searchInput = document.getElementById('search-input');
+            const classFilter = document.getElementById('schoolclass-filter');
+            const statusFilter = document.getElementById('status-filter');
+            const genderFilter = document.getElementById('gender-filter');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', () => this.debouncedSearch());
+            }
+
+            if (classFilter) {
+                classFilter.addEventListener('change', () => {
+                    AppState.pagination.currentPage = 1;
+                    StudentManager.fetchStudents();
+                });
+            }
+
+            if (statusFilter) {
+                statusFilter.addEventListener('change', () => {
+                    AppState.pagination.currentPage = 1;
+                    StudentManager.fetchStudents();
+                });
+            }
+
+            if (genderFilter) {
+                genderFilter.addEventListener('change', () => {
+                    AppState.pagination.currentPage = 1;
+                    StudentManager.fetchStudents();
+                });
+            }
+        },
+
+        applyFilters: function() {
+            const searchInput = document.getElementById('search-input');
+            const classFilter = document.getElementById('schoolclass-filter');
+            const statusFilter = document.getElementById('status-filter');
+            const genderFilter = document.getElementById('gender-filter');
+
+            AppState.filters = {
+                search: searchInput ? searchInput.value : '',
+                class: classFilter ? classFilter.value : 'all',
+                status: statusFilter ? statusFilter.value : 'all',
+                gender: genderFilter ? genderFilter.value : 'all'
+            };
+
+            AppState.pagination.currentPage = 1;
+            StudentManager.fetchStudents();
+        },
+
+        resetFilters: function() {
+            const searchInput = document.getElementById('search-input');
+            const classFilter = document.getElementById('schoolclass-filter');
+            const statusFilter = document.getElementById('status-filter');
+            const genderFilter = document.getElementById('gender-filter');
+
+            if (searchInput) searchInput.value = '';
+            if (classFilter) classFilter.value = 'all';
+            if (statusFilter) statusFilter.value = 'all';
+            if (genderFilter) genderFilter.value = 'all';
+
+            AppState.filters = {
+                search: '',
+                class: 'all',
+                status: 'all',
+                gender: 'all'
+            };
+
+            AppState.pagination.currentPage = 1;
+            StudentManager.fetchStudents();
+        }
+    };
+
+    // ============================================================================
+    // STUDENT MANAGER - Core student operations
+    // ============================================================================
+    const StudentManager = {
+        async fetchStudents() {
+            Utils.showLoading();
+
+            try {
+                const paginationData = await ApiService.getStudents(
+                    AppState.pagination.currentPage,
+                    AppState.pagination.perPage,
+                    AppState.filters
+                );
+
+                AppState.pagination = {
+                    ...AppState.pagination,
+                    currentPage: paginationData.current_page,
+                    lastPage: paginationData.last_page,
+                    total: paginationData.total,
+                    data: paginationData.data
+                };
+
+                // Render based on current view
+                if (AppState.ui.currentView === 'table') {
+                    RenderManager.renderTableView(paginationData.data);
+                } else {
+                    RenderManager.renderCardView(paginationData.data);
+                }
+
+                // Update UI
+                PaginationManager.updatePaginationUI(paginationData);
+                SelectionManager.updateBulkActionsVisibility();
+
+                // Update cache
+                paginationData.data.forEach(student => {
+                    AppState.cache.students.set(student.id.toString(), student);
+                });
+
+                Utils.log('Students fetched successfully', {
+                    total: paginationData.total,
+                    showing: paginationData.data.length
+                });
+
+            } catch (error) {
+                Utils.log('Error fetching students', error, 'error');
+                Utils.showError('Failed to load students. Please try again.');
+
+                const emptyState = document.getElementById('emptyState');
+                if (emptyState) emptyState.classList.remove('d-none');
+            } finally {
+                Utils.hideLoading();
+            }
+        },
+
+        async viewStudent(id) {
+            try {
+                Utils.showLoading();
+
+                // Try to get from cache first
+                let student = AppState.cache.students.get(id.toString());
+
+                if (!student) {
+                    student = await ApiService.getStudent(id);
+                    if (student && student.id) {
+                        AppState.cache.students.set(id.toString(), student);
+                    }
+                }
+
+                Utils.hideLoading();
+
+                if (student) {
+                    ViewModalManager.populateEnhancedViewModal(student);
+
+                    const viewModalElement = document.getElementById('viewStudentModal');
+                    if (viewModalElement) {
+                        const viewModal = new bootstrap.Modal(viewModalElement);
+                        viewModal.show();
+
+                        // Fetch term history after modal is shown
+                        viewModalElement.addEventListener('shown.bs.modal', function onShown() {
+                            ViewModalManager.fetchStudentTermInfo(student.id);
+                            this.removeEventListener('shown.bs.modal', onShown);
+                        });
+                    }
+                }
+            } catch (error) {
+                Utils.hideLoading();
+                Utils.log('Error viewing student', error, 'error');
+                Utils.showError('Failed to load student data.');
+            }
+        },
+
+        async editStudent(id) {
+            try {
+                Utils.showLoading();
+
+                const student = await ApiService.getStudent(id);
+
+                Utils.hideLoading();
+
+                EditFormManager.populateEditForm(student);
+
+                const editModalElement = document.getElementById('editStudentModal');
+                if (editModalElement) {
+                    const editModal = new bootstrap.Modal(editModalElement);
+                    editModal.show();
+                }
+            } catch (error) {
+                Utils.hideLoading();
+                Utils.log('Error editing student', error, 'error');
+                Utils.showError('Failed to load student for editing.');
+            }
+        },
+
+        async deleteStudent(id) {
+            const confirmed = await Utils.showConfirm(
+                'Delete Student',
+                'You won\'t be able to revert this!',
+                'Yes, delete it!'
+            );
+
+            if (confirmed) {
+                try {
+                    await ApiService.deleteStudent(id);
+
+                    // Remove from cache
+                    AppState.cache.students.delete(id.toString());
+
+                    // Refresh current page
+                    await this.fetchStudents();
+
+                    Utils.showSuccess('Student has been deleted.');
+                } catch (error) {
+                    Utils.log('Error deleting student', error, 'error');
+                    Utils.showError('Failed to delete student.');
+                }
+            }
+        },
+
+        async deleteMultiple() {
+            const selectedIds = SelectionManager.getSelectedStudentIds();
+
+            if (selectedIds.length === 0) {
+                Utils.showError('Please select at least one student to delete.', 'No Selection');
+                return;
+            }
+
+            const confirmed = await Utils.showConfirm(
+                `Delete ${selectedIds.length} Students?`,
+                "This action cannot be undone!",
+                'Yes, delete them!'
+            );
+
+            if (confirmed) {
+                try {
+                    await ApiService.deleteMultipleStudents(selectedIds);
+
+                    // Remove from cache
+                    selectedIds.forEach(id => AppState.cache.students.delete(id.toString()));
+
+                    // Refresh current page
+                    await this.fetchStudents();
+
+                    Utils.showSuccess(`${selectedIds.length} student(s) have been deleted.`);
+
+                    // Clear selections
+                    SelectionManager.clearAllSelections();
+
+                } catch (error) {
+                    Utils.log('Error deleting multiple students', error, 'error');
+                    Utils.showError('Failed to delete selected students.');
                 }
             }
         }
+    };
 
-        // Fetch term history
-        await fetchTermHistory(studentId);
+    // ============================================================================
+    // RENDER MANAGER - Optimized rendering for large datasets
+    // ============================================================================
+    const RenderManager = {
+        renderTableView: function(students) {
+            const tbody = document.getElementById('studentTableBody');
+            if (!tbody) return;
 
-    } catch (error) {
-        console.error('Error fetching term information:', error);
-    }
-}
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '';
+                const emptyState = document.getElementById('emptyState');
+                if (emptyState) emptyState.classList.remove('d-none');
+                return;
+            }
 
-async function fetchTermHistory(studentId) {
-    try {
-        const response = await axios.get(`/student/${studentId}/all-terms`);
-        const terms = response.data.success ? response.data.data : [];
+            const emptyState = document.getElementById('emptyState');
+            if (emptyState) emptyState.classList.add('d-none');
 
-        const loadingElement = document.getElementById('termHistoryLoading');
-        const contentElement = document.getElementById('termHistoryContent');
+            // Use DocumentFragment for better performance
+            const fragment = document.createDocumentFragment();
 
-        if (loadingElement) loadingElement.style.display = 'none';
-        if (contentElement) contentElement.style.display = 'block';
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.className = 'align-middle';
+                row.dataset.id = student.id;
 
-        if (terms.length === 0) {
-            contentElement.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No term registration history found.</p>
+                row.innerHTML = `
+                    <td>
+                        <div class="form-check">
+                            <input class="form-check-input student-checkbox" type="checkbox"
+                                   value="${student.id}" onchange="window.updateBulkActionsVisibility()">
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="position-relative">
+                                ${this.getOptimizedAvatar(student)}
+                                <span class="position-absolute bottom-0 end-0 ${student.student_status === 'Active' ? 'bg-success' : 'bg-secondary'} rounded-circle p-1 border border-2 border-white"
+                                      style="width: 12px; height: 12px;"></span>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-semibold">${Utils.escapeHtml(student.lastname || '')} ${Utils.escapeHtml(student.firstname || '')}</h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-dark px-2 py-1 rounded-pill">
+                                        <i class="fas fa-id-card me-1 text-muted" style="font-size: 10px;"></i>
+                                        ${Utils.escapeHtml(student.admissionNo || 'N/A')}
+                                    </span>
+                                    ${student.statusId == 2 ?
+                                        '<span class="badge bg-warning bg-gradient text-dark px-2 py-1 rounded-pill"><i class="fas fa-star me-1" style="font-size: 10px;"></i>New</span>' :
+                                        student.statusId == 1 ?
+                                        '<span class="badge bg-secondary bg-gradient px-2 py-1 rounded-pill"><i class="fas fa-history me-1" style="font-size: 10px;"></i>Old</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column">
+                            <span class="fw-medium">${Utils.escapeHtml(student.schoolclass || '')} ${Utils.escapeHtml(student.arm || '')}</span>
+                            <small class="text-muted">${Utils.escapeHtml(student.student_category || '')}</small>
+                        </div>
+                    </td>
+                    <td>
+                        ${this.getCompactStatusBadge(student)}
+                    </td>
+                    <td>
+                        <span class="d-flex align-items-center gap-1">
+                            <i class="fas fa-${student.gender === 'Male' ? 'mars text-primary' : 'venus text-pink'}"></i>
+                            ${Utils.escapeHtml(student.gender || 'N/A')}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-1">
+                            <i class="fas fa-calendar-alt text-muted" style="font-size: 12px;"></i>
+                            <span>${Utils.formatDate(student.created_at, 'short')}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <div class="btn-group" role="group">
+                                <button type="button"
+                                        class="btn btn-sm btn-soft-info rounded-start"
+                                        onclick="window.viewStudent(${student.id})"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="View Student Details">
+                                    <i class="fas fa-eye"></i>
+                                    <span class="d-none d-xl-inline-block ms-1">View</span>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-soft-warning"
+                                        onclick="window.editStudent(${student.id})"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="Edit Student">
+                                    <i class="fas fa-edit"></i>
+                                    <span class="d-none d-xl-inline-block ms-1">Edit</span>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-soft-danger rounded-end"
+                                        onclick="window.deleteStudent(${student.id})"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="Delete Student">
+                                    <i class="fas fa-trash-alt"></i>
+                                    <span class="d-none d-xl-inline-block ms-1">Delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                `;
+
+                fragment.appendChild(row);
+            });
+
+            tbody.innerHTML = '';
+            tbody.appendChild(fragment);
+
+            // Initialize tooltips
+            Utils.initializeTooltips();
+
+            // Update checkAll state
+            this.updateCheckAllState();
+        },
+
+        renderCardView: function(students) {
+            const container = document.getElementById('studentsCardsContainer');
+            if (!container) return;
+
+            if (!students || students.length === 0) {
+                container.innerHTML = '';
+                const emptyState = document.getElementById('emptyState');
+                if (emptyState) emptyState.classList.remove('d-none');
+                return;
+            }
+
+            const emptyState = document.getElementById('emptyState');
+            if (emptyState) emptyState.classList.add('d-none');
+
+            // Use DocumentFragment for better performance
+            const fragment = document.createDocumentFragment();
+
+            students.forEach(student => {
+                const col = document.createElement('div');
+                col.className = 'col-xl-3 col-lg-4 col-md-6 mb-4';
+
+                col.innerHTML = `
+                    <div class="student-profile-card" data-id="${student.id}">
+                        <div class="checkbox-container">
+                            <div class="form-check">
+                                <input class="form-check-input student-checkbox" type="checkbox"
+                                       value="${student.id}" onchange="window.updateBulkActionsVisibility()">
+                            </div>
+                        </div>
+                        <div class="card-header">
+                            <div class="header-content">
+                                <h5 class="student-name">${Utils.escapeHtml(student.lastname || '')} ${Utils.escapeHtml(student.firstname || '')}</h5>
+                                <span class="student-admission">${Utils.escapeHtml(student.admissionNo || 'N/A')}</span>
+                            </div>
+                            <div class="avatar-container">
+                                ${this.getOptimizedAvatar(student, true)}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            ${this.getStatusBadge(student, true)}
+                            <div class="student-info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Class</span>
+                                    <span class="info-value">${Utils.escapeHtml(student.schoolclass || '')} ${Utils.escapeHtml(student.arm || '')}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Gender</span>
+                                    <span class="info-value">${Utils.escapeHtml(student.gender || 'N/A')}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Age</span>
+                                    <span class="info-value">${Utils.escapeHtml(student.age || 'N/A')}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Registered</span>
+                                    <span class="info-value">${Utils.formatDate(student.created_at, 'short')}</span>
+                                </div>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="action-btn view-btn" onclick="window.viewStudent(${student.id})">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                <button class="action-btn edit-btn" onclick="window.editStudent(${student.id})">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="action-btn delete-btn" onclick="window.deleteStudent(${student.id})">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                fragment.appendChild(col);
+            });
+
+            container.innerHTML = '';
+            container.appendChild(fragment);
+
+            this.updateCheckAllState();
+        },
+
+        getOptimizedAvatar: function(student, isCard = false) {
+            const initials = Utils.getInitials(student.firstname, student.lastname);
+            const colors = ['#4361ee', '#3a0ca3', '#f72585', '#4cc9f0', '#7209b7', '#f8961e', '#2ec4b6', '#e71d36'];
+            const colorIndex = (student.id?.toString().length || 0) % colors.length;
+            const bgColor = colors[colorIndex];
+            const size = isCard ? '80px' : '45px';
+            const fontSize = isCard ? '28px' : '16px';
+
+            if (student.picture && student.picture !== 'unnamed.jpg') {
+                return `
+                    <div class="avatar-circle" style="width: ${size}; height: ${size};">
+                        <img src="/storage/images/student_avatars/${Utils.escapeHtml(student.picture)}"
+                             alt="${Utils.escapeHtml(student.firstname || 'Student')}"
+                             class="rounded-circle border border-2 border-white shadow-sm"
+                             style="width: ${size}; height: ${size}; object-fit: cover;"
+                             loading="lazy"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="avatar-initials rounded-circle border border-2 border-white shadow-sm"
+                             style="width: ${size}; height: ${size}; background: ${bgColor}; color: white; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: ${fontSize};">
+                            ${initials}
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="avatar-initials rounded-circle border border-2 border-white shadow-sm"
+                     style="width: ${size}; height: ${size}; background: ${bgColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: ${fontSize};">
+                    ${initials}
                 </div>
             `;
+        },
+
+        getStatusBadge: function(student, isCard = false) {
+            let badges = '';
+
+            if (student.student_status === 'Active') {
+                badges += `<span class="status-badge status-active">
+                            <i class="fas fa-check-circle"></i> Active
+                        </span>`;
+            } else if (student.student_status === 'Inactive') {
+                badges += `<span class="status-badge status-inactive">
+                            <i class="fas fa-pause-circle"></i> Inactive
+                        </span>`;
+            }
+
+            if (student.statusId == 2) {
+                badges += `<span class="status-badge status-new ${!isCard ? 'ms-2' : ''}">
+                            <i class="fas fa-star"></i> New Student
+                        </span>`;
+            } else if (student.statusId == 1) {
+                badges += `<span class="status-badge status-old ${!isCard ? 'ms-2' : ''}">
+                            <i class="fas fa-history"></i> Old Student
+                        </span>`;
+            }
+
+            return badges;
+        },
+
+        getCompactStatusBadge: function(student) {
+            let badges = '';
+
+            if (student.student_status === 'Active') {
+                badges += '<span class="badge bg-success bg-gradient px-2 py-1 rounded-pill"><span class="status-dot active"></span>Active</span>';
+            } else if (student.student_status === 'Inactive') {
+                badges += '<span class="badge bg-secondary bg-gradient px-2 py-1 rounded-pill"><span class="status-dot inactive"></span>Inactive</span>';
+            }
+
+            return badges;
+        },
+
+        updateCheckAllState: function() {
+            const checkAll = document.getElementById('checkAll');
+            const checkAllTable = document.getElementById('checkAllTable');
+
+            const totalCheckboxes = document.querySelectorAll('.student-checkbox').length;
+            const checkedCheckboxes = document.querySelectorAll('.student-checkbox:checked').length;
+
+            if (checkAll) {
+                checkAll.checked = totalCheckboxes > 0 && totalCheckboxes === checkedCheckboxes;
+                checkAll.indeterminate = checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
+            }
+
+            if (checkAllTable) {
+                checkAllTable.checked = totalCheckboxes > 0 && totalCheckboxes === checkedCheckboxes;
+                checkAllTable.indeterminate = checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
+            }
+        },
+
+        toggleView: function(viewType) {
+            AppState.ui.currentView = viewType;
+
+            const tableView = document.getElementById('tableView');
+            const cardView = document.getElementById('cardView');
+            const tableViewBtn = document.getElementById('tableViewBtn');
+            const cardViewBtn = document.getElementById('cardViewBtn');
+
+            if (!tableView || !cardView || !tableViewBtn || !cardViewBtn) return;
+
+            if (viewType === 'table') {
+                tableView.classList.remove('d-none');
+                cardView.classList.add('d-none');
+                tableViewBtn.classList.add('active');
+                cardViewBtn.classList.remove('active');
+
+                if (AppState.pagination.data.length > 0) {
+                    this.renderTableView(AppState.pagination.data);
+                }
+            } else {
+                tableView.classList.add('d-none');
+                cardView.classList.remove('d-none');
+                tableViewBtn.classList.remove('active');
+                cardViewBtn.classList.add('active');
+
+                if (AppState.pagination.data.length > 0) {
+                    this.renderCardView(AppState.pagination.data);
+                }
+            }
+        }
+    };
+
+    // ============================================================================
+    // SELECTION MANAGER - Bulk selection handling
+    // ============================================================================
+    const SelectionManager = {
+        toggleSelectAll: function(e) {
+            const isChecked = e.target.checked;
+            const checkboxes = document.querySelectorAll('.student-checkbox');
+
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                const parent = checkbox.closest('.student-profile-card, tr');
+                if (parent) {
+                    parent.classList.toggle('selected', isChecked);
+                }
+
+                if (isChecked) {
+                    AppState.ui.selectedStudents.add(checkbox.value);
+                } else {
+                    AppState.ui.selectedStudents.delete(checkbox.value);
+                }
+            });
+
+            RenderManager.updateCheckAllState();
+            this.updateBulkActionsVisibility();
+        },
+
+        updateBulkActionsVisibility: function() {
+            const selectedCount = document.querySelectorAll('.student-checkbox:checked').length;
+            const bulkActionsDropdown = document.getElementById('bulkActionsDropdown');
+
+            if (bulkActionsDropdown) {
+                if (selectedCount > 0) {
+                    bulkActionsDropdown.disabled = false;
+                    bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions (${selectedCount})`;
+                } else {
+                    bulkActionsDropdown.disabled = true;
+                    bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions`;
+                }
+            }
+
+            // Update selected students set
+            AppState.ui.selectedStudents.clear();
+            document.querySelectorAll('.student-checkbox:checked').forEach(cb => {
+                AppState.ui.selectedStudents.add(cb.value);
+            });
+        },
+
+        getSelectedStudentIds: function() {
+            return Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
+        },
+
+        clearAllSelections: function() {
+            const checkboxes = document.querySelectorAll('.student-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                const parent = checkbox.closest('.student-profile-card, tr');
+                if (parent) {
+                    parent.classList.remove('selected');
+                }
+            });
+
+            AppState.ui.selectedStudents.clear();
+
+            const checkAll = document.getElementById('checkAll');
+            const checkAllTable = document.getElementById('checkAllTable');
+
+            if (checkAll) checkAll.checked = false;
+            if (checkAllTable) checkAllTable.checked = false;
+
+            this.updateBulkActionsVisibility();
+        },
+
+        initializeCheckboxes: function() {
+            const checkAll = document.getElementById('checkAll');
+            const checkAllTable = document.getElementById('checkAllTable');
+
+            if (checkAll) {
+                checkAll.removeEventListener('change', this.toggleSelectAll);
+                checkAll.addEventListener('change', (e) => this.toggleSelectAll(e));
+            }
+
+            if (checkAllTable) {
+                checkAllTable.removeEventListener('change', this.toggleSelectAll);
+                checkAllTable.addEventListener('change', (e) => this.toggleSelectAll(e));
+            }
+
+            // Delegate event listener for dynamic checkboxes
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('student-checkbox')) {
+                    SelectionManager.updateBulkActionsVisibility();
+                    RenderManager.updateCheckAllState();
+                }
+            });
+        }
+    };
+
+    // ============================================================================
+    // VIEW MODAL MANAGER - Enhanced student profile modal
+    // ============================================================================
+    const ViewModalManager = {
+        populateEnhancedViewModal: function(student) {
+            Utils.log('Populating enhanced view modal', student);
+
+            const setText = (id, value, defaultValue = '-') => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = value || defaultValue;
+            };
+
+            const setHtml = (id, html) => {
+                const element = document.getElementById(id);
+                if (element) element.innerHTML = html;
+            };
+
+            // Set student photo
+            const photoElement = document.getElementById('viewStudentPhoto');
+            if (photoElement) {
+                if (student.picture && student.picture !== 'unnamed.jpg') {
+                    photoElement.src = `/storage/images/student_avatars/${student.picture}`;
+                    photoElement.onerror = function() {
+                        this.src = '/theme/layouts/assets/media/avatars/blank.png';
+                    };
+                } else {
+                    photoElement.src = '/theme/layouts/assets/media/avatars/blank.png';
+                }
+            }
+
+            // Set status indicator
+            const statusIndicator = document.getElementById('studentStatusIndicator');
+            if (statusIndicator) {
+                const isActive = student.student_status === 'Active';
+                statusIndicator.className = `position-absolute bottom-0 end-0 rounded-circle p-2 border border-2 border-white ${isActive ? 'bg-success' : 'bg-secondary'}`;
+                statusIndicator.title = isActive ? 'Active Student' : 'Inactive Student';
+            }
+
+            // Basic Information
+            const fullName = `${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}`.trim();
+            setText('viewFullName', fullName);
+            setText('viewFullNameDetail', fullName);
+            setText('viewAdmissionNumber', student.admissionNo);
+            setText('viewAdmissionNo', student.admissionNo);
+
+            // Class Display
+            const classDisplay = `${student.schoolclass || ''} ${student.arm ? '- ' + student.arm : ''}`.trim();
+            setText('viewClassDisplay', classDisplay);
+            setText('viewCurrentClass', classDisplay);
+            setHtml('viewClassBadge', `<i class="fas fa-school me-1"></i>${classDisplay || 'Not Assigned'}`);
+
+            // Student Type
+            const studentType = student.statusId == 1 ? 'Old Student' : student.statusId == 2 ? 'New Student' : 'N/A';
+            setText('viewStudentType', studentType);
+            setHtml('viewStudentTypeBadge', `<i class="fas fa-user-tag me-1"></i>${studentType}`);
+
+            // Admission Date
+            if (student.admission_date) {
+                setText('viewAdmittedDate', Utils.formatDate(student.admission_date, 'long'));
+                setText('viewAdmissionDate', Utils.formatDate(student.admission_date));
+            }
+
+            // Gender
+            const gender = student.gender || '-';
+            const genderIcon = gender === 'Male' ? 'mars' : gender === 'Female' ? 'venus' : 'genderless';
+            setText('viewGenderText', gender);
+            setHtml('viewGenderDetail', `<i class="fas fa-${genderIcon} me-1"></i>${gender}`);
+
+            // Age
+            const age = student.age || Utils.calculateAge(student.dateofbirth) || 'N/A';
+            setText('viewAge', age);
+            setText('viewAgeDetail', age);
+
+            // Title
+            setText('viewTitle', student.title || '-');
+
+            // Date of Birth
+            if (student.dateofbirth) {
+                setText('viewDOB', Utils.formatDate(student.dateofbirth, 'long'));
+            } else {
+                setText('viewDOB', '-');
+            }
+
+            // Place of Birth
+            setText('viewPlaceOfBirth', student.placeofbirth || '-');
+
+            // Blood Group
+            setText('viewBloodGroupDetail', student.blood_group || '-');
+            setText('viewBloodGroupAdditional', student.blood_group || '-');
+
+            // Religion
+            setText('viewReligionDetail', student.religion || '-');
+
+            // Contact Information
+            setText('viewPhoneNumber', student.phone_number || '-');
+            setText('viewEmailAddress', student.email || '-');
+            setText('viewPermanentAddress', student.permanent_address || '-');
+            setText('viewCity', student.city || '-');
+            setText('viewStateOrigin', student.state || '-');
+            setText('viewLGA', student.local || '-');
+            setText('viewNationality', student.nationality || '-');
+
+            // Future Ambition
+            setText('viewFutureAmbition', student.future_ambition || '-');
+
+            // Academic Information
+            setText('viewArm', student.arm || '-');
+            setText('viewStudentCategory', student.student_category || '-');
+
+            // Student Status Badge
+            const studentStatus = student.student_status || 'Inactive';
+            const statusBadgeClass = studentStatus === 'Active' ? 'bg-success' : 'bg-secondary';
+            const statusIcon = studentStatus === 'Active' ? 'check-circle' : 'pause-circle';
+            setHtml('viewStudentStatus', `<span class="badge ${statusBadgeClass}"><i class="fas fa-${statusIcon} me-1"></i>${studentStatus}</span>`);
+
+            // School House
+            setText('viewSchoolHouse', student.school_house || student.sport_house || '-');
+
+            // Previous School
+            setText('viewLastSchool', student.last_school || '-');
+            setText('viewLastClass', student.last_class || '-');
+            setText('viewReasonForLeaving', student.reason_for_leaving || '-');
+
+            // Parent Information - Father
+            setText('viewFatherFullName', student.father_name || student.father || '-');
+            setText('viewFatherPhone', student.father_phone || '-');
+            setText('viewFatherOccupation', student.father_occupation || '-');
+            setText('viewFatherCityState', student.father_city || '-');
+            setText('viewFatherAddress', student.office_address || '-');
+
+            const fatherStatusBadge = document.getElementById('fatherStatusBadge');
+            if (fatherStatusBadge) {
+                if (student.father_name || student.father) {
+                    fatherStatusBadge.textContent = 'Active Contact';
+                    fatherStatusBadge.className = 'badge bg-success ms-2';
+                } else {
+                    fatherStatusBadge.textContent = 'Not Provided';
+                    fatherStatusBadge.className = 'badge bg-secondary ms-2';
+                }
+            }
+
+            // Parent Information - Mother
+            setText('viewMotherFullName', student.mother_name || student.mother || '-');
+            setText('viewMotherPhone', student.mother_phone || '-');
+            setText('viewParentEmail', student.parent_email || '-');
+            setText('viewParentAddress', student.parent_address || '-');
+
+            const motherStatusBadge = document.getElementById('motherStatusBadge');
+            if (motherStatusBadge) {
+                if (student.mother_name || student.mother) {
+                    motherStatusBadge.textContent = 'Active Contact';
+                    motherStatusBadge.className = 'badge bg-danger ms-2';
+                } else {
+                    motherStatusBadge.textContent = 'Not Provided';
+                    motherStatusBadge.className = 'badge bg-secondary ms-2';
+                }
+            }
+
+            // Additional Information
+            setText('viewNIN', student.nin_number || '-');
+            setText('viewMotherTongue', student.mother_tongue || '-');
+
+            // Set last updated timestamp
+            const now = new Date();
+            setText('studentProfileLastUpdated', `Last updated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`);
+        },
+
+        async fetchStudentTermInfo(studentId) {
+            try {
+                // Get system active term
+                const systemInfo = await ApiService.getActiveTermSystem();
+
+                // Get student's active term
+                const activeResponse = await ApiService.getStudentActiveTerm(studentId);
+                const activeTerm = activeResponse.success ? activeResponse.data : null;
+
+                const setText = (id, value) => {
+                    const element = document.getElementById(id);
+                    if (element) element.textContent = value || '-';
+                };
+
+                const setHtml = (id, html) => {
+                    const element = document.getElementById(id);
+                    if (element) element.innerHTML = html;
+                };
+
+                if (systemInfo.term) {
+                    setText('viewCurrentTerm', systemInfo.term.term || systemInfo.term.name || 'Not Set');
+                    setText('viewCurrentSession', systemInfo.session?.session || systemInfo.session?.name || 'Not Set');
+
+                    const isActiveInCurrentTerm = activeTerm &&
+                        activeTerm.term_id == systemInfo.term.id &&
+                        activeTerm.session_id == systemInfo.session.id;
+
+                    const alertElement = document.getElementById('currentTermAlert');
+                    if (alertElement) {
+                        if (isActiveInCurrentTerm) {
+                            alertElement.innerHTML = `
+                                <div class="alert alert-success py-2 px-3 mb-3">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <strong>Active in Current Term</strong>
+                                    <p class="mb-0 small">Student is registered and active in the current academic term.</p>
+                                </div>
+                            `;
+                            setHtml('viewCurrentTermStatus', '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>');
+                        } else {
+                            alertElement.innerHTML = `
+                                <div class="alert alert-warning py-2 px-3 mb-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Not in Current Term</strong>
+                                    <p class="mb-0 small">Student is not registered for the current academic term.</p>
+                                </div>
+                            `;
+                            setHtml('viewCurrentTermStatus', '<span class="badge bg-warning"><i class="fas fa-pause-circle me-1"></i>Not Registered</span>');
+                        }
+                    }
+                }
+
+                // Fetch term history
+                await this.fetchTermHistory(studentId);
+
+            } catch (error) {
+                Utils.log('Error fetching term information', error, 'error');
+            }
+        },
+
+        async fetchTermHistory(studentId) {
+            try {
+                const response = await ApiService.getStudentAllTerms(studentId);
+                const terms = response.success ? response.data : [];
+
+                const loadingElement = document.getElementById('termHistoryLoading');
+                const contentElement = document.getElementById('termHistoryContent');
+
+                if (loadingElement) loadingElement.style.display = 'none';
+                if (contentElement) contentElement.style.display = 'block';
+
+                if (!terms || terms.length === 0) {
+                    contentElement.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No term registration history found.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let tableHtml = `
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>S/N</th>
+                                    <th>Term</th>
+                                    <th>Session</th>
+                                    <th>Class</th>
+                                    <th>Arm</th>
+                                    <th>Status</th>
+                                    <th>Registered Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                terms.forEach((term, index) => {
+                    const isCurrent = term.is_current ?
+                        '<span class="badge bg-info"><i class="fas fa-star me-1"></i>Current</span>' :
+                        '<span class="badge bg-secondary">Past</span>';
+
+                    const regDate = term.created_at ? Utils.formatDate(term.created_at) : 'N/A';
+
+                    tableHtml += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td><span class="fw-semibold">${Utils.escapeHtml(term.term_name || 'N/A')}</span></td>
+                            <td>${Utils.escapeHtml(term.session_name || 'N/A')}</td>
+                            <td>${Utils.escapeHtml(term.class_name || 'N/A')}</td>
+                            <td>${Utils.escapeHtml(term.arm_name || 'N/A')}</td>
+                            <td>${isCurrent}</td>
+                            <td>${regDate}</td>
+                        </tr>
+                    `;
+                });
+
+                tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                contentElement.innerHTML = tableHtml;
+
+            } catch (error) {
+                Utils.log('Error fetching term history', error, 'error');
+                const loadingElement = document.getElementById('termHistoryLoading');
+                const contentElement = document.getElementById('termHistoryContent');
+
+                if (loadingElement) loadingElement.style.display = 'none';
+                if (contentElement) {
+                    contentElement.style.display = 'block';
+                    contentElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Failed to load term history. Please try again.
+                        </div>
+                    `;
+                }
+            }
+        }
+    };
+
+    // ============================================================================
+    // EDIT FORM MANAGER - Student edit functionality
+    // ============================================================================
+    const EditFormManager = {
+        populateEditForm: function(student) {
+            Utils.log('Populating edit form', student);
+
+            const fields = [
+                { id: 'editStudentId', value: student.id },
+                { id: 'editAdmissionNo', value: student.admissionNo || '' },
+                { id: 'editAdmissionYear', value: student.admissionYear || '' },
+                { id: 'editAdmissionDate', value: student.admissionDate || (student.admission_date ? student.admission_date.split('T')[0] : '') },
+                { id: 'editTitle', value: student.title || '' },
+                { id: 'editFirstname', value: student.firstname || '' },
+                { id: 'editLastname', value: student.lastname || '' },
+                { id: 'editOthername', value: student.othername || '' },
+                { id: 'editPermanentAddress', value: student.permanent_address || student.home_address2 || '' },
+                { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
+                { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
+                { id: 'editNationality', value: student.nationality || '' },
+                { id: 'editReligion', value: student.religion || '' },
+                { id: 'editLastSchool', value: student.last_school || '' },
+                { id: 'editLastClass', value: student.last_class || '' },
+                { id: 'editSchoolclassid', value: student.schoolclassid || '' },
+                { id: 'editTermid', value: student.termid || '' },
+                { id: 'editSessionid', value: student.sessionid || '' },
+                { id: 'editPhoneNumber', value: student.phone_number || '' },
+                { id: 'editEmail', value: student.email || '' },
+                { id: 'editFutureAmbition', value: student.future_ambition || '' },
+                { id: 'editCity', value: student.city || '' },
+                { id: 'editState', value: student.state || '' },
+                { id: 'editLocal', value: student.local || '' },
+                { id: 'editNinNumber', value: student.nin_number || '' },
+                { id: 'editBloodGroup', value: student.blood_group || '' },
+                { id: 'editMotherTongue', value: student.mother_tongue || '' },
+                { id: 'editFatherName', value: student.father_name || student.father || '' },
+                { id: 'editFatherPhone', value: student.father_phone || '' },
+                { id: 'editFatherOccupation', value: student.father_occupation || '' },
+                { id: 'editFatherCity', value: student.father_city || '' },
+                { id: 'editMotherName', value: student.mother_name || student.mother || '' },
+                { id: 'editMotherPhone', value: student.mother_phone || '' },
+                { id: 'editParentEmail', value: student.parent_email || '' },
+                { id: 'editParentAddress', value: student.parent_address || '' },
+                { id: 'editStudentCategory', value: student.student_category || '' },
+                { id: 'editSchoolHouse', value: student.schoolhouseid || student.school_house || student.sport_house || '' },
+                { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
+            ];
+
+            fields.forEach(({ id, value }) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = value || '';
+                }
+            });
+
+            // Set gender
+            const genderRadios = document.querySelectorAll('#editStudentModal input[name="gender"]');
+            if (genderRadios.length > 0) {
+                const studentGender = student.gender || '';
+                genderRadios.forEach(radio => {
+                    radio.checked = (radio.value === studentGender);
+                });
+            }
+
+            // Set status (Old/New)
+            const statusRadios = document.querySelectorAll('#editStudentModal input[name="statusId"]');
+            if (statusRadios.length > 0) {
+                const studentStatusId = student.statusId || '';
+                statusRadios.forEach(radio => {
+                    radio.checked = (parseInt(radio.value) === parseInt(studentStatusId));
+                });
+            }
+
+            // Set student activity status
+            const studentStatusRadios = document.querySelectorAll('#editStudentModal input[name="student_status"]');
+            if (studentStatusRadios.length > 0) {
+                const studentActivityStatus = student.student_status || '';
+                studentStatusRadios.forEach(radio => {
+                    radio.checked = (radio.value === studentActivityStatus);
+                });
+            }
+
+            // Set admission mode
+            if (student.admissionNo) {
+                const autoMode = document.getElementById('editAdmissionAuto');
+                const manualMode = document.getElementById('editAdmissionManual');
+                if (autoMode && manualMode) {
+                    // Default to manual mode when editing
+                    manualMode.checked = true;
+                    autoMode.checked = false;
+                }
+            }
+
+            // Set avatar
+            const avatarElement = document.getElementById('editStudentAvatar');
+            if (avatarElement) {
+                if (student.picture && student.picture !== 'unnamed.jpg') {
+                    const avatarUrl = `/storage/images/student_avatars/${student.picture}`;
+                    avatarElement.src = avatarUrl;
+                } else {
+                    avatarElement.src = '/theme/layouts/assets/media/avatars/blank.png';
+                }
+            }
+
+            // Set state and LGA
+            if (student.state || student.local) {
+                this.setEditStateAndLGA(student.state, student.local);
+            }
+
+            // Calculate age
+            if (student.dateofbirth) {
+                const age = Utils.calculateAge(student.dateofbirth);
+                const ageInput = document.getElementById('editAgeInput');
+                if (ageInput) ageInput.value = age;
+            }
+
+            // Update form action
+            const form = document.getElementById('editStudentForm');
+            if (form && student.id) {
+                form.action = `/student/${student.id}`;
+            }
+        },
+
+        setEditStateAndLGA: function(stateName, lgaName) {
+            const stateSelect = document.getElementById('editState');
+            const lgaSelect = document.getElementById('editLocal');
+
+            if (!stateSelect || !lgaSelect) return;
+
+            // Set state value
+            if (stateName) {
+                stateSelect.value = stateName;
+
+                // Trigger change event to populate LGAs
+                const event = new Event('change', { bubbles: true });
+                stateSelect.dispatchEvent(event);
+
+                // Set LGA value after a short delay
+                setTimeout(() => {
+                    if (lgaName) {
+                        lgaSelect.value = lgaName;
+                    }
+                }, 100);
+            }
+        },
+
+        resetEditStateDropdown: function() {
+            const stateSelect = document.getElementById('editState');
+            const lgaSelect = document.getElementById('editLocal');
+
+            if (stateSelect) {
+                stateSelect.value = '';
+            }
+            if (lgaSelect) {
+                lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+                lgaSelect.disabled = true;
+            }
+        }
+    };
+
+    // ============================================================================
+    // REPORT MANAGER - Complete column sorting and report generation
+    // ============================================================================
+    const ReportManager = {
+        sortableInstance: null,
+        columnOrder: [],
+
+        initializeReportModal: function() {
+            Utils.log('Initializing report modal...');
+
+            const container = document.getElementById('columnsContainer');
+            if (!container) {
+                Utils.log('Column container not found', null, 'error');
+                return;
+            }
+
+            // Initialize column ordering with Sortable.js
+            this.initializeColumnOrdering();
+
+            // Set up event listeners for checkboxes
+            container.querySelectorAll('.column-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', () => this.updateColumnOrder());
+                checkbox.addEventListener('change', () => this.updatePreview());
+            });
+
+            // Initialize column sorting
+            this.initializeColumnSorting();
+
+            // Initial preview update
+            this.updatePreview();
+
+            Utils.log('Report modal initialized');
+        },
+
+        initializeColumnOrdering: function() {
+            const container = document.getElementById('columnsContainer');
+            const hiddenOrderInput = document.getElementById('columnsOrderInput');
+
+            if (!container || !hiddenOrderInput) {
+                Utils.log('Column container or hidden input not found', null, 'error');
+                return;
+            }
+
+            // Check if Sortable is available
+            if (typeof Sortable === 'undefined') {
+                Utils.log('Sortable.js not loaded, using static column order', null, 'warn');
+                // Fallback: just update order from checkboxes
+                this.updateColumnOrder();
+                return;
+            }
+
+            // Destroy existing instance if any
+            if (this.sortableInstance) {
+                this.sortableInstance.destroy();
+            }
+
+            // Initialize Sortable with improved configuration
+            this.sortableInstance = new Sortable(container, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                handle: '.drag-handle',
+                filter: '.column-checkbox, .form-check-label',
+                preventOnFilter: false,
+                onEnd: () => {
+                    this.updateColumnOrder();
+                    this.updatePreview();
+                },
+                onStart: (evt) => {
+                    // Add visual feedback during drag
+                    evt.item.classList.add('dragging');
+                },
+                onMove: (evt) => {
+                    // Prevent dragging onto checkboxes
+                    return !evt.related.classList.contains('column-checkbox') &&
+                           !evt.related.classList.contains('form-check-label');
+                }
+            });
+
+            Utils.log('Sortable initialized');
+        },
+
+        initializeColumnSorting: function() {
+            // Get all draggable items
+            const columnItems = document.querySelectorAll('.draggable-item');
+
+            // Add click handlers for column headers to sort
+            columnItems.forEach(item => {
+                const checkbox = item.querySelector('.column-checkbox');
+                const label = item.querySelector('.form-check-label');
+
+                if (label) {
+                    label.addEventListener('click', (e) => {
+                        // Toggle checkbox when label is clicked
+                        if (checkbox && e.target === label) {
+                            checkbox.checked = !checkbox.checked;
+
+                            // Trigger change event
+                            const changeEvent = new Event('change', { bubbles: true });
+                            checkbox.dispatchEvent(changeEvent);
+                        }
+                    });
+                }
+            });
+        },
+
+        updateColumnOrder: function() {
+            const container = document.getElementById('columnsContainer');
+            const hiddenOrderInput = document.getElementById('columnsOrderInput');
+
+            if (!container || !hiddenOrderInput) return;
+
+            // Get all draggable items in their current DOM order
+            const columnItems = container.querySelectorAll('.draggable-item');
+            const order = [];
+
+            columnItems.forEach(item => {
+                const checkbox = item.querySelector('.column-checkbox');
+                if (checkbox && checkbox.checked) {
+                    order.push(checkbox.value);
+                }
+            });
+
+            this.columnOrder = order;
+            hiddenOrderInput.value = order.join(',');
+
+            Utils.log('Column order updated', order);
+        },
+
+        updatePreview: function() {
+            const container = document.getElementById('columnsContainer');
+            if (!container) return;
+
+            // Get selected columns in current order
+            const columnItems = container.querySelectorAll('.draggable-item');
+            const selectedLabels = [];
+
+            columnItems.forEach(item => {
+                const checkbox = item.querySelector('.column-checkbox');
+                if (checkbox && checkbox.checked) {
+                    const label = item.querySelector('.form-check-label');
+                    if (label) {
+                        selectedLabels.push(label.textContent.trim());
+                    }
+                }
+            });
+
+            const preview = document.getElementById('columnOrderPreview');
+            if (preview) {
+                preview.textContent = selectedLabels.join(', ') || 'No columns selected';
+            }
+
+            // Update hidden input with order
+            const hiddenInput = document.getElementById('columnsOrderInput');
+            if (hiddenInput) {
+                const order = [];
+                columnItems.forEach(item => {
+                    const checkbox = item.querySelector('.column-checkbox');
+                    if (checkbox && checkbox.checked) {
+                        order.push(checkbox.value);
+                    }
+                });
+                hiddenInput.value = order.join(',');
+            }
+        },
+
+        resetColumnOrder: function() {
+            const container = document.getElementById('columnsContainer');
+            if (!container) return;
+
+            // Reset to default order (alphabetical by column key)
+            const defaultColumns = ['admissionNo', 'lastname', 'firstname', 'class', 'gender'];
+
+            // Reorder items based on default columns
+            const items = Array.from(container.querySelectorAll('.draggable-item'));
+
+            // Sort items based on default order
+            items.sort((a, b) => {
+                const aVal = a.dataset.column || '';
+                const bVal = b.dataset.column || '';
+                const aIndex = defaultColumns.indexOf(aVal);
+                const bIndex = defaultColumns.indexOf(bVal);
+
+                if (aIndex === -1 && bIndex === -1) return 0;
+                if (aIndex === -1) return 1;
+                if (bIndex === -1) return -1;
+                return aIndex - bIndex;
+            });
+
+            // Reorder in DOM
+            items.forEach(item => container.appendChild(item));
+
+            // Update checkboxes
+            defaultColumns.forEach(col => {
+                const checkbox = container.querySelector(`.column-checkbox[value="${col}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+
+            // Update preview and order
+            this.updateColumnOrder();
+            this.updatePreview();
+        },
+
+        generateReport: async function() {
+            Utils.log('Generate report clicked');
+
+            const form = document.getElementById('printReportForm');
+            if (!form) {
+                Utils.log('Report form not found', null, 'error');
+                Utils.showError('Report form not found. Please try again.');
+                return;
+            }
+
+            // Get selected columns
+            const selectedCheckboxes = form.querySelectorAll('input[name="columns[]"]:checked');
+            const selectedColumns = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+            if (selectedColumns.length === 0) {
+                Utils.showError('Please select at least one column to include in the report.', 'Warning');
+                return;
+            }
+
+            // Get column order from hidden input
+            const columnsOrderInput = document.getElementById('columnsOrderInput');
+            let columnOrder = columnsOrderInput ? columnsOrderInput.value : '';
+
+            // If no specific order, use the order from DOM
+            if (!columnOrder) {
+                const container = document.getElementById('columnsContainer');
+                if (container) {
+                    const items = container.querySelectorAll('.draggable-item');
+                    const order = [];
+                    items.forEach(item => {
+                        const checkbox = item.querySelector('.column-checkbox');
+                        if (checkbox && checkbox.checked) {
+                            order.push(checkbox.value);
+                        }
+                    });
+                    columnOrder = order.join(',');
+                }
+            }
+
+            // Get form values
+            const classId = form.querySelector('[name="class_id"]')?.value || '';
+            const status = form.querySelector('[name="status"]')?.value || '';
+            const termId = form.querySelector('[name="term_id"]')?.value || '';
+            const sessionId = form.querySelector('[name="session_id"]')?.value || '';
+
+            const formatElements = form.querySelectorAll('[name="format"]');
+            let format = 'pdf';
+            formatElements.forEach(element => {
+                if (element.checked) {
+                    format = element.value;
+                }
+            });
+
+            const includeHeader = form.querySelector('[name="include_header"]')?.checked || true;
+            const includeLogo = form.querySelector('[name="include_logo"]')?.checked || true;
+            const orientation = form.querySelector('[name="orientation"]')?.value || 'portrait';
+            const template = form.querySelector('[name="template"]')?.value || 'default';
+            const confidential = form.querySelector('[name="confidential"]')?.checked || false;
+            const excludePhotos = form.querySelector('[name="exclude_photos"]')?.checked || false;
+
+            // Show loading indicator
+            Swal.fire({
+                title: 'Generating Report...',
+                text: 'This may take a moment. Please wait...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Build query parameters
+            const params = {
+                class_id: classId,
+                term_id: termId,
+                session_id: sessionId,
+                status: status,
+                columns: selectedColumns.join(','),
+                columns_order: columnOrder,
+                format: format,
+                orientation: orientation,
+                include_header: includeHeader ? '1' : '0',
+                include_logo: includeLogo ? '1' : '0',
+                template: template,
+                confidential: confidential ? '1' : '0',
+                exclude_photos: excludePhotos ? '1' : '0',
+                optimize_large_reports: '1'
+            };
+
+            try {
+                const response = await ApiService.generateReport(params);
+
+                Swal.close();
+
+                // Create a blob from the response
+                const blob = new Blob([response.data], {
+                    type: response.headers['content-type']
+                });
+
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+
+                // Get filename from content-disposition header
+                const contentDisposition = response.headers['content-disposition'];
+                let filename = 'student-report.' + (format === 'pdf' ? 'pdf' : 'xlsx');
+
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1];
+                    }
+                }
+
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+
+                // Cleanup
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }, 100);
+
+                // Close modal
+                const modalElement = document.getElementById('printStudentReportModal');
+                if (modalElement) {
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    if (modal) {
+                        modal.hide();
+                    }
+                }
+
+                // Show success message
+                Utils.showSuccess(`Report generated successfully and downloaded as ${format.toUpperCase()}`);
+
+            } catch (error) {
+                Swal.close();
+
+                Utils.log('Error generating report', error, 'error');
+
+                let errorMessage = 'Failed to generate report. Please try again.';
+
+                if (error.response) {
+                    if (error.response.status === 404) {
+                        errorMessage = 'No students found matching the selected filters.';
+                    } else if (error.response.status === 422) {
+                        errorMessage = error.response.data.message || 'Validation error. Please check your selections.';
+                    } else if (error.response.status === 500) {
+                        errorMessage = error.response.data?.message || 'Server error. Please try again later.';
+                    }
+                } else if (error.code === 'ECONNABORTED') {
+                    errorMessage = 'Request timeout. The report generation is taking too long. Try with fewer students or different filters.';
+                }
+
+                Utils.showError(errorMessage);
+            }
+        }
+    };
+
+    // ============================================================================
+    // STATE AND LGA MANAGER - Nigerian states and LGAs
+    // ============================================================================
+    const StateLGAManager = {
+        initializeAddStateDropdown: function() {
+            const stateSelect = document.getElementById('addState');
+            const lgaSelect = document.getElementById('addLocal');
+
+            if (!stateSelect || !lgaSelect) {
+                Utils.log('State or LGA dropdown not found for add modal', null, 'error');
+                return;
+            }
+
+            // Clear existing options
+            stateSelect.innerHTML = '<option value="">Select State</option>';
+            lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+            lgaSelect.disabled = true;
+
+            // Populate states
+            NIGERIAN_STATES.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state.name;
+                option.textContent = state.name;
+                stateSelect.appendChild(option);
+            });
+
+            // Add change event listener
+            stateSelect.removeEventListener('change', this.handleStateChange);
+            stateSelect.addEventListener('change', (e) => this.handleStateChange(e, 'add'));
+        },
+
+        initializeEditStateDropdown: function() {
+            const stateSelect = document.getElementById('editState');
+            const lgaSelect = document.getElementById('editLocal');
+
+            if (!stateSelect || !lgaSelect) {
+                Utils.log('State or LGA dropdown not found for edit modal', null, 'error');
+                return;
+            }
+
+            // Clear existing options
+            stateSelect.innerHTML = '<option value="">Select State</option>';
+            lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+            lgaSelect.disabled = true;
+
+            // Populate states
+            NIGERIAN_STATES.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state.name;
+                option.textContent = state.name;
+                stateSelect.appendChild(option);
+            });
+
+            // Add change event listener
+            stateSelect.removeEventListener('change', this.handleStateChange);
+            stateSelect.addEventListener('change', (e) => this.handleStateChange(e, 'edit'));
+        },
+
+        handleStateChange: function(event, modalType = 'add') {
+            const selectedState = event.target.value;
+            const lgaSelect = modalType === 'add' ? document.getElementById('addLocal') : document.getElementById('editLocal');
+
+            if (!lgaSelect) return;
+
+            // Clear LGA dropdown
+            lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+
+            if (selectedState) {
+                const state = NIGERIAN_STATES.find(s => s.name === selectedState);
+                lgaSelect.disabled = false;
+
+                if (state) {
+                    // Populate LGAs for selected state
+                    state.lgas.forEach(lga => {
+                        const option = document.createElement('option');
+                        option.value = lga;
+                        option.textContent = lga;
+                        lgaSelect.appendChild(option);
+                    });
+                }
+            } else {
+                lgaSelect.disabled = true;
+            }
+        },
+
+        resetAddStateDropdown: function() {
+            const stateSelect = document.getElementById('addState');
+            const lgaSelect = document.getElementById('addLocal');
+
+            if (stateSelect) {
+                stateSelect.value = '';
+            }
+            if (lgaSelect) {
+                lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+                lgaSelect.disabled = true;
+            }
+        }
+    };
+
+    // ============================================================================
+    // ADMISSION NUMBER MANAGER - Auto-generate admission numbers
+    // ============================================================================
+    const AdmissionNumberManager = {
+        async updateAdmissionNumber(prefix = '') {
+            const yearSelect = document.getElementById(`${prefix}admissionYear`);
+            const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+            const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
+
+            if (!yearSelect || !admissionNoInput) return;
+
+            const year = yearSelect.value;
+            const baseFormat = `TCC/${year}/`;
+
+            if (admissionMode && admissionMode.value === 'auto') {
+                admissionNoInput.readOnly = true;
+
+                try {
+                    const response = await axios.get(`/students/last-admission-number?year=${year}`);
+
+                    if (response.data.success) {
+                        admissionNoInput.value = response.data.admissionNo;
+                    } else {
+                        Utils.showError(response.data.message || 'Failed to generate admission number');
+                        admissionNoInput.value = `${baseFormat}0871`;
+                    }
+                } catch (error) {
+                    Utils.log('Error generating admission number', error, 'error');
+                    Utils.showError('Failed to generate admission number');
+                    admissionNoInput.value = `${baseFormat}0871`;
+                }
+            } else {
+                admissionNoInput.readOnly = false;
+
+                if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
+                    admissionNoInput.value = `${baseFormat}0871`;
+                } else if (!admissionNoInput.value.startsWith(baseFormat)) {
+                    const numericPart = admissionNoInput.value.split('/').pop() || '0871';
+                    const numericValue = Math.max(871, parseInt(numericPart) || 871);
+                    admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
+                }
+            }
+        },
+
+        toggleAdmissionInput: function(prefix = '') {
+            const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
+            const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
+            const yearSelect = document.getElementById(`${prefix}admissionYear`);
+
+            if (!admissionMode || !admissionNoInput || !yearSelect) return;
+
+            const year = yearSelect.value;
+            const baseFormat = `TCC/${year}/`;
+
+            if (admissionMode.value === 'auto') {
+                admissionNoInput.readOnly = true;
+                this.updateAdmissionNumber(prefix);
+            } else {
+                admissionNoInput.readOnly = false;
+
+                if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
+                    admissionNoInput.value = `${baseFormat}0871`;
+                } else if (!admissionNoInput.value.startsWith(baseFormat)) {
+                    const numericPart = admissionNoInput.value.split('/').pop() || '0871';
+                    const numericValue = Math.max(871, parseInt(numericPart) || 871);
+                    admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
+                }
+            }
+        }
+    };
+
+    // ============================================================================
+    // CURRENT TERM MANAGER - Bulk update current term
+    // ============================================================================
+    const CurrentTermManager = {
+        showUpdateCurrentTermModal: function(studentId = null) {
+            let selectedIds = [];
+
+            if (studentId) {
+                selectedIds = [studentId];
+            } else {
+                selectedIds = SelectionManager.getSelectedStudentIds();
+            }
+
+            if (selectedIds.length === 0) {
+                Utils.showError('Please select at least one student.', 'No Selection');
+                return;
+            }
+
+            const form = document.getElementById('updateCurrentTermForm');
+            if (form) {
+                form.reset();
+            }
+
+            const selectedCountEl = document.getElementById('selectedStudentsCount');
+            if (selectedCountEl) {
+                selectedCountEl.textContent = selectedIds.length;
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('updateCurrentTermModal'));
+            modal.show();
+        },
+
+        async updateCurrentTerm() {
+            const selectedIds = SelectionManager.getSelectedStudentIds();
+            const form = document.getElementById('updateCurrentTermForm');
+
+            if (!form) return;
+
+            const classId = form.querySelector('[name="schoolclassId"]')?.value;
+            const termId = form.querySelector('[name="termId"]')?.value;
+            const sessionId = form.querySelector('[name="sessionId"]')?.value;
+
+            if (!classId || !termId || !sessionId) {
+                Utils.showError('Please select class, term, and session.', 'Missing Fields');
+                return;
+            }
+
+            try {
+                Swal.fire({
+                    title: 'Updating...',
+                    text: 'Please wait while updating current term.',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                const data = {
+                    student_ids: selectedIds,
+                    schoolclassId: classId,
+                    termId: termId,
+                    sessionId: sessionId,
+                    is_current: true
+                };
+
+                const response = await ApiService.updateBulkCurrentTerm(data);
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('updateCurrentTermModal'));
+                if (modal) modal.hide();
+
+                Swal.close();
+
+                Utils.showSuccess(response.data.message || `Current term updated for ${selectedIds.length} student(s).`);
+
+                // Refresh the student list
+                await StudentManager.fetchStudents();
+
+            } catch (error) {
+                Swal.close();
+
+                Utils.log('Error updating current term', error, 'error');
+
+                let errorMessage = 'Failed to update current term.';
+                if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                }
+
+                Utils.showError(errorMessage);
+            }
+        }
+    };
+
+    // ============================================================================
+    // EVENT LISTENER MANAGER - Centralized event registration
+    // ============================================================================
+    const EventManager = {
+        initializeAll: function() {
+            this.initializeViewToggles();
+            this.initializeFilterEvents();
+            this.initializeModalEvents();
+            this.initializeAdmissionEvents();
+            this.initializeFormSubmissions();
+            this.initializeCheckboxes();
+            this.initializePerPageSelector();
+        },
+
+        initializeViewToggles: function() {
+            const tableViewBtn = document.getElementById('tableViewBtn');
+            const cardViewBtn = document.getElementById('cardViewBtn');
+
+            if (tableViewBtn) {
+                tableViewBtn.removeEventListener('click', this.handleTableViewClick);
+                tableViewBtn.addEventListener('click', () => RenderManager.toggleView('table'));
+            }
+
+            if (cardViewBtn) {
+                cardViewBtn.removeEventListener('click', this.handleCardViewClick);
+                cardViewBtn.addEventListener('click', () => RenderManager.toggleView('card'));
+            }
+        },
+
+        initializeFilterEvents: function() {
+            // Search with debounce
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.removeEventListener('input', FilterManager.debouncedSearch);
+                searchInput.addEventListener('input', FilterManager.debouncedSearch);
+            }
+
+            // Filter changes
+            const classFilter = document.getElementById('schoolclass-filter');
+            const statusFilter = document.getElementById('status-filter');
+            const genderFilter = document.getElementById('gender-filter');
+
+            if (classFilter) {
+                classFilter.removeEventListener('change', this.handleFilterChange);
+                classFilter.addEventListener('change', () => {
+                    AppState.pagination.currentPage = 1;
+                    StudentManager.fetchStudents();
+                });
+            }
+
+            if (statusFilter) {
+                statusFilter.removeEventListener('change', this.handleFilterChange);
+                statusFilter.addEventListener('change', () => {
+                    AppState.pagination.currentPage = 1;
+                    StudentManager.fetchStudents();
+                });
+            }
+
+            if (genderFilter) {
+                genderFilter.removeEventListener('change', this.handleFilterChange);
+                genderFilter.addEventListener('change', () => {
+                    AppState.pagination.currentPage = 1;
+                    StudentManager.fetchStudents();
+                });
+            }
+
+            // Filter button
+            const filterBtn = document.querySelector('[onclick="filterData()"]');
+            if (filterBtn) {
+                filterBtn.removeEventListener('click', this.handleFilterClick);
+                filterBtn.addEventListener('click', () => FilterManager.applyFilters());
+            }
+
+            // Reset button
+            const resetBtn = document.querySelector('[onclick="resetFilters()"]');
+            if (resetBtn) {
+                resetBtn.removeEventListener('click', this.handleResetClick);
+                resetBtn.addEventListener('click', () => FilterManager.resetFilters());
+            }
+        },
+
+        initializeModalEvents: function() {
+            // Add Student Modal
+            const addModal = document.getElementById('addStudentModal');
+            if (addModal) {
+                addModal.removeEventListener('hidden.bs.modal', StateLGAManager.resetAddStateDropdown);
+                addModal.addEventListener('hidden.bs.modal', () => StateLGAManager.resetAddStateDropdown());
+
+                addModal.removeEventListener('shown.bs.modal', this.handleAddModalShown);
+                addModal.addEventListener('shown.bs.modal', () => {
+                    StateLGAManager.initializeAddStateDropdown();
+                    AdmissionNumberManager.updateAdmissionNumber('');
+                });
+            }
+
+            // Edit Student Modal
+            const editModal = document.getElementById('editStudentModal');
+            if (editModal) {
+                editModal.removeEventListener('hidden.bs.modal', EditFormManager.resetEditStateDropdown);
+                editModal.addEventListener('hidden.bs.modal', () => EditFormManager.resetEditStateDropdown());
+
+                editModal.removeEventListener('shown.bs.modal', this.handleEditModalShown);
+                editModal.addEventListener('shown.bs.modal', () => {
+                    StateLGAManager.initializeEditStateDropdown();
+                });
+            }
+
+            // Report Modal
+            const reportModal = document.getElementById('printStudentReportModal');
+            if (reportModal) {
+                reportModal.removeEventListener('show.bs.modal', this.handleReportModalShow);
+                reportModal.addEventListener('show.bs.modal', () => {
+                    setTimeout(() => ReportManager.initializeReportModal(), 100);
+                });
+
+                reportModal.removeEventListener('hidden.bs.modal', this.handleReportModalHide);
+                reportModal.addEventListener('hidden.bs.modal', () => {
+                    // Cleanup Sortable instance
+                    if (ReportManager.sortableInstance) {
+                        ReportManager.sortableInstance.destroy();
+                        ReportManager.sortableInstance = null;
+                    }
+                });
+            }
+
+            // Update Current Term Modal
+            const confirmUpdateBtn = document.getElementById('confirmUpdateCurrentTerm');
+            if (confirmUpdateBtn) {
+                confirmUpdateBtn.removeEventListener('click', CurrentTermManager.updateCurrentTerm);
+                confirmUpdateBtn.addEventListener('click', () => CurrentTermManager.updateCurrentTerm());
+            }
+        },
+
+        initializeAdmissionEvents: function() {
+            // Admission year selects
+            const admissionYear = document.getElementById('admissionYear');
+            const editAdmissionYear = document.getElementById('editAdmissionYear');
+
+            if (admissionYear) {
+                admissionYear.removeEventListener('change', this.handleAdmissionYearChange);
+                admissionYear.addEventListener('change', () => AdmissionNumberManager.updateAdmissionNumber(''));
+            }
+
+            if (editAdmissionYear) {
+                editAdmissionYear.removeEventListener('change', this.handleEditAdmissionYearChange);
+                editAdmissionYear.addEventListener('change', () => AdmissionNumberManager.updateAdmissionNumber('edit'));
+            }
+
+            // Admission mode radios
+            const admissionModes = document.querySelectorAll('input[name="admissionMode"]');
+            admissionModes.forEach(radio => {
+                radio.removeEventListener('change', this.handleAdmissionModeChange);
+                radio.addEventListener('change', function() {
+                    const prefix = this.id.includes('edit') ? 'edit' : '';
+                    AdmissionNumberManager.toggleAdmissionInput(prefix);
+                });
+            });
+        },
+
+        initializeFormSubmissions: function() {
+            // Add Student Form
+            const addForm = document.getElementById('addStudentForm');
+            if (addForm) {
+                addForm.removeEventListener('submit', this.handleAddFormSubmit);
+                addForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const form = e.target;
+                    const formData = new FormData(form);
+
+                    try {
+                        const response = await axios.post(form.action, formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                        });
+
+                        if (response.data.success) {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
+                            modal.hide();
+
+                            await StudentManager.fetchStudents();
+
+                            Utils.showSuccess(response.data.message || 'Student registered successfully.');
+                        }
+                    } catch (error) {
+                        let errorMessage = 'Failed to save student.';
+
+                        if (error.response?.data?.message) {
+                            errorMessage = error.response.data.message;
+                        }
+
+                        if (error.response?.data?.errors) {
+                            const errors = error.response.data.errors;
+                            let errorList = '';
+                            for (const field in errors) {
+                                errorList += `<li>${Utils.escapeHtml(errors[field].join(', '))}</li>`;
+                            }
+                            errorMessage = `<div class="text-start">
+                                <strong>Validation Errors:</strong>
+                                <ul class="mb-0">${errorList}</ul>
+                            </div>`;
+                        }
+
+                        Utils.showError(errorMessage);
+                    }
+                });
+            }
+
+            // Edit Student Form
+            const editForm = document.getElementById('editStudentForm');
+            if (editForm) {
+                editForm.removeEventListener('submit', this.handleEditFormSubmit);
+                editForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const form = e.target;
+                    const formData = new FormData(form);
+                    formData.append('_method', 'PATCH');
+
+                    try {
+                        const response = await axios.post(form.action, formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                        });
+
+                        if (response.data.success) {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('editStudentModal'));
+                            modal.hide();
+
+                            await StudentManager.fetchStudents();
+
+                            Utils.showSuccess(response.data.message || 'Student updated successfully.');
+                        }
+                    } catch (error) {
+                        let errorMessage = 'Failed to update student.';
+
+                        if (error.response?.data?.message) {
+                            errorMessage = error.response.data.message;
+                        }
+
+                        if (error.response?.data?.errors) {
+                            const errors = error.response.data.errors;
+                            let errorList = '';
+                            for (const field in errors) {
+                                errorList += `<li>${Utils.escapeHtml(errors[field].join(', '))}</li>`;
+                            }
+                            errorMessage = `<div class="text-start">
+                                <strong>Validation Errors:</strong>
+                                <ul class="mb-0">${errorList}</ul>
+                            </div>`;
+                        }
+
+                        Utils.showError(errorMessage);
+                    }
+                });
+            }
+        },
+
+        initializeCheckboxes: function() {
+            SelectionManager.initializeCheckboxes();
+        },
+
+        initializePerPageSelector: function() {
+            PaginationManager.initializePerPageSelector();
+        },
+
+        handleFilterChange: function() {
+            AppState.pagination.currentPage = 1;
+            StudentManager.fetchStudents();
+        },
+
+        handleFilterClick: function() {
+            FilterManager.applyFilters();
+        },
+
+        handleResetClick: function() {
+            FilterManager.resetFilters();
+        },
+
+        handleAddModalShown: function() {
+            StateLGAManager.initializeAddStateDropdown();
+            AdmissionNumberManager.updateAdmissionNumber('');
+        },
+
+        handleEditModalShown: function() {
+            StateLGAManager.initializeEditStateDropdown();
+        },
+
+        handleReportModalShow: function() {
+            setTimeout(() => ReportManager.initializeReportModal(), 100);
+        },
+
+        handleReportModalHide: function() {
+            if (ReportManager.sortableInstance) {
+                ReportManager.sortableInstance.destroy();
+                ReportManager.sortableInstance = null;
+            }
+        },
+
+        handleAdmissionYearChange: function() {
+            AdmissionNumberManager.updateAdmissionNumber('');
+        },
+
+        handleEditAdmissionYearChange: function() {
+            AdmissionNumberManager.updateAdmissionNumber('edit');
+        },
+
+        handleAdmissionModeChange: function(e) {
+            const prefix = e.target.id.includes('edit') ? 'edit' : '';
+            AdmissionNumberManager.toggleAdmissionInput(prefix);
+        },
+
+        handleAddFormSubmit: async function(e) {
+            e.preventDefault();
+            // Handled in initializeFormSubmissions
+        },
+
+        handleEditFormSubmit: async function(e) {
+            e.preventDefault();
+            // Handled in initializeFormSubmissions
+        }
+    };
+
+    // ============================================================================
+    // INITIALIZATION - Start the application
+    // ============================================================================
+    function initializeApplication() {
+        Utils.log('Initializing Student Management System...');
+
+        // Ensure Axios is available
+        if (!Utils.ensureAxios()) {
+            Utils.showError('Failed to initialize application. Please refresh the page.');
             return;
         }
 
-        let tableHtml = `
-            <div class="table-responsive">
-                <table class="table table-hover table-sm">
-                    <thead class="table-light">
-                        <tr>
-                            <th>S/N</th>
-                            <th>Term</th>
-                            <th>Session</th>
-                            <th>Class</th>
-                            <th>Arm</th>
-                            <th>Status</th>
-                            <th>Registered Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+        // Initialize all event listeners
+        EventManager.initializeAll();
 
-        terms.forEach((term, index) => {
-            const isCurrent = term.is_current ?
-                '<span class="badge bg-info"><i class="fas fa-star me-1"></i>Current</span>' :
-                '<span class="badge bg-secondary">Past</span>';
+        // Initialize state dropdowns
+        StateLGAManager.initializeAddStateDropdown();
+        StateLGAManager.initializeEditStateDropdown();
 
-            const regDate = term.created_at ? new Date(term.created_at).toLocaleDateString() : 'N/A';
+        // Initialize admission numbers
+        AdmissionNumberManager.updateAdmissionNumber('');
+        AdmissionNumberManager.updateAdmissionNumber('edit');
 
-            tableHtml += `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td><span class="fw-semibold">${escapeHtml(term.term_name || 'N/A')}</span></td>
-                    <td>${escapeHtml(term.session_name || 'N/A')}</td>
-                    <td>${escapeHtml(term.class_name || 'N/A')}</td>
-                    <td>${escapeHtml(term.arm_name || 'N/A')}</td>
-                    <td>${isCurrent}</td>
-                    <td>${regDate}</td>
-                </tr>
-            `;
-        });
+        // Load initial data
+        StudentManager.fetchStudents();
 
-        tableHtml += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-
-        contentElement.innerHTML = tableHtml;
-
-    } catch (error) {
-        console.error('Error fetching term history:', error);
-        const loadingElement = document.getElementById('termHistoryLoading');
-        const contentElement = document.getElementById('termHistoryContent');
-
-        if (loadingElement) loadingElement.style.display = 'none';
-        if (contentElement) {
-            contentElement.style.display = 'block';
-            contentElement.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    Failed to load term history. Please try again.
-                </div>
-            `;
-        }
-    }
-}
-
-// ============================================================================
-// EDIT FORM FUNCTIONS
-// ============================================================================
-
-function populateEditForm(student) {
-    console.log('Populating edit form with student:', student);
-
-    const fields = [
-        { id: 'editStudentId', value: student.id },
-        { id: 'editAdmissionNo', value: student.admissionNo || '' },
-        { id: 'editAdmissionYear', value: student.admissionYear || '' },
-        { id: 'editAdmissionDate', value: student.admission_date ? student.admission_date.split('T')[0] : '' },
-        { id: 'editTitle', value: student.title || '' },
-        { id: 'editFirstname', value: student.firstname || '' },
-        { id: 'editLastname', value: student.lastname || '' },
-        { id: 'editOthername', value: student.othername || '' },
-        { id: 'editPermanentAddress', value: student.permanent_address || '' },
-        { id: 'editDOB', value: student.dateofbirth ? student.dateofbirth.split('T')[0] : '' },
-        { id: 'editPlaceofbirth', value: student.placeofbirth || '' },
-        { id: 'editNationality', value: student.nationality || '' },
-        { id: 'editReligion', value: student.religion || '' },
-        { id: 'editLastSchool', value: student.last_school || '' },
-        { id: 'editLastClass', value: student.last_class || '' },
-        { id: 'editSchoolclassid', value: student.schoolclassid || '' },
-        { id: 'editTermid', value: student.termid || '' },
-        { id: 'editSessionid', value: student.sessionid || '' },
-        { id: 'editPhoneNumber', value: student.phone_number || '' },
-        { id: 'editEmail', value: student.email || '' },
-        { id: 'editFutureAmbition', value: student.future_ambition || '' },
-        { id: 'editCity', value: student.city || '' },
-        { id: 'editState', value: student.state || '' },
-        { id: 'editLocal', value: student.local || '' },
-        { id: 'editNinNumber', value: student.nin_number || '' },
-        { id: 'editBloodGroup', value: student.blood_group || '' },
-        { id: 'editMotherTongue', value: student.mother_tongue || '' },
-        // Parent fields - using correct column names
-        { id: 'editFatherName', value: student.father || student.father_name || '' },
-        { id: 'editFatherPhone', value: student.father_phone || '' },
-        { id: 'editFatherOccupation', value: student.father_occupation || '' },
-        { id: 'editFatherCity', value: student.father_city || '' },
-        { id: 'editMotherName', value: student.mother || student.mother_name || '' },
-        { id: 'editMotherPhone', value: student.mother_phone || '' },
-        { id: 'editParentEmail', value: student.parent_email || '' },
-        { id: 'editParentAddress', value: student.parent_address || '' },
-        { id: 'editStudentCategory', value: student.student_category || '' },
-        { id: 'editSchoolHouse', value: student.schoolhouseid || student.school_house || student.sport_house || '' },
-        { id: 'editReasonForLeaving', value: student.reason_for_leaving || '' }
-    ];
-
-    fields.forEach(({ id, value }) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.value = value || '';
-        }
-    });
-
-    // Set gender
-    const genderRadios = document.querySelectorAll('#editStudentModal input[name="gender"]');
-    if (genderRadios.length > 0) {
-        const studentGender = student.gender || '';
-        genderRadios.forEach(radio => {
-            radio.checked = (radio.value === studentGender);
-        });
+        Utils.log('Student Management System initialized successfully');
     }
 
-    // Set status
-    const statusRadios = document.querySelectorAll('#editStudentModal input[name="statusId"]');
-    if (statusRadios.length > 0) {
-        const studentStatusId = student.statusId || '';
-        statusRadios.forEach(radio => {
-            radio.checked = (parseInt(radio.value) === parseInt(studentStatusId));
-        });
-    }
+    // ============================================================================
+    // EXPORT GLOBAL FUNCTIONS - Make functions available globally
+    // ============================================================================
+    window.fetchStudents = () => StudentManager.fetchStudents();
+    window.filterData = () => FilterManager.applyFilters();
+    window.resetFilters = () => FilterManager.resetFilters();
+    window.viewStudent = (id) => StudentManager.viewStudent(id);
+    window.editStudent = (id) => StudentManager.editStudent(id);
+    window.deleteStudent = (id) => StudentManager.deleteStudent(id);
+    window.deleteMultiple = () => StudentManager.deleteMultiple();
+    window.toggleView = (view) => RenderManager.toggleView(view);
+    window.updateAdmissionNumber = (prefix) => AdmissionNumberManager.updateAdmissionNumber(prefix);
+    window.toggleAdmissionInput = (prefix) => AdmissionNumberManager.toggleAdmissionInput(prefix);
+    window.previewImage = function(input, targetId = 'addStudentAvatar') {
+        const file = input.files[0];
+        if (!file) return;
 
-    // Set student activity status
-    const studentStatusRadios = document.querySelectorAll('#editStudentModal input[name="student_status"]');
-    if (studentStatusRadios.length > 0) {
-        const studentActivityStatus = student.student_status || '';
-        studentStatusRadios.forEach(radio => {
-            radio.checked = (radio.value === studentActivityStatus);
-        });
-    }
-
-    // Set avatar
-    const avatarElement = document.getElementById('editStudentAvatar');
-    if (avatarElement) {
-        if (student.picture && student.picture !== 'unnamed.jpg') {
-            const avatarUrl = `/storage/images/student_avatars/${student.picture}`;
-            avatarElement.src = avatarUrl;
-        } else {
-            avatarElement.src = '/theme/layouts/assets/media/avatars/blank.png';
-        }
-    }
-
-    // Set state and LGA for edit modal
-    if (student.state || student.local) {
-        setEditStateAndLGA(student.state, student.local);
-    }
-
-    // Calculate age if date of birth exists
-    if (student.dateofbirth) {
-        calculateAge(student.dateofbirth, 'editAgeInput');
-    }
-
-    // Update form action
-    const form = document.getElementById('editStudentForm');
-    if (form && student.id) {
-        form.action = `/student/${student.id}`;
-    }
-}
-
-// ============================================================================
-// STATE AND LGA DROPDOWN FUNCTIONS
-// ============================================================================
-
-function initializeAddStateDropdown() {
-    const stateSelect = document.getElementById('addState');
-    const lgaSelect = document.getElementById('addLocal');
-
-    if (!stateSelect || !lgaSelect) {
-        console.error('State or LGA dropdown not found for add modal');
-        return;
-    }
-
-    // Clear existing options
-    stateSelect.innerHTML = '<option value="">Select State</option>';
-    lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-    lgaSelect.disabled = true;
-
-    // Populate states
-    nigerianStates.forEach(state => {
-        const option = document.createElement('option');
-        option.value = state.name;
-        option.textContent = state.name;
-        stateSelect.appendChild(option);
-    });
-
-    // Add change event listener for states
-    stateSelect.addEventListener('change', function() {
-        const selectedState = this.value;
-
-        // Clear LGA dropdown
-        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-
-        if (selectedState) {
-            const state = nigerianStates.find(s => s.name === selectedState);
-            lgaSelect.disabled = false;
-
-            if (state) {
-                // Populate LGAs for selected state
-                state.lgas.forEach(lga => {
-                    const option = document.createElement('option');
-                    option.value = lga;
-                    option.textContent = lga;
-                    lgaSelect.appendChild(option);
-                });
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const target = document.getElementById(targetId);
+            if (target) {
+                target.src = e.target.result;
             }
-        } else {
-            lgaSelect.disabled = true;
-        }
-    });
-}
-
-function initializeEditStateDropdown() {
-    const stateSelect = document.getElementById('editState');
-    const lgaSelect = document.getElementById('editLocal');
-
-    if (!stateSelect || !lgaSelect) {
-        console.error('State or LGA dropdown not found for edit modal');
-        return;
-    }
-
-    // Clear existing options
-    stateSelect.innerHTML = '<option value="">Select State</option>';
-    lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-    lgaSelect.disabled = true;
-
-    // Populate states
-    nigerianStates.forEach(state => {
-        const option = document.createElement('option');
-        option.value = state.name;
-        option.textContent = state.name;
-        stateSelect.appendChild(option);
-    });
-
-    // Add change event listener for states
-    stateSelect.addEventListener('change', function() {
-        const selectedState = this.value;
-        const lgaSelect = document.getElementById('editLocal');
-
-        // Clear LGA dropdown
-        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-
-        if (selectedState) {
-            const state = nigerianStates.find(s => s.name === selectedState);
-            lgaSelect.disabled = false;
-
-            if (state) {
-                // Populate LGAs for selected state
-                state.lgas.forEach(lga => {
-                    const option = document.createElement('option');
-                    option.value = lga;
-                    option.textContent = lga;
-                    lgaSelect.appendChild(option);
-                });
-            }
-        } else {
-            lgaSelect.disabled = true;
-        }
-    });
-}
-
-function setEditStateAndLGA(stateName, lgaName) {
-    const stateSelect = document.getElementById('editState');
-    const lgaSelect = document.getElementById('editLocal');
-
-    if (!stateSelect || !lgaSelect) return;
-
-    // Set state value
-    if (stateName) {
-        stateSelect.value = stateName;
-
-        // Trigger change event to populate LGAs
-        const event = new Event('change', { bubbles: true });
-        stateSelect.dispatchEvent(event);
-
-        // Set LGA value after a short delay to ensure LGAs are populated
-        setTimeout(() => {
-            if (lgaName) {
-                lgaSelect.value = lgaName;
-            }
-        }, 100);
-    }
-}
-
-function resetAddStateDropdown() {
-    const stateSelect = document.getElementById('addState');
-    const lgaSelect = document.getElementById('addLocal');
-
-    if (stateSelect) {
-        stateSelect.value = '';
-    }
-    if (lgaSelect) {
-        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-        lgaSelect.disabled = true;
-    }
-}
-
-function resetEditStateDropdown() {
-    const stateSelect = document.getElementById('editState');
-    const lgaSelect = document.getElementById('editLocal');
-
-    if (stateSelect) {
-        stateSelect.value = '';
-    }
-    if (lgaSelect) {
-        lgaSelect.innerHTML = '<option value="">Select LGA</option>';
-        lgaSelect.disabled = true;
-    }
-}
-
-// ============================================================================
-// ADMISSION NUMBER FUNCTIONS
-// ============================================================================
-
-function updateAdmissionNumber(prefix = '') {
-    const yearSelect = document.getElementById(`${prefix}admissionYear`);
-    const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
-    const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
-
-    if (!yearSelect || !admissionNoInput) return;
-
-    const year = yearSelect.value;
-    const baseFormat = `TCC/${year}/`;
-
-    if (admissionMode && admissionMode.value === 'auto') {
-        admissionNoInput.readOnly = true;
-        fetch(`/students/last-admission-number?year=${year}`, {
-            method: 'GET',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                admissionNoInput.value = data.admissionNo;
-            } else {
-                showError(data.message || 'Failed to generate admission number');
-                admissionNoInput.value = `${baseFormat}0871`;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showError('Failed to generate admission number');
-            admissionNoInput.value = `${baseFormat}0871`;
-        });
-    } else {
-        admissionNoInput.readOnly = false;
-        if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
-            admissionNoInput.value = `${baseFormat}0871`;
-        } else if (!admissionNoInput.value.startsWith(baseFormat)) {
-            const numericPart = admissionNoInput.value.split('/').pop() || '0871';
-            const numericValue = Math.max(871, parseInt(numericPart) || 871);
-            admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
-        }
-    }
-}
-
-window.toggleAdmissionInput = function(prefix = '') {
-    const admissionMode = document.querySelector(`input[name="admissionMode"]:checked${prefix ? `[id^="${prefix}"]` : ''}`);
-    const admissionNoInput = document.getElementById(`${prefix}admissionNo`);
-    const yearSelect = document.getElementById(`${prefix}admissionYear`);
-
-    if (!admissionMode || !admissionNoInput || !yearSelect) return;
-
-    const year = yearSelect.value;
-    const baseFormat = `TCC/${year}/`;
-
-    if (admissionMode.value === 'auto') {
-        admissionNoInput.readOnly = true;
-        fetch(`/students/last-admission-number?year=${year}`, {
-            method: 'GET',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                admissionNoInput.value = data.admissionNo;
-            } else {
-                showError(data.message || 'Failed to generate admission number');
-                admissionNoInput.value = `${baseFormat}0871`;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showError('Failed to generate admission number');
-            admissionNoInput.value = `${baseFormat}0871`;
-        });
-    } else {
-        admissionNoInput.readOnly = false;
-        if (!admissionNoInput.value || admissionNoInput.value === `${baseFormat}AUTO`) {
-            admissionNoInput.value = `${baseFormat}0871`;
-        } else if (!admissionNoInput.value.startsWith(baseFormat)) {
-            const numericPart = admissionNoInput.value.split('/').pop() || '0871';
-            const numericValue = Math.max(871, parseInt(numericPart) || 871);
-            admissionNoInput.value = `${baseFormat}${numericValue.toString().padStart(4, '0')}`;
-        }
-    }
-};
-
-// ============================================================================
-// FORM HANDLERS
-// ============================================================================
-
-async function handleAddStudent(e) {
-    e.preventDefault();
-
-    const form = e.target;
-    const formData = new FormData(form);
-
-    try {
-        const response = await axios.post(form.action, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-
-        if (response.data.success) {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
-            modal.hide();
-
-            // Refresh first page
-            await fetchStudents(1, currentFilters);
-
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message || 'Student registered successfully.',
-                icon: 'success',
-                confirmButtonText: 'OK',
-                timer: 2000,
-                timerProgressBar: true
-            });
-        }
-    } catch (error) {
-        handleFormError(error, 'add');
-    }
-}
-
-async function handleEditStudent(e) {
-    e.preventDefault();
-
-    const form = e.target;
-    const formData = new FormData(form);
-    formData.append('_method', 'PATCH');
-
-    try {
-        const response = await axios.post(form.action, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-
-        if (response.data.success) {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editStudentModal'));
-            modal.hide();
-
-            // Refresh current page
-            await fetchStudents(currentPage, currentFilters);
-
-            Swal.fire({
-                title: 'Success!',
-                text: response.data.message || 'Student updated successfully.',
-                icon: 'success',
-                confirmButtonText: 'OK',
-                timer: 2000,
-                timerProgressBar: true
-            });
-        }
-    } catch (error) {
-        handleFormError(error, 'edit');
-    }
-}
-
-function handleFormError(error, formType) {
-    let errorMessage = 'Failed to save student.';
-
-    if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-    }
-
-    if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        let errorList = '';
-        for (const field in errors) {
-            errorList += `<li>${escapeHtml(errors[field].join(', '))}</li>`;
-        }
-        errorMessage = `<div class="text-start">
-            <strong>Validation Errors:</strong>
-            <ul class="mb-0">${errorList}</ul>
-        </div>`;
-    }
-
-    Swal.fire({
-        title: 'Error!',
-        html: errorMessage,
-        icon: 'error',
-        confirmButtonText: 'OK'
-    });
-}
-
-// ============================================================================
-// UPDATE CURRENT TERM FUNCTIONS
-// ============================================================================
-
-function showUpdateCurrentTermModal(studentId = null) {
-    let selectedIds = [];
-
-    if (studentId) {
-        // Single student
-        selectedIds = [studentId];
-    } else {
-        // Multiple students from checkboxes
-        selectedIds = getSelectedStudentIds();
-    }
-
-    if (selectedIds.length === 0) {
-        Swal.fire({
-            title: 'No Selection',
-            text: 'Please select at least one student.',
-            icon: 'warning',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
-
-    // Reset form and update count
-    const form = document.getElementById('updateCurrentTermForm');
-    if (form) {
-        form.reset();
-    }
-
-    const selectedCountEl = document.getElementById('selectedStudentsCount');
-    if (selectedCountEl) {
-        selectedCountEl.textContent = selectedIds.length;
-    }
-
-    const modal = new bootstrap.Modal(document.getElementById('updateCurrentTermModal'));
-    modal.show();
-}
-
-async function updateCurrentTerm() {
-    const selectedIds = getSelectedStudentIds();
-    const form = document.getElementById('updateCurrentTermForm');
-
-    if (!form) return;
-
-    // Validate form
-    const classId = form.querySelector('[name="schoolclassId"]')?.value;
-    const termId = form.querySelector('[name="termId"]')?.value;
-    const sessionId = form.querySelector('[name="sessionId"]')?.value;
-
-    if (!classId || !termId || !sessionId) {
-        Swal.fire({
-            title: 'Missing Fields',
-            text: 'Please select class, term, and session.',
-            icon: 'warning',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
-
-    try {
-        // Show loading
-        Swal.fire({
-            title: 'Updating...',
-            text: 'Please wait while updating current term.',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-
-        // Prepare data
-        const data = {
-            student_ids: selectedIds,
-            schoolclassId: classId,
-            termId: termId,
-            sessionId: sessionId,
-            is_current: true
         };
-
-        // Make the API call
-        const response = await axios.post('/student-current-term/bulk-update', data);
-
-        const modal = bootstrap.Modal.getInstance(document.getElementById('updateCurrentTermModal'));
-        if (modal) modal.hide();
-
-        Swal.fire({
-            title: 'Success!',
-            text: response.data.message || `Current term updated for ${selectedIds.length} student(s).`,
-            icon: 'success',
-            confirmButtonText: 'OK'
-        });
-
-        // Refresh the student list
-        await fetchStudents(currentPage, currentFilters);
-
-    } catch (error) {
-        console.error('Error updating current term:', error);
-
-        let errorMessage = 'Failed to update current term.';
-        if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-
-        Swal.fire({
-            title: 'Error!',
-            text: errorMessage,
-            icon: 'error',
-            confirmButtonText: 'OK'
-        });
-    }
-}
-
-// ============================================================================
-// REPORT FUNCTIONS
-// ============================================================================
-
-function initializeColumnOrdering() {
-    console.log('Initializing column ordering...');
-
-    const columnContainer = document.getElementById('columnsContainer');
-    const hiddenOrderInput = document.getElementById('columnsOrderInput');
-
-    if (!columnContainer || !hiddenOrderInput) {
-        console.error('Column container or hidden input not found');
-        return;
-    }
-
-    // Function to update column order
-    function updateColumnOrder() {
-        // Get all checked checkboxes in their current DOM order
-        const columnItems = columnContainer.querySelectorAll('.draggable-item');
-        const order = [];
-        const selectedLabels = [];
-
-        columnItems.forEach(item => {
-            const checkbox = item.querySelector('.column-checkbox');
-            if (checkbox && checkbox.checked) {
-                order.push(checkbox.value);
-
-                // Get the label text
-                const label = item.querySelector('.form-check-label');
-                if (label) {
-                    selectedLabels.push(label.textContent.trim());
-                }
-            }
-        });
-
-        hiddenOrderInput.value = order.join(',');
-
-        // Update preview
-        updatePreview();
-    }
-
-    // Check if Sortable.js is loaded
-    if (typeof Sortable !== 'undefined') {
-        // Destroy existing instance if any
-        if (window.columnSortable) {
-            window.columnSortable.destroy();
-        }
-
-        // Initialize Sortable.js
-        window.columnSortable = new Sortable(columnContainer, {
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            chosenClass: 'sortable-chosen',
-            dragClass: 'sortable-drag',
-            handle: '.drag-handle',
-            filter: '.column-checkbox',
-            onEnd: function() {
-                updateColumnOrder();
-            }
-        });
-    }
-
-    // Update order when checkboxes change
-    columnContainer.querySelectorAll('.column-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            updateColumnOrder();
-        });
-    });
-
-    // Initial update
-    updateColumnOrder();
-}
-
-function updatePreview() {
-    const container = document.getElementById('columnsContainer');
-    if (!container) return;
-
-    // Get selected columns in current order
-    const columnItems = container.querySelectorAll('.draggable-item');
-    const selectedLabels = [];
-
-    columnItems.forEach(item => {
-        const checkbox = item.querySelector('.column-checkbox');
-        if (checkbox && checkbox.checked) {
-            const label = item.querySelector('.form-check-label');
-            if (label) {
-                selectedLabels.push(label.textContent.trim());
-            }
-        }
-    });
-
-    const preview = document.getElementById('columnOrderPreview');
-    if (preview) {
-        preview.textContent = selectedLabels.join(', ') || 'No columns selected';
-    }
-
-    // Update hidden input with order
-    const hiddenInput = document.getElementById('columnsOrderInput');
-    if (hiddenInput) {
-        const order = [];
-        columnItems.forEach(item => {
-            const checkbox = item.querySelector('.column-checkbox');
-            if (checkbox && checkbox.checked) {
-                order.push(checkbox.value);
-            }
-        });
-        hiddenInput.value = order.join(',');
-    }
-}
-
-function initializeReportModal() {
-    console.log('Initializing report modal...');
-
-    // Initialize column ordering
-    initializeColumnOrdering();
-
-    // Set up event listeners for checkboxes
-    const container = document.getElementById('columnsContainer');
-    if (container) {
-        container.querySelectorAll('.column-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', updatePreview);
-        });
-    }
-
-    // Initial preview update
-    updatePreview();
-}
-
-window.generateReport = function() {
-    console.log('Generate report clicked');
-
-    const form = document.getElementById('printReportForm');
-    if (!form) {
-        console.error('Report form not found');
-        return;
-    }
-
-    // Get selected columns
-    const selectedCheckboxes = form.querySelectorAll('input[name="columns[]"]:checked');
-    const selectedColumns = Array.from(selectedCheckboxes).map(cb => cb.value);
-
-    if (selectedColumns.length === 0) {
-        Swal.fire({
-            title: 'Warning!',
-            text: 'Please select at least one column to include in the report.',
-            icon: 'warning',
-            customClass: { confirmButton: 'btn btn-primary' },
-            buttonsStyling: false
-        });
-        return;
-    }
-
-    // Get form values
-    const classId = form.querySelector('[name="class_id"]')?.value || '';
-    const status = form.querySelector('[name="status"]')?.value || '';
-    const termId = form.querySelector('[name="term_id"]')?.value || '';
-    const sessionId = form.querySelector('[name="session_id"]')?.value || '';
-
-    const formatElements = form.querySelectorAll('[name="format"]');
-    let format = 'pdf';
-    formatElements.forEach(element => {
-        if (element.checked) {
-            format = element.value;
-        }
-    });
-
-    const columnsOrderInput = document.getElementById('columnsOrderInput');
-    const includeHeader = form.querySelector('[name="include_header"]')?.checked || true;
-    const includeLogo = form.querySelector('[name="include_logo"]')?.checked || true;
-    const orientation = form.querySelector('[name="orientation"]')?.value || 'portrait';
-
-    // Show loading indicator
-    Swal.fire({
-        title: 'Generating Report...',
-        text: 'This may take a moment. Please wait...',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-
-    // Build query parameters
-    const params = new URLSearchParams({
-        class_id: classId,
-        term_id: termId,
-        session_id: sessionId,
-        status: status,
-        columns: selectedColumns.join(','),
-        columns_order: columnsOrderInput?.value || '',
-        format: format,
-        orientation: orientation,
-        include_header: includeHeader ? '1' : '0',
-        include_logo: includeLogo ? '1' : '0'
-    });
-
-    // Make the request
-    axios.get(`/students/report?${params.toString()}`, {
-        responseType: 'blob',
-        timeout: 120000 // 2 minutes timeout
-    })
-    .then(response => {
-        Swal.close();
-
-        // Create a blob from the response
-        const blob = new Blob([response.data], {
-            type: response.headers['content-type']
-        });
-
-        // Create download link
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-
-        // Get filename from content-disposition header or generate one
-        const contentDisposition = response.headers['content-disposition'];
-        let filename = 'student-report.' + (format === 'pdf' ? 'pdf' : 'xlsx');
-
-        if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-            if (filenameMatch && filenameMatch[1]) {
-                filename = filenameMatch[1];
-            }
-        }
-
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-
-        // Cleanup
-        setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        }, 100);
-
-        // Close modal
-        const modalElement = document.getElementById('printStudentReportModal');
-        if (modalElement) {
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            }
-        }
-
-        // Show success message
-        Swal.fire({
-            title: 'Success!',
-            text: `Report generated successfully and downloaded as ${format.toUpperCase()}`,
-            icon: 'success',
-            customClass: { confirmButton: 'btn btn-primary' },
-            buttonsStyling: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
-    })
-    .catch(error => {
-        Swal.close();
-
-        console.error('Error generating report:', error);
-
-        let errorMessage = 'Failed to generate report. Please try again.';
-
-        if (error.response) {
-            if (error.response.status === 404) {
-                errorMessage = 'No students found matching the selected filters.';
-            } else if (error.response.status === 422) {
-                errorMessage = error.response.data.message || 'Validation error. Please check your selections.';
-            } else if (error.response.status === 500) {
-                errorMessage = error.response.data?.message || 'Server error. Please try again later.';
-            }
-        } else if (error.code === 'ECONNABORTED') {
-            errorMessage = 'Request timeout. The report generation is taking too long. Try with fewer students or different filters.';
-        }
-
-        Swal.fire({
-            title: 'Error!',
-            text: errorMessage,
-            icon: 'error',
-            customClass: { confirmButton: 'btn btn-primary' },
-            buttonsStyling: false
-        });
-    });
-};
-
-// ============================================================================
-// TOGGLE VIEW
-// ============================================================================
-
-function toggleView(viewType) {
-    currentView = viewType;
-    const tableView = document.getElementById('tableView');
-    const cardView = document.getElementById('cardView');
-    const tableViewBtn = document.getElementById('tableViewBtn');
-    const cardViewBtn = document.getElementById('cardViewBtn');
-
-    if (!tableView || !cardView || !tableViewBtn || !cardViewBtn) return;
-
-    if (viewType === 'table') {
-        tableView.classList.remove('d-none');
-        cardView.classList.add('d-none');
-        tableViewBtn.classList.add('active');
-        cardViewBtn.classList.remove('active');
-    } else {
-        tableView.classList.add('d-none');
-        cardView.classList.remove('d-none');
-        tableViewBtn.classList.remove('active');
-        cardViewBtn.classList.add('active');
-    }
-
-    // Re-render current view with existing data
-    if (paginationData && paginationData.data) {
-        if (viewType === 'table') {
-            renderTableView(paginationData.data);
-        } else {
-            renderCardView(paginationData.data);
-        }
-    }
-}
-
-// ============================================================================
-// LOADING STATES
-// ============================================================================
-
-function showLoading() {
-    const loadingState = document.getElementById('loadingState');
-    const tableView = document.getElementById('tableView');
-    const cardView = document.getElementById('cardView');
-    const emptyState = document.getElementById('emptyState');
-
-    if (loadingState) loadingState.classList.remove('d-none');
-    if (tableView) tableView.classList.add('d-none');
-    if (cardView) cardView.classList.add('d-none');
-    if (emptyState) emptyState.classList.add('d-none');
-}
-
-function hideLoading() {
-    const loadingState = document.getElementById('loadingState');
-    if (loadingState) loadingState.classList.add('d-none');
-
-    const tableView = document.getElementById('tableView');
-    const cardView = document.getElementById('cardView');
-
-    if (tableView && currentView === 'table') {
-        tableView.classList.remove('d-none');
-    }
-
-    if (cardView && currentView === 'card') {
-        cardView.classList.remove('d-none');
-    }
-}
-
-function showError(message) {
-    Swal.fire({
-        title: 'Error!',
-        text: message,
-        icon: 'error',
-        confirmButtonText: 'OK',
-        customClass: {
-            confirmButton: 'btn btn-primary'
-        }
-    });
-}
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-window.calculateAge = function(dateValue, targetId = null) {
-    if (!dateValue) {
-        return 'N/A';
-    }
-
-    try {
-        const dateString = dateValue.includes('T') ? dateValue.split('T')[0] : dateValue;
-        const dob = new Date(dateString);
-
-        if (isNaN(dob.getTime())) {
-            return 'N/A';
-        }
-
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const monthDiff = today.getMonth() - dob.getMonth();
-
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-            age--;
-        }
-
-        // If targetId is provided, update the input field
-        if (targetId) {
-            const ageInput = document.getElementById(targetId);
-            if (ageInput) {
-                ageInput.value = age;
-            }
-        }
-
-        return age;
-    } catch (error) {
-        console.error('Error calculating age:', error);
-        return 'N/A';
-    }
-};
-
-window.previewImage = function(input, targetId = 'addStudentAvatar') {
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const target = document.getElementById(targetId);
-        if (target) {
-            target.src = e.target.result;
-        }
+        reader.readAsDataURL(file);
     };
-    reader.readAsDataURL(file);
-};
-
-window.printStudentCard = function(studentId) {
-    window.open(`/student/${studentId}/id-card`, '_blank');
-};
-
-window.printStudentDetails = function(studentId) {
-    window.open(`/student/${studentId}/print`, '_blank');
-};
-
-window.sendMessage = function(studentId) {
-    Swal.fire({
-        title: 'Send Message',
-        html: `
-            <div class="text-start">
-                <label class="form-label">Message</label>
-                <textarea id="messageText" class="form-control" rows="4" placeholder="Type your message here..."></textarea>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Send',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#4361ee',
-        preConfirm: () => {
-            const message = document.getElementById('messageText')?.value;
-            if (!message) {
-                Swal.showValidationMessage('Message cannot be empty');
-                return false;
+    window.calculateAge = Utils.calculateAge;
+    window.generateReport = () => ReportManager.generateReport();
+    window.showUpdateCurrentTermModal = (id) => CurrentTermManager.showUpdateCurrentTermModal(id);
+    window.updateCurrentTerm = () => CurrentTermManager.updateCurrentTerm();
+    window.getSelectedStudentIds = () => SelectionManager.getSelectedStudentIds();
+    window.updateBulkActionsVisibility = () => SelectionManager.updateBulkActionsVisibility();
+    window.printStudentCard = function(studentId) {
+        window.open(`/student/${studentId}/id-card`, '_blank');
+    };
+    window.printStudentDetails = function(studentId) {
+        window.open(`/student/${studentId}/print`, '_blank');
+    };
+    window.sendMessage = function(studentId) {
+        Swal.fire({
+            title: 'Send Message',
+            html: `
+                <div class="text-start">
+                    <label class="form-label">Message</label>
+                    <textarea id="messageText" class="form-control" rows="4" placeholder="Type your message here..."></textarea>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Send',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#4361ee',
+            preConfirm: () => {
+                const message = document.getElementById('messageText')?.value;
+                if (!message) {
+                    Swal.showValidationMessage('Message cannot be empty');
+                    return false;
+                }
+                return axios.post('/student/send-message', {
+                    student_id: studentId,
+                    message: message
+                });
             }
-            return axios.post('/student/send-message', {
-                student_id: studentId,
-                message: message
-            });
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Success!',
-                text: 'Message sent successfully',
-                icon: 'success',
-                confirmButtonText: 'OK'
-            });
-        }
-    });
-};
-
-function initializeTooltips() {
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function(tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-}
-
-// ============================================================================
-// EVENT LISTENERS
-// ============================================================================
-
-function initializeEventListeners() {
-    // View toggle
-    const tableViewBtn = document.getElementById('tableViewBtn');
-    const cardViewBtn = document.getElementById('cardViewBtn');
-
-    if (tableViewBtn) {
-        tableViewBtn.addEventListener('click', () => toggleView('table'));
-    }
-
-    if (cardViewBtn) {
-        cardViewBtn.addEventListener('click', () => toggleView('card'));
-    }
-
-    // Search with debounce
-    const searchInput = document.getElementById('search-input');
-    if (searchInput) {
-        searchInput.addEventListener('input', debouncedSearch);
-    }
-
-    // Filter changes
-    const classFilter = document.getElementById('schoolclass-filter');
-    const statusFilter = document.getElementById('status-filter');
-    const genderFilter = document.getElementById('gender-filter');
-
-    if (classFilter) classFilter.addEventListener('change', () => filterData(true));
-    if (statusFilter) statusFilter.addEventListener('change', () => filterData(true));
-    if (genderFilter) genderFilter.addEventListener('change', () => filterData(true));
-
-    // Filter button
-    const filterBtn = document.querySelector('[onclick="filterData()"]');
-    if (filterBtn) {
-        filterBtn.addEventListener('click', () => filterData(true));
-    }
-
-    // Reset button
-    const resetBtn = document.querySelector('[onclick="resetFilters()"]');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', resetFilters);
-    }
-
-    // Checkboxes
-    initializeCheckboxes();
-
-    // Form submissions
-    const addForm = document.getElementById('addStudentForm');
-    const editForm = document.getElementById('editStudentForm');
-
-    if (addForm) {
-        addForm.addEventListener('submit', handleAddStudent);
-    }
-
-    if (editForm) {
-        editForm.addEventListener('submit', handleEditStudent);
-    }
-
-    // Update current term
-    const confirmUpdateBtn = document.getElementById('confirmUpdateCurrentTerm');
-    if (confirmUpdateBtn) {
-        confirmUpdateBtn.addEventListener('click', updateCurrentTerm);
-    }
-
-    // Modal events
-    const addModal = document.getElementById('addStudentModal');
-    const editModal = document.getElementById('editStudentModal');
-    const reportModal = document.getElementById('printStudentReportModal');
-
-    if (addModal) {
-        addModal.addEventListener('hidden.bs.modal', resetAddStateDropdown);
-        addModal.addEventListener('shown.bs.modal', function() {
-            initializeAddStateDropdown();
-            updateAdmissionNumber('');
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Utils.showSuccess('Message sent successfully');
+            }
         });
+    };
+
+    // ============================================================================
+    // DOM CONTENT LOADED - Start the application
+    // ============================================================================
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeApplication);
+    } else {
+        // DOM already loaded, initialize immediately
+        initializeApplication();
     }
 
-    if (editModal) {
-        editModal.addEventListener('hidden.bs.modal', resetEditStateDropdown);
-        editModal.addEventListener('shown.bs.modal', function() {
-            initializeEditStateDropdown();
-        });
-    }
-
-    if (reportModal) {
-        reportModal.addEventListener('show.bs.modal', function() {
-            setTimeout(initializeReportModal, 100);
-        });
-    }
-
-    // Admission number events
-    const admissionYear = document.getElementById('admissionYear');
-    const editAdmissionYear = document.getElementById('editAdmissionYear');
-
-    if (admissionYear) {
-        admissionYear.addEventListener('change', () => updateAdmissionNumber(''));
-    }
-
-    if (editAdmissionYear) {
-        editAdmissionYear.addEventListener('change', () => updateAdmissionNumber('edit'));
-    }
-
-    // Admission mode radios
-    const admissionModes = document.querySelectorAll('input[name="admissionMode"]');
-    admissionModes.forEach(radio => {
-        radio.addEventListener('change', function() {
-            const prefix = this.id.includes('edit') ? 'edit' : '';
-            toggleAdmissionInput(prefix);
-        });
-    });
-}
-
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
-
-function initializeApplication() {
-    // Ensure Axios is available
-    ensureAxios();
-
-    // Initialize state dropdowns
-    initializeAddStateDropdown();
-    initializeEditStateDropdown();
-
-    // Initialize admission numbers
-    updateAdmissionNumber('');
-    updateAdmissionNumber('edit');
-
-    // Initialize event listeners
-    initializeEventListeners();
-
-    // Load initial data
-    fetchStudents(1, currentFilters);
-}
-
-// ============================================================================
-// DOM CONTENT LOADED
-// ============================================================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing optimized application...');
-    initializeApplication();
-});
-
-// ============================================================================
-// EXPORT GLOBAL FUNCTIONS
-// ============================================================================
-
-window.fetchStudents = fetchStudents;
-window.filterData = filterData;
-window.resetFilters = resetFilters;
-window.viewStudent = viewStudent;
-window.editStudent = editStudent;
-window.deleteStudent = deleteStudent;
-window.deleteMultiple = deleteMultiple;
-window.toggleView = toggleView;
-window.updateAdmissionNumber = updateAdmissionNumber;
-window.toggleAdmissionInput = toggleAdmissionInput;
-window.previewImage = previewImage;
-window.calculateAge = calculateAge;
-window.generateReport = generateReport;
-window.showUpdateCurrentTermModal = showUpdateCurrentTermModal;
-window.updateCurrentTerm = updateCurrentTerm;
-window.printStudentCard = printStudentCard;
-window.printStudentDetails = printStudentDetails;
-window.sendMessage = sendMessage;
-window.getSelectedStudentIds = getSelectedStudentIds;
-window.updateBulkActionsVisibility = updateBulkActionsVisibility;
+})();
 </script>
 {{-- <!-- Include Sortable.js for drag and drop functionality -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
