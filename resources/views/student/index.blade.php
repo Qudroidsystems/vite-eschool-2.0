@@ -4090,7 +4090,26 @@ use Spatie\Permission\Models\Role;
 
             // Set state value
             if (stateName && stateName !== '') {
-                stateSelect.value = stateName;
+                // Try to find the exact match
+                let stateFound = false;
+                for (let i = 0; i < stateSelect.options.length; i++) {
+                    if (stateSelect.options[i].value.toLowerCase() === stateName.toLowerCase()) {
+                        stateSelect.selectedIndex = i;
+                        stateFound = true;
+                        Utils.log('State found and selected:', stateName);
+                        break;
+                    }
+                }
+
+                if (!stateFound) {
+                    // Try direct assignment
+                    try {
+                        stateSelect.value = stateName;
+                        Utils.log('State set by direct value:', stateName);
+                    } catch (e) {
+                        Utils.log('Could not set state by direct value', e);
+                    }
+                }
 
                 // Force LGA population by dispatching change event
                 const changeEvent = new Event('change', { bubbles: true });
@@ -4099,22 +4118,30 @@ use Spatie\Permission\Models\Role;
                 // Set LGA value after a short delay
                 setTimeout(() => {
                     if (lgaName && lgaName !== '') {
-                        // Check if the LGA option exists
-                        let optionExists = false;
+                        Utils.log('Attempting to set LGA:', lgaName);
+
+                        // Try to find the exact match
+                        let lgaFound = false;
                         for (let i = 0; i < lgaSelect.options.length; i++) {
-                            if (lgaSelect.options[i].value === lgaName) {
-                                optionExists = true;
+                            if (lgaSelect.options[i].value.toLowerCase() === lgaName.toLowerCase()) {
+                                lgaSelect.selectedIndex = i;
+                                lgaFound = true;
+                                Utils.log('LGA found and selected:', lgaName);
                                 break;
                             }
                         }
 
-                        if (optionExists) {
-                            lgaSelect.value = lgaName;
-                        } else {
-                            Utils.log('LGA not found in options:', lgaName);
+                        if (!lgaFound) {
+                            // Try direct assignment
+                            try {
+                                lgaSelect.value = lgaName;
+                                Utils.log('LGA set by direct value:', lgaName);
+                            } catch (e) {
+                                Utils.log('Could not set LGA by direct value', e);
+                            }
                         }
                     }
-                }, 200);
+                }, 300);
             }
 
             return true;
@@ -4233,8 +4260,10 @@ use Spatie\Permission\Models\Role;
             if (admissionNoInput) admissionNoInput.value = student.admissionNo || '';
             if (admissionYearSelect) admissionYearSelect.value = student.admissionYear || new Date().getFullYear();
             if (admissionDateInput) {
-                if (student.admissionDate) {
-                    admissionDateInput.value = student.admissionDate.split(' ')[0];
+                // FIXED: Use admissionDate or admission_date
+                const admissionDate = student.admissionDate || student.admission_date || '';
+                if (admissionDate) {
+                    admissionDateInput.value = admissionDate.split(' ')[0];
                 }
             }
 
@@ -4316,14 +4345,40 @@ use Spatie\Permission\Models\Role;
                 document.getElementById('editGenderFemale').checked = true;
             }
 
+            // ===== CRITICAL FIX: DATE OF BIRTH =====
+            // The field name in database is 'dateofbirth' (all lowercase, no camelCase)
             const dobInput = document.getElementById('editDOB');
-            if (dobInput && student.dateofbirth) {
-                dobInput.value = student.dateofbirth.split(' ')[0];
-            }
+            if (dobInput) {
+                // Check both possible field names
+                const dobValue = student.dateofbirth || student.dateOfBirth || student.dob || '';
+                Utils.log('Setting date of birth:', dobValue);
+                if (dobValue) {
+                    // Handle different date formats
+                    let formattedDate = dobValue;
+                    if (typeof dobValue === 'string') {
+                        // If it's in format "YYYY-MM-DD HH:MM:SS", take just the date part
+                        if (dobValue.includes(' ')) {
+                            formattedDate = dobValue.split(' ')[0];
+                        }
+                        // If it's in format "DD/MM/YYYY", convert to YYYY-MM-DD
+                        else if (dobValue.includes('/')) {
+                            const parts = dobValue.split('/');
+                            if (parts.length === 3) {
+                                // Check if it's DD/MM/YYYY or MM/DD/YYYY
+                                if (parts[2].length === 4) {
+                                    formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                }
+                            }
+                        }
+                    }
+                    dobInput.value = formattedDate;
 
-            if (student.dateofbirth) {
-                const ageInput = document.getElementById('editAgeInput');
-                if (ageInput) ageInput.value = Utils.calculateAge(student.dateofbirth);
+                    // Calculate and set age
+                    const ageInput = document.getElementById('editAgeInput');
+                    if (ageInput) {
+                        ageInput.value = Utils.calculateAge(formattedDate) || student.age || '';
+                    }
+                }
             }
 
             const placeOfBirthInput = document.getElementById('editPlaceofbirth');
@@ -4345,42 +4400,65 @@ use Spatie\Permission\Models\Role;
             const nationalityInput = document.getElementById('editNationality');
             if (nationalityInput) nationalityInput.value = student.nationality || '';
 
-            // ===== CRITICAL FIX: BLOOD GROUP SELECT =====
+            // ===== CRITICAL FIX: BLOOD GROUP =====
             const bloodGroupSelect = document.getElementById('editBloodGroup');
             if (bloodGroupSelect && student.blood_group) {
                 Utils.log('Setting blood group:', student.blood_group);
                 bloodGroupSelect.value = student.blood_group;
             }
 
-            // ===== CRITICAL FIX: SCHOOL HOUSE SELECT =====
+            // ===== CRITICAL FIX: SCHOOL HOUSE =====
+            // The field name in database is 'sport_house' (from your controller)
             const houseSelect = document.getElementById('editSchoolHouse');
             if (houseSelect) {
-                // Check both possible field names
-                let houseValue = student.schoolhouse || student.school_house || null;
+                // Check all possible field names
+                let houseValue = student.schoolhouse || student.school_house || student.sport_house || student.house || null;
 
-                Utils.log('Setting school house:', houseValue);
+                Utils.log('Setting school house - raw values:', {
+                    schoolhouse: student.schoolhouse,
+                    school_house: student.school_house,
+                    sport_house: student.sport_house,
+                    house: student.house,
+                    selected: houseValue
+                });
 
                 if (houseValue) {
-                    // Try to find the matching option
+                    // Try to find by exact value
                     let optionFound = false;
                     for (let i = 0; i < houseSelect.options.length; i++) {
                         if (houseSelect.options[i].value == houseValue) {
                             houseSelect.selectedIndex = i;
                             optionFound = true;
+                            Utils.log('School house set by value:', houseValue);
                             break;
                         }
                     }
 
+                    // If not found by value, try by text content
                     if (!optionFound) {
-                        // Try by ID if it's a number
-                        if (!isNaN(houseValue)) {
+                        for (let i = 0; i < houseSelect.options.length; i++) {
+                            if (houseSelect.options[i].text.toLowerCase().includes(String(houseValue).toLowerCase())) {
+                                houseSelect.selectedIndex = i;
+                                optionFound = true;
+                                Utils.log('School house set by text match:', houseSelect.options[i].text);
+                                break;
+                            }
+                        }
+                    }
+
+                    // If still not found and it's a number, try direct assignment
+                    if (!optionFound && !isNaN(parseInt(houseValue))) {
+                        try {
                             houseSelect.value = houseValue;
+                            Utils.log('School house set by direct value:', houseValue);
+                        } catch (e) {
+                            Utils.log('Could not set school house by direct value', e);
                         }
                     }
                 }
             }
 
-            // State and LGA - CRITICAL FIX
+            // ===== STATE AND LGA =====
             if (student.state) {
                 Utils.log('Setting state and LGA:', student.state, student.local);
                 StateLGAManager.setEditStateAndLGA(student.state, student.local);
@@ -4402,7 +4480,7 @@ use Spatie\Permission\Models\Role;
 
             // ===== PARENT/GUARDIAN DETAILS =====
             const fatherNameInput = document.getElementById('editFatherName');
-            if (fatherNameInput) fatherNameInput.value = student.father_name || '';
+            if (fatherNameInput) fatherNameInput.value = student.father_name || student.father || '';
 
             const fatherPhoneInput = document.getElementById('editFatherPhone');
             if (fatherPhoneInput) fatherPhoneInput.value = student.father_phone || '';
@@ -4414,7 +4492,7 @@ use Spatie\Permission\Models\Role;
             if (fatherCityInput) fatherCityInput.value = student.father_city || '';
 
             const motherNameInput = document.getElementById('editMotherName');
-            if (motherNameInput) motherNameInput.value = student.mother_name || '';
+            if (motherNameInput) motherNameInput.value = student.mother_name || student.mother || '';
 
             const motherPhoneInput = document.getElementById('editMotherPhone');
             if (motherPhoneInput) motherPhoneInput.value = student.mother_phone || '';
@@ -4575,7 +4653,7 @@ use Spatie\Permission\Models\Role;
             }
 
             this.safeSetText('viewStudentStatus', student.student_status || '-');
-            this.safeSetText('viewSchoolHouse', student.school_house || student.schoolhouse || '-');
+            this.safeSetText('viewSchoolHouse', student.school_house || student.schoolhouse || student.sport_house || '-');
             this.safeSetText('viewAdmittedDate', Utils.formatDate(student.admission_date, 'short'));
 
             // Student Status Indicator
@@ -6078,13 +6156,13 @@ use Spatie\Permission\Models\Role;
 
 </script>
 
-{{-- <!-- Include Sortable.js for drag and drop functionality -->
+<!-- Include Sortable.js for drag and drop functionality -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <!-- Include SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Include Axios -->
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> --}}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 @endsection
