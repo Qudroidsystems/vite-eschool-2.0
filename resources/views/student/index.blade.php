@@ -6078,13 +6078,13 @@ use Spatie\Permission\Models\Role;
 
 </script>
 
-<!-- Include Sortable.js for drag and drop functionality -->
+{{-- <!-- Include Sortable.js for drag and drop functionality -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <!-- Include SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Include Axios -->
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> --}}
 
 @endsection
