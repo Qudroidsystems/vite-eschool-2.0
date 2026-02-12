@@ -334,7 +334,7 @@ Route::group(['middleware' => ['auth']], function () {
         Route::get('/{id}/all-terms', [StudentController::class, 'getAllRegisteredTerms'])->name('student.all-terms');
     });
 
-
+    Route::get('/students/data-paginated', [StudentController::class, 'dataPaginated'])->name('student.data-paginated');
 
     Route::resource('classoperation', ClassOperationController::class);
 

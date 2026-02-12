@@ -141,6 +141,102 @@ class StudentController extends Controller
         ));
     }
 
+
+    /**
+ * Get paginated students data with filters
+ */
+public function dataPaginated(Request $request): JsonResponse
+{
+    try {
+        Log::debug('Fetching paginated students data', $request->all());
+
+        $query = Student::leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
+            ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
+            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->select([
+                'studentRegistration.id',
+                'studentRegistration.admissionNo',
+                'studentRegistration.firstname',
+                'studentRegistration.lastname',
+                'studentRegistration.othername',
+                'studentRegistration.gender',
+                'studentRegistration.statusId',
+                'studentRegistration.student_status',
+                'studentRegistration.created_at',
+                'studentRegistration.dateofbirth',
+                'studentRegistration.age',
+                'studentRegistration.student_category',
+                'studentpicture.picture',
+                'schoolclass.schoolclass',
+                'schoolarm.arm',
+                'studentclass.schoolclassid',
+            ]);
+
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('studentRegistration.firstname', 'LIKE', "%{$search}%")
+                  ->orWhere('studentRegistration.lastname', 'LIKE', "%{$search}%")
+                  ->orWhere('studentRegistration.othername', 'LIKE', "%{$search}%")
+                  ->orWhere('studentRegistration.admissionNo', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Apply class filter
+        if ($request->filled('class_id')) {
+            $query->where('studentclass.schoolclassid', $request->class_id);
+        }
+
+        // Apply gender filter
+        if ($request->filled('gender') && $request->gender != 'all') {
+            $query->where('studentRegistration.gender', $request->gender);
+        }
+
+        // Apply status filter
+        if ($request->filled('status') && $request->status != 'all') {
+            if (in_array($request->status, ['1', '2'])) {
+                $query->where('studentRegistration.statusId', $request->status);
+            } else {
+                $query->where('studentRegistration.student_status', $request->status);
+            }
+        }
+
+        // Order by latest first
+        $query->latest('studentRegistration.created_at');
+
+        // Pagination
+        $perPage = $request->input('per_page', 20);
+        $students = $query->paginate($perPage);
+
+        Log::debug('Paginated students fetched', [
+            'total' => $students->total(),
+            'per_page' => $students->perPage(),
+            'current_page' => $students->currentPage()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $students->items(),
+            'current_page' => $students->currentPage(),
+            'last_page' => $students->lastPage(),
+            'per_page' => $students->perPage(),
+            'total' => $students->total(),
+            'from' => $students->firstItem(),
+            'to' => $students->lastItem()
+        ], 200);
+
+    } catch (\Exception $e) {
+        Log::error("Error fetching paginated students: {$e->getMessage()}\nStack trace: {$e->getTraceAsString()}");
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch students: ' . $e->getMessage(),
+        ], 500);
+    }
+}
+
+
     public function store(Request $request)
     {
         Log::debug('Creating new student', $request->all());
