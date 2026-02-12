@@ -3266,12 +3266,12 @@ use Spatie\Permission\Models\Role;
 </div>
 
 <script>
- // ============================================================================
-// STUDENT MANAGEMENT SYSTEM - COMPLETE OPTIMIZED VERSION
+// ============================================================================
+// STUDENT MANAGEMENT SYSTEM - COMPLETE OPTIMIZED VERSION WITH SESSION FILTER
 // ============================================================================
 // This comprehensive solution includes:
 // 1. Server-side pagination with user-controlled items per page
-// 2. Enhanced filtering with debouncing
+// 2. Enhanced filtering with debouncing - NOW INCLUDES SESSION FILTER
 // 3. Working column sorting in Generate Report modal
 // 4. Optimized for 5000+ student records
 // ============================================================================
@@ -3289,11 +3289,11 @@ use Spatie\Permission\Models\Role;
         MAX_API_RETRIES: 3,
         CACHE_DURATION: 300000, // 5 minutes
         LAZY_LOAD_IMAGES: true,
-        ENABLE_LOGGING: false
+        ENABLE_LOGGING: true
     };
 
     // ============================================================================
-    // STATE MANAGEMENT - Single source of truth
+    // STATE MANAGEMENT - WITH SESSION FILTER ADDED
     // ============================================================================
     const AppState = {
         // Pagination state
@@ -3305,12 +3305,13 @@ use Spatie\Permission\Models\Role;
             data: []
         },
 
-        // Filter state
+        // Filter state - SESSION ADDED
         filters: {
             search: '',
             class: 'all',
             status: 'all',
-            gender: 'all'
+            gender: 'all',
+            session: 'all' // NEW: Session filter
         },
 
         // UI state
@@ -3325,7 +3326,8 @@ use Spatie\Permission\Models\Role;
         cache: {
             students: new Map(),
             stats: null,
-            classes: null
+            classes: null,
+            sessions: null
         },
 
         // Report column state
@@ -3617,7 +3619,7 @@ use Spatie\Permission\Models\Role;
     };
 
     // ============================================================================
-    // API SERVICE - Centralized API calls
+    // API SERVICE - COMPLETE WITH ALL METHODS + SESSION FILTER
     // ============================================================================
     const ApiService = {
         async getStudents(page = 1, perPage = null, filters = null) {
@@ -3634,6 +3636,7 @@ use Spatie\Permission\Models\Role;
             if (currentFilters.class && currentFilters.class !== 'all') params.append('class_id', currentFilters.class);
             if (currentFilters.status && currentFilters.status !== 'all') params.append('status', currentFilters.status);
             if (currentFilters.gender && currentFilters.gender !== 'all') params.append('gender', currentFilters.gender);
+            if (currentFilters.session && currentFilters.session !== 'all') params.append('session_id', currentFilters.session); // NEW: Session filter
 
             try {
                 Utils.log('Fetching students', { page, perPage, params: params.toString() });
@@ -3764,6 +3767,34 @@ use Spatie\Permission\Models\Role;
                 Utils.log('API Error - generateReport', error, 'error');
                 throw error;
             }
+        },
+
+        async getSessions() {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.get('/schoolsessions/list');
+                return response.data;
+            } catch (error) {
+                Utils.log('API Error - getSessions', error, 'error');
+                return { success: false, data: [] };
+            }
+        },
+
+        async getClasses() {
+            if (!Utils.ensureAxios()) {
+                throw new Error('Axios not available');
+            }
+
+            try {
+                const response = await axios.get('/schoolclasses/list');
+                return response.data;
+            } catch (error) {
+                Utils.log('API Error - getClasses', error, 'error');
+                return { success: false, data: [] };
+            }
         }
     };
 
@@ -3851,7 +3882,7 @@ use Spatie\Permission\Models\Role;
             }
 
             this.updatePageNumbers(pagination);
-            this.updateCounts(pagination.total, pagination.data.length);
+            this.updateCounts(pagination.total, pagination.from || 0, pagination.to || 0);
         },
 
         updatePageNumbers: function(pagination) {
@@ -3905,19 +3936,25 @@ use Spatie\Permission\Models\Role;
             }
         },
 
-        updateCounts: function(total, showing) {
+        updateCounts: function(total, from, to) {
             const totalStudentsEl = document.getElementById('totalStudents');
             const totalCountEl = document.getElementById('totalCount');
             const showingCountEl = document.getElementById('showingCount');
 
             if (totalStudentsEl) totalStudentsEl.textContent = total;
             if (totalCountEl) totalCountEl.textContent = total;
-            if (showingCountEl) showingCountEl.textContent = showing;
+            if (showingCountEl) {
+                if (from && to) {
+                    showingCountEl.textContent = `${from} - ${to}`;
+                } else {
+                    showingCountEl.textContent = AppState.pagination.data.length;
+                }
+            }
         }
     };
 
     // ============================================================================
-    // FILTER MANAGER - Enhanced filtering with debouncing
+    // FILTER MANAGER - WITH SESSION FILTER ADDED
     // ============================================================================
     const FilterManager = {
         debouncedSearch: Utils.debounce(function() {
@@ -3930,6 +3967,7 @@ use Spatie\Permission\Models\Role;
             const classFilter = document.getElementById('schoolclass-filter');
             const statusFilter = document.getElementById('status-filter');
             const genderFilter = document.getElementById('gender-filter');
+            const sessionFilter = document.getElementById('session-filter'); // NEW: Session filter
 
             if (searchInput) {
                 searchInput.addEventListener('input', () => this.debouncedSearch());
@@ -3955,6 +3993,14 @@ use Spatie\Permission\Models\Role;
                     StudentManager.fetchStudents();
                 });
             }
+
+            // NEW: Session filter event listener
+            if (sessionFilter) {
+                sessionFilter.addEventListener('change', () => {
+                    AppState.pagination.currentPage = 1;
+                    StudentManager.fetchStudents();
+                });
+            }
         },
 
         applyFilters: function() {
@@ -3962,12 +4008,14 @@ use Spatie\Permission\Models\Role;
             const classFilter = document.getElementById('schoolclass-filter');
             const statusFilter = document.getElementById('status-filter');
             const genderFilter = document.getElementById('gender-filter');
+            const sessionFilter = document.getElementById('session-filter'); // NEW: Session filter
 
             AppState.filters = {
                 search: searchInput ? searchInput.value : '',
                 class: classFilter ? classFilter.value : 'all',
                 status: statusFilter ? statusFilter.value : 'all',
-                gender: genderFilter ? genderFilter.value : 'all'
+                gender: genderFilter ? genderFilter.value : 'all',
+                session: sessionFilter ? sessionFilter.value : 'all' // NEW: Session filter
             };
 
             AppState.pagination.currentPage = 1;
@@ -3979,21 +4027,46 @@ use Spatie\Permission\Models\Role;
             const classFilter = document.getElementById('schoolclass-filter');
             const statusFilter = document.getElementById('status-filter');
             const genderFilter = document.getElementById('gender-filter');
+            const sessionFilter = document.getElementById('session-filter'); // NEW: Session filter
 
             if (searchInput) searchInput.value = '';
             if (classFilter) classFilter.value = 'all';
             if (statusFilter) statusFilter.value = 'all';
             if (genderFilter) genderFilter.value = 'all';
+            if (sessionFilter) sessionFilter.value = 'all'; // NEW: Session filter
 
             AppState.filters = {
                 search: '',
                 class: 'all',
                 status: 'all',
-                gender: 'all'
+                gender: 'all',
+                session: 'all' // NEW: Session filter
             };
 
             AppState.pagination.currentPage = 1;
             StudentManager.fetchStudents();
+        },
+
+        populateSessionFilter: function() {
+            const sessionFilter = document.getElementById('session-filter');
+            if (!sessionFilter) return;
+
+            // Clear existing options except "All Sessions"
+            sessionFilter.innerHTML = '<option value="all">All Sessions</option>';
+
+            // Fetch sessions from API or use existing data
+            ApiService.getSessions().then(response => {
+                if (response.success && response.data) {
+                    response.data.forEach(session => {
+                        const option = document.createElement('option');
+                        option.value = session.id;
+                        option.textContent = session.name || session.session;
+                        sessionFilter.appendChild(option);
+                    });
+                }
+            }).catch(error => {
+                Utils.log('Error populating session filter', error, 'error');
+            });
         }
     };
 
@@ -4016,6 +4089,8 @@ use Spatie\Permission\Models\Role;
                     currentPage: paginationData.current_page,
                     lastPage: paginationData.last_page,
                     total: paginationData.total,
+                    from: paginationData.from,
+                    to: paginationData.to,
                     data: paginationData.data
                 };
 
@@ -4692,7 +4767,7 @@ use Spatie\Permission\Models\Role;
             // Contact Information
             setText('viewPhoneNumber', student.phone_number || '-');
             setText('viewEmailAddress', student.email || '-');
-            setText('viewPermanentAddress', student.permanent_address || '-');
+            setText('viewPermanentAddress', student.permanent_address || student.home_address2 || '-');
             setText('viewCity', student.city || '-');
             setText('viewStateOrigin', student.state || '-');
             setText('viewLGA', student.local || '-');
@@ -5671,7 +5746,7 @@ use Spatie\Permission\Models\Role;
 
                 Swal.close();
 
-                Utils.showSuccess(response.data.message || `Current term updated for ${selectedIds.length} student(s).`);
+                Utils.showSuccess(response.message || `Current term updated for ${selectedIds.length} student(s).`);
 
                 // Refresh the student list
                 await StudentManager.fetchStudents();
@@ -5684,6 +5759,8 @@ use Spatie\Permission\Models\Role;
                 let errorMessage = 'Failed to update current term.';
                 if (error.response?.data?.message) {
                     errorMessage = error.response.data.message;
+                } else if (error.message) {
+                    errorMessage = error.message;
                 }
 
                 Utils.showError(errorMessage);
@@ -5703,6 +5780,7 @@ use Spatie\Permission\Models\Role;
             this.initializeFormSubmissions();
             this.initializeCheckboxes();
             this.initializePerPageSelector();
+            this.initializeSessionFilter(); // NEW: Initialize session filter
         },
 
         initializeViewToggles: function() {
@@ -5732,6 +5810,7 @@ use Spatie\Permission\Models\Role;
             const classFilter = document.getElementById('schoolclass-filter');
             const statusFilter = document.getElementById('status-filter');
             const genderFilter = document.getElementById('gender-filter');
+            const sessionFilter = document.getElementById('session-filter'); // NEW: Session filter
 
             if (classFilter) {
                 classFilter.removeEventListener('change', this.handleFilterChange);
@@ -5752,6 +5831,15 @@ use Spatie\Permission\Models\Role;
             if (genderFilter) {
                 genderFilter.removeEventListener('change', this.handleFilterChange);
                 genderFilter.addEventListener('change', () => {
+                    AppState.pagination.currentPage = 1;
+                    StudentManager.fetchStudents();
+                });
+            }
+
+            // NEW: Session filter event listener
+            if (sessionFilter) {
+                sessionFilter.removeEventListener('change', this.handleFilterChange);
+                sessionFilter.addEventListener('change', () => {
                     AppState.pagination.currentPage = 1;
                     StudentManager.fetchStudents();
                 });
@@ -5955,6 +6043,11 @@ use Spatie\Permission\Models\Role;
             PaginationManager.initializePerPageSelector();
         },
 
+        // NEW: Initialize session filter
+        initializeSessionFilter: function() {
+            FilterManager.populateSessionFilter();
+        },
+
         handleFilterChange: function() {
             AppState.pagination.currentPage = 1;
             StudentManager.fetchStudents();
@@ -5999,16 +6092,6 @@ use Spatie\Permission\Models\Role;
         handleAdmissionModeChange: function(e) {
             const prefix = e.target.id.includes('edit') ? 'edit' : '';
             AdmissionNumberManager.toggleAdmissionInput(prefix);
-        },
-
-        handleAddFormSubmit: async function(e) {
-            e.preventDefault();
-            // Handled in initializeFormSubmissions
-        },
-
-        handleEditFormSubmit: async function(e) {
-            e.preventDefault();
-            // Handled in initializeFormSubmissions
         }
     };
 
@@ -6016,7 +6099,7 @@ use Spatie\Permission\Models\Role;
     // INITIALIZATION - Start the application
     // ============================================================================
     function initializeApplication() {
-        Utils.log('Initializing Student Management System...');
+        Utils.log('Initializing Student Management System with Session Filter...');
 
         // Ensure Axios is available
         if (!Utils.ensureAxios()) {
@@ -6121,6 +6204,7 @@ use Spatie\Permission\Models\Role;
     }
 
 })();
+
 </script>
 {{-- <!-- Include Sortable.js for drag and drop functionality -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
