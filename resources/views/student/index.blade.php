@@ -1391,62 +1391,66 @@ use Spatie\Permission\Models\Role;
 
                 <!-- Filter Bar -->
 
-              
-               <!-- Filter Bar - WITH SESSION FILTER - FIXED DISPLAY -->
-                <div class="filter-bar">
-                    <div class="row g-3">
-                        <div class="col-md-2">
-                            <div class="search-box">
-                                <i class="fas fa-search search-icon"></i>
-                                <input type="text" class="form-control" id="search-input"
-                                    placeholder="Search name or admission...">
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-control" id="schoolclass-filter">
-                                <option value="all">All Classes</option>
-                                @foreach ($schoolclasses as $class)
-                                    <option value="{{ $class->id }}">{{ $class->schoolclass }} - {{ $class->arm }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-control" id="status-filter">
-                                <option value="all">All Status</option>
-                                <option value="1">Old Student</option>
-                                <option value="2">New Student</option>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-control" id="gender-filter">
-                                <option value="all">All Gender</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                            </select>
-                        </div>
-                        <!-- SESSION FILTER - FIXED: Use session->session instead of session->name -->
-                        <div class="col-md-2">
-                            <select class="form-control" id="session-filter">
-                                <option value="all">All Sessions</option>
-                                @foreach ($schoolsessions as $session)
-                                    <option value="{{ $session->id }}">{{ $session->session }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-1">
-                            <button type="button" class="btn btn-primary w-100" onclick="window.filterData()">
-                                <i class="fas fa-filter me-2"></i>Filter
-                            </button>
-                        </div>
-                        <div class="col-md-1">
-                            <button type="button" class="btn btn-outline-secondary w-100" onclick="window.resetFilters()">
-                                <i class="fas fa-redo"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+
+              <!-- Filter Bar - COMPLETE WORKING VERSION -->
+<div class="filter-bar">
+    <div class="row g-3">
+        <div class="col-md-2">
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="form-control" id="search-input"
+                       placeholder="Search name or admission...">
+            </div>
+        </div>
+        <div class="col-md-2">
+            <select class="form-control" id="schoolclass-filter">
+                <option value="all">All Classes</option>
+                @foreach ($schoolclasses as $class)
+                    <option value="{{ $class->id }}">{{ $class->schoolclass }} - {{ $class->arm }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select class="form-control" id="status-filter">
+                <option value="all">All Status</option>
+                <option value="1">Old Student</option>
+                <option value="2">New Student</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select class="form-control" id="gender-filter">
+                <option value="all">All Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+        </div>
+        <!-- SESSION FILTER - FIXED -->
+        <div class="col-md-2">
+            <select class="form-control" id="session-filter">
+                <option value="all">All Sessions</option>
+                @if(isset($schoolsessions) && count($schoolsessions) > 0)
+                    @foreach ($schoolsessions as $session)
+                        <option value="{{ $session->id }}">{{ $session->session ?? $session->name ?? 'Session ' . $session->id }}</option>
+                    @endforeach
+                @else
+                    <option value="" disabled>No sessions found</option>
+                @endif
+            </select>
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-primary w-100" onclick="window.filterData()">
+                <i class="fas fa-filter me-2"></i>Filter
+            </button>
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-outline-secondary w-100" onclick="window.resetFilters()">
+                <i class="fas fa-redo"></i>
+            </button>
+        </div>
+    </div>
+</div>
 
                 <!-- Table View -->
                 <div id="tableView" class="view-container">
