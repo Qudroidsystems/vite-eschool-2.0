@@ -1391,7 +1391,8 @@ use Spatie\Permission\Models\Role;
 
                 <!-- Filter Bar -->
 
-                <!-- Filter Bar - UPDATED WITH SESSION FILTER -->
+              
+               <!-- Filter Bar - WITH SESSION FILTER - FIXED DISPLAY -->
                 <div class="filter-bar">
                     <div class="row g-3">
                         <div class="col-md-2">
@@ -1425,22 +1426,22 @@ use Spatie\Permission\Models\Role;
                                 <option value="Female">Female</option>
                             </select>
                         </div>
-                        <!-- NEW: Session Filter -->
+                        <!-- SESSION FILTER - FIXED: Use session->session instead of session->name -->
                         <div class="col-md-2">
                             <select class="form-control" id="session-filter">
                                 <option value="all">All Sessions</option>
                                 @foreach ($schoolsessions as $session)
-                                    <option value="{{ $session->id }}">{{ $session->name }}</option>
+                                    <option value="{{ $session->id }}">{{ $session->session }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-1">
-                            <button type="button" class="btn btn-primary w-100" onclick="filterData()">
+                            <button type="button" class="btn btn-primary w-100" onclick="window.filterData()">
                                 <i class="fas fa-filter me-2"></i>Filter
                             </button>
                         </div>
                         <div class="col-md-1">
-                            <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                            <button type="button" class="btn btn-outline-secondary w-100" onclick="window.resetFilters()">
                                 <i class="fas fa-redo"></i>
                             </button>
                         </div>
