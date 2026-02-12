@@ -206,15 +206,9 @@ public function dataPaginated(Request $request): JsonResponse
         // Order by latest first
         $query->latest('studentRegistration.created_at');
 
-        // Pagination - DEFAULT 20 RECORDS PER PAGE
+        // Pagination
         $perPage = $request->input('per_page', 20);
         $students = $query->paginate($perPage);
-
-        Log::debug('Paginated students fetched', [
-            'total' => $students->total(),
-            'per_page' => $students->perPage(),
-            'current_page' => $students->currentPage()
-        ]);
 
         return response()->json([
             'success' => true,
@@ -235,8 +229,6 @@ public function dataPaginated(Request $request): JsonResponse
         ], 500);
     }
 }
-
-
 
     public function store(Request $request)
     {
