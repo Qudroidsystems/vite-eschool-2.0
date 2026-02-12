@@ -145,7 +145,7 @@ class StudentController extends Controller
 
   /**
  * Get students optimized with server-side pagination and filtering
- * INCLUDES SESSION FILTER - FIXED VERSION
+ * INCLUDES SESSION FILTER - FIXED FOR ONLY_FULL_GROUP_BY
  */
 public function getStudentsOptimized(Request $request)
 {
@@ -164,29 +164,7 @@ public function getStudentsOptimized(Request $request)
             ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
             ->leftJoin('parentRegistration', 'parentRegistration.studentId', '=', 'studentRegistration.id')
             ->leftJoin('studenthouses', 'studenthouses.studentid', '=', 'studentRegistration.id')
-            ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
-            ->select([
-                'studentRegistration.*',
-                'studentpicture.picture',
-                'schoolclass.schoolclass',
-                'schoolarm.arm',
-                'studentclass.schoolclassid',
-                'studentclass.termid',
-                'studentclass.sessionid',
-                // Parent fields
-                'parentRegistration.father',
-                'parentRegistration.mother',
-                'parentRegistration.father_phone',
-                'parentRegistration.mother_phone',
-                'parentRegistration.father_occupation',
-                'parentRegistration.father_city',
-                'parentRegistration.office_address',
-                'parentRegistration.parent_email',
-                'parentRegistration.parent_address',
-                'parentRegistration.father_title',
-                'parentRegistration.mother_title',
-                'schoolhouses.house as school_house',
-            ]);
+            ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse');
 
         // Apply search filter
         if (!empty($search)) {
@@ -198,12 +176,12 @@ public function getStudentsOptimized(Request $request)
             });
         }
 
-        // Apply class filter - FIXED: Use studentclass.schoolclassid
+        // Apply class filter
         if ($classId !== 'all' && !empty($classId)) {
             $query->where('studentclass.schoolclassid', $classId);
         }
 
-        // Apply status filter - FIXED: Handle both statusId and student_status
+        // Apply status filter
         if ($status !== 'all' && !empty($status)) {
             if ($status === '1' || $status === '2') {
                 $query->where('studentRegistration.statusId', $status);
@@ -217,12 +195,67 @@ public function getStudentsOptimized(Request $request)
             $query->where('studentRegistration.gender', $gender);
         }
 
-        // APPLY SESSION FILTER - FIXED: Use studentclass.sessionid
+        // Apply session filter
         if ($sessionId !== 'all' && !empty($sessionId)) {
             $query->where('studentclass.sessionid', $sessionId);
         }
 
-        // IMPORTANT: Group by student ID to prevent duplicates from multiple joins
+        // IMPORTANT: Use select with aggregation for pagination
+        $query->select([
+            'studentRegistration.id',
+            'studentRegistration.admissionNo',
+            'studentRegistration.admission_date',
+            'studentRegistration.admissionYear',
+            'studentRegistration.firstname',
+            'studentRegistration.lastname',
+            'studentRegistration.othername',
+            'studentRegistration.gender',
+            'studentRegistration.statusId',
+            'studentRegistration.student_status',
+            'studentRegistration.created_at',
+            'studentRegistration.updated_at',
+            'studentRegistration.dateofbirth',
+            'studentRegistration.title',
+            'studentRegistration.placeofbirth',
+            'studentRegistration.phone_number',
+            'studentRegistration.email',
+            'studentRegistration.home_address2',
+            'studentRegistration.future_ambition',
+            'studentRegistration.nationality',
+            'studentRegistration.state',
+            'studentRegistration.local',
+            'studentRegistration.city',
+            'studentRegistration.religion',
+            'studentRegistration.blood_group',
+            'studentRegistration.mother_tongue',
+            'studentRegistration.nin_number',
+            'studentRegistration.student_category',
+            'studentRegistration.last_school',
+            'studentRegistration.last_class',
+            'studentRegistration.reason_for_leaving',
+
+            // Use MAX() for joined tables to satisfy ONLY_FULL_GROUP_BY
+            DB::raw('MAX(studentpicture.picture) as picture'),
+            DB::raw('MAX(schoolclass.schoolclass) as schoolclass'),
+            DB::raw('MAX(schoolarm.arm) as arm'),
+            DB::raw('MAX(studentclass.schoolclassid) as schoolclassid'),
+            DB::raw('MAX(studentclass.termid) as termid'),
+            DB::raw('MAX(studentclass.sessionid) as sessionid'),
+            DB::raw('MAX(parentRegistration.father) as father'),
+            DB::raw('MAX(parentRegistration.mother) as mother'),
+            DB::raw('MAX(parentRegistration.father_phone) as father_phone'),
+            DB::raw('MAX(parentRegistration.mother_phone) as mother_phone'),
+            DB::raw('MAX(parentRegistration.father_occupation) as father_occupation'),
+            DB::raw('MAX(parentRegistration.father_city) as father_city'),
+            DB::raw('MAX(parentRegistration.office_address) as office_address'),
+            DB::raw('MAX(parentRegistration.parent_email) as parent_email'),
+            DB::raw('MAX(parentRegistration.parent_address) as parent_address'),
+            DB::raw('MAX(parentRegistration.father_title) as father_title'),
+            DB::raw('MAX(parentRegistration.mother_title) as mother_title'),
+            DB::raw('MAX(schoolhouses.house) as school_house'),
+        ]);
+
+        // Group by studentRegistration.id to avoid duplicates
         $query->groupBy('studentRegistration.id');
 
         // Get paginated results
