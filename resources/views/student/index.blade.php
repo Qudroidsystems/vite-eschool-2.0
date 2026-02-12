@@ -3602,7 +3602,15 @@ use Spatie\Permission\Models\Role;
                 Utils.log('Fetching student by ID:', id);
                 const response = await axios.get(`/student/${id}/edit`);
 
+                Utils.log('Student API response - full data:', response.data);
+
                 if (response.data.success && response.data.student) {
+                    // Log specific fields to verify they're coming through
+                    Utils.log('Student dateofbirth:', response.data.student.dateofbirth);
+                    Utils.log('Student sport_house:', response.data.student.sport_house);
+                    Utils.log('Student schoolhouse:', response.data.student.schoolhouse);
+                    Utils.log('Student school_house:', response.data.student.school_house);
+
                     return response.data.student;
                 } else {
                     throw new Error(response.data.message || 'Failed to fetch student');
@@ -4248,6 +4256,15 @@ use Spatie\Permission\Models\Role;
         populateEditForm: function(student) {
             Utils.log('Populating edit form', student);
 
+            // Log all student fields to see what's available
+            Utils.log('All student fields:', Object.keys(student));
+
+            // Log specific fields we care about
+            Utils.log('Student dateofbirth field:', student.dateofbirth);
+            Utils.log('Student sport_house field:', student.sport_house);
+            Utils.log('Student schoolhouse field:', student.schoolhouse);
+            Utils.log('Student school_house field:', student.school_house);
+
             // Set student ID
             const studentIdField = document.getElementById('editStudentId');
             if (studentIdField) studentIdField.value = student.id || '';
@@ -4349,9 +4366,11 @@ use Spatie\Permission\Models\Role;
             // The field name in database is 'dateofbirth' (all lowercase, no camelCase)
             const dobInput = document.getElementById('editDOB');
             if (dobInput) {
-                // Check both possible field names
-                const dobValue = student.dateofbirth || student.dateOfBirth || student.dob || '';
-                Utils.log('Setting date of birth:', dobValue);
+                // Check both possible field names - use exact field name from database
+                const dobValue = student.dateofbirth || '';
+
+                Utils.log('Setting date of birth - raw value:', dobValue);
+
                 if (dobValue) {
                     // Handle different date formats
                     let formattedDate = dobValue;
@@ -4364,20 +4383,26 @@ use Spatie\Permission\Models\Role;
                         else if (dobValue.includes('/')) {
                             const parts = dobValue.split('/');
                             if (parts.length === 3) {
-                                // Check if it's DD/MM/YYYY or MM/DD/YYYY
+                                // Check if it's DD/MM/YYYY
                                 if (parts[2].length === 4) {
                                     formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
                                 }
                             }
                         }
                     }
+
                     dobInput.value = formattedDate;
+                    Utils.log('Date of birth set to:', formattedDate);
 
                     // Calculate and set age
                     const ageInput = document.getElementById('editAgeInput');
                     if (ageInput) {
-                        ageInput.value = Utils.calculateAge(formattedDate) || student.age || '';
+                        const age = Utils.calculateAge(formattedDate);
+                        ageInput.value = age || student.age || '';
+                        Utils.log('Age set to:', ageInput.value);
                     }
+                } else {
+                    Utils.log('No date of birth value found in student object');
                 }
             }
 
@@ -4411,18 +4436,27 @@ use Spatie\Permission\Models\Role;
             // The field name in database is 'sport_house' (from your controller)
             const houseSelect = document.getElementById('editSchoolHouse');
             if (houseSelect) {
-                // Check all possible field names
-                let houseValue = student.schoolhouse || student.school_house || student.sport_house || student.house || null;
+                // Check all possible field names - sport_house is the actual database field
+                let houseValue = student.sport_house || student.schoolhouse || student.school_house || null;
 
                 Utils.log('Setting school house - raw values:', {
-                    schoolhouse: student.schoolhouse,
-                    school_house: student.school_house,
-                    sport_house: student.sport_house,
-                    house: student.house,
+                    sport_house: student.sport_house,    // This is the actual database field
+                    schoolhouse: student.schoolhouse,    // From the join
+                    school_house: student.school_house,  // Aliased field
                     selected: houseValue
                 });
 
                 if (houseValue) {
+                    // Log all available options for debugging
+                    const options = [];
+                    for (let i = 0; i < houseSelect.options.length; i++) {
+                        options.push({
+                            value: houseSelect.options[i].value,
+                            text: houseSelect.options[i].text
+                        });
+                    }
+                    Utils.log('Available house options:', options);
+
                     // Try to find by exact value
                     let optionFound = false;
                     for (let i = 0; i < houseSelect.options.length; i++) {
@@ -4455,6 +4489,12 @@ use Spatie\Permission\Models\Role;
                             Utils.log('Could not set school house by direct value', e);
                         }
                     }
+
+                    if (!optionFound) {
+                        Utils.log('WARNING: Could not set school house value:', houseValue);
+                    }
+                } else {
+                    Utils.log('No school house value found in student object');
                 }
             }
 
@@ -4653,7 +4693,11 @@ use Spatie\Permission\Models\Role;
             }
 
             this.safeSetText('viewStudentStatus', student.student_status || '-');
-            this.safeSetText('viewSchoolHouse', student.school_house || student.schoolhouse || student.sport_house || '-');
+
+            // School house in view modal
+            const schoolHouseValue = student.school_house || student.schoolhouse || student.sport_house || '-';
+            this.safeSetText('viewSchoolHouse', schoolHouseValue);
+
             this.safeSetText('viewAdmittedDate', Utils.formatDate(student.admission_date, 'short'));
 
             // Student Status Indicator
@@ -6153,8 +6197,8 @@ use Spatie\Permission\Models\Role;
     }
 
 })();
-
 </script>
+
 
 <!-- Include Sortable.js for drag and drop functionality -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
