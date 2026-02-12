@@ -143,9 +143,11 @@ class StudentController extends Controller
         ));
     }
 
-  /**
+
+
+    /**
  * Get students optimized with server-side pagination and filtering
- * INCLUDES SESSION FILTER - FIXED FOR ONLY_FULL_GROUP_BY
+ * FIXED: Using subquery approach to avoid ONLY_FULL_GROUP_BY issues
  */
 public function getStudentsOptimized(Request $request)
 {
@@ -157,18 +159,14 @@ public function getStudentsOptimized(Request $request)
         $gender = $request->get('gender', 'all');
         $sessionId = $request->get('session_id', 'all');
 
-        $query = Student::query()
-            ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
+        // Build the base query for student IDs with filters
+        $idQuery = Student::query()
             ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
-            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
-            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('parentRegistration', 'parentRegistration.studentId', '=', 'studentRegistration.id')
-            ->leftJoin('studenthouses', 'studenthouses.studentid', '=', 'studentRegistration.id')
-            ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse');
+            ->select('studentRegistration.id');
 
         // Apply search filter
         if (!empty($search)) {
-            $query->where(function($q) use ($search) {
+            $idQuery->where(function($q) use ($search) {
                 $q->where('studentRegistration.firstname', 'LIKE', "%{$search}%")
                   ->orWhere('studentRegistration.lastname', 'LIKE', "%{$search}%")
                   ->orWhere('studentRegistration.admissionNo', 'LIKE', "%{$search}%")
@@ -178,92 +176,100 @@ public function getStudentsOptimized(Request $request)
 
         // Apply class filter
         if ($classId !== 'all' && !empty($classId)) {
-            $query->where('studentclass.schoolclassid', $classId);
+            $idQuery->where('studentclass.schoolclassid', $classId);
         }
 
         // Apply status filter
         if ($status !== 'all' && !empty($status)) {
             if ($status === '1' || $status === '2') {
-                $query->where('studentRegistration.statusId', $status);
+                $idQuery->where('studentRegistration.statusId', $status);
             } elseif ($status === 'Active' || $status === 'Inactive') {
-                $query->where('studentRegistration.student_status', $status);
+                $idQuery->where('studentRegistration.student_status', $status);
             }
         }
 
         // Apply gender filter
         if ($gender !== 'all' && !empty($gender)) {
-            $query->where('studentRegistration.gender', $gender);
+            $idQuery->where('studentRegistration.gender', $gender);
         }
 
         // Apply session filter
         if ($sessionId !== 'all' && !empty($sessionId)) {
-            $query->where('studentclass.sessionid', $sessionId);
+            $idQuery->where('studentclass.sessionid', $sessionId);
         }
 
-        // IMPORTANT: Use select with aggregation for pagination
-        $query->select([
-            'studentRegistration.id',
-            'studentRegistration.admissionNo',
-            'studentRegistration.admission_date',
-            'studentRegistration.admissionYear',
-            'studentRegistration.firstname',
-            'studentRegistration.lastname',
-            'studentRegistration.othername',
-            'studentRegistration.gender',
-            'studentRegistration.statusId',
-            'studentRegistration.student_status',
-            'studentRegistration.created_at',
-            'studentRegistration.updated_at',
-            'studentRegistration.dateofbirth',
-            'studentRegistration.title',
-            'studentRegistration.placeofbirth',
-            'studentRegistration.phone_number',
-            'studentRegistration.email',
-            'studentRegistration.home_address2',
-            'studentRegistration.future_ambition',
-            'studentRegistration.nationality',
-            'studentRegistration.state',
-            'studentRegistration.local',
-            'studentRegistration.city',
-            'studentRegistration.religion',
-            'studentRegistration.blood_group',
-            'studentRegistration.mother_tongue',
-            'studentRegistration.nin_number',
-            'studentRegistration.student_category',
-            'studentRegistration.last_school',
-            'studentRegistration.last_class',
-            'studentRegistration.reason_for_leaving',
+        // Group by to avoid duplicates
+        $idQuery->groupBy('studentRegistration.id');
 
-            // Use MAX() for joined tables to satisfy ONLY_FULL_GROUP_BY
-            DB::raw('MAX(studentpicture.picture) as picture'),
-            DB::raw('MAX(schoolclass.schoolclass) as schoolclass'),
-            DB::raw('MAX(schoolarm.arm) as arm'),
-            DB::raw('MAX(studentclass.schoolclassid) as schoolclassid'),
-            DB::raw('MAX(studentclass.termid) as termid'),
-            DB::raw('MAX(studentclass.sessionid) as sessionid'),
-            DB::raw('MAX(parentRegistration.father) as father'),
-            DB::raw('MAX(parentRegistration.mother) as mother'),
-            DB::raw('MAX(parentRegistration.father_phone) as father_phone'),
-            DB::raw('MAX(parentRegistration.mother_phone) as mother_phone'),
-            DB::raw('MAX(parentRegistration.father_occupation) as father_occupation'),
-            DB::raw('MAX(parentRegistration.father_city) as father_city'),
-            DB::raw('MAX(parentRegistration.office_address) as office_address'),
-            DB::raw('MAX(parentRegistration.parent_email) as parent_email'),
-            DB::raw('MAX(parentRegistration.parent_address) as parent_address'),
-            DB::raw('MAX(parentRegistration.father_title) as father_title'),
-            DB::raw('MAX(parentRegistration.mother_title) as mother_title'),
-            DB::raw('MAX(schoolhouses.house) as school_house'),
-        ]);
+        // Get paginated IDs first
+        $paginatedIds = $idQuery->paginate($perPage, ['studentRegistration.id'], 'page', $request->get('page', 1));
 
-        // Group by studentRegistration.id to avoid duplicates
-        $query->groupBy('studentRegistration.id');
+        $studentIds = $paginatedIds->pluck('id')->toArray();
 
-        // Get paginated results
-        $students = $query->orderBy('studentRegistration.created_at', 'desc')
-                         ->paginate($perPage);
+        // If no students found, return empty pagination
+        if (empty($studentIds)) {
+            return response()->json([
+                'success' => true,
+                'data' => new \Illuminate\Pagination\LengthAwarePaginator(
+                    [],
+                    0,
+                    $perPage,
+                    $request->get('page', 1),
+                    ['path' => $request->url(), 'query' => $request->query()]
+                )
+            ]);
+        }
+
+        // Now fetch full student data for these IDs
+        $students = Student::query()
+            ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
+            ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
+            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->leftJoin('parentRegistration', 'parentRegistration.studentId', '=', 'studentRegistration.id')
+            ->leftJoin('studenthouses', 'studenthouses.studentid', '=', 'studentRegistration.id')
+            ->leftJoin('schoolhouses', 'schoolhouses.id', '=', 'studenthouses.schoolhouse')
+            ->whereIn('studentRegistration.id', $studentIds)
+            ->select([
+                'studentRegistration.*',
+                'studentpicture.picture',
+                'schoolclass.schoolclass',
+                'schoolarm.arm',
+                'studentclass.schoolclassid',
+                'studentclass.termid',
+                'studentclass.sessionid',
+                'parentRegistration.father',
+                'parentRegistration.mother',
+                'parentRegistration.father_phone',
+                'parentRegistration.mother_phone',
+                'parentRegistration.father_occupation',
+                'parentRegistration.father_city',
+                'parentRegistration.office_address',
+                'parentRegistration.parent_email',
+                'parentRegistration.parent_address',
+                'parentRegistration.father_title',
+                'parentRegistration.mother_title',
+                'schoolhouses.house as school_house',
+            ])
+            ->orderBy('studentRegistration.created_at', 'desc')
+            ->get();
+
+        // Group by student ID to handle any remaining duplicates
+        $groupedStudents = $students->groupBy('id')->map(function($group) {
+            return $group->first();
+        })->values();
+
+        // Create pagination manually
+        $paginatedData = new \Illuminate\Pagination\LengthAwarePaginator(
+            $groupedStudents,
+            $paginatedIds->total(),
+            $paginatedIds->perPage(),
+            $paginatedIds->currentPage(),
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         // Process each student to add calculated fields
-        $students->getCollection()->transform(function($student) {
+        $paginatedData->getCollection()->transform(function($student) {
             // Calculate age if dateofbirth exists
             $age = null;
             if ($student->dateofbirth) {
@@ -329,7 +335,7 @@ public function getStudentsOptimized(Request $request)
 
         return response()->json([
             'success' => true,
-            'data' => $students
+            'data' => $paginatedData
         ]);
 
     } catch (\Exception $e) {
@@ -342,7 +348,6 @@ public function getStudentsOptimized(Request $request)
         ], 500);
     }
 }
-
 
     public function store(Request $request)
     {
