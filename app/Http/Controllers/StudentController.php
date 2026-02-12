@@ -69,7 +69,7 @@ class StudentController extends Controller
             ->orderBy('schoolclass.schoolclass')
             ->get();
         $schoolterms = Schoolterm::select('id', 'term as name')->get();
-        // $schoolsessions = Schoolsession::select('id', 'session as name')->get();
+        $schoolsessions = Schoolsession::select('id', 'session as name')->get();
         $currentSession = Schoolsession::where('status', 'Current')->first();
         $schoolhouses = Schoolhouse::all();
 
@@ -124,7 +124,7 @@ class StudentController extends Controller
 
         $currentTerm = Schoolterm::where('status', 'Current')->first();
          // IMPORTANT: Get sessions with the actual column name 'session'
-        $schoolsessions = Schoolsession::select('id', 'session')->get(); // NOT 'session as name'
+        // $schoolsessions = Schoolsession::select('id', 'session')->get(); // NOT 'session as name'
 
         return view('student.index', compact(
             'schoolclasses',
