@@ -3269,7 +3269,6 @@ use Spatie\Permission\Models\Role;
         </div>
     </div>
 </div>
-
 <script>
 // ============================================================================
 // STUDENT MANAGEMENT SYSTEM - COMPLETE OPTIMIZED VERSION WITH SESSION FILTER
@@ -3691,10 +3690,12 @@ use Spatie\Permission\Models\Role;
                 throw new Error('Axios not available');
             }
             try {
-                const response = await axios.get('/students/report', {
+                const response = await axios({
+                    method: 'GET',
+                    url: '/students/report',
                     params: params,
                     responseType: 'blob',
-                    timeout: 120000
+                    timeout: 120000 // 2 minute timeout for large reports
                 });
                 return response;
             } catch (error) {
@@ -4518,36 +4519,496 @@ use Spatie\Permission\Models\Role;
     };
 
     // ============================================================================
-    // VIEW MODAL MANAGER (Simplified for brevity - keep your existing implementation)
+    // VIEW MODAL MANAGER
     // ============================================================================
     const ViewModalManager = {
         populateEnhancedViewModal: function(student) {
-            // Keep your existing implementation - it's fine
             Utils.log('Populating enhanced view modal', student);
-            // ... (keep your existing code here)
+
+            // Basic Information
+            document.getElementById('viewFullName').textContent = `${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}`.trim() || '-';
+            document.getElementById('viewFullNameDetail').textContent = `${student.lastname || ''} ${student.firstname || ''} ${student.othername || ''}`.trim() || '-';
+            document.getElementById('viewAdmissionNumber').textContent = student.admissionNo || '-';
+            document.getElementById('viewAdmissionNo').textContent = student.admissionNo || '-';
+            document.getElementById('viewTitle').textContent = student.title || '-';
+            document.getElementById('viewDOB').textContent = Utils.formatDate(student.dateofbirth, 'long');
+            document.getElementById('viewAge').textContent = student.age || Utils.calculateAge(student.dateofbirth);
+            document.getElementById('viewAgeDetail').textContent = student.age || Utils.calculateAge(student.dateofbirth);
+            document.getElementById('viewPlaceOfBirth').textContent = student.placeofbirth || '-';
+            document.getElementById('viewGenderDetail').textContent = student.gender || '-';
+            document.getElementById('viewGenderText').textContent = student.gender || '-';
+            document.getElementById('viewBloodGroupDetail').textContent = student.blood_group || 'Not Specified';
+            document.getElementById('viewBloodGroupAdditional').textContent = student.blood_group || 'Not Specified';
+            document.getElementById('viewReligionDetail').textContent = student.religion || '-';
+
+            // Contact Information
+            document.getElementById('viewPhoneNumber').textContent = student.phone_number || '-';
+            document.getElementById('viewEmailAddress').textContent = student.email || '-';
+            document.getElementById('viewPermanentAddress').textContent = student.permanent_address || student.home_address2 || '-';
+            document.getElementById('viewCity').textContent = student.city || '-';
+            document.getElementById('viewStateOrigin').textContent = student.state || '-';
+            document.getElementById('viewLGA').textContent = student.local || '-';
+            document.getElementById('viewNationality').textContent = student.nationality || '-';
+
+            // Future Ambition
+            document.getElementById('viewFutureAmbition').textContent = student.future_ambition || 'Not specified';
+
+            // Academic Information
+            document.getElementById('viewAdmissionDate').textContent = Utils.formatDate(student.admission_date, 'long');
+            document.getElementById('viewCurrentClass').textContent = `${student.schoolclass || ''} ${student.arm || ''}`.trim() || '-';
+            document.getElementById('viewClassDisplay').textContent = `${student.schoolclass || ''} ${student.arm || ''}`.trim() || '-';
+            document.getElementById('viewClassBadge').innerHTML = `<i class="fas fa-school me-1"></i> ${`${student.schoolclass || ''} ${student.arm || ''}`.trim() || 'N/A'}`;
+            document.getElementById('viewArm').textContent = student.arm || '-';
+            document.getElementById('viewStudentCategory').textContent = student.student_category || '-';
+            document.getElementById('viewStudentType').textContent = student.statusId == 2 ? 'New Student' : student.statusId == 1 ? 'Old Student' : '-';
+
+            // Student Status Badge
+            const studentTypeBadge = document.getElementById('viewStudentTypeBadge');
+            if (student.statusId == 2) {
+                studentTypeBadge.className = 'badge bg-warning bg-gradient px-3 py-2';
+                studentTypeBadge.innerHTML = `<i class="fas fa-star me-1"></i> New Student`;
+            } else if (student.statusId == 1) {
+                studentTypeBadge.className = 'badge bg-secondary bg-gradient px-3 py-2';
+                studentTypeBadge.innerHTML = `<i class="fas fa-history me-1"></i> Old Student`;
+            }
+
+            document.getElementById('viewStudentStatus').textContent = student.student_status || '-';
+            document.getElementById('viewSchoolHouse').textContent = student.school_house || student.schoolhouse || '-';
+            document.getElementById('viewAdmittedDate').textContent = Utils.formatDate(student.admission_date, 'short');
+
+            // Student Status Indicator
+            const statusIndicator = document.getElementById('studentStatusIndicator');
+            if (student.student_status === 'Active') {
+                statusIndicator.className = 'position-absolute bottom-0 end-0 bg-success rounded-circle p-2 border border-2 border-white';
+            } else {
+                statusIndicator.className = 'position-absolute bottom-0 end-0 bg-secondary rounded-circle p-2 border border-2 border-white';
+            }
+
+            // Previous School
+            document.getElementById('viewLastSchool').textContent = student.last_school || '-';
+            document.getElementById('viewLastClass').textContent = student.last_class || '-';
+            document.getElementById('viewReasonForLeaving').textContent = student.reason_for_leaving || '-';
+
+            // Photo
+            const photoElement = document.getElementById('viewStudentPhoto');
+            const avatarContainer = document.getElementById('viewStudentAvatarContainer');
+
+            if (student.picture && student.picture !== 'unnamed.jpg') {
+                photoElement.src = `/storage/images/student_avatars/${student.picture}`;
+                photoElement.style.display = 'inline';
+                photoElement.onerror = function() {
+                    this.style.display = 'none';
+                    const fallback = document.createElement('div');
+                    fallback.className = 'avatar-initials rounded-circle border border-4 border-white shadow-sm';
+                    fallback.style.cssText = 'width: 120px; height: 120px; background: #4361ee; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 42px;';
+                    fallback.textContent = Utils.getInitials(student.firstname, student.lastname);
+                    avatarContainer.appendChild(fallback);
+                };
+            } else {
+                photoElement.style.display = 'none';
+                const existingFallback = avatarContainer.querySelector('.avatar-initials');
+                if (!existingFallback) {
+                    const fallback = document.createElement('div');
+                    fallback.className = 'avatar-initials rounded-circle border border-4 border-white shadow-sm';
+                    fallback.style.cssText = 'width: 120px; height: 120px; background: #4361ee; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 42px;';
+                    fallback.textContent = Utils.getInitials(student.firstname, student.lastname);
+                    avatarContainer.appendChild(fallback);
+                }
+            }
+
+            // Parent Information
+            document.getElementById('viewFatherFullName').textContent = student.father_name || '-';
+            document.getElementById('viewFatherPhone').textContent = student.father_phone || '-';
+            document.getElementById('viewFatherOccupation').textContent = student.father_occupation || '-';
+            document.getElementById('viewFatherCityState').textContent = student.father_city || '-';
+            document.getElementById('viewFatherEmail').textContent = student.parent_email || '-';
+            document.getElementById('viewFatherAddress').textContent = student.parent_address || '-';
+
+            document.getElementById('viewMotherFullName').textContent = student.mother_name || '-';
+            document.getElementById('viewMotherPhone').textContent = student.mother_phone || '-';
+            document.getElementById('viewMotherOccupation').textContent = student.mother_occupation || '-';
+            document.getElementById('viewMotherEmail').textContent = student.parent_email || '-';
+            document.getElementById('viewMotherAddress').textContent = student.parent_address || '-';
+
+            document.getElementById('viewParentEmail').textContent = student.parent_email || '-';
+            document.getElementById('viewParentAddress').textContent = student.parent_address || '-';
+
+            // Father Status Badge
+            const fatherBadge = document.getElementById('fatherStatusBadge');
+            if (student.father_name) {
+                fatherBadge.textContent = 'Available';
+                fatherBadge.className = 'badge bg-success ms-2';
+            } else {
+                fatherBadge.textContent = 'Not Provided';
+                fatherBadge.className = 'badge bg-secondary ms-2';
+            }
+
+            // Mother Status Badge
+            const motherBadge = document.getElementById('motherStatusBadge');
+            if (student.mother_name) {
+                motherBadge.textContent = 'Available';
+                motherBadge.className = 'badge bg-success ms-2';
+            } else {
+                motherBadge.textContent = 'Not Provided';
+                motherBadge.className = 'badge bg-secondary ms-2';
+            }
+
+            // Additional Information
+            document.getElementById('viewNIN').textContent = student.nin_number || '-';
+            document.getElementById('viewMotherTongue').textContent = student.mother_tongue || '-';
+
+            // Reset term history section
+            document.getElementById('termHistoryLoading').style.display = 'block';
+            document.getElementById('termHistoryContent').style.display = 'none';
+
+            // Store student ID for term history
+            this.currentStudentId = student.id;
         },
+
         fetchStudentTermInfo: async function(studentId) {
-            // Keep your existing implementation
+            try {
+                const response = await ApiService.getStudentActiveTerm(studentId);
+                const currentTermAlert = document.getElementById('currentTermAlert');
+
+                if (response.success && response.data) {
+                    const data = response.data;
+
+                    document.getElementById('viewCurrentTerm').textContent = data.term?.term || '-';
+                    document.getElementById('viewCurrentSession').textContent = data.session?.session || '-';
+
+                    let statusHtml = '';
+                    if (data.is_current) {
+                        statusHtml = '<span class="badge bg-success">Current Active Term</span>';
+                    } else {
+                        statusHtml = '<span class="badge bg-warning text-dark">Registered (Not Current)</span>';
+                    }
+                    document.getElementById('viewCurrentTermStatus').innerHTML = statusHtml;
+
+                    currentTermAlert.innerHTML = `
+                        <div class="alert alert-success mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Currently enrolled in:</strong> ${data.schoolClass?.schoolclass || ''} ${data.schoolClass?.armRelation?.arm || ''}
+                            (${data.term?.term || ''} Term, ${data.session?.session || ''} Session)
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('viewCurrentTerm').textContent = '-';
+                    document.getElementById('viewCurrentSession').textContent = '-';
+                    document.getElementById('viewCurrentTermStatus').innerHTML = '<span class="badge bg-secondary">Not Registered</span>';
+
+                    currentTermAlert.innerHTML = `
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>No active term registration found.</strong> Please update the student's current term.
+                        </div>
+                    `;
+                }
+
+                // Fetch term history
+                await this.fetchTermHistory(studentId);
+
+            } catch (error) {
+                Utils.log('Error fetching student term info', error, 'error');
+            }
         },
+
         fetchTermHistory: async function(studentId) {
-            // Keep your existing implementation
-        }
+            try {
+                const response = await ApiService.getStudentAllTerms(studentId);
+
+                const loadingEl = document.getElementById('termHistoryLoading');
+                const contentEl = document.getElementById('termHistoryContent');
+
+                if (response.success && response.data && response.data.length > 0) {
+                    loadingEl.style.display = 'none';
+                    contentEl.style.display = 'block';
+
+                    let html = `
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Session</th>
+                                        <th>Term</th>
+                                        <th>Class</th>
+                                        <th>Status</th>
+                                        <th>Registered On</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    response.data.forEach(term => {
+                        const statusBadge = term.is_current
+                            ? '<span class="badge bg-success">Current</span>'
+                            : '<span class="badge bg-secondary">Past</span>';
+
+                        html += `
+                            <tr>
+                                <td>${term.session_name || '-'}</td>
+                                <td>${term.term_name || '-'}</td>
+                                <td>${term.class_name || ''} ${term.arm_name || ''}</td>
+                                <td>${statusBadge}</td>
+                                <td>${Utils.formatDate(term.created_at, 'short')}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+
+                    contentEl.innerHTML = html;
+                } else {
+                    loadingEl.style.display = 'none';
+                    contentEl.style.display = 'block';
+                    contentEl.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No term registration history found for this student.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                Utils.log('Error fetching term history', error, 'error');
+                document.getElementById('termHistoryLoading').style.display = 'none';
+                document.getElementById('termHistoryContent').style.display = 'block';
+                document.getElementById('termHistoryContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Failed to load term history. Please try again.
+                    </div>
+                `;
+            }
+        },
+
+        currentStudentId: null
     };
 
     // ============================================================================
-    // EDIT FORM MANAGER (Simplified for brevity - keep your existing implementation)
+    // EDIT FORM MANAGER
     // ============================================================================
     const EditFormManager = {
         populateEditForm: function(student) {
-            // Keep your existing implementation
             Utils.log('Populating edit form', student);
-            // ... (keep your existing code here)
+
+            // Set student ID
+            document.getElementById('editStudentId').value = student.id || '';
+
+            // Academic Details
+            document.getElementById('editAdmissionNo').value = student.admissionNo || '';
+            document.getElementById('editAdmissionYear').value = student.admissionYear || new Date().getFullYear();
+            document.getElementById('editAdmissionDate').value = student.admissionDate ? student.admissionDate.split(' ')[0] : '';
+
+            // Set admission mode
+            const admissionAuto = document.getElementById('editAdmissionAuto');
+            const admissionManual = document.getElementById('editAdmissionManual');
+            if (student.admissionNo && student.admissionNo.includes('AUTO')) {
+                if (admissionAuto) admissionAuto.checked = true;
+                if (admissionManual) admissionManual.checked = false;
+                document.getElementById('editAdmissionNo').readOnly = true;
+            } else {
+                if (admissionAuto) admissionAuto.checked = false;
+                if (admissionManual) admissionManual.checked = true;
+                document.getElementById('editAdmissionNo').readOnly = false;
+            }
+
+            // Class, Term, Session
+            const classSelect = document.getElementById('editSchoolclassid');
+            if (classSelect && student.schoolclassid) {
+                classSelect.value = student.schoolclassid;
+            }
+
+            const termSelect = document.getElementById('editTermid');
+            if (termSelect && student.termid) {
+                termSelect.value = student.termid;
+            }
+
+            const sessionSelect = document.getElementById('editSessionid');
+            if (sessionSelect && student.sessionid) {
+                sessionSelect.value = student.sessionid;
+            }
+
+            // Status radio buttons
+            if (student.statusId == 1) {
+                document.getElementById('editStatusOld').checked = true;
+            } else if (student.statusId == 2) {
+                document.getElementById('editStatusNew').checked = true;
+            }
+
+            if (student.student_status === 'Active') {
+                document.getElementById('editStatusActive').checked = true;
+            } else if (student.student_status === 'Inactive') {
+                document.getElementById('editStatusInactive').checked = true;
+            }
+
+            // Student Category
+            const categorySelect = document.getElementById('editStudentCategory');
+            if (categorySelect && student.student_category) {
+                categorySelect.value = student.student_category;
+            }
+
+            // Personal Details
+            document.getElementById('editTitle').value = student.title || '';
+            document.getElementById('editLastname').value = student.lastname || '';
+            document.getElementById('editFirstname').value = student.firstname || '';
+            document.getElementById('editOthername').value = student.othername || '';
+
+            // Gender radio buttons
+            if (student.gender === 'Male') {
+                document.getElementById('editGenderMale').checked = true;
+            } else if (student.gender === 'Female') {
+                document.getElementById('editGenderFemale').checked = true;
+            }
+
+            document.getElementById('editDOB').value = student.dateofbirth ? student.dateofbirth.split(' ')[0] : '';
+            if (student.dateofbirth) {
+                document.getElementById('editAgeInput').value = Utils.calculateAge(student.dateofbirth);
+            }
+
+            document.getElementById('editPlaceofbirth').value = student.placeofbirth || '';
+            document.getElementById('editPhoneNumber').value = student.phone_number || '';
+            document.getElementById('editEmail').value = student.email || '';
+            document.getElementById('editFutureAmbition').value = student.future_ambition || '';
+            document.getElementById('editPermanentAddress').value = student.permanent_address || student.home_address2 || '';
+
+            // Additional Information
+            document.getElementById('editNationality').value = student.nationality || '';
+
+            // Set state and LGA with proper initialization
+            if (student.state) {
+                this.setEditStateAndLGA(student.state, student.local);
+            }
+
+            document.getElementById('editCity').value = student.city || '';
+            document.getElementById('editReligion').value = student.religion || '';
+            document.getElementById('editBloodGroup').value = student.blood_group || '';
+            document.getElementById('editMotherTongue').value = student.mother_tongue || '';
+            document.getElementById('editNinNumber').value = student.nin_number || '';
+
+            // School House
+            const houseSelect = document.getElementById('editSchoolHouse');
+            if (houseSelect && student.schoolhouse) {
+                houseSelect.value = student.schoolhouse;
+            }
+
+            // Parent/Guardian Details
+            document.getElementById('editFatherName').value = student.father_name || '';
+            document.getElementById('editFatherPhone').value = student.father_phone || '';
+            document.getElementById('editFatherOccupation').value = student.father_occupation || '';
+            document.getElementById('editFatherCity').value = student.father_city || '';
+            document.getElementById('editMotherName').value = student.mother_name || '';
+            document.getElementById('editMotherPhone').value = student.mother_phone || '';
+            document.getElementById('editParentEmail').value = student.parent_email || '';
+            document.getElementById('editParentAddress').value = student.parent_address || '';
+
+            // Previous School Details
+            document.getElementById('editLastSchool').value = student.last_school || '';
+            document.getElementById('editLastClass').value = student.last_class || '';
+            document.getElementById('editReasonForLeaving').value = student.reason_for_leaving || '';
+
+            // Photo
+            const avatarImg = document.getElementById('editStudentAvatar');
+            if (student.picture && student.picture !== 'unnamed.jpg') {
+                avatarImg.src = `/storage/images/student_avatars/${student.picture}`;
+            } else {
+                avatarImg.src = 'https://via.placeholder.com/120x120/667eea/ffffff?text=Photo';
+            }
+
+            // Update form action URL
+            const form = document.getElementById('editStudentForm');
+            if (form) {
+                form.action = form.action.replace(':id', student.id);
+            }
+
+            // Update progress steps - set active step based on form completion
+            this.updateProgressSteps(student);
         },
+
         setEditStateAndLGA: function(stateName, lgaName) {
-            // Keep your existing implementation
+            const stateSelect = document.getElementById('editState');
+            const lgaSelect = document.getElementById('editLocal');
+
+            if (!stateSelect || !lgaSelect) return;
+
+            // Populate states if empty
+            if (stateSelect.options.length <= 1) {
+                NIGERIAN_STATES.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state.name;
+                    option.textContent = state.name;
+                    stateSelect.appendChild(option);
+                });
+            }
+
+            // Set state value
+            if (stateName) {
+                stateSelect.value = stateName;
+
+                // Trigger LGA population
+                const event = new Event('change', { bubbles: true });
+                stateSelect.dispatchEvent(event);
+
+                // Set LGA value after a short delay
+                setTimeout(() => {
+                    if (lgaName) {
+                        lgaSelect.value = lgaName;
+                    }
+                }, 100);
+            }
         },
+
         resetEditStateDropdown: function() {
-            // Keep your existing implementation
+            const stateSelect = document.getElementById('editState');
+            const lgaSelect = document.getElementById('editLocal');
+
+            if (stateSelect) {
+                stateSelect.value = '';
+            }
+            if (lgaSelect) {
+                lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+                lgaSelect.disabled = true;
+            }
+        },
+
+        updateProgressSteps: function(student) {
+            const steps = document.querySelectorAll('#editStudentModal .progress-steps .step');
+            if (!steps.length) return;
+
+            // Reset all steps
+            steps.forEach(step => step.classList.remove('active'));
+
+            // Count filled fields per section
+            let completedSections = 0;
+
+            // Section 1: Academic Details
+            if (student.schoolclassid && student.termid && student.sessionid && student.statusId) {
+                completedSections++;
+            }
+
+            // Section 2: Personal Details
+            if (student.firstname && student.lastname && student.gender && student.dateofbirth) {
+                completedSections++;
+            }
+
+            // Section 3: Additional Information
+            if (student.state && student.religion) {
+                completedSections++;
+            }
+
+            // Section 4: Parent Details
+            if (student.father_name || student.mother_name) {
+                completedSections++;
+            }
+
+            // Mark active steps
+            for (let i = 0; i <= completedSections; i++) {
+                if (steps[i]) {
+                    steps[i].classList.add('active');
+                }
+            }
         }
     };
 
@@ -4795,28 +5256,353 @@ use Spatie\Permission\Models\Role;
     };
 
     // ============================================================================
-    // REPORT MANAGER (Simplified for brevity - keep your existing implementation)
+    // REPORT MANAGER - COMPLETE WORKING VERSION
     // ============================================================================
     const ReportManager = {
         sortableInstance: null,
         columnOrder: [],
 
         initializeReportModal: function() {
-            // Keep your existing implementation
             Utils.log('Initializing report modal...');
+            this.columnOrder = [];
+            this.initSortable();
+            this.updatePreview();
+
+            // Set default checked columns
+            const defaultColumns = ['admissionNo', 'lastname', 'firstname', 'class', 'gender'];
+            defaultColumns.forEach(col => {
+                const checkbox = document.getElementById(`col_${col}`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+
+            this.updateColumnOrder();
+        },
+
+        initSortable: function() {
+            const container = document.getElementById('columnsContainer');
+            if (!container) {
+                Utils.log('Columns container not found', null, 'error');
+                return;
+            }
+
+            // Check if Sortable is available
+            if (typeof Sortable === 'undefined') {
+                Utils.log('Sortable library not loaded', null, 'error');
+                return;
+            }
+
+            // Destroy existing instance if any
+            if (this.sortableInstance) {
+                this.sortableInstance.destroy();
+            }
+
+            // Initialize new Sortable instance
+            this.sortableInstance = new Sortable(container, {
+                animation: 150,
+                handle: '.drag-handle',
+                draggable: '.draggable-item',
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                onEnd: () => {
+                    this.updateColumnOrder();
+                }
+            });
+
+            Utils.log('Sortable initialized');
+
+            // Initialize column order
+            this.updateColumnOrder();
+
+            // Add event listeners to checkboxes
+            document.querySelectorAll('.column-checkbox').forEach(checkbox => {
+                checkbox.removeEventListener('change', this.updateColumnOrder);
+                checkbox.addEventListener('change', () => this.updateColumnOrder());
+            });
         },
 
         updateColumnOrder: function() {
-            // Keep your existing implementation
+            const items = document.querySelectorAll('#columnsContainer .draggable-item');
+            this.columnOrder = Array.from(items)
+                .map(item => item.dataset.column)
+                .filter(col => {
+                    const checkbox = item.querySelector('.column-checkbox');
+                    return checkbox && checkbox.checked;
+                });
+
+            const orderInput = document.getElementById('columnsOrderInput');
+            if (orderInput) {
+                orderInput.value = this.columnOrder.join(',');
+            }
+
+            this.updatePreview();
         },
 
         updatePreview: function() {
-            // Keep your existing implementation
+            const previewEl = document.getElementById('columnOrderPreview');
+            if (!previewEl) return;
+
+            const checkedColumns = Array.from(document.querySelectorAll('.column-checkbox:checked'))
+                .map(cb => {
+                    const label = document.querySelector(`label[for="${cb.id}"]`)?.innerText.trim() || cb.value;
+                    return label;
+                });
+
+            if (checkedColumns.length === 0) {
+                previewEl.innerHTML = '<span class="text-danger">No columns selected</span>';
+            } else {
+                previewEl.innerHTML = checkedColumns.join(' <span class="text-muted">→</span> ');
+            }
         },
 
         generateReport: async function() {
-            // Keep your existing implementation
             Utils.log('Generate report clicked');
+
+            const form = document.getElementById('printReportForm');
+            if (!form) {
+                Utils.showError('Report form not found');
+                return;
+            }
+
+            // Validate at least one column is selected
+            const selectedColumns = Array.from(form.querySelectorAll('.column-checkbox:checked')).map(cb => cb.value);
+            if (selectedColumns.length === 0) {
+                Utils.showError('Please select at least one column to display in the report', 'No Columns Selected');
+                return;
+            }
+
+            // Get form data
+            const formData = new FormData(form);
+            const params = {};
+
+            // Convert FormData to plain object
+            for (let [key, value] of formData.entries()) {
+                if (key === 'columns[]') {
+                    if (!params.columns) {
+                        params.columns = [];
+                    }
+                    params.columns.push(value);
+                } else if (key === 'columns_order') {
+                    if (value) {
+                        params.columns_order = value;
+                    }
+                } else if (value) {
+                    params[key] = value;
+                }
+            }
+
+            // Ensure columns is a comma-separated string
+            if (params.columns && Array.isArray(params.columns)) {
+                params.columns = params.columns.join(',');
+            }
+
+            // Add format (default to pdf)
+            if (!params.format) {
+                const formatRadio = form.querySelector('input[name="format"]:checked');
+                params.format = formatRadio ? formatRadio.value : 'pdf';
+            }
+
+            // Add orientation
+            if (!params.orientation) {
+                const orientationSelect = form.querySelector('#orientation');
+                params.orientation = orientationSelect ? orientationSelect.value : 'portrait';
+            }
+
+            // Add boolean flags
+            params.include_header = form.querySelector('input[name="include_header"]')?.checked ? '1' : '0';
+            params.include_logo = form.querySelector('input[name="include_logo"]')?.checked ? '1' : '0';
+            params.exclude_photos = '0'; // Default
+
+            Utils.log('Report parameters:', params);
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('printStudentReportModal'));
+            if (modal) modal.hide();
+
+            // Show loading
+            Swal.fire({
+                title: 'Generating Report',
+                html: 'Please wait while your report is being generated...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                // Make API call
+                const response = await ApiService.generateReport(params);
+
+                Swal.close();
+
+                // Create download link
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+
+                // Get filename from Content-Disposition header or generate one
+                const contentDisposition = response.headers['content-disposition'];
+                let filename = 'student-report.pdf';
+
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                } else {
+                    const date = new Date();
+                    const formattedDate = date.toISOString().split('T')[0];
+                    filename = `student-report-${formattedDate}.${params.format === 'excel' ? 'xlsx' : 'pdf'}`;
+                }
+
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                Utils.showSuccess(`Report generated successfully: ${filename}`, 'Success');
+
+            } catch (error) {
+                Swal.close();
+                Utils.log('Error generating report', error, 'error');
+
+                let errorMessage = 'Failed to generate report. Please try again.';
+
+                if (error.response) {
+                    // Try to parse error message from blob
+                    if (error.response.data instanceof Blob) {
+                        try {
+                            const text = await error.response.data.text();
+                            const json = JSON.parse(text);
+                            errorMessage = json.message || errorMessage;
+                        } catch (e) {
+                            // Not JSON, use default message
+                        }
+                    } else if (error.response.data && error.response.data.message) {
+                        errorMessage = error.response.data.message;
+                    }
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+
+                Utils.showError(errorMessage, 'Report Generation Failed');
+            }
+        },
+
+        // Alternative method using fetch API if axios has issues
+        generateReportFetch: async function() {
+            Utils.log('Generate report clicked (fetch)');
+
+            const form = document.getElementById('printReportForm');
+            if (!form) {
+                Utils.showError('Report form not found');
+                return;
+            }
+
+            const selectedColumns = Array.from(form.querySelectorAll('.column-checkbox:checked')).map(cb => cb.value);
+            if (selectedColumns.length === 0) {
+                Utils.showError('Please select at least one column');
+                return;
+            }
+
+            const formData = new FormData(form);
+            const params = new URLSearchParams();
+
+            for (let [key, value] of formData.entries()) {
+                if (key === 'columns[]') {
+                    if (!params.has('columns')) {
+                        params.set('columns', '');
+                    }
+                    params.set('columns', params.get('columns') + (params.get('columns') ? ',' : '') + value);
+                } else if (key === 'columns_order') {
+                    if (value) {
+                        params.set(key, value);
+                    }
+                } else if (value) {
+                    params.set(key, value);
+                }
+            }
+
+            if (!params.has('format')) {
+                const formatRadio = form.querySelector('input[name="format"]:checked');
+                params.set('format', formatRadio ? formatRadio.value : 'pdf');
+            }
+
+            if (!params.has('orientation')) {
+                const orientationSelect = form.querySelector('#orientation');
+                params.set('orientation', orientationSelect ? orientationSelect.value : 'portrait');
+            }
+
+            params.set('include_header', form.querySelector('input[name="include_header"]')?.checked ? '1' : '0');
+            params.set('include_logo', form.querySelector('input[name="include_logo"]')?.checked ? '1' : '0');
+            params.set('exclude_photos', '0');
+
+            Utils.log('Report params:', Object.fromEntries(params));
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('printStudentReportModal'));
+            if (modal) modal.hide();
+
+            Swal.fire({
+                title: 'Generating Report',
+                html: 'Please wait while your report is being generated...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                const response = await fetch(`/students/report?${params.toString()}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken || '',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    let errorMessage = 'Failed to generate report';
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || errorMessage;
+                    } catch (e) {
+                        // Not JSON
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const blob = await response.blob();
+                Swal.close();
+
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+
+                let filename = 'student-report.pdf';
+                const contentDisposition = response.headers.get('content-disposition');
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                Utils.showSuccess('Report generated successfully!');
+
+            } catch (error) {
+                Swal.close();
+                Utils.log('Error generating report:', error, 'error');
+                Utils.showError(error.message || 'Failed to generate report');
+            }
         }
     };
 
@@ -4982,17 +5768,32 @@ use Spatie\Permission\Models\Role;
                     const formData = new FormData(form);
 
                     try {
+                        Swal.fire({
+                            title: 'Saving...',
+                            text: 'Please wait while student is being registered.',
+                            allowOutsideClick: false,
+                            didOpen: () => Swal.showLoading()
+                        });
+
                         const response = await axios.post(form.action, formData, {
                             headers: { 'Content-Type': 'multipart/form-data' }
                         });
+
+                        Swal.close();
 
                         if (response.data.success) {
                             const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
                             modal.hide();
                             await StudentManager.fetchStudents();
                             Utils.showSuccess(response.data.message || 'Student registered successfully.');
+
+                            // Reset form
+                            form.reset();
+                            document.getElementById('addStudentAvatar').src = 'https://via.placeholder.com/120x120/667eea/ffffff?text=Photo';
                         }
                     } catch (error) {
+                        Swal.close();
+
                         let errorMessage = 'Failed to save student.';
                         if (error.response?.data?.message) {
                             errorMessage = error.response.data.message;
@@ -5023,9 +5824,18 @@ use Spatie\Permission\Models\Role;
                     formData.append('_method', 'PATCH');
 
                     try {
+                        Swal.fire({
+                            title: 'Updating...',
+                            text: 'Please wait while student is being updated.',
+                            allowOutsideClick: false,
+                            didOpen: () => Swal.showLoading()
+                        });
+
                         const response = await axios.post(form.action, formData, {
                             headers: { 'Content-Type': 'multipart/form-data' }
                         });
+
+                        Swal.close();
 
                         if (response.data.success) {
                             const modal = bootstrap.Modal.getInstance(document.getElementById('editStudentModal'));
@@ -5034,6 +5844,8 @@ use Spatie\Permission\Models\Role;
                             Utils.showSuccess(response.data.message || 'Student updated successfully.');
                         }
                     } catch (error) {
+                        Swal.close();
+
                         let errorMessage = 'Failed to update student.';
                         if (error.response?.data?.message) {
                             errorMessage = error.response.data.message;
@@ -5125,6 +5937,40 @@ use Spatie\Permission\Models\Role;
     window.updateCurrentTerm = () => CurrentTermManager.updateCurrentTerm();
     window.getSelectedStudentIds = () => SelectionManager.getSelectedStudentIds();
     window.updateBulkActionsVisibility = () => SelectionManager.updateBulkActionsVisibility();
+    window.refreshTermHistory = () => {
+        if (ViewModalManager.currentStudentId) {
+            ViewModalManager.fetchTermHistory(ViewModalManager.currentStudentId);
+        }
+    };
+    window.callNumber = function(phoneElementId) {
+        const phone = document.getElementById(phoneElementId)?.textContent;
+        if (phone && phone !== '-') {
+            window.location.href = `tel:${phone}`;
+        }
+    };
+    window.sendSMS = function(phoneElementId) {
+        const phone = document.getElementById(phoneElementId)?.textContent;
+        if (phone && phone !== '-') {
+            window.location.href = `sms:${phone}`;
+        }
+    };
+    window.sendEmail = function(emailElementId) {
+        const email = document.getElementById(emailElementId)?.textContent;
+        if (email && email !== '-') {
+            window.location.href = `mailto:${email}`;
+        }
+    };
+    window.editStudentFromView = function() {
+        if (ViewModalManager.currentStudentId) {
+            const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewStudentModal'));
+            if (viewModal) viewModal.hide();
+            StudentManager.editStudent(ViewModalManager.currentStudentId);
+        }
+    };
+    window.printStudentProfile = function() {
+        // Implement print functionality if needed
+        window.print();
+    };
 
     // Start the application
     if (document.readyState === 'loading') {
@@ -5135,13 +5981,14 @@ use Spatie\Permission\Models\Role;
 
 })();
 </script>
-{{-- <!-- Include Sortable.js for drag and drop functionality -->
+
+<!-- Include Sortable.js for drag and drop functionality -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <!-- Include SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Include Axios -->
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> --}}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 @endsection
