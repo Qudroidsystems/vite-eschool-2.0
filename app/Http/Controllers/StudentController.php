@@ -1020,16 +1020,16 @@ public function getStudentsOptimized(Request $request)
             $studentpersonalityprofiles->save();
 
             // Update StudentCurrentTerm
-            $currentTerm = StudentCurrentTerm::where('studentId', $id)->first();
-            if (!$currentTerm) {
-                $currentTerm = new StudentCurrentTerm();
-                $currentTerm->studentId = $id;
-            }
-            $currentTerm->schoolclassId = $request->schoolclassid;
-            $currentTerm->termId = $request->termid;
-            $currentTerm->sessionId = $request->sessionid;
-            $currentTerm->is_current = true;
-            $currentTerm->save();
+            // $currentTerm = StudentCurrentTerm::where('studentId', $id)->first();
+            // if (!$currentTerm) {
+            //     $currentTerm = new StudentCurrentTerm();
+            //     $currentTerm->studentId = $id;
+            // }
+            // $currentTerm->schoolclassId = $request->schoolclassid;
+            // $currentTerm->termId = $request->termid;
+            // $currentTerm->sessionId = $request->sessionid;
+            // $currentTerm->is_current = true;
+            // $currentTerm->save();
 
             DB::commit();
 
