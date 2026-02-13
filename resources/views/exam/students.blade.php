@@ -1,5 +1,7 @@
 @extends('layouts.master')
+
 @section('content')
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
 <div class="main-content">
     <div class="page-content">
@@ -25,7 +27,13 @@
                     <div class="card">
                         <div class="card-header d-flex align-items-center">
                             <div class="flex-grow-1">
-                                <h5 class="card-title mb-0">Students <span class="badge bg-dark-subtle text-dark ms-1" id="students-count">{{ $students->total() }}</span></h5>
+                                <h5 class="card-title mb-0">
+                                    Students <span class="badge bg-dark-subtle text-dark ms-1" id="students-count">{{ $students->total() }}</span>
+                                    <span class="ms-3 text-muted">
+                                        <i class="ph-info me-1"></i>
+                                        Click <i class="ph-arrow-right text-success"></i> to transfer scores to assessment sheet
+                                    </span>
+                                </h5>
                             </div>
                             <div>
                                 <span class="text-muted me-2">Total Questions: <strong>{{ $examTotals['total_questions'] ?? 0 }}</strong></span>
@@ -69,17 +77,17 @@
                                 <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0">
                                     <thead>
                                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                                            <th class="min-w-125px">SN</th>
-                                            <th class="min-w-125px">Photo</th>
-                                            <th class="min-w-125px">Student Name</th>
-                                            <th class="min-w-125px">Admission No</th>
-                                            <th class="min-w-125px">Total Questions</th>
-                                            <th class="min-w-125px">Attempted</th>
-                                            <th class="min-w-125px">Correct</th>
-                                            <th class="min-w-125px">Incorrect</th>
-                                            <th class="min-w-125px">Not Attempted</th>
-                                            <th class="min-w-125px">Score (Marks)</th>
-                                            <th class="min-w-100px">Actions</th>
+                                            <th class="min-w-50px">SN</th>
+                                            <th class="min-w-80px">Photo</th>
+                                            <th class="min-w-150px">Student Name</th>
+                                            <th class="min-w-100px">Admission No</th>
+                                            <th class="min-w-100px">Total Ques</th>
+                                            <th class="min-w-80px">Attempted</th>
+                                            <th class="min-w-70px">Correct</th>
+                                            <th class="min-w-80px">Incorrect</th>
+                                            <th class="min-w-100px">Not Attempted</th>
+                                            <th class="min-w-120px">Score (Marks)</th>
+                                            <th class="min-w-150px">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="students-tbody">
@@ -88,7 +96,7 @@
                                             $hasStudents = false;
                                         @endphp
                                         @forelse ($students as $student)
-                                            @if($student) {{-- Check if student is not null (after filtering) --}}
+                                            @if($student)
                                                 @php
                                                     $totalQuestions = $examTotals['total_questions'] ?? 0;
                                                     $totalMarks = $examTotals['total_marks'] ?? 0;
@@ -96,7 +104,6 @@
                                                     $correct = $student->correct_count ?? 0;
                                                     $incorrect = $student->incorrect ?? 0;
                                                     $notAttempted = $totalQuestions - $attempted;
-                                                    // Use marks_earned if available, otherwise use score
                                                     $score = $student->marks_earned ?? $student->score ?? 0;
                                                     $studentTotalMarks = $student->total_marks ?? $totalMarks;
                                                     $hasStudents = true;
@@ -168,6 +175,17 @@
                                                                    title="View Answers">
                                                                     <i class="ph-eye"></i>
                                                                 </a>
+                                                                <button type="button"
+                                                                        class="btn btn-subtle-success btn-icon btn-sm transfer-score-btn"
+                                                                        data-bs-toggle="tooltip"
+                                                                        data-bs-placement="top"
+                                                                        title="Transfer to Assessment Sheet"
+                                                                        data-student-id="{{ $student->id }}"
+                                                                        data-student-name="{{ $student->lastname }} {{ $student->firstname }}"
+                                                                        data-student-admission="{{ $student->admissionNo }}"
+                                                                        data-exam-score="{{ $score }}">
+                                                                    <i class="ph-arrow-right"></i>
+                                                                </button>
                                                             @endif
                                                             <button type="button"
                                                                     class="btn btn-subtle-danger btn-icon btn-sm delete-attempt"
@@ -190,7 +208,6 @@
                                             </tr>
                                         @endforelse
 
-                                        {{-- Additional check for filtered results --}}
                                         @if(!$hasStudents && $students->count() > 0)
                                             <tr class="empty-row">
                                                 <td colspan="11" class="text-center">
@@ -204,7 +221,6 @@
                                 </table>
                             </div>
 
-                            {{-- Only show pagination if we have actual students --}}
                             @if($hasStudents)
                             <div class="row mt-3 align-items-center">
                                 <div class="col-sm">
@@ -224,10 +240,151 @@
                 </div>
             </div>
         </div>
-        <!-- End Page-content -->
     </div>
 </div>
 
+<!-- Assessment Transfer Modal -->
+<div class="modal fade" id="assessmentTransferModal" tabindex="-1" aria-labelledby="assessmentTransferModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="assessmentTransferModalLabel">
+                    <i class="ph-arrow-circle-right me-2"></i>Transfer Exam Score to Assessment Sheet
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Exam Info -->
+                <div class="alert alert-info d-flex align-items-center mb-4">
+                    <i class="ph-info fs-4 me-2"></i>
+                    <div>
+                        <strong>Exam:</strong> {{ $exam->title }} ({{ $exam->subject->subject ?? 'N/A' }})<br>
+                        <strong>Class:</strong> {{ $exam->schoolclass->schoolclass ?? 'N/A' }} {{ $exam->schoolclass->arm ?? '' }} |
+                        <strong>Term:</strong> {{ $term->term ?? 'N/A' }} |
+                        <strong>Session:</strong> {{ $session->session ?? 'N/A' }}
+                    </div>
+                </div>
+
+                <!-- Student Info -->
+                <div class="card bg-light mb-4">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">Student Information</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Name:</strong> <span id="studentName"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Admission No:</strong> <span id="studentAdmission"></span>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-12">
+                                <strong>Exam Score:</strong>
+                                <span class="badge bg-primary" id="examScore"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="assessmentTransferForm">
+                    @csrf
+                    <input type="hidden" name="exam_id" id="examId" value="{{ $exam->id }}">
+                    <input type="hidden" name="student_id" id="studentId">
+                    <input type="hidden" name="exam_score" id="examScoreHidden">
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="assessmentSelect" class="form-label fw-bold">Select Assessment <span class="text-danger">*</span></label>
+                            <select class="form-select" id="assessmentSelect" name="assessment_id" required>
+                                <option value="">Loading assessments...</option>
+                            </select>
+                            <div class="form-text">Choose the assessment to transfer this score to</div>
+                        </div>
+
+                        <div class="col-md-12 mb-3" id="subAssessmentContainer" style="display: none;">
+                            <label for="subAssessmentSelect" class="form-label fw-bold">Select Sub-Assessment</label>
+                            <select class="form-select" id="subAssessmentSelect" name="sub_assessment_id">
+                                <option value="">-- Select Sub-Assessment (Optional) --</option>
+                            </select>
+                            <div class="form-text">If this assessment has sub-components, you can select a specific one</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="maxScore" class="form-label fw-bold">Maximum Score</label>
+                            <input type="number" class="form-control" id="maxScore" readonly>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="transferScore" class="form-label fw-bold">Score to Transfer <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="transferScore" name="score"
+                                   step="0.1" min="0" required>
+                            <div class="form-text text-danger" id="scoreValidationMsg"></div>
+                        </div>
+
+                        <input type="hidden" name="is_sub" id="isSub" value="0">
+                    </div>
+                </form>
+
+                <div id="assessmentInfo" class="mt-3 p-3 bg-light rounded" style="display: none;">
+                    <h6 class="fw-bold">Assessment Details:</h6>
+                    <div id="assessmentDetails" class="small"></div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="assessmentLoader" style="display: none;" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading assessments...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="ph-x me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="transferScoreBtn">
+                    <i class="ph-check me-1"></i>Transfer Score
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="transferSuccessModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="text-success mb-3">
+                    <i class="ph-check-circle" style="font-size: 48px;"></i>
+                </div>
+                <h5 class="mb-3">Score Transferred Successfully!</h5>
+                <div id="successMessage" class="text-muted mb-3"></div>
+                <button type="button" class="btn btn-success w-100" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="text-danger mb-3">
+                    <i class="ph-x-circle" style="font-size: 48px;"></i>
+                </div>
+                <h5 class="mb-3">Transfer Failed</h5>
+                <div id="errorMessage" class="text-muted mb-3"></div>
+                <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@endsection
+
+@section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips
@@ -236,8 +393,300 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    const deleteButtons = document.querySelectorAll('.delete-attempt');
+    // Initialize modals
+    const transferModal = new bootstrap.Modal(document.getElementById('assessmentTransferModal'));
+    const successModal = new bootstrap.Modal(document.getElementById('transferSuccessModal'));
+    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
 
+    // DOM elements
+    const assessmentSelect = document.getElementById('assessmentSelect');
+    const subAssessmentSelect = document.getElementById('subAssessmentSelect');
+    const subAssessmentContainer = document.getElementById('subAssessmentContainer');
+    const maxScoreInput = document.getElementById('maxScore');
+    const transferScoreInput = document.getElementById('transferScore');
+    const isSubInput = document.getElementById('isSub');
+    const assessmentInfo = document.getElementById('assessmentInfo');
+    const assessmentDetails = document.getElementById('assessmentDetails');
+    const scoreValidationMsg = document.getElementById('scoreValidationMsg');
+    const assessmentLoader = document.getElementById('assessmentLoader');
+    const transferBtn = document.getElementById('transferScoreBtn');
+
+    let assessments = [];
+    let currentExamId = '{{ $exam->id }}';
+
+    // Add click event to all transfer buttons
+    document.querySelectorAll('.transfer-score-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const studentId = this.dataset.studentId;
+            const studentName = this.dataset.studentName;
+            const studentAdmission = this.dataset.studentAdmission;
+            const examScore = parseFloat(this.dataset.examScore) || 0;
+
+            // Set student data in modal
+            document.getElementById('studentId').value = studentId;
+            document.getElementById('studentName').textContent = studentName;
+            document.getElementById('studentAdmission').textContent = studentAdmission;
+            document.getElementById('examScore').textContent = examScore.toFixed(1) + ' marks';
+            document.getElementById('examScoreHidden').value = examScore;
+            transferScoreInput.value = examScore.toFixed(1);
+
+            // Load assessments
+            loadAssessments(currentExamId);
+
+            // Show modal
+            transferModal.show();
+        });
+    });
+
+    // Load assessments function
+    function loadAssessments(examId) {
+        // Show loader
+        assessmentLoader.style.display = 'block';
+        assessmentSelect.style.display = 'none';
+
+        fetch(`/exams/assessments/${examId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Hide loader
+            assessmentLoader.style.display = 'none';
+            assessmentSelect.style.display = 'block';
+
+            if (data.success) {
+                assessments = data.assessments;
+                let options = '<option value="">Select an assessment</option>';
+
+                data.assessments.forEach(assessment => {
+                    const hasSub = assessment.sub_assessments && assessment.sub_assessments.length > 0;
+                    options += `<option value="${assessment.id}"
+                                     data-max="${assessment.max_score}"
+                                     data-has-sub="${hasSub}">
+                                    ${assessment.name} (Max: ${assessment.max_score})
+                                </option>`;
+                });
+
+                assessmentSelect.innerHTML = options;
+            } else {
+                assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
+                showError('Failed to load assessments: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error loading assessments:', error);
+            assessmentLoader.style.display = 'none';
+            assessmentSelect.style.display = 'block';
+            assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
+            showError('Network error while loading assessments');
+        });
+    }
+
+    // Handle assessment selection
+    assessmentSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+
+        if (!this.value) {
+            maxScoreInput.value = '';
+            assessmentInfo.style.display = 'none';
+            subAssessmentContainer.style.display = 'none';
+            isSubInput.value = '0';
+            return;
+        }
+
+        const maxScore = selectedOption.dataset.max;
+        const hasSub = selectedOption.dataset.hasSub === 'true';
+
+        maxScoreInput.value = maxScore;
+        assessmentInfo.style.display = 'block';
+
+        const assessment = assessments.find(a => a.id == this.value);
+        if (assessment) {
+            let details = `
+                <strong>Name:</strong> ${assessment.name}<br>
+                <strong>Max Score:</strong> ${assessment.max_score}<br>
+            `;
+
+            if (assessment.sub_assessments && assessment.sub_assessments.length > 0) {
+                details += `<strong>Sub-assessments:</strong> ${assessment.sub_assessments.length}<br>`;
+                details += `<small class="text-muted">${assessment.sub_assessments.map(s => s.name).join(', ')}</small>`;
+            }
+
+            assessmentDetails.innerHTML = details;
+
+            // Handle sub-assessments
+            if (hasSub) {
+                loadSubAssessments(assessment.id);
+                subAssessmentContainer.style.display = 'block';
+                isSubInput.value = '1';
+            } else {
+                subAssessmentContainer.style.display = 'none';
+                subAssessmentSelect.innerHTML = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
+                isSubInput.value = '0';
+            }
+        }
+
+        validateScore();
+    });
+
+    // Load sub-assessments
+    function loadSubAssessments(assessmentId) {
+        const assessment = assessments.find(a => a.id == assessmentId);
+        if (assessment && assessment.sub_assessments && assessment.sub_assessments.length > 0) {
+            let options = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
+            assessment.sub_assessments.forEach(sub => {
+                options += `<option value="${sub.id}" data-max="${sub.max_score}">
+                                ${sub.name} (Max: ${sub.max_score})
+                           </option>`;
+            });
+            subAssessmentSelect.innerHTML = options;
+        } else {
+            subAssessmentSelect.innerHTML = '<option value="">-- No sub-assessments available --</option>';
+        }
+    }
+
+    // Handle sub-assessment selection
+    subAssessmentSelect.addEventListener('change', function() {
+        if (this.value) {
+            const selectedOption = this.options[this.selectedIndex];
+            maxScoreInput.value = selectedOption.dataset.max;
+        } else {
+            // Revert to main assessment max
+            const mainOption = assessmentSelect.options[assessmentSelect.selectedIndex];
+            maxScoreInput.value = mainOption.dataset.max;
+        }
+        validateScore();
+    });
+
+    // Validate score
+    function validateScore() {
+        const score = parseFloat(transferScoreInput.value) || 0;
+        const maxScore = parseFloat(maxScoreInput.value) || 0;
+
+        if (score > maxScore) {
+            transferScoreInput.classList.add('is-invalid');
+            scoreValidationMsg.innerHTML = `Score cannot exceed ${maxScore}`;
+            return false;
+        } else if (score < 0) {
+            transferScoreInput.classList.add('is-invalid');
+            scoreValidationMsg.innerHTML = 'Score cannot be negative';
+            return false;
+        } else {
+            transferScoreInput.classList.remove('is-invalid');
+            scoreValidationMsg.innerHTML = '';
+            return true;
+        }
+    }
+
+    transferScoreInput.addEventListener('input', validateScore);
+    transferScoreInput.addEventListener('blur', validateScore);
+
+    // Transfer score
+    transferBtn.addEventListener('click', function() {
+        // Validate
+        if (!assessmentSelect.value) {
+            showError('Please select an assessment');
+            return;
+        }
+
+        if (!validateScore()) {
+            return;
+        }
+
+        const score = parseFloat(transferScoreInput.value);
+        const maxScore = parseFloat(maxScoreInput.value);
+
+        // Prepare form data
+        const formData = new FormData(document.getElementById('assessmentTransferForm'));
+
+        // Add max score
+        formData.append('max_score', maxScore);
+
+        // Add sub-assessment if selected
+        if (subAssessmentSelect.value) {
+            formData.append('sub_assessment_id', subAssessmentSelect.value);
+            formData.append('is_sub', '1');
+        }
+
+        // Show loading state
+        transferBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Transferring...';
+        transferBtn.disabled = true;
+
+        // Send request
+        fetch('{{ route("exams.update-assessment-score") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset button
+            transferBtn.innerHTML = '<i class="ph-check me-1"></i>Transfer Score';
+            transferBtn.disabled = false;
+
+            if (data.success) {
+                // Hide transfer modal
+                transferModal.hide();
+
+                // Show success message
+                const successMsg = `Score transferred successfully!<br>
+                    <small>Total: ${data.data.total} | Cum: ${data.data.cum} | Grade: ${data.data.grade}</small>`;
+                document.getElementById('successMessage').innerHTML = successMsg;
+                successModal.show();
+
+                // Mark the row as transferred
+                const studentId = formData.get('student_id');
+                const studentRow = document.querySelector(`tr[data-student-id="${studentId}"]`);
+                if (studentRow) {
+                    const transferBtn = studentRow.querySelector('.transfer-score-btn');
+                    if (transferBtn) {
+                        transferBtn.classList.remove('btn-subtle-success');
+                        transferBtn.classList.add('btn-success');
+                        transferBtn.setAttribute('title', 'Already transferred to assessment sheet');
+                        transferBtn.disabled = true;
+                    }
+                }
+            } else {
+                showError(data.message || 'Failed to transfer score');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            transferBtn.innerHTML = '<i class="ph-check me-1"></i>Transfer Score';
+            transferBtn.disabled = false;
+            showError('Network error occurred. Please try again.');
+        });
+    });
+
+    // Show error function
+    function showError(message) {
+        document.getElementById('errorMessage').textContent = message;
+        errorModal.show();
+    }
+
+    // Reset modal when hidden
+    document.getElementById('assessmentTransferModal').addEventListener('hidden.bs.modal', function() {
+        assessmentSelect.value = '';
+        subAssessmentSelect.innerHTML = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
+        subAssessmentContainer.style.display = 'none';
+        maxScoreInput.value = '';
+        transferScoreInput.value = '';
+        isSubInput.value = '0';
+        assessmentInfo.style.display = 'none';
+        transferScoreInput.classList.remove('is-invalid');
+        scoreValidationMsg.innerHTML = '';
+    });
+
+    // Delete attempt functionality (existing)
+    const deleteButtons = document.querySelectorAll('.delete-attempt');
     deleteButtons.forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
@@ -283,15 +732,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             'Accept': 'application/json'
                         }
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.text().then(text => {
-                                console.error('Delete Error Response:', text);
-                                throw new Error(`Server error ${response.status}: ${text.substring(0, 200)}...`);
-                            });
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         if (data.success) {
                             row.remove();
@@ -320,7 +761,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.error('Delete Error:', error);
                         Swal.fire({
                             title: 'Error!',
-                            text: error.message || 'An error occurred while deleting the attempt.',
+                            text: 'An error occurred while deleting the attempt.',
                             icon: 'error',
                             confirmButtonColor: '#3085d6'
                         });
@@ -367,8 +808,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const rows = tbody.querySelectorAll('tr:not(.empty-row)');
         if (rows.length === 0) {
             tbody.innerHTML = '<tr class="empty-row"><td colspan="11" class="text-center">No students found</td></tr>';
-
-            // Hide pagination if table is empty
             const paginationContainer = document.querySelector('.pagination-wrap');
             const paginationText = document.getElementById('pagination-text');
             if (paginationContainer) paginationContainer.style.display = 'none';
@@ -377,5 +816,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
 @endsection

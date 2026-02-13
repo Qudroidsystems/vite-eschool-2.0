@@ -529,6 +529,9 @@ Route::post('/students/bulk-remove-from-term', [StudentController::class, 'bulkR
          // Get exam questions for copy modal
     Route::get('/exams/{exam}/questions', [ExamController::class, 'getExamQuestions'])->name('exams.questions');
 
+    Route::post('/exams/update-assessment-score', [ExamController::class, 'updateAssessmentScore'])->name('exams.update-assessment-score');
+    Route::get('/exams/assessments/{examId}', [ExamController::class, 'getAssessments'])->name('exams.get-assessments');
+
 
     // Specific routes FIRST
     Route::get('/questions/get-exams', [QuestionController::class, 'getExamsForSelection'])->name('questions.getExams');

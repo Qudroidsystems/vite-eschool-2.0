@@ -10,6 +10,13 @@ use App\Models\ExamAttempt;
 use App\Models\Schoolclass;
 use App\Models\Schoolsession;
 use App\Models\SubjectTeacher;
+use App\Models\Assessment;
+use App\Models\SubAssessment;
+use App\Models\Broadsheets;
+use App\Models\BroadsheetRecord;
+use App\Models\BroadsheetAssessmentScore;
+use App\Models\BroadsheetSubAssessmentScore;
+use App\Models\Subjectclass;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\SchoolInformation;
 use Illuminate\Http\Request;
@@ -44,8 +51,8 @@ class ExamController extends Controller
                           ->select('schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm');
                 },
                 'subject:id,subject,subject_code',
-                'termRelation:id,term',  // Changed from 'term' to 'termRelation'
-                'sessionRelation:id,session'  // Changed from 'session' to 'sessionRelation'
+                'termRelation:id,term',
+                'sessionRelation:id,session'
             ])
             ->withCount('questions')
             ->where('staffId', $user->id);
@@ -728,7 +735,7 @@ public function getExamQuestions($examId)
     {
         $exam = Exam::where('id', $examId)
                 ->where('staffId', auth()->user()->id)
-                ->with(['schoolclass', 'termRelation:id,term', 'sessionRelation:id,session'])
+                ->with(['schoolclass', 'termRelation:id,term', 'sessionRelation:id,session', 'subject:id,subject'])
                 ->firstOrFail();
 
         // Get total number of questions and total marks for this exam
@@ -1159,7 +1166,7 @@ public function getExamQuestions($examId)
             $defaultPath = 'student_avatars/unnamed.jpg';
             $student->picture_path = Storage::disk('public')->exists($defaultPath)
                 ? asset('storage/' . $defaultPath)
-                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiVFNUU1RTUiLz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Qzk5QUMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4Ii8+Cjwvc3ZnPgo=';
+                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNFNUU1RTUiLz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Qzk5QUMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI4Ii8+Cjwvc3ZnPgo=';
         }
 
         $result = DB::table('results')
@@ -1284,5 +1291,236 @@ public function getExamQuestions($examId)
             'avgScore', 'highestScore', 'lowestScore', 'topPerformers', 'questionStats',
             'scoreBins', 'questionAvgCorrect'
         ));
+    }
+
+    /**
+     * Get available assessments for the exam's class
+     */
+    public function getAssessments($examId)
+    {
+        try {
+            $exam = Exam::where('id', $examId)
+                ->where('staffId', auth()->user()->id)
+                ->with('schoolclass')
+                ->firstOrFail();
+
+            // Get the class category for this exam's class
+            $schoolclass = Schoolclass::with('classcategories')
+                ->find($exam->schoolclass_id);
+
+            if (!$schoolclass || $schoolclass->classcategories->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No class category found for this class'
+                ]);
+            }
+
+            $categoryIds = $schoolclass->classcategories->pluck('id');
+
+            // Get all assessments for this class category with their sub-assessments
+            $assessments = Assessment::whereIn('classcategory_id', $categoryIds)
+                ->with(['subAssessments' => function($query) {
+                    $query->orderBy('name');
+                }])
+                ->orderBy('name')
+                ->get();
+
+            // Get current term and session from the exam
+            $term = Schoolterm::find($exam->termid);
+            $session = Schoolsession::find($exam->session);
+
+            return response()->json([
+                'success' => true,
+                'assessments' => $assessments,
+                'exam' => [
+                    'id' => $exam->id,
+                    'title' => $exam->title,
+                    'subject' => $exam->subject->subject ?? 'N/A',
+                    'class' => $schoolclass->schoolclass . ' ' . ($schoolclass->arm ?? ''),
+                    'term' => $term->term ?? 'N/A',
+                    'session' => $session->session ?? 'N/A'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error getting assessments: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load assessments: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update student's exam score to assessment scoresheet
+     */
+    public function updateAssessmentScore(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'exam_id' => 'required|exists:exams,id',
+                'student_id' => 'required|exists:studentRegistration,id',
+                'assessment_id' => 'required|exists:assessments,id',
+                'sub_assessment_id' => 'nullable|exists:sub_assessments,id',
+                'score' => 'required|numeric|min:0',
+                'max_score' => 'required|numeric|min:0',
+                'is_sub' => 'boolean'
+            ]);
+
+            $isSub = $validated['is_sub'] ?? false;
+
+            // Validate score doesn't exceed max
+            if ($validated['score'] > $validated['max_score']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Score cannot exceed maximum of {$validated['max_score']}"
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            // Get the exam to find the subjectclass_id
+            $exam = Exam::with(['subject', 'schoolclass'])->find($validated['exam_id']);
+
+            // Find or create the broadsheet record for this student
+            $broadsheetRecord = BroadsheetRecord::firstOrCreate(
+                [
+                    'student_id' => $validated['student_id'],
+                    'session_id' => $exam->session,
+                    'subject_id' => $exam->subject_id,
+                    'schoolclass_id' => $exam->schoolclass_id,
+                ],
+                [
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]
+            );
+
+            // Find the subjectclass for this subject and class
+            $subjectclass = Subjectclass::where('subjectid', $exam->subject_id)
+                ->where('schoolclassid', $exam->schoolclass_id)
+                ->first();
+
+            if (!$subjectclass) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Subject class configuration not found'
+                ], 404);
+            }
+
+            // Find or create the broadsheet
+            $broadsheet = Broadsheets::firstOrCreate(
+                [
+                    'broadSheet_record_id' => $broadsheetRecord->id,
+                    'subjectclass_id' => $subjectclass->id,
+                    'staff_id' => auth()->user()->id,
+                    'term_id' => $exam->termid,
+                ],
+                [
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]
+            );
+
+            // Update or create the assessment score
+            if ($isSub && $validated['sub_assessment_id']) {
+                // Update sub-assessment score
+                BroadsheetSubAssessmentScore::updateOrCreate(
+                    [
+                        'broadsheet_id' => $broadsheet->id,
+                        'sub_assessment_id' => $validated['sub_assessment_id'],
+                        'assessment_id' => $validated['assessment_id'],
+                    ],
+                    ['score' => $validated['score']]
+                );
+
+                // Recalculate parent assessment score (sum of sub-assessments normalized)
+                $assessment = Assessment::with('subAssessments')->find($validated['assessment_id']);
+                if ($assessment && $assessment->subAssessments->isNotEmpty()) {
+                    $subMaxSum = $assessment->subAssessments->sum('max_score');
+                    $subTotal = BroadsheetSubAssessmentScore::where('broadsheet_id', $broadsheet->id)
+                        ->where('assessment_id', $validated['assessment_id'])
+                        ->sum('score');
+
+                    $normalizedScore = $subMaxSum > 0 ? ($subTotal / $subMaxSum) * $assessment->max_score : 0;
+                    $normalizedScore = max(0, min($normalizedScore, $assessment->max_score));
+
+                    BroadsheetAssessmentScore::updateOrCreate(
+                        [
+                            'broadsheet_id' => $broadsheet->id,
+                            'assessment_id' => $validated['assessment_id'],
+                        ],
+                        ['score' => $normalizedScore]
+                    );
+                }
+            } else {
+                // Update main assessment score directly
+                BroadsheetAssessmentScore::updateOrCreate(
+                    [
+                        'broadsheet_id' => $broadsheet->id,
+                        'assessment_id' => $validated['assessment_id'],
+                    ],
+                    ['score' => $validated['score']]
+                );
+            }
+
+            // Trigger recalculations for this student
+            $schoolclass = Schoolclass::with('classcategories')->find($exam->schoolclass_id);
+            $assessments = Assessment::whereIn('classcategory_id',
+                $schoolclass->classcategories->pluck('id')
+            )->with('subAssessments')->get();
+
+            // Refresh broadsheet with relationships
+            $broadsheet->load(['assessmentScores', 'subAssessmentScores']);
+
+            // Recompute totals using your existing method
+            $myScoreSheetController = app(MyScoreSheetController::class);
+            $myScoreSheetController->computeDynamicTotals(
+                collect([$broadsheet]),
+                $assessments,
+                $schoolclass,
+                $exam->termid,
+                $exam->session
+            );
+
+            // Update positions
+            $myScoreSheetController->updateClassMetrics(
+                $subjectclass->id,
+                auth()->user()->id,
+                $exam->termid,
+                $exam->session
+            );
+            $myScoreSheetController->updateSubjectPositions(
+                $subjectclass->id,
+                auth()->user()->id,
+                $exam->termid,
+                $exam->session
+            );
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Score successfully transferred to assessment sheet',
+                'data' => [
+                    'broadsheet_id' => $broadsheet->id,
+                    'total' => $broadsheet->total,
+                    'cum' => $broadsheet->cum,
+                    'grade' => $broadsheet->grade
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error updating assessment score: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update score: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
