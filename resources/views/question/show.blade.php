@@ -11,7 +11,7 @@
                         <h4 class="mb-sm-0">{{ $pagetitle }}</h4>
                         <div class="page-title-right">
                             <ol class="breadcrumb m-0">
-                                <li class="breadcrumb-item"><a href="{{ route('exams.index') }}">Examsddd</a></li>
+                                <li class="breadcrumb-item"><a href="{{ route('exams.index') }}">Exams</a></li>
                                 <li class="breadcrumb-item"><a href="{{ route('exams.index') }}">All Exams</a></li>
                                 <li class="breadcrumb-item active">Questions</li>
                             </ol>
@@ -177,6 +177,9 @@
                             </div>
                             <div class="flex-shrink-0">
                                 <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-primary" id="add-question-btn" data-exam-id="{{ $exam->id }}">
+                                        <i class="ph-plus-circle me-1"></i> Add Question
+                                    </button>
                                     <button class="btn btn-subtle-info btn-sm" id="toggleViewBtn">
                                         <i class="ph-list ph-sm me-1"></i> Toggle View
                                     </button>
@@ -191,7 +194,7 @@
                                 <!-- Grid View (Default) -->
                                 <div id="gridView" class="row g-4">
                                     @foreach($questions as $index => $question)
-                                        <div class="col-xl-4 col-lg-6">
+                                        <div class="col-xl-4 col-lg-6" data-question-id="{{ $question->id }}">
                                             <div class="card question-card h-100 border">
                                                 <div class="card-body">
                                                     <!-- Question Header -->
@@ -210,12 +213,22 @@
                                                                 <i class="ph-star ph-xs me-1"></i>{{ $question->marks }} pts
                                                             </span>
                                                         </div>
-                                                        @if($question->image)
-                                                            <button class="btn btn-sm btn-subtle-primary view-image-btn"
-                                                                    data-image="{{ asset('storage/' . $question->image) }}">
-                                                                <i class="ph-image ph-sm"></i>
+                                                        <div class="d-flex gap-1">
+                                                            @if($question->image)
+                                                                <button class="btn btn-sm btn-subtle-primary view-image-btn"
+                                                                        data-image="{{ asset('storage/' . $question->image) }}">
+                                                                    <i class="ph-image ph-sm"></i>
+                                                                </button>
+                                                            @endif
+                                                            <button class="btn btn-sm btn-subtle-secondary edit-question-btn"
+                                                                    data-question-id="{{ $question->id }}">
+                                                                <i class="ph-pencil ph-sm"></i>
                                                             </button>
-                                                        @endif
+                                                            <button class="btn btn-sm btn-subtle-danger delete-question-btn"
+                                                                    data-question-id="{{ $question->id }}">
+                                                                <i class="ph-trash ph-sm"></i>
+                                                            </button>
+                                                        </div>
                                                     </div>
 
                                                     <!-- Question Text -->
@@ -310,11 +323,12 @@
                                                     <th class="text-center" style="width: 80px;">Marks</th>
                                                     <th style="min-width: 200px;">Correct Answer</th>
                                                     <th class="text-center" style="width: 100px;">Image</th>
+                                                    <th class="text-center" style="width: 120px;">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach($questions as $index => $question)
-                                                    <tr>
+                                                    <tr data-question-id="{{ $question->id }}">
                                                         <td class="text-center">
                                                             <span class="badge bg-primary rounded-pill p-2">
                                                                 <span class="fw-bold">{{ $index + 1 }}</span>
@@ -380,6 +394,18 @@
                                                                 <span class="text-muted">-</span>
                                                             @endif
                                                         </td>
+                                                        <td class="text-center">
+                                                            <div class="d-flex justify-content-center gap-1">
+                                                                <button class="btn btn-sm btn-subtle-secondary edit-question-btn"
+                                                                        data-question-id="{{ $question->id }}">
+                                                                    <i class="ph-pencil"></i>
+                                                                </button>
+                                                                <button class="btn btn-sm btn-subtle-danger delete-question-btn"
+                                                                        data-question-id="{{ $question->id }}">
+                                                                    <i class="ph-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                        </td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>
@@ -444,14 +470,9 @@
                                     </div>
                                     <h4 class="mb-3">No Questions Found</h4>
                                     <p class="text-muted mb-4">This exam doesn't have any questions yet. Start by adding some questions.</p>
-                                    <div class="d-flex gap-2 justify-content-center">
-                                        <a href="{{ route('questions.all') }}" class="btn btn-primary">
-                                            <i class="ph-plus-circle me-2"></i> Add New Question
-                                        </a>
-                                        <a href="{{ route('exams.index') }}" class="btn btn-subtle-secondary">
-                                            <i class="ph-arrow-left me-2"></i> Back to Exams
-                                        </a>
-                                    </div>
+                                    <button type="button" class="btn btn-primary" id="add-question-btn" data-exam-id="{{ $exam->id }}">
+                                        <i class="ph-plus-circle me-2"></i> Add Your First Question
+                                    </button>
                                 </div>
                             @endif
                         </div>
@@ -461,6 +482,221 @@
         </div>
     </div>
 </div>
+
+<!-- Question Form Modal -->
+<div class="modal fade" id="questionFormModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <span id="modal-title-text">Add</span> Question to Exam
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Exam Info -->
+                <div id="exam-info" class="alert alert-info mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="ri-information-line fs-4 me-2"></i>
+                        <div>
+                            <strong>Exam:</strong> <span id="exam-title-text">{{ $exam->title }}</span><br>
+                            <strong>Class:</strong> <span id="exam-class-text">{{ $exam->schoolclass->schoolclass ?? 'N/A' }} @if($exam->schoolclass && $exam->schoolclass->armRelation) ({{ $exam->schoolclass->armRelation->arm }}) @endif</span><br>
+                            <strong>Subject:</strong> <span id="exam-subject-text">{{ $exam->subject->subject ?? 'No Subject' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question Form -->
+                <form id="question-form" enctype="multipart/form-data">
+                    @csrf
+                    <div id="method-field"></div>
+                    <input type="hidden" name="question_id" id="question_id_field">
+                    <input type="hidden" name="exam_id" id="exam_id_field" value="{{ $exam->id }}">
+
+                    <div class="mb-3">
+                        <label for="question_text" class="form-label required">Question Text</label>
+                        <textarea name="question_text" id="question_text" class="form-control" rows="4" required placeholder="Enter your question here..."></textarea>
+                        <div class="form-text">Enter the main question text here.</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="type" class="form-label required">Question Type</label>
+                            <select name="type" id="type" class="form-control question-type" required>
+                                <option value="" disabled selected>Select a type</option>
+                                <option value="mcq">Multiple Choice (MCQ)</option>
+                                <option value="true_false">True/False</option>
+                                <option value="short_answer">Short Answer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="marks" class="form-label required">Marks</label>
+                            <input type="number" name="marks" id="marks" class="form-control" value="1" min="0.1" step="0.1" required>
+                        </div>
+                    </div>
+
+                    <!-- Question Type Options -->
+                    <div id="question-options-container">
+                        <!-- Options will be dynamically loaded based on type -->
+                    </div>
+
+                    <!-- Image Upload -->
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Upload Image (Optional)</label>
+                        <input type="file" name="image" id="image" class="form-control" accept="image/*" />
+                        <div id="image-preview" class="mt-3" style="display: none;">
+                            <img id="preview-img" src="#" alt="Image Preview" style="max-width: 200px; max-height: 200px;" class="img-thumbnail">
+                            <button type="button" class="btn btn-sm btn-danger ms-2" id="remove-image">
+                                <i class="ri-close-line"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Reusable Option -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_reusable" id="is_reusable" value="1">
+                            <label class="form-check-label" for="is_reusable">
+                                <strong>Mark as reusable question</strong>
+                                <div class="form-text">This question can be reused in other exams</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div class="alert alert-danger d-none" id="form-errors">
+                        <ul id="error-list" class="mb-0"></ul>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" id="save-question-btn" form="question-form">
+                    <i class="ri-save-line me-1"></i> Save Question
+                </button>
+                <button type="button" class="btn btn-success" id="save-and-add-another-btn">
+                    <i class="ri-add-line me-1"></i> Save & Add Another
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MCQ Options Template -->
+<template id="mcq-options-template">
+    <div class="mcq-options">
+        <h6 class="fw-bold mb-3">Multiple Choice Options (Select at least 2)</h6>
+        <div class="alert alert-warning">
+            <i class="ri-alert-line me-2"></i> You must select one correct option
+        </div>
+        <div class="options-fields">
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">A:</label>
+                    <input type="text" name="options[a][option_text]" class="form-control me-3" placeholder="Enter option A..." required />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="a" required />
+                        <label class="form-check-label">Correct Answer</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">B:</label>
+                    <input type="text" name="options[b][option_text]" class="form-control me-3" placeholder="Enter option B..." required />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="b" />
+                        <label class="form-check-label">Correct Answer</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">C:</label>
+                    <input type="text" name="options[c][option_text]" class="form-control me-3" placeholder="Enter option C..." />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="c" />
+                        <label class="form-check-label">Correct Answer</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">D:</label>
+                    <input type="text" name="options[d][option_text]" class="form-control me-3" placeholder="Enter option D..." />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="d" />
+                        <label class="form-check-label">Correct Answer</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <label class="fw-semibold me-3">E:</label>
+                    <input type="text" name="options[e][option_text]" class="form-control me-3" placeholder="Enter option E..." />
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="e" />
+                        <label class="form-check-label">Correct Answer</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- True/False Options Template -->
+<template id="tf-options-template">
+    <div class="tf-options">
+        <h6 class="fw-bold mb-3">True/False Options</h6>
+        <div class="alert alert-warning">
+            <i class="ri-alert-line me-2"></i> Select the correct answer
+        </div>
+        <div class="options-fields">
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <input type="hidden" name="options[true][option_text]" value="True">
+                    <label class="fw-semibold me-3">True</label>
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="true" required />
+                        <label class="form-check-label">Correct Answer</label>
+                    </div>
+                </div>
+            </div>
+            <div class="option-field mb-3">
+                <div class="d-flex align-items-center">
+                    <input type="hidden" name="options[false][option_text]" value="False">
+                    <label class="fw-semibold me-3">False</label>
+                    <div class="form-check">
+                        <input class="form-check-input is-correct" type="radio" name="correct_option" value="false" />
+                        <label class="form-check-label">Correct Answer</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Short Answer Options Template -->
+<template id="sa-options-template">
+    <div class="sa-options">
+        <h6 class="fw-bold mb-3">Correct Answer</h6>
+        <div class="alert alert-warning">
+            <i class="ri-alert-line me-2"></i> Enter the correct answer for this short answer question
+        </div>
+        <div class="mb-3">
+            <textarea name="options[answer][option_text]" id="short_answer_text" class="form-control" rows="3" required placeholder="Enter the correct answer..."></textarea>
+
+            <!-- Hidden radio button for short answer (always checked) -->
+            <div style="display: none;">
+                <input type="radio" name="correct_option" value="answer" checked />
+            </div>
+        </div>
+    </div>
+</template>
 
 <!-- Image Modal -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
@@ -482,8 +718,6 @@
         </div>
     </div>
 </div>
-
-
 
 <style>
 .question-card {
@@ -559,7 +793,9 @@
     .card-header,
     .btn,
     #toggleViewBtn,
-    .view-image-btn {
+    .view-image-btn,
+    .edit-question-btn,
+    .delete-question-btn {
         display: none !important;
     }
 
@@ -572,8 +808,16 @@
 }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const examId = {{ $exam->id }};
+
+    // Initialize Bootstrap modal
+    const questionModal = new bootstrap.Modal(document.getElementById('questionFormModal'));
+
     // Toggle between grid and table view
     const toggleViewBtn = document.getElementById('toggleViewBtn');
     const gridView = document.getElementById('gridView');
@@ -581,19 +825,100 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (toggleViewBtn) {
         toggleViewBtn.addEventListener('click', function() {
-            if (gridView.classList.contains('d-none')) {
-                // Show Grid View
-                gridView.classList.remove('d-none');
-                tableView.classList.add('d-none');
-                toggleViewBtn.innerHTML = '<i class="ph-list ph-sm me-1"></i> Switch to Table View';
-            } else {
-                // Show Table View
-                gridView.classList.add('d-none');
-                tableView.classList.remove('d-none');
-                toggleViewBtn.innerHTML = '<i class="ph-grid-four ph-sm me-1"></i> Switch to Card View';
+            if (gridView && tableView) {
+                if (gridView.classList.contains('d-none')) {
+                    // Show Grid View
+                    gridView.classList.remove('d-none');
+                    tableView.classList.add('d-none');
+                    toggleViewBtn.innerHTML = '<i class="ph-list ph-sm me-1"></i> Switch to Table View';
+                } else {
+                    // Show Table View
+                    gridView.classList.add('d-none');
+                    tableView.classList.remove('d-none');
+                    toggleViewBtn.innerHTML = '<i class="ph-grid-four ph-sm me-1"></i> Switch to Card View';
+                }
             }
         });
     }
+
+    // Add Question button
+    document.querySelectorAll('#add-question-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            resetQuestionForm();
+            document.getElementById('modal-title-text').textContent = 'Add';
+            document.getElementById('method-field').innerHTML = '';
+            document.getElementById('question_id_field').value = '';
+            document.getElementById('exam_id_field').value = examId;
+            questionModal.show();
+        });
+    });
+
+    // Edit Question button
+    document.querySelectorAll('.edit-question-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const questionId = this.dataset.questionId;
+            loadQuestionForEdit(questionId);
+        });
+    });
+
+    // Delete Question button
+    document.querySelectorAll('.delete-question-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const questionId = this.dataset.questionId;
+            deleteQuestion(questionId);
+        });
+    });
+
+    // Question type change
+    document.getElementById('type').addEventListener('change', function() {
+        const type = this.value;
+        const container = document.getElementById('question-options-container');
+
+        // Clear container
+        container.innerHTML = '';
+
+        // Load appropriate template
+        if (type === 'mcq') {
+            const template = document.getElementById('mcq-options-template');
+            container.appendChild(template.content.cloneNode(true));
+        } else if (type === 'true_false') {
+            const template = document.getElementById('tf-options-template');
+            container.appendChild(template.content.cloneNode(true));
+        } else if (type === 'short_answer') {
+            const template = document.getElementById('sa-options-template');
+            container.appendChild(template.content.cloneNode(true));
+        }
+    });
+
+    // Form submission
+    document.getElementById('question-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveQuestion(false);
+    });
+
+    // Save & Add Another
+    document.getElementById('save-and-add-another-btn').addEventListener('click', function() {
+        saveQuestion(true);
+    });
+
+    // Image preview
+    document.getElementById('image').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('preview-img').src = e.target.result;
+                document.getElementById('image-preview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Remove image
+    document.getElementById('remove-image').addEventListener('click', function() {
+        document.getElementById('image').value = '';
+        document.getElementById('image-preview').style.display = 'none';
+    });
 
     // Image Modal
     const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
@@ -625,15 +950,287 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Print functionality
     const printBtn = document.createElement('button');
-    printBtn.className = 'btn btn-subtle-info btn-sm';
+    printBtn.className = 'btn btn-subtle-info btn-sm ms-2';
     printBtn.innerHTML = '<i class="ph-printer ph-sm me-1"></i> Print Questions';
     printBtn.addEventListener('click', function() {
         window.print();
     });
 
-    if (document.querySelector('.card-header .flex-shrink-0 .d-flex')) {
-        document.querySelector('.card-header .flex-shrink-0 .d-flex').appendChild(printBtn);
+    const actionBar = document.querySelector('.card-header .flex-shrink-0 .d-flex');
+    if (actionBar) {
+        actionBar.appendChild(printBtn);
     }
 });
+
+function resetQuestionForm() {
+    document.getElementById('question-form').reset();
+    document.getElementById('question-options-container').innerHTML = '';
+    document.getElementById('image-preview').style.display = 'none';
+    document.getElementById('form-errors').classList.add('d-none');
+    document.getElementById('error-list').innerHTML = '';
+    document.getElementById('method-field').innerHTML = '';
+    document.getElementById('question_id_field').value = '';
+    document.getElementById('is_reusable').checked = false;
+}
+
+function loadQuestionForEdit(questionId) {
+    Swal.fire({
+        title: 'Loading...',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    fetch(`/questions/${questionId}/edit`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Reset form and populate with data
+            resetQuestionForm();
+
+            // Set form to edit mode
+            document.getElementById('modal-title-text').textContent = 'Edit';
+            document.getElementById('method-field').innerHTML = '@method("PUT")';
+            document.getElementById('question_id_field').value = questionId;
+
+            // Populate basic fields
+            document.getElementById('question_text').value = data.question.question_text;
+            document.getElementById('type').value = data.question.type;
+            document.getElementById('marks').value = data.question.marks;
+            document.getElementById('is_reusable').checked = data.question.is_reusable;
+
+            // Trigger type change to load options
+            const typeEvent = new Event('change');
+            document.getElementById('type').dispatchEvent(typeEvent);
+
+            // Wait for options container to render then populate
+            setTimeout(() => {
+                if (data.question.type === 'mcq') {
+                    // Populate MCQ options
+                    data.options.forEach(option => {
+                        const optionInput = document.querySelector(`input[name="options[${option.label}][option_text]"]`);
+                        if (optionInput) {
+                            optionInput.value = option.option_text;
+                        }
+                        if (option.is_correct) {
+                            const radio = document.querySelector(`input[name="correct_option"][value="${option.label}"]`);
+                            if (radio) radio.checked = true;
+                        }
+                    });
+                } else if (data.question.type === 'true_false') {
+                    // Populate True/False
+                    data.options.forEach(option => {
+                        if (option.is_correct) {
+                            const radio = document.querySelector(`input[name="correct_option"][value="${option.label}"]`);
+                            if (radio) radio.checked = true;
+                        }
+                    });
+                } else if (data.question.type === 'short_answer') {
+                    // Populate Short Answer
+                    data.options.forEach(option => {
+                        if (option.is_correct) {
+                            document.getElementById('short_answer_text').value = option.option_text;
+                        }
+                    });
+                }
+
+                // Show image preview if exists
+                if (data.question.image) {
+                    document.getElementById('preview-img').src = '/storage/' + data.question.image;
+                    document.getElementById('image-preview').style.display = 'block';
+                }
+            }, 200);
+
+            // Show modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('questionFormModal'));
+            if (modal) modal.show();
+            Swal.close();
+        } else {
+            throw new Error(data.message || 'Failed to load question');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading question:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load question data. Please try again.',
+            timer: 3000
+        });
+    });
+}
+
+function saveQuestion(andAddAnother = false) {
+    const form = document.getElementById('question-form');
+    const formData = new FormData(form);
+    const questionId = document.getElementById('question_id_field').value;
+    const isEdit = questionId !== '';
+
+    let url = '{{ route("questions.store") }}';
+    let method = 'POST';
+
+    if (isEdit) {
+        url = `/questions/${questionId}`;
+        formData.append('_method', 'PUT');
+    }
+
+    // Disable submit buttons
+    const saveBtn = document.getElementById('save-question-btn');
+    const saveAnotherBtn = document.getElementById('save-and-add-another-btn');
+    const originalText = saveBtn.innerHTML;
+    const originalAnotherText = saveAnotherBtn.innerHTML;
+
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+    saveBtn.disabled = true;
+    saveAnotherBtn.disabled = true;
+
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message || 'Question saved successfully!',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                if (andAddAnother) {
+                    // Reset form but keep exam ID
+                    resetQuestionForm();
+                    document.getElementById('exam_id_field').value = examId;
+                    document.getElementById('modal-title-text').textContent = 'Add';
+                    document.getElementById('method-field').innerHTML = '';
+                } else {
+                    // Close modal and reload
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('questionFormModal'));
+                    if (modal) modal.hide();
+                    window.location.reload();
+                }
+            });
+        } else {
+            let errorMsg = 'An error occurred.';
+            if (data.errors) {
+                errorMsg = Object.values(data.errors).flat().join('<br>');
+                // Display errors in form
+                const errorList = document.getElementById('error-list');
+                errorList.innerHTML = '';
+                Object.values(data.errors).flat().forEach(error => {
+                    const li = document.createElement('li');
+                    li.textContent = error;
+                    errorList.appendChild(li);
+                });
+                document.getElementById('form-errors').classList.remove('d-none');
+            } else if (data.message) {
+                errorMsg = data.message;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg,
+                    timer: 3000
+                });
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred. Please try again.',
+            timer: 3000
+        });
+    })
+    .finally(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+        saveAnotherBtn.innerHTML = originalAnotherText;
+        saveAnotherBtn.disabled = false;
+    });
+}
+
+function deleteQuestion(questionId) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "This will permanently delete this question!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(`/questions/${questionId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: 'Question deleted successfully!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to delete question.',
+                        timer: 3000
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to delete question. Please try again.',
+                    timer: 3000
+                });
+            });
+        }
+    });
+}
 </script>
+
 @endsection
