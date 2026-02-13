@@ -2602,31 +2602,25 @@ public function bulkUpdateCurrentTerm(Request $request)
 /**
  * Get students by class and session for status update
  */
+/**
+ * Get students by class and session for status update
+ */
 public function getStudentsByClassAndSession(Request $request)
 {
     try {
         $request->validate([
             'class_id' => 'required|exists:schoolclass,id',
             'session_id' => 'required|exists:schoolsession,id',
-            'term_id' => 'nullable|exists:schoolterm,id'
         ]);
 
         $query = Student::query()
             ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
             ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
-            ->leftJoin('parentRegistration', 'parentRegistration.studentId', '=', 'studentRegistration.id')
             ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
             ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
-            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
-            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
             ->where('studentclass.schoolclassid', $request->class_id)
             ->where('studentclass.sessionid', $request->session_id);
 
-        if ($request->filled('term_id')) {
-            $query->where('studentclass.termid', $request->term_id);
-        }
-
-        // Get student status counts
         $students = $query->select([
             'studentRegistration.id',
             'studentRegistration.admissionNo',
@@ -2637,36 +2631,70 @@ public function getStudentsByClassAndSession(Request $request)
             'studentRegistration.statusId',
             'studentRegistration.student_status',
             'studentRegistration.dateofbirth',
+            'studentRegistration.created_at',
             'studentpicture.picture',
             'schoolclass.schoolclass',
             'schoolarm.arm',
-            'schoolterm.term',
-            'schoolsession.session',
         ])->get();
+
+        // Format the students data to handle null values
+        $formattedStudents = $students->map(function($student) {
+            // Handle date of birth safely
+            $formattedDob = null;
+            if ($student->dateofbirth) {
+                try {
+                    $formattedDob = $student->dateofbirth instanceof \Carbon\Carbon
+                        ? $student->dateofbirth->format('Y-m-d')
+                        : date('Y-m-d', strtotime($student->dateofbirth));
+                } catch (\Exception $e) {
+                    $formattedDob = null;
+                }
+            }
+
+            return [
+                'id' => $student->id,
+                'admissionNo' => $student->admissionNo ?? 'N/A',
+                'firstname' => $student->firstname ?? '',
+                'lastname' => $student->lastname ?? '',
+                'othername' => $student->othername ?? '',
+                'fullname' => trim(($student->lastname ?? '') . ' ' . ($student->firstname ?? '') . ' ' . ($student->othername ?? '')),
+                'gender' => $student->gender ?? 'N/A',
+                'statusId' => $student->statusId,
+                'student_status' => $student->student_status ?? 'Inactive',
+                'dateofbirth' => $formattedDob,
+                'picture' => $student->picture ?? null,
+                'schoolclass' => $student->schoolclass ?? '',
+                'arm' => $student->arm ?? '',
+                'created_at' => $student->created_at ? $student->created_at->format('Y-m-d') : null,
+            ];
+        });
 
         // Calculate stats
         $stats = [
-            'total' => $students->count(),
-            'active' => $students->where('student_status', 'Active')->count(),
-            'inactive' => $students->where('student_status', 'Inactive')->count(),
-            'old_students' => $students->where('statusId', 1)->count(),
-            'new_students' => $students->where('statusId', 2)->count(),
+            'total' => $formattedStudents->count(),
+            'active' => $formattedStudents->where('student_status', 'Active')->count(),
+            'inactive' => $formattedStudents->where('student_status', 'Inactive')->count(),
+            'old_students' => $formattedStudents->where('statusId', 1)->count(),
+            'new_students' => $formattedStudents->where('statusId', 2)->count(),
         ];
 
         return response()->json([
             'success' => true,
-            'students' => $students,
+            'students' => $formattedStudents,
             'stats' => $stats
         ]);
 
     } catch (\Exception $e) {
         Log::error('Error fetching students by class/session: ' . $e->getMessage());
+        Log::error($e->getTraceAsString());
+
         return response()->json([
             'success' => false,
             'message' => 'Failed to fetch students: ' . $e->getMessage()
         ], 500);
     }
 }
+
 
 /**
  * Bulk update student status (active/inactive and old/new)
@@ -2721,6 +2749,9 @@ public function bulkUpdateStatus(Request $request)
 /**
  * Get students registered in a specific term/session (via StudentCurrentTerm)
  */
+/**
+ * Get students registered in a specific term/session (via StudentCurrentTerm)
+ */
 public function getStudentsInTerm(Request $request)
 {
     try {
@@ -2747,39 +2778,48 @@ public function getStudentsInTerm(Request $request)
 
         $formattedStudents = $registrations->map(function($reg) {
             $student = $reg->student;
+
+            // Handle potential null student
+            if (!$student) {
+                return null;
+            }
+
             return [
                 'registration_id' => $reg->id,
                 'student_id' => $student->id,
-                'admissionNo' => $student->admissionNo,
-                'firstname' => $student->firstname,
-                'lastname' => $student->lastname,
-                'othername' => $student->othername,
-                'fullname' => trim($student->lastname . ' ' . $student->firstname . ' ' . $student->othername),
-                'gender' => $student->gender,
+                'admissionNo' => $student->admissionNo ?? 'N/A',
+                'firstname' => $student->firstname ?? '',
+                'lastname' => $student->lastname ?? '',
+                'othername' => $student->othername ?? '',
+                'fullname' => trim(($student->lastname ?? '') . ' ' . ($student->firstname ?? '') . ' ' . ($student->othername ?? '')),
+                'gender' => $student->gender ?? 'N/A',
                 'class' => $reg->schoolClass ? $reg->schoolClass->schoolclass : 'N/A',
-                'arm' => $reg->schoolClass && $reg->schoolClass->armRelation ? $reg->schoolClass->armRelation->arm : 'N/A',
+                'arm' => $reg->schoolClass && $reg->schoolClass->armRelation ? $reg->schoolClass->armRelation->arm : '',
                 'term' => $reg->term ? $reg->term->term : 'N/A',
                 'session' => $reg->session ? $reg->session->session : 'N/A',
                 'is_current' => $reg->is_current,
                 'picture' => $student->picture ? $student->picture->picture : null,
-                'registered_at' => $reg->created_at->format('d M Y'),
+                'registered_at' => $reg->created_at ? $reg->created_at->format('d M Y') : 'N/A',
             ];
-        });
+        })->filter(); // Remove null entries
 
         return response()->json([
             'success' => true,
-            'students' => $formattedStudents,
+            'students' => $formattedStudents->values(),
             'total' => $formattedStudents->count()
         ]);
 
     } catch (\Exception $e) {
         Log::error('Error fetching students in term: ' . $e->getMessage());
+        Log::error($e->getTraceAsString());
+
         return response()->json([
             'success' => false,
             'message' => 'Failed to fetch students: ' . $e->getMessage()
         ], 500);
     }
 }
+
 
 /**
  * Remove a student from term registration (StudentCurrentTerm)
