@@ -2914,9 +2914,6 @@ public function getStudentsByClassAndSession(Request $request)
 
 
 
-/**
- * Bulk update student status (active/inactive and old/new)
- */
 public function bulkUpdateStatus(Request $request)
 {
     try {
@@ -2982,6 +2979,7 @@ public function bulkUpdateStatus(Request $request)
         DB::commit();
 
         Log::info('=== bulkUpdateStatus COMPLETED SUCCESSFULLY ===');
+        Log::info('Response message: ' . "Successfully updated {$updated} student(s)");
 
         return response()->json([
             'success' => true,
@@ -2989,17 +2987,6 @@ public function bulkUpdateStatus(Request $request)
             'updated_count' => $updated
         ]);
 
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        DB::rollBack();
-        Log::error('Validation error in bulkUpdateStatus:', [
-            'errors' => $e->errors(),
-            'message' => $e->getMessage()
-        ]);
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation failed: ' . json_encode($e->errors()),
-            'errors' => $e->errors()
-        ], 422);
     } catch (\Exception $e) {
         DB::rollBack();
         Log::error('Error in bulkUpdateStatus: ' . $e->getMessage());
@@ -3007,11 +2994,13 @@ public function bulkUpdateStatus(Request $request)
 
         return response()->json([
             'success' => false,
-            'message' => 'Failed to update students: ' . $e->getMessage(),
-            'error_detail' => config('app.debug') ? $e->getTraceAsString() : null
+            'message' => 'Failed to update students: ' . $e->getMessage()
         ], 500);
     }
 }
+
+
+
 /**
  * Get students registered in a specific term/session (via StudentCurrentTerm)
  */
