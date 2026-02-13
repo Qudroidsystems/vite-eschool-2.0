@@ -5615,14 +5615,21 @@ use Spatie\Permission\Models\Role;
         },
 
 
+
         renderStudentRows: function(students) {
     if (!students || students.length === 0) {
         return '<tr><td colspan="7" class="text-center py-4">No students found</td></tr>';
     }
 
     return students.map(student => {
-        // Ensure student.id is valid
-        const studentId = student.id || '';
+        // Ensure student.id is valid and is a number
+        const studentId = student.id ? parseInt(student.id) : null;
+
+        // Skip if no valid ID
+        if (!studentId) {
+            console.warn('Student has no valid ID:', student);
+            return '';
+        }
 
         // Safely handle potentially null/undefined values
         const firstName = student.firstname || '';
@@ -5645,8 +5652,7 @@ use Spatie\Permission\Models\Role;
                 <td>
                     <div class="form-check">
                         <input class="form-check-input student-status-checkbox" type="checkbox"
-                               value="${studentId}" data-student-id="${studentId}"
-                               ${studentId ? '' : 'disabled'}>
+                               value="${studentId}" data-student-id="${studentId}">
                     </div>
                 </td>
                 <td>
@@ -5670,8 +5676,7 @@ use Spatie\Permission\Models\Role;
                         <button class="btn btn-sm btn-outline-success toggle-activity"
                                 data-student-id="${studentId}"
                                 data-current="${student.student_status || 'Inactive'}"
-                                onclick="BulkStatusManager.toggleIndividualStatus(this, 'activity')"
-                                ${studentId ? '' : 'disabled'}>
+                                onclick="BulkStatusManager.toggleIndividualStatus(this, 'activity')">
                             <i class="fas fa-exchange-alt"></i>
                         </button>
                     </div>
@@ -5682,8 +5687,7 @@ use Spatie\Permission\Models\Role;
                         <button class="btn btn-sm btn-outline-warning toggle-type"
                                 data-student-id="${studentId}"
                                 data-current="${student.statusId || 1}"
-                                onclick="BulkStatusManager.toggleIndividualStatus(this, 'type')"
-                                ${studentId ? '' : 'disabled'}>
+                                onclick="BulkStatusManager.toggleIndividualStatus(this, 'type')">
                             <i class="fas fa-exchange-alt"></i>
                         </button>
                     </div>
@@ -5691,8 +5695,7 @@ use Spatie\Permission\Models\Role;
                 <td>
                     <button class="btn btn-sm btn-info view-student-btn"
                             data-student-id="${studentId}"
-                            onclick="StudentManager.viewStudent(${studentId})"
-                            ${studentId ? '' : 'disabled'}>
+                            onclick="StudentManager.viewStudent(${studentId})">
                         <i class="fas fa-eye"></i>
                     </button>
                 </td>
@@ -5722,12 +5725,17 @@ use Spatie\Permission\Models\Role;
             });
         },
 
-       handleSelectAll: function(e) {
+      handleSelectAll: function(e) {
     const isChecked = e.target.checked;
-    const checkboxes = document.querySelectorAll('.student-status-checkbox:not([disabled])');
+    // Only select checkboxes with valid numeric values
+    const checkboxes = document.querySelectorAll('.student-status-checkbox');
 
     checkboxes.forEach(checkbox => {
-        checkbox.checked = isChecked;
+        const value = checkbox.value;
+        // Only check if it has a valid numeric value
+        if (value && value !== 'on' && !isNaN(parseInt(value))) {
+            checkbox.checked = isChecked;
+        }
     });
 
     this.updateSelectedCount();
@@ -5761,22 +5769,23 @@ updateSelectedCount: function() {
         }
     }
 },
-       getSelectedStudentIds: function() {
-            // Make sure we're only getting checked checkboxes that are visible
-            const checkedBoxes = document.querySelectorAll('.student-status-checkbox:checked');
-            const ids = [];
+      getSelectedStudentIds: function() {
+    const checkedBoxes = document.querySelectorAll('.student-status-checkbox:checked');
+    const ids = [];
 
-            checkedBoxes.forEach(cb => {
-                // Ensure we only get valid IDs (not empty or undefined)
-                const value = cb.value;
-                if (value && value !== 'undefined' && value !== 'null') {
-                    ids.push(value);
-                }
-            });
+    checkedBoxes.forEach(cb => {
+        const value = cb.value;
+        // Only include valid numeric IDs (not "on" or empty)
+        if (value && value !== 'on' && !isNaN(parseInt(value))) {
+            ids.push(parseInt(value));
+        } else {
+            console.warn('Invalid checkbox value:', value, cb);
+        }
+    });
 
-            console.log('Selected student IDs:', ids); // Debug log
-            return ids;
-        },
+    console.log('Filtered selected student IDs:', ids);
+    return ids;
+},
 
         async toggleIndividualStatus(button, type) {
             const studentId = button.dataset.studentId;
