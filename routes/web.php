@@ -192,6 +192,12 @@ Route::group(['middleware' => ['auth']], function () {
         Route::get('/report', [StudentController::class, 'generateReport'])->name('students.report');
         Route::post('/destroy-multiple', [StudentController::class, 'destroyMultiple'])->name('student.destroyMultiple');
         Route::get('/optimized', [StudentController::class, 'getStudentsOptimized'])->name('students.optimized'); // THIS IS THE KEY ROUTE
+
+            // NEW ROUTES FOR YOUR FEATURES
+        Route::post('/bulk-update-status', [StudentController::class, 'bulkUpdateStatus'])->name('students.bulk-update-status');
+        Route::get('/by-class-session', [StudentController::class, 'getStudentsByClassAndSession'])->name('students.by-class-session');
+        Route::post('/remove-from-term', [StudentController::class, 'removeFromTerm'])->name('students.remove-from-term');
+        Route::post('/bulk-remove-from-term', [StudentController::class, 'bulkRemoveFromTerm'])->name('students.bulk-remove-from-term');
     });
 
     // Individual student operations

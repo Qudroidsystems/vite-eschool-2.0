@@ -2597,4 +2597,256 @@ public function bulkUpdateCurrentTerm(Request $request)
         ], 500);
     }
 }
+
+
+/**
+ * Get students by class and session for status update
+ */
+public function getStudentsByClassAndSession(Request $request)
+{
+    try {
+        $request->validate([
+            'class_id' => 'required|exists:schoolclass,id',
+            'session_id' => 'required|exists:schoolsession,id',
+            'term_id' => 'nullable|exists:schoolterm,id'
+        ]);
+
+        $query = Student::query()
+            ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
+            ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
+            ->leftJoin('parentRegistration', 'parentRegistration.studentId', '=', 'studentRegistration.id')
+            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'studentclass.schoolclassid')
+            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'studentclass.termid')
+            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'studentclass.sessionid')
+            ->where('studentclass.schoolclassid', $request->class_id)
+            ->where('studentclass.sessionid', $request->session_id);
+
+        if ($request->filled('term_id')) {
+            $query->where('studentclass.termid', $request->term_id);
+        }
+
+        // Get student status counts
+        $students = $query->select([
+            'studentRegistration.id',
+            'studentRegistration.admissionNo',
+            'studentRegistration.firstname',
+            'studentRegistration.lastname',
+            'studentRegistration.othername',
+            'studentRegistration.gender',
+            'studentRegistration.statusId',
+            'studentRegistration.student_status',
+            'studentRegistration.dateofbirth',
+            'studentpicture.picture',
+            'schoolclass.schoolclass',
+            'schoolarm.arm',
+            'schoolterm.term',
+            'schoolsession.session',
+        ])->get();
+
+        // Calculate stats
+        $stats = [
+            'total' => $students->count(),
+            'active' => $students->where('student_status', 'Active')->count(),
+            'inactive' => $students->where('student_status', 'Inactive')->count(),
+            'old_students' => $students->where('statusId', 1)->count(),
+            'new_students' => $students->where('statusId', 2)->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'students' => $students,
+            'stats' => $stats
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error fetching students by class/session: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch students: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Bulk update student status (active/inactive and old/new)
+ */
+public function bulkUpdateStatus(Request $request)
+{
+    try {
+        $request->validate([
+            'student_ids' => 'required|array',
+            'student_ids.*' => 'exists:studentRegistration,id',
+            'update_type' => 'required|in:activity_status,student_type',
+            'value' => 'required'
+        ]);
+
+        DB::beginTransaction();
+
+        $studentIds = $request->student_ids;
+        $updateType = $request->update_type;
+        $value = $request->value;
+
+        $updated = 0;
+
+        if ($updateType === 'activity_status') {
+            // Update student_status (Active/Inactive)
+            $updated = Student::whereIn('id', $studentIds)
+                ->update(['student_status' => $value]);
+        } else {
+            // Update statusId (1=Old, 2=New)
+            $statusId = $value === 'old' ? 1 : 2;
+            $updated = Student::whereIn('id', $studentIds)
+                ->update(['statusId' => $statusId]);
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully updated {$updated} student(s)",
+            'updated_count' => $updated
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error bulk updating student status: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update students: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get students registered in a specific term/session (via StudentCurrentTerm)
+ */
+public function getStudentsInTerm(Request $request)
+{
+    try {
+        $request->validate([
+            'term_id' => 'required|exists:schoolterm,id',
+            'session_id' => 'required|exists:schoolsession,id',
+            'class_id' => 'nullable|exists:schoolclass,id'
+        ]);
+
+        $query = StudentCurrentTerm::with([
+            'student.picture',
+            'schoolClass.armRelation',
+            'term',
+            'session'
+        ])
+        ->where('termId', $request->term_id)
+        ->where('sessionId', $request->session_id);
+
+        if ($request->filled('class_id')) {
+            $query->where('schoolclassId', $request->class_id);
+        }
+
+        $registrations = $query->get();
+
+        $formattedStudents = $registrations->map(function($reg) {
+            $student = $reg->student;
+            return [
+                'registration_id' => $reg->id,
+                'student_id' => $student->id,
+                'admissionNo' => $student->admissionNo,
+                'firstname' => $student->firstname,
+                'lastname' => $student->lastname,
+                'othername' => $student->othername,
+                'fullname' => trim($student->lastname . ' ' . $student->firstname . ' ' . $student->othername),
+                'gender' => $student->gender,
+                'class' => $reg->schoolClass ? $reg->schoolClass->schoolclass : 'N/A',
+                'arm' => $reg->schoolClass && $reg->schoolClass->armRelation ? $reg->schoolClass->armRelation->arm : 'N/A',
+                'term' => $reg->term ? $reg->term->term : 'N/A',
+                'session' => $reg->session ? $reg->session->session : 'N/A',
+                'is_current' => $reg->is_current,
+                'picture' => $student->picture ? $student->picture->picture : null,
+                'registered_at' => $reg->created_at->format('d M Y'),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'students' => $formattedStudents,
+            'total' => $formattedStudents->count()
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error fetching students in term: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch students: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Remove a student from term registration (StudentCurrentTerm)
+ */
+public function removeFromTerm(Request $request)
+{
+    try {
+        $request->validate([
+            'registration_id' => 'required|exists:student_current_term,id'
+        ]);
+
+        DB::beginTransaction();
+
+        $registration = StudentCurrentTerm::findOrFail($request->registration_id);
+        $studentName = $registration->student ?
+            $registration->student->firstname . ' ' . $registration->student->lastname : 'Unknown';
+
+        $registration->delete();
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Student removed from term registration successfully",
+            'student_name' => $studentName
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error removing student from term: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to remove student: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Bulk remove students from term registration
+ */
+public function bulkRemoveFromTerm(Request $request)
+{
+    try {
+        $request->validate([
+            'registration_ids' => 'required|array',
+            'registration_ids.*' => 'exists:student_current_term,id'
+        ]);
+
+        DB::beginTransaction();
+
+        $count = StudentCurrentTerm::whereIn('id', $request->registration_ids)->delete();
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully removed {$count} student(s) from term registration",
+            'removed_count' => $count
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error bulk removing students from term: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to remove students: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }
