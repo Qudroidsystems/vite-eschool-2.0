@@ -1352,6 +1352,7 @@ public function getExamQuestions($examId)
 
 
 
+
     /**
  * Update student's exam score to assessment scoresheet
  */
@@ -1380,7 +1381,7 @@ public function updateAssessmentScore(Request $request)
 
         DB::beginTransaction();
 
-        // Get the exam to find the subjectclass_id
+        // Get the exam with relationships
         $exam = Exam::with(['subject', 'schoolclass'])->find($validated['exam_id']);
 
         if (!$exam) {
@@ -1400,10 +1401,22 @@ public function updateAssessmentScore(Request $request)
                 'schoolclass_id' => $exam->schoolclass_id,
             ],
             [
+                'student_id' => $validated['student_id'],
+                'session_id' => $exam->session,
+                'subject_id' => $exam->subject_id,
+                'schoolclass_id' => $exam->schoolclass_id,
                 'created_at' => now(),
                 'updated_at' => now()
             ]
         );
+
+        if (!$broadsheetRecord) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create broadsheet record'
+            ], 500);
+        }
 
         // Find the subjectclass for this subject and class
         $subjectclass = Subjectclass::where('subjectid', $exam->subject_id)
@@ -1418,44 +1431,63 @@ public function updateAssessmentScore(Request $request)
             ], 404);
         }
 
-        // Find or create the broadsheet - FIXED: Include broadSheet_record_id in both conditions and values
-        $broadsheet = Broadsheets::firstOrCreate(
-            [
-                'broadSheet_record_id' => $broadsheetRecord->id,
-                'subjectclass_id' => $subjectclass->id,
-                'staff_id' => auth()->user()->id,
-                'term_id' => $exam->termid,
-            ],
-            [
-                'broadSheet_record_id' => $broadsheetRecord->id,
-                'subjectclass_id' => $subjectclass->id,
-                'staff_id' => auth()->user()->id,
-                'term_id' => $exam->termid,
-                'total' => 0,
-                'bf' => 0,
-                'cum' => 0,
-                'grade' => null,
-                'remark' => null,
-                'cmin' => 0,
-                'cmax' => 0,
-                'avg' => 0,
-                'subject_position_class' => 0,
-                'vettedstatus' => 0,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]
-        );
+        // MANUAL APPROACH: Check if broadsheet exists, create if not
+        $broadsheet = Broadsheets::where([
+            'broadSheet_record_id' => $broadsheetRecord->id,
+            'subjectclass_id' => $subjectclass->id,
+            'staff_id' => auth()->user()->id,
+            'term_id' => $exam->termid,
+        ])->first();
+
+        if (!$broadsheet) {
+            // Create new broadsheet with ALL required fields explicitly set
+            $broadsheet = new Broadsheets();
+            $broadsheet->broadSheet_record_id = $broadsheetRecord->id;
+            $broadsheet->subjectclass_id = $subjectclass->id;
+            $broadsheet->staff_id = auth()->user()->id;
+            $broadsheet->term_id = $exam->termid;
+            $broadsheet->total = 0;
+            $broadsheet->bf = 0;
+            $broadsheet->cum = 0;
+            $broadsheet->grade = null;
+            $broadsheet->remark = null;
+            $broadsheet->cmin = 0;
+            $broadsheet->cmax = 0;
+            $broadsheet->avg = 0;
+            $broadsheet->subject_position_class = 0;
+            $broadsheet->vettedstatus = 0;
+            $broadsheet->created_at = now();
+            $broadsheet->updated_at = now();
+
+            // Save the model
+            if (!$broadsheet->save()) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create broadsheet'
+                ], 500);
+            }
+
+            \Log::info('Created new broadsheet', ['id' => $broadsheet->id, 'record_id' => $broadsheetRecord->id]);
+        } else {
+            \Log::info('Found existing broadsheet', ['id' => $broadsheet->id]);
+        }
 
         // Update or create the assessment score
         if ($isSub && !empty($validated['sub_assessment_id'])) {
             // Update sub-assessment score
-            BroadsheetSubAssessmentScore::updateOrCreate(
+            $subScore = BroadsheetSubAssessmentScore::updateOrCreate(
                 [
                     'broadsheet_id' => $broadsheet->id,
                     'sub_assessment_id' => $validated['sub_assessment_id'],
                     'assessment_id' => $validated['assessment_id'],
                 ],
-                ['score' => $validated['score']]
+                [
+                    'broadsheet_id' => $broadsheet->id,
+                    'sub_assessment_id' => $validated['sub_assessment_id'],
+                    'assessment_id' => $validated['assessment_id'],
+                    'score' => $validated['score']
+                ]
             );
 
             // Recalculate parent assessment score (sum of sub-assessments normalized)
@@ -1474,7 +1506,11 @@ public function updateAssessmentScore(Request $request)
                         'broadsheet_id' => $broadsheet->id,
                         'assessment_id' => $validated['assessment_id'],
                     ],
-                    ['score' => $normalizedScore]
+                    [
+                        'broadsheet_id' => $broadsheet->id,
+                        'assessment_id' => $validated['assessment_id'],
+                        'score' => $normalizedScore
+                    ]
                 );
             }
         } else {
@@ -1484,7 +1520,11 @@ public function updateAssessmentScore(Request $request)
                     'broadsheet_id' => $broadsheet->id,
                     'assessment_id' => $validated['assessment_id'],
                 ],
-                ['score' => $validated['score']]
+                [
+                    'broadsheet_id' => $broadsheet->id,
+                    'assessment_id' => $validated['assessment_id'],
+                    'score' => $validated['score']
+                ]
             );
         }
 
