@@ -144,10 +144,10 @@ class StudentController extends Controller
     }
 
 
-
-    /**
+/**
  * Get students optimized with server-side pagination and filtering
  * FIXED: Using subquery approach to avoid ONLY_FULL_GROUP_BY issues
+ * UPDATED: Added robust N/A date handling
  */
 public function getStudentsOptimized(Request $request)
 {
@@ -158,6 +158,15 @@ public function getStudentsOptimized(Request $request)
         $status = $request->get('status', 'all');
         $gender = $request->get('gender', 'all');
         $sessionId = $request->get('session_id', 'all');
+
+        Log::info('getStudentsOptimized called with params:', [
+            'per_page' => $perPage,
+            'search' => $search,
+            'class_id' => $classId,
+            'status' => $status,
+            'gender' => $gender,
+            'session_id' => $sessionId
+        ]);
 
         // Build the base query for student IDs with filters
         $idQuery = Student::query()
@@ -201,13 +210,19 @@ public function getStudentsOptimized(Request $request)
         // Group by to avoid duplicates
         $idQuery->groupBy('studentRegistration.id');
 
+        // Log the ID query for debugging
+        Log::info('ID Query SQL:', ['sql' => $idQuery->toSql(), 'bindings' => $idQuery->getBindings()]);
+
         // Get paginated IDs first
         $paginatedIds = $idQuery->paginate($perPage, ['studentRegistration.id'], 'page', $request->get('page', 1));
 
         $studentIds = $paginatedIds->pluck('id')->toArray();
 
+        Log::info('Found student IDs:', ['count' => count($studentIds), 'ids' => $studentIds]);
+
         // If no students found, return empty pagination
         if (empty($studentIds)) {
+            Log::info('No students found, returning empty pagination');
             return response()->json([
                 'success' => true,
                 'data' => new \Illuminate\Pagination\LengthAwarePaginator(
@@ -254,6 +269,8 @@ public function getStudentsOptimized(Request $request)
             ->orderBy('studentRegistration.created_at', 'desc')
             ->get();
 
+        Log::info('Raw students fetched:', ['count' => $students->count()]);
+
         // Group by student ID to handle any remaining duplicates
         $groupedStudents = $students->groupBy('id')->map(function($group) {
             return $group->first();
@@ -268,70 +285,151 @@ public function getStudentsOptimized(Request $request)
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        // Process each student to add calculated fields
-        $paginatedData->getCollection()->transform(function($student) {
-            // Calculate age if dateofbirth exists
-            $age = null;
-            if ($student->dateofbirth) {
-                $dob = new \Carbon\Carbon($student->dateofbirth);
-                $age = $dob->age;
-            }
+        // Process each student to add calculated fields with robust error handling
+        $processedStudents = $paginatedData->getCollection()->map(function($student) {
+            try {
+                // Calculate age if dateofbirth exists and is valid
+                $age = null;
+                if ($student->dateofbirth &&
+                    $student->dateofbirth !== 'N/A' &&
+                    !str_contains($student->dateofbirth, 'N/A') &&
+                    !str_contains($student->dateofbirth, '0000-00-00')) {
+                    try {
+                        $dob = new \Carbon\Carbon($student->dateofbirth);
+                        $age = $dob->age;
+                    } catch (\Exception $e) {
+                        Log::warning('Could not parse date of birth for student ID ' . $student->id . ': ' . $student->dateofbirth);
+                        $age = null;
+                    }
+                }
 
-            return [
-                'id' => $student->id,
-                'admissionNo' => $student->admissionNo,
-                'admission_date' => $student->admission_date,
-                'admissionYear' => $student->admissionYear,
-                'firstname' => $student->firstname,
-                'lastname' => $student->lastname,
-                'othername' => $student->othername,
-                'fullname' => trim($student->lastname . ' ' . $student->firstname . ' ' . $student->othername),
-                'gender' => $student->gender,
-                'statusId' => $student->statusId,
-                'student_status' => $student->student_status,
-                'created_at' => $student->created_at,
-                'updated_at' => $student->updated_at,
-                'picture' => $student->picture,
-                'schoolclass' => $student->schoolclass,
-                'arm' => $student->arm,
-                'schoolclassid' => $student->schoolclassid,
-                'age' => $age,
-                'dateofbirth' => $student->dateofbirth,
-                'title' => $student->title,
-                'placeofbirth' => $student->placeofbirth,
-                'phone_number' => $student->phone_number,
-                'email' => $student->email,
-                'permanent_address' => $student->home_address2,
-                'future_ambition' => $student->future_ambition,
-                'nationality' => $student->nationality,
-                'state' => $student->state,
-                'local' => $student->local,
-                'city' => $student->city,
-                'religion' => $student->religion,
-                'blood_group' => $student->blood_group,
-                'mother_tongue' => $student->mother_tongue,
-                'nin_number' => $student->nin_number,
-                'student_category' => $student->student_category,
-                'termid' => $student->termid,
-                'sessionid' => $student->sessionid,
-                'last_school' => $student->last_school,
-                'last_class' => $student->last_class,
-                'reason_for_leaving' => $student->reason_for_leaving,
-                // Parent fields
-                'father_name' => $student->father,
-                'father_title' => $student->father_title,
-                'father_phone' => $student->father_phone,
-                'father_occupation' => $student->father_occupation,
-                'father_city' => $student->father_city,
-                'mother_name' => $student->mother,
-                'mother_title' => $student->mother_title,
-                'mother_phone' => $student->mother_phone,
-                'parent_email' => $student->parent_email,
-                'parent_address' => $student->parent_address,
-                'office_address' => $student->office_address,
-                'school_house' => $student->school_house,
-            ];
+                // Format dates safely
+                $formattedDateOfBirth = null;
+                if ($student->dateofbirth &&
+                    $student->dateofbirth !== 'N/A' &&
+                    !str_contains($student->dateofbirth, 'N/A') &&
+                    !str_contains($student->dateofbirth, '0000-00-00')) {
+                    try {
+                        $date = new \Carbon\Carbon($student->dateofbirth);
+                        $formattedDateOfBirth = $date->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $formattedDateOfBirth = null;
+                    }
+                }
+
+                $formattedCreatedAt = null;
+                if ($student->created_at &&
+                    $student->created_at !== 'N/A' &&
+                    !str_contains($student->created_at, 'N/A')) {
+                    try {
+                        $date = new \Carbon\Carbon($student->created_at);
+                        $formattedCreatedAt = $date->format('Y-m-d H:i:s');
+                    } catch (\Exception $e) {
+                        $formattedCreatedAt = null;
+                    }
+                }
+
+                $formattedUpdatedAt = null;
+                if ($student->updated_at &&
+                    $student->updated_at !== 'N/A' &&
+                    !str_contains($student->updated_at, 'N/A')) {
+                    try {
+                        $date = new \Carbon\Carbon($student->updated_at);
+                        $formattedUpdatedAt = $date->format('Y-m-d H:i:s');
+                    } catch (\Exception $e) {
+                        $formattedUpdatedAt = null;
+                    }
+                }
+
+                $formattedAdmissionDate = null;
+                if ($student->admission_date &&
+                    $student->admission_date !== 'N/A' &&
+                    !str_contains($student->admission_date, 'N/A') &&
+                    !str_contains($student->admission_date, '0000-00-00')) {
+                    try {
+                        $date = new \Carbon\Carbon($student->admission_date);
+                        $formattedAdmissionDate = $date->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $formattedAdmissionDate = null;
+                    }
+                }
+
+                // Build the return array with safe values
+                return [
+                    'id' => $student->id ?? null,
+                    'admissionNo' => $student->admissionNo ?? null,
+                    'admission_date' => $formattedAdmissionDate,
+                    'admissionYear' => $student->admissionYear ?? null,
+                    'firstname' => $student->firstname ?? '',
+                    'lastname' => $student->lastname ?? '',
+                    'othername' => $student->othername ?? '',
+                    'fullname' => trim(($student->lastname ?? '') . ' ' . ($student->firstname ?? '') . ' ' . ($student->othername ?? '')),
+                    'gender' => $student->gender ?? null,
+                    'statusId' => $student->statusId ?? null,
+                    'student_status' => $student->student_status ?? null,
+                    'created_at' => $formattedCreatedAt,
+                    'updated_at' => $formattedUpdatedAt,
+                    'picture' => $student->picture ?? null,
+                    'schoolclass' => $student->schoolclass ?? null,
+                    'arm' => $student->arm ?? null,
+                    'schoolclassid' => $student->schoolclassid ?? null,
+                    'age' => $age,
+                    'dateofbirth' => $formattedDateOfBirth,
+                    'title' => $student->title ?? null,
+                    'placeofbirth' => $student->placeofbirth ?? null,
+                    'phone_number' => $student->phone_number ?? null,
+                    'email' => $student->email ?? null,
+                    'permanent_address' => $student->home_address2 ?? null,
+                    'future_ambition' => $student->future_ambition ?? null,
+                    'nationality' => $student->nationality ?? null,
+                    'state' => $student->state ?? null,
+                    'local' => $student->local ?? null,
+                    'city' => $student->city ?? null,
+                    'religion' => $student->religion ?? null,
+                    'blood_group' => $student->blood_group ?? null,
+                    'mother_tongue' => $student->mother_tongue ?? null,
+                    'nin_number' => $student->nin_number ?? null,
+                    'student_category' => $student->student_category ?? null,
+                    'termid' => $student->termid ?? null,
+                    'sessionid' => $student->sessionid ?? null,
+                    'last_school' => $student->last_school ?? null,
+                    'last_class' => $student->last_class ?? null,
+                    'reason_for_leaving' => $student->reason_for_leaving ?? null,
+                    // Parent fields
+                    'father_name' => $student->father ?? null,
+                    'father_title' => $student->father_title ?? null,
+                    'father_phone' => $student->father_phone ?? null,
+                    'father_occupation' => $student->father_occupation ?? null,
+                    'father_city' => $student->father_city ?? null,
+                    'mother_name' => $student->mother ?? null,
+                    'mother_title' => $student->mother_title ?? null,
+                    'mother_phone' => $student->mother_phone ?? null,
+                    'parent_email' => $student->parent_email ?? null,
+                    'parent_address' => $student->parent_address ?? null,
+                    'office_address' => $student->office_address ?? null,
+                    'school_house' => $student->school_house ?? null,
+                ];
+            } catch (\Exception $e) {
+                Log::error('Error processing student ID ' . ($student->id ?? 'unknown') . ': ' . $e->getMessage());
+                // Return a minimal safe array for this student
+                return [
+                    'id' => $student->id ?? null,
+                    'admissionNo' => $student->admissionNo ?? null,
+                    'firstname' => $student->firstname ?? '',
+                    'lastname' => $student->lastname ?? '',
+                    'fullname' => trim(($student->lastname ?? '') . ' ' . ($student->firstname ?? '')),
+                    'error' => 'Failed to process student data'
+                ];
+            }
         });
+
+        // Set the processed collection back to the paginator
+        $paginatedData->setCollection($processedStudents);
+
+        Log::info('getStudentsOptimized completed successfully', [
+            'total' => $paginatedData->total(),
+            'processed_count' => $processedStudents->count()
+        ]);
 
         return response()->json([
             'success' => true,
@@ -339,8 +437,8 @@ public function getStudentsOptimized(Request $request)
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('Error fetching optimized students: ' . $e->getMessage());
-        \Log::error($e->getTraceAsString());
+        Log::error('Error fetching optimized students: ' . $e->getMessage());
+        Log::error($e->getTraceAsString());
 
         return response()->json([
             'success' => false,
@@ -348,7 +446,6 @@ public function getStudentsOptimized(Request $request)
         ], 500);
     }
 }
-
     public function store(Request $request)
     {
         Log::debug('Creating new student', $request->all());
@@ -1203,8 +1300,8 @@ public function getStudentsOptimized(Request $request)
                 Studentpicture::where('studentid', $id)->delete();
                 Broadsheet::where('studentId', $id)->delete();
                 SubjectRegistrationStatus::where('studentId', $id)->delete();
-                Studenthouses::where('studentid', $id)->delete();
-                Studentpersonalityprofiles::where('studentid', $id)->delete();
+                Studenthouse::where('studentid', $id)->delete();
+                Studentpersonalityprofile::where('studentid', $id)->delete();
 
                 // Delete StudentCurrentTerm records
                 StudentCurrentTerm::where('studentId', $id)->delete();
@@ -2616,14 +2713,7 @@ public function getStudentsByClassAndSession(Request $request)
             'session_id' => $request->session_id
         ]);
 
-        // First, let's check if the class and session exist
-        $class = Schoolclass::find($request->class_id);
-        $session = Schoolsession::find($request->session_id);
-
-        Log::info('Class found:', ['id' => $class->id ?? null, 'name' => $class->schoolclass ?? 'Not found']);
-        Log::info('Session found:', ['id' => $session->id ?? null, 'name' => $session->session ?? 'Not found']);
-
-        // Build the query with explicit joins to see what's happening
+        // Build the query
         $query = Student::query()
             ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
             ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
@@ -2631,30 +2721,6 @@ public function getStudentsByClassAndSession(Request $request)
             ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
             ->where('studentclass.schoolclassid', $request->class_id)
             ->where('studentclass.sessionid', $request->session_id);
-
-        // Log the SQL query for debugging
-        $sql = $query->toSql();
-        $bindings = $query->getBindings();
-        Log::info('SQL Query:', ['sql' => $sql, 'bindings' => $bindings]);
-
-        // Get count first
-        $count = $query->count();
-        Log::info('Total students found:', ['count' => $count]);
-
-        if ($count === 0) {
-            Log::warning('No students found for this class/session combination');
-            return response()->json([
-                'success' => true,
-                'students' => [],
-                'stats' => [
-                    'total' => 0,
-                    'active' => 0,
-                    'inactive' => 0,
-                    'old_students' => 0,
-                    'new_students' => 0,
-                ]
-            ]);
-        }
 
         // Get the students
         $students = $query->select([
@@ -2668,6 +2734,8 @@ public function getStudentsByClassAndSession(Request $request)
             'studentRegistration.student_status',
             'studentRegistration.dateofbirth',
             'studentRegistration.created_at',
+            'studentRegistration.updated_at',
+            'studentRegistration.admission_date',
             'studentpicture.picture',
             'schoolclass.schoolclass',
             'schoolarm.arm',
@@ -2675,65 +2743,145 @@ public function getStudentsByClassAndSession(Request $request)
 
         Log::info('Students retrieved:', ['count' => $students->count()]);
 
-        // Log first student for debugging (if any)
-        if ($students->count() > 0) {
-            $firstStudent = $students->first();
-            Log::info('First student data:', [
-                'id' => $firstStudent->id,
-                'admissionNo' => $firstStudent->admissionNo,
-                'firstname' => $firstStudent->firstname,
-                'lastname' => $firstStudent->lastname,
-                'dateofbirth' => $firstStudent->dateofbirth,
-                'created_at' => $firstStudent->created_at,
-                'student_status' => $firstStudent->student_status,
-                'statusId' => $firstStudent->statusId,
-                'schoolclass' => $firstStudent->schoolclass,
-                'arm' => $firstStudent->arm,
-            ]);
+        // DEBUG: Check each student for problematic fields
+        $problematicRecords = [];
+        foreach ($students as $index => $student) {
+            $problems = [];
+
+            // Check dateofbirth
+            if ($student->dateofbirth && ($student->dateofbirth === 'N/A' || str_contains($student->dateofbirth, 'N/A'))) {
+                $problems['dateofbirth'] = $student->dateofbirth;
+            }
+
+            // Check created_at
+            if ($student->created_at && ($student->created_at === 'N/A' || str_contains($student->created_at, 'N/A'))) {
+                $problems['created_at'] = $student->created_at;
+            }
+
+            // Check updated_at
+            if ($student->updated_at && ($student->updated_at === 'N/A' || str_contains($student->updated_at, 'N/A'))) {
+                $problems['updated_at'] = $student->updated_at;
+            }
+
+            // Check admission_date
+            if ($student->admission_date && ($student->admission_date === 'N/A' || str_contains($student->admission_date, 'N/A'))) {
+                $problems['admission_date'] = $student->admission_date;
+            }
+
+            // If any problems found, log them
+            if (!empty($problems)) {
+                $problematicRecords[] = [
+                    'id' => $student->id,
+                    'admissionNo' => $student->admissionNo,
+                    'firstname' => $student->firstname,
+                    'lastname' => $student->lastname,
+                    'problems' => $problems
+                ];
+            }
         }
 
-        // Calculate stats
-        $stats = [
-            'total' => $students->count(),
-            'active' => $students->where('student_status', 'Active')->count(),
-            'inactive' => $students->where('student_status', 'Inactive')->count(),
-            'old_students' => $students->where('statusId', 1)->count(),
-            'new_students' => $students->where('statusId', 2)->count(),
-        ];
-
-        Log::info('Stats calculated:', $stats);
+        if (!empty($problematicRecords)) {
+            Log::warning('Found problematic records with N/A values:', $problematicRecords);
+        } else {
+            Log::info('No problematic records found with N/A values');
+        }
 
         // Process each student to ensure no N/A values in date fields
         $processedStudents = $students->map(function($student) {
-            // Handle date fields - ensure they're not N/A or invalid
-            if ($student->dateofbirth && $student->dateofbirth !== 'N/A' && $student->dateofbirth !== '') {
+            // Create a new stdClass to avoid model casting issues
+            $processed = new \stdClass();
+
+            // Copy all properties
+            $processed->id = $student->id;
+            $processed->admissionNo = $student->admissionNo;
+            $processed->firstname = $student->firstname;
+            $processed->lastname = $student->lastname;
+            $processed->othername = $student->othername;
+            $processed->gender = $student->gender;
+            $processed->statusId = $student->statusId;
+            $processed->student_status = $student->student_status;
+            $processed->picture = $student->picture;
+            $processed->schoolclass = $student->schoolclass;
+            $processed->arm = $student->arm;
+
+            // Handle dateofbirth - if it's N/A or invalid, set to null
+            if ($student->dateofbirth && $student->dateofbirth !== 'N/A' && !str_contains($student->dateofbirth, 'N/A')) {
                 try {
                     // Try to parse and format consistently
                     $date = new \Carbon\Carbon($student->dateofbirth);
-                    $student->dateofbirth = $date->format('Y-m-d');
+                    $processed->dateofbirth = $date->format('Y-m-d');
                 } catch (\Exception $e) {
                     Log::warning('Invalid dateofbirth for student ID ' . $student->id . ': ' . $student->dateofbirth);
-                    $student->dateofbirth = null;
+                    $processed->dateofbirth = null;
                 }
             } else {
-                $student->dateofbirth = null;
+                if ($student->dateofbirth) {
+                    Log::warning('N/A dateofbirth for student ID ' . $student->id . ': ' . $student->dateofbirth);
+                }
+                $processed->dateofbirth = null;
             }
 
-            if ($student->created_at && $student->created_at !== 'N/A' && $student->created_at !== '') {
+            // Handle created_at - if it's N/A or invalid, set to null
+            if ($student->created_at && $student->created_at !== 'N/A' && !str_contains($student->created_at, 'N/A')) {
                 try {
                     $date = new \Carbon\Carbon($student->created_at);
-                    $student->created_at = $date->format('Y-m-d H:i:s');
+                    $processed->created_at = $date->format('Y-m-d H:i:s');
                 } catch (\Exception $e) {
                     Log::warning('Invalid created_at for student ID ' . $student->id . ': ' . $student->created_at);
-                    $student->created_at = null;
+                    $processed->created_at = null;
                 }
             } else {
-                $student->created_at = null;
+                if ($student->created_at) {
+                    Log::warning('N/A created_at for student ID ' . $student->id . ': ' . $student->created_at);
+                }
+                $processed->created_at = null;
             }
 
-            return $student;
+            // Handle updated_at - if it's N/A or invalid, set to null
+            if ($student->updated_at && $student->updated_at !== 'N/A' && !str_contains($student->updated_at, 'N/A')) {
+                try {
+                    $date = new \Carbon\Carbon($student->updated_at);
+                    $processed->updated_at = $date->format('Y-m-d H:i:s');
+                } catch (\Exception $e) {
+                    Log::warning('Invalid updated_at for student ID ' . $student->id . ': ' . $student->updated_at);
+                    $processed->updated_at = null;
+                }
+            } else {
+                if ($student->updated_at) {
+                    Log::warning('N/A updated_at for student ID ' . $student->id . ': ' . $student->updated_at);
+                }
+                $processed->updated_at = null;
+            }
+
+            // Handle admission_date - if it's N/A or invalid, set to null
+            if ($student->admission_date && $student->admission_date !== 'N/A' && !str_contains($student->admission_date, 'N/A')) {
+                try {
+                    $date = new \Carbon\Carbon($student->admission_date);
+                    $processed->admission_date = $date->format('Y-m-d');
+                } catch (\Exception $e) {
+                    Log::warning('Invalid admission_date for student ID ' . $student->id . ': ' . $student->admission_date);
+                    $processed->admission_date = null;
+                }
+            } else {
+                if ($student->admission_date) {
+                    Log::warning('N/A admission_date for student ID ' . $student->id . ': ' . $student->admission_date);
+                }
+                $processed->admission_date = null;
+            }
+
+            return $processed;
         });
 
+        // Calculate stats using the processed data
+        $stats = [
+            'total' => $processedStudents->count(),
+            'active' => $processedStudents->where('student_status', 'Active')->count(),
+            'inactive' => $processedStudents->where('student_status', 'Inactive')->count(),
+            'old_students' => $processedStudents->where('statusId', 1)->count(),
+            'new_students' => $processedStudents->where('statusId', 2)->count(),
+        ];
+
+        Log::info('Stats calculated:', $stats);
         Log::info('=== getStudentsByClassAndSession COMPLETED SUCCESSFULLY ===');
 
         return response()->json([
@@ -2763,6 +2911,8 @@ public function getStudentsByClassAndSession(Request $request)
         ], 500);
     }
 }
+
+
 
 /**
  * Bulk update student status (active/inactive and old/new)
