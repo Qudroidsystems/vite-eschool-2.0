@@ -493,7 +493,6 @@
                                                 <label class="form-label required">Select Subject</label>
                                                 <select name="subject_id" id="addSubject" class="form-control" required>
                                                     <option value="" selected>Select Subject</option>
-                                                    <!-- Options will be loaded dynamically -->
                                                 </select>
                                             </div>
                                         </div>
@@ -649,7 +648,6 @@
                                                 <label class="form-label required">Select Subject</label>
                                                 <select name="subject_id" id="edit-subject_id" class="form-control" required>
                                                     <option value="" selected>Select Subject</option>
-                                                    <!-- Options will be loaded dynamically -->
                                                 </select>
                                             </div>
                                         </div>
@@ -701,6 +699,82 @@
                 </div>
             </div>
             @endcan
+
+            <!-- Copy Questions Modal -->
+            <div id="copyQuestionsModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">
+                                <i class="ph-copy ph-sm me-2"></i>Copy Questions to New Classes
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info mb-4">
+                                <i class="ph-info ph-sm me-2"></i>
+                                You have added <span id="new-classes-count" class="fw-bold">0</span> new class(es). Would you like to copy questions to these new exams?
+                            </div>
+
+                            <div class="card mb-3 border">
+                                <div class="card-header bg-light">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="copy-all-questions" checked>
+                                        <label class="form-check-label fw-medium" for="copy-all-questions">
+                                            Copy all questions from current exam
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="questions-loading" class="text-center py-3 d-none">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading questions...</span>
+                                        </div>
+                                        <p class="mt-2 text-muted">Loading questions...</p>
+                                    </div>
+
+                                    <div id="questions-list-container" class="d-none">
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="text-muted">
+                                                    <i class="ph-check-square ph-sm me-1"></i>
+                                                    <span id="selected-questions-count">0</span> of <span id="total-questions-count">0</span> questions selected
+                                                </span>
+                                                <div>
+                                                    <button type="button" class="btn btn-sm btn-link" id="select-all-questions">Select All</button>
+                                                    <button type="button" class="btn btn-sm btn-link" id="deselect-all-questions">Deselect All</button>
+                                                </div>
+                                            </div>
+                                            <div class="list-group" id="questions-list" style="max-height: 300px; overflow-y: auto;"></div>
+                                        </div>
+                                    </div>
+
+                                    <div id="no-questions-message" class="alert alert-warning mb-0 d-none">
+                                        <i class="ph-warning-circle ph-sm me-2"></i>
+                                        No questions found in the current exam. You can add questions later.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-warning mb-0">
+                                <i class="ph-info ph-sm me-2"></i>
+                                <strong>Note:</strong> Questions will be duplicated for each new class. They will be independent copies that you can edit separately.
+                            </div>
+
+                            <input type="hidden" id="source-exam-id" value="">
+                            <input type="hidden" id="new-class-ids" value="">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                                <i class="ph-x ph-sm me-1"></i>Skip & Continue
+                            </button>
+                            <button type="button" class="btn btn-primary" id="confirm-copy-questions">
+                                <i class="ph-check-circle ph-sm me-1"></i>Copy Selected Questions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <!-- End Page-content -->
     </div>
@@ -791,7 +865,63 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 500);
         });
     }
+
+    // Copy questions modal event listeners
+    document.getElementById('copy-all-questions').addEventListener('change', function() {
+        const questionsListContainer = document.getElementById('questions-list-container');
+        if (this.checked) {
+            questionsListContainer.classList.add('d-none');
+        } else {
+            questionsListContainer.classList.remove('d-none');
+        }
+    });
+
+    document.getElementById('select-all-questions').addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('#questions-list .question-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+        updateSelectedQuestionsCount();
+    });
+
+    document.getElementById('deselect-all-questions').addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('#questions-list .question-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+        updateSelectedQuestionsCount();
+    });
+
+    document.getElementById('confirm-copy-questions').addEventListener('click', function() {
+        const copyAll = document.getElementById('copy-all-questions').checked;
+        let selectedQuestions = [];
+
+        if (!copyAll) {
+            selectedQuestions = Array.from(document.querySelectorAll('#questions-list .question-checkbox:checked'))
+                .map(cb => cb.value);
+        }
+
+        // Close copy modal
+        const copyModal = bootstrap.Modal.getInstance(document.getElementById('copyQuestionsModal'));
+        if (copyModal) copyModal.hide();
+
+        // Execute the form submission with copy parameters
+        if (window.pendingEditFormData) {
+            executeEditFormSubmit(
+                window.pendingEditFormData.examId,
+                window.pendingEditFormData.formData,
+                true,
+                copyAll,
+                selectedQuestions
+            );
+            window.pendingEditFormData = null;
+        }
+    });
 });
+
+// Global variables
+let newClassesToCreate = [];
+let sourceExamId = null;
 
 function initModalFiltering() {
     // Add modal filtering
@@ -1003,6 +1133,13 @@ function loadExamForEdit(examId) {
     })
     .then(data => {
         if (data.success && data.exam) {
+            // Store original class IDs for comparison
+            window.originalClassIds = data.schoolclass_ids || [];
+
+            // Store source exam ID for copying questions
+            sourceExamId = data.exam.id;
+            document.getElementById('source-exam-id').value = data.exam.id;
+
             populateEditForm(data);
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
@@ -1059,7 +1196,7 @@ function populateEditForm(data) {
             if (subjectSelect && data.subject_id) {
                 subjectSelect.value = data.subject_id;
 
-                // Now load classes for this subject
+                // Now load classes for this subject with selection
                 if (data.subject_id) {
                     loadClassesForEditWithSelection(data.subject_id, data.schoolclass_ids || []);
                 }
@@ -1085,6 +1222,9 @@ function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
     })
     .then(data => {
         if (data.success && data.classes && data.classes.length > 0) {
+            // Get original class IDs from the exam group
+            const originalClassIds = window.originalClassIds || [];
+
             let html = '<div class="row">';
 
             data.classes.forEach(cls => {
@@ -1103,6 +1243,8 @@ function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
                             <label class="form-check-label" for="class_edit_${cls.id}">
                                 <span class="fw-medium">${cls.schoolclass}</span>
                                 ${cls.arm ? `<span class="text-muted">(${cls.arm})</span>` : ''}
+                                ${!originalClassIds.includes(classId) && isChecked ?
+                                    '<span class="badge bg-success ms-2">New</span>' : ''}
                             </label>
                         </div>
                     </div>`;
@@ -1111,14 +1253,9 @@ function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
             html += '</div>';
             container.innerHTML = html;
 
-            // Verify checkboxes are checked
+            // Track new classes that are checked
             setTimeout(() => {
-                selectedClassIds.forEach(classId => {
-                    const checkbox = document.getElementById(`class_edit_${classId}`);
-                    if (checkbox) {
-                        checkbox.checked = true;
-                    }
-                });
+                trackNewClasses(originalClassIds);
             }, 100);
         } else {
             container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
@@ -1128,6 +1265,21 @@ function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
         console.error('Error loading classes:', error);
         container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
     });
+}
+
+// Function to track which classes are new
+function trackNewClasses(originalClassIds) {
+    const checkboxes = document.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
+    newClassesToCreate = [];
+
+    checkboxes.forEach(cb => {
+        const classId = parseInt(cb.value);
+        if (!originalClassIds.includes(classId)) {
+            newClassesToCreate.push(classId);
+        }
+    });
+
+    console.log('New classes to create:', newClassesToCreate);
 }
 
 function formatDateForInput(date) {
@@ -1244,7 +1396,6 @@ function submitEditForm() {
     const form = document.getElementById('edit-exam-form');
     const examId = document.getElementById('edit-id-field').value;
     const submitBtn = document.getElementById('update-btn');
-    const originalText = submitBtn.textContent;
 
     if (!examId) {
         Swal.fire({
@@ -1279,8 +1430,47 @@ function submitEditForm() {
         return;
     }
 
+    // Check if there are new classes to create
+    const originalClassIds = window.originalClassIds || [];
+    const selectedClassIds = Array.from(classCheckboxes).map(cb => parseInt(cb.value));
+    const newClassIds = selectedClassIds.filter(id => !originalClassIds.includes(id));
+
+    if (newClassIds.length > 0 && sourceExamId) {
+        // Show copy questions modal first
+        newClassesToCreate = newClassIds;
+        showCopyQuestionsModal();
+
+        // Store form data to submit later
+        window.pendingEditFormData = {
+            examId: examId,
+            formData: new FormData(form)
+        };
+
+        return;
+    }
+
+    // If no new classes, submit directly
+    executeEditFormSubmit(examId, form);
+}
+
+// Execute the actual form submission
+function executeEditFormSubmit(examId, form, copyQuestions = false, copyAll = true, selectedQuestions = []) {
+    const submitBtn = document.getElementById('update-btn');
+    const originalText = submitBtn.textContent;
+
     const formData = new FormData(form);
     formData.append('_method', 'PUT');
+
+    // Add copy questions parameters
+    if (copyQuestions) {
+        formData.append('copy_questions', '1');
+        formData.append('copy_all_questions', copyAll ? '1' : '0');
+        if (!copyAll && selectedQuestions.length > 0) {
+            selectedQuestions.forEach(id => {
+                formData.append('selected_questions[]', id);
+            });
+        }
+    }
 
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
     submitBtn.disabled = true;
@@ -1293,9 +1483,7 @@ function submitEditForm() {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => {
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
             Swal.fire({
@@ -1337,6 +1525,117 @@ function submitEditForm() {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
     });
+}
+
+// Function to show copy questions modal
+function showCopyQuestionsModal() {
+    const modal = new bootstrap.Modal(document.getElementById('copyQuestionsModal'));
+
+    // Update new classes count
+    document.getElementById('new-classes-count').textContent = newClassesToCreate.length;
+    document.getElementById('new-class-ids').value = JSON.stringify(newClassesToCreate);
+
+    // Reset modal state
+    document.getElementById('copy-all-questions').checked = true;
+    document.getElementById('questions-list-container').classList.add('d-none');
+    document.getElementById('no-questions-message').classList.add('d-none');
+
+    // Load questions
+    if (sourceExamId) {
+        loadQuestionsForCopy(sourceExamId);
+    }
+
+    modal.show();
+}
+
+// Function to load questions for copying
+function loadQuestionsForCopy(examId) {
+    const questionsList = document.getElementById('questions-list');
+    const questionsLoading = document.getElementById('questions-loading');
+    const questionsListContainer = document.getElementById('questions-list-container');
+    const noQuestionsMessage = document.getElementById('no-questions-message');
+
+    questionsLoading.classList.remove('d-none');
+    questionsListContainer.classList.add('d-none');
+    noQuestionsMessage.classList.add('d-none');
+
+    fetch(`/exams/${examId}/questions`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        questionsLoading.classList.add('d-none');
+
+        if (data.success && data.questions && data.questions.length > 0) {
+            let html = '';
+            let typeBadges = {
+                'mcq': 'bg-info',
+                'true_false': 'bg-warning',
+                'short_answer': 'bg-success'
+            };
+
+            data.questions.forEach((question, index) => {
+                const typeClass = typeBadges[question.type] || 'bg-secondary';
+                const typeLabel = question.type.toUpperCase().replace('_', ' ');
+
+                html += `
+                    <div class="list-group-item list-group-item-action">
+                        <div class="form-check">
+                            <input class="form-check-input question-checkbox"
+                                   type="checkbox"
+                                   value="${question.id}"
+                                   id="copy_question_${question.id}"
+                                   checked>
+                            <label class="form-check-label w-100" for="copy_question_${question.id}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1 me-3">
+                                        <span class="fw-medium">Q${index + 1}:</span>
+                                        ${question.text}
+                                        <div class="mt-2">
+                                            <span class="badge ${typeClass} me-1">${typeLabel}</span>
+                                            <span class="badge bg-primary me-1">${question.marks} marks</span>
+                                            <span class="badge bg-secondary">${question.options_count} options</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+
+            questionsList.innerHTML = html;
+            document.getElementById('total-questions-count').textContent = data.questions.length;
+            document.getElementById('selected-questions-count').textContent = data.questions.length;
+            questionsListContainer.classList.remove('d-none');
+
+            // Add event listeners to checkboxes
+            document.querySelectorAll('#questions-list .question-checkbox').forEach(cb => {
+                cb.addEventListener('change', updateSelectedQuestionsCount);
+            });
+        } else {
+            noQuestionsMessage.classList.remove('d-none');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading questions:', error);
+        questionsLoading.classList.add('d-none');
+        noQuestionsMessage.classList.remove('d-none');
+        noQuestionsMessage.innerHTML = `
+            <i class="ph-warning-circle ph-sm me-2"></i>
+            Error loading questions. Please try again.
+        `;
+    });
+}
+
+// Update selected questions count
+function updateSelectedQuestionsCount() {
+    const checkboxes = document.querySelectorAll('#questions-list .question-checkbox:checked');
+    const count = checkboxes.length;
+    document.getElementById('selected-questions-count').textContent = count;
 }
 
 function deleteExam(examId) {
@@ -1552,6 +1851,32 @@ function toggleRemoveActions() {
 
 @keyframes spinner-border {
     to { transform: rotate(360deg); }
+}
+
+/* Modal styles */
+.modal-header.bg-primary {
+    background-color: #0d6efd !important;
+}
+
+.modal-header.bg-primary .btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+#questions-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+#questions-list .list-group-item {
+    padding: 0.75rem 1rem;
+}
+
+#questions-list .form-check {
+    margin-bottom: 0;
+}
+
+#questions-list .form-check-label {
+    cursor: pointer;
 }
 
 /* Responsive adjustments */

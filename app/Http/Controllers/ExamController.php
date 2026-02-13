@@ -264,97 +264,81 @@ class ExamController extends Controller
         abort(404);
     }
 
-    public function update(Request $request, string $id)
-    {
-        try {
-            \Log::info('Update request received:', [
-                'exam_id' => $id,
-                'data' => $request->all(),
-                'user_id' => auth()->id()
-            ]);
+   public function update(Request $request, string $id)
+{
+    try {
+        \Log::info('Update request received:', [
+            'exam_id' => $id,
+            'data' => $request->all(),
+            'user_id' => auth()->id()
+        ]);
 
-            $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
-            $validated = $request->validate([
-                'title'           => 'required|string|max:255',
-                'description'     => 'nullable|string',
-                'duration'        => 'required|integer|min:1',
-                'start_time'      => 'required|date',
-                'end_time'        => 'required|date|after:start_time',
-                'termid'          => 'required|integer|exists:schoolterm,id',
-                'session'         => 'required|integer|exists:schoolsession,id',
-                'subject_id'      => 'required|integer|exists:subject,id',
-                'schoolclass_ids' => 'required|array|min:1',
-                'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
-                'is_published'    => 'boolean|nullable',
-            ]);
+        $validated = $request->validate([
+            'title'           => 'required|string|max:255',
+            'description'     => 'nullable|string',
+            'duration'        => 'required|integer|min:1',
+            'start_time'      => 'required|date',
+            'end_time'        => 'required|date|after:start_time',
+            'termid'          => 'required|integer|exists:schoolterm,id',
+            'session'         => 'required|integer|exists:schoolsession,id',
+            'subject_id'      => 'required|integer|exists:subject,id',
+            'schoolclass_ids' => 'required|array|min:1',
+            'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
+            'is_published'    => 'boolean|nullable',
+            'copy_questions'  => 'boolean|nullable',
+            'copy_all_questions' => 'boolean|nullable',
+            'selected_questions' => 'nullable|array',
+            'selected_questions.*' => 'integer|exists:questions,id',
+        ]);
 
-            // Validate duration against start and end times
-            $startTime = strtotime($validated['start_time']);
-            $endTime = strtotime($validated['end_time']);
-            $durationMinutes = $validated['duration'];
-            $totalMinutes = round(($endTime - $startTime) / 60);
+        // Validate duration against start and end times
+        $startTime = strtotime($validated['start_time']);
+        $endTime = strtotime($validated['end_time']);
+        $durationMinutes = $validated['duration'];
+        $totalMinutes = round(($endTime - $startTime) / 60);
 
-            if ($durationMinutes > $totalMinutes) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Duration ({$durationMinutes} minutes) exceeds the time between start and end ({$totalMinutes} minutes). Please adjust.",
-                    'errors' => ['duration' => 'Duration exceeds available time']
-                ], 422);
-            }
+        if ($durationMinutes > $totalMinutes) {
+            return response()->json([
+                'success' => false,
+                'message' => "Duration ({$durationMinutes} minutes) exceeds the time between start and end ({$totalMinutes} minutes). Please adjust.",
+                'errors' => ['duration' => 'Duration exceeds available time']
+            ], 422);
+        }
 
-            $validated['is_published'] = $request->has('is_published');
-            $validated['staffId'] = $exam->staffId;
+        $validated['is_published'] = $request->has('is_published');
+        $validated['staffId'] = $exam->staffId;
 
-            \Log::info('Validated data:', $validated);
+        \Log::info('Validated data:', $validated);
 
-            // Get all exams in the original group
-            $originalGroupExams = Exam::where('staffId', $exam->staffId)
-                ->where('title', $exam->title)
-                ->where('subject_id', $exam->subject_id)
-                ->where('termid', $exam->termid)
-                ->where('session', $exam->session)
-                ->get();
+        // Get all exams in the original group
+        $originalGroupExams = Exam::where('staffId', $exam->staffId)
+            ->where('title', $exam->title)
+            ->where('subject_id', $exam->subject_id)
+            ->where('termid', $exam->termid)
+            ->where('session', $exam->session)
+            ->get();
 
-            // Get original class IDs
-            $originalClassIds = $originalGroupExams->pluck('schoolclass_id')->toArray();
-            $newClassIds = $validated['schoolclass_ids'];
+        // Get original class IDs
+        $originalClassIds = $originalGroupExams->pluck('schoolclass_id')->toArray();
+        $newClassIds = $validated['schoolclass_ids'];
 
-            \Log::info('Original class IDs:', $originalClassIds);
-            \Log::info('New class IDs:', $newClassIds);
+        \Log::info('Original class IDs:', $originalClassIds);
+        \Log::info('New class IDs:', $newClassIds);
 
-            // Update existing exams
-            $updatedCount = 0;
-            $createdCount = 0;
+        // Update existing exams
+        $updatedCount = 0;
+        $createdCount = 0;
+        $copiedQuestionsCount = 0;
 
-            // Update exams for classes that exist in both original and new
-            $classesToUpdate = array_intersect($originalClassIds, $newClassIds);
+        // Update exams for classes that exist in both original and new
+        $classesToUpdate = array_intersect($originalClassIds, $newClassIds);
 
-            foreach ($classesToUpdate as $classId) {
-                $existingExam = $originalGroupExams->where('schoolclass_id', $classId)->first();
-                if ($existingExam) {
-                    $existingExam->update([
-                        'title' => $validated['title'],
-                        'description' => $validated['description'],
-                        'duration' => $validated['duration'],
-                        'start_time' => $validated['start_time'],
-                        'end_time' => $validated['end_time'],
-                        'termid' => $validated['termid'],
-                        'session' => $validated['session'],
-                        'subject_id' => $validated['subject_id'],
-                        'is_published' => $validated['is_published']
-                    ]);
-                    $updatedCount++;
-                    \Log::info("Updated existing exam for class {$classId}");
-                }
-            }
-
-            // Create new exams for classes that are new
-            $classesToCreate = array_diff($newClassIds, $originalClassIds);
-
-            foreach ($classesToCreate as $classId) {
-                $newExam = Exam::create([
-                    'staffId' => $validated['staffId'],
+        foreach ($classesToUpdate as $classId) {
+            $existingExam = $originalGroupExams->where('schoolclass_id', $classId)->first();
+            if ($existingExam) {
+                $existingExam->update([
                     'title' => $validated['title'],
                     'description' => $validated['description'],
                     'duration' => $validated['duration'],
@@ -363,46 +347,207 @@ class ExamController extends Controller
                     'termid' => $validated['termid'],
                     'session' => $validated['session'],
                     'subject_id' => $validated['subject_id'],
-                    'schoolclass_id' => $classId,
                     'is_published' => $validated['is_published']
                 ]);
-                $createdCount++;
-                \Log::info("Created new exam for class {$classId}");
+                $updatedCount++;
+                \Log::info("Updated existing exam for class {$classId}");
             }
-
-            // Do NOT delete exams for removed classes - keep them as separate exams
-            // $classesToRemove = array_diff($originalClassIds, $newClassIds);
-            // We are NOT deleting exams anymore - they remain as separate exams
-
-            $message = "Exam updated successfully. ";
-            if ($updatedCount > 0) {
-                $message .= "Updated {$updatedCount} existing class" . ($updatedCount > 1 ? 'es' : '') . ". ";
-            }
-            if ($createdCount > 0) {
-                $message .= "Added {$createdCount} new class" . ($createdCount > 1 ? 'es' : '') . ". ";
-            }
-
-            \Log::info($message);
-
-            if ($request->ajax()) {
-                return response()->json(['success' => true, 'message' => $message]);
-            }
-
-            return redirect()->route('exams.index')->with('success', $message);
-        } catch (\Exception $e) {
-            \Log::error('Error updating exam: ' . $e->getMessage());
-
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'An error occurred while updating the exam. Please try again.',
-                    'error' => $e->getMessage()
-                ], 500);
-            }
-
-            return redirect()->back()->with('error', 'An error occurred while updating the exam.');
         }
+
+        // Create new exams for classes that are new
+        $classesToCreate = array_diff($newClassIds, $originalClassIds);
+
+        foreach ($classesToCreate as $classId) {
+            $newExam = Exam::create([
+                'staffId' => $validated['staffId'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'duration' => $validated['duration'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
+                'termid' => $validated['termid'],
+                'session' => $validated['session'],
+                'subject_id' => $validated['subject_id'],
+                'schoolclass_id' => $classId,
+                'is_published' => $validated['is_published']
+            ]);
+            $createdCount++;
+            \Log::info("Created new exam for class {$classId}");
+
+            // Copy questions to the new exam if requested
+            if ($request->has('copy_questions') && $request->copy_questions) {
+                $sourceExam = $exam; // Use the current exam as source
+
+                if ($request->has('copy_all_questions') && $request->copy_all_questions) {
+                    // Copy all questions from source exam
+                    $copiedCount = $this->copyQuestionsToExam($sourceExam->id, $newExam->id);
+                    $copiedQuestionsCount += $copiedCount;
+                    \Log::info("Copied {$copiedCount} questions to new exam for class {$classId}");
+                } elseif ($request->has('selected_questions') && !empty($request->selected_questions)) {
+                    // Copy only selected questions
+                    $copiedCount = $this->copySelectedQuestionsToExam($sourceExam->id, $newExam->id, $request->selected_questions);
+                    $copiedQuestionsCount += $copiedCount;
+                    \Log::info("Copied {$copiedCount} selected questions to new exam for class {$classId}");
+                }
+            }
+        }
+
+        $message = "Exam updated successfully. ";
+        if ($updatedCount > 0) {
+            $message .= "Updated {$updatedCount} existing class" . ($updatedCount > 1 ? 'es' : '') . ". ";
+        }
+        if ($createdCount > 0) {
+            $message .= "Added {$createdCount} new class" . ($createdCount > 1 ? 'es' : '') . ". ";
+            if ($copiedQuestionsCount > 0) {
+                $message .= "Copied {$copiedQuestionsCount} questions to new class" . ($createdCount > 1 ? 'es' : '') . ". ";
+            }
+        }
+
+        \Log::info($message);
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return redirect()->route('exams.index')->with('success', $message);
+    } catch (\Exception $e) {
+        \Log::error('Error updating exam: ' . $e->getMessage());
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while updating the exam. Please try again.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+        return redirect()->back()->with('error', 'An error occurred while updating the exam.');
     }
+}
+
+/**
+ * Copy all questions from source exam to target exam
+ */
+private function copyQuestionsToExam($sourceExamId, $targetExamId)
+{
+    $copiedCount = 0;
+
+    // Get all questions from source exam with their options
+    $questions = Question::with('options')
+        ->where('exam_id', $sourceExamId)
+        ->orderBy('order')
+        ->get();
+
+    foreach ($questions as $question) {
+        // Get next order number for target exam
+        $order = Question::where('exam_id', $targetExamId)->max('order') + 1;
+
+        // Create new question
+        $newQuestion = Question::create([
+            'exam_id' => $targetExamId,
+            'question_text' => $question->question_text,
+            'type' => $question->type,
+            'image' => $question->image,
+            'marks' => $question->marks,
+            'order' => $order,
+            'is_reusable' => $question->is_reusable,
+        ]);
+
+        // Copy options
+        foreach ($question->options as $option) {
+            $newQuestion->options()->create([
+                'option_text' => $option->option_text,
+                'is_correct' => $option->is_correct,
+                'label' => $option->label,
+            ]);
+        }
+
+        $copiedCount++;
+    }
+
+    return $copiedCount;
+}
+
+/**
+ * Copy selected questions from source exam to target exam
+ */
+private function copySelectedQuestionsToExam($sourceExamId, $targetExamId, $selectedQuestionIds)
+{
+    $copiedCount = 0;
+
+    // Get selected questions from source exam with their options
+    $questions = Question::with('options')
+        ->where('exam_id', $sourceExamId)
+        ->whereIn('id', $selectedQuestionIds)
+        ->orderBy('order')
+        ->get();
+
+    foreach ($questions as $question) {
+        // Get next order number for target exam
+        $order = Question::where('exam_id', $targetExamId)->max('order') + 1;
+
+        // Create new question
+        $newQuestion = Question::create([
+            'exam_id' => $targetExamId,
+            'question_text' => $question->question_text,
+            'type' => $question->type,
+            'image' => $question->image,
+            'marks' => $question->marks,
+            'order' => $order,
+            'is_reusable' => $question->is_reusable,
+        ]);
+
+        // Copy options
+        foreach ($question->options as $option) {
+            $newQuestion->options()->create([
+                'option_text' => $option->option_text,
+                'is_correct' => $option->is_correct,
+                'label' => $option->label,
+            ]);
+        }
+
+        $copiedCount++;
+    }
+
+    return $copiedCount;
+}
+
+/**
+ * Get questions for a specific exam to display in copy modal
+ */
+public function getExamQuestions($examId)
+{
+    try {
+        $exam = Exam::where('id', $examId)
+            ->where('staffId', auth()->user()->id)
+            ->firstOrFail();
+
+        $questions = Question::where('exam_id', $examId)
+            ->orderBy('order')
+            ->get()
+            ->map(function($question) {
+                return [
+                    'id' => $question->id,
+                    'text' => strip_tags($question->question_text),
+                    'type' => $question->type,
+                    'marks' => $question->marks,
+                    'options_count' => $question->options()->count(),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'questions' => $questions,
+            'exam_title' => $exam->title
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Error getting exam questions: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load questions'
+        ], 500);
+    }
+}
 
     public function destroy(string $id)
     {
