@@ -2602,9 +2602,6 @@ public function bulkUpdateCurrentTerm(Request $request)
 /**
  * Get students by class and session for status update
  */
-/**
- * Get students by class and session for status update
- */
 public function getStudentsByClassAndSession(Request $request)
 {
     try {
@@ -2613,6 +2610,20 @@ public function getStudentsByClassAndSession(Request $request)
             'session_id' => 'required|exists:schoolsession,id',
         ]);
 
+        Log::info('=== getStudentsByClassAndSession STARTED ===');
+        Log::info('Request params:', [
+            'class_id' => $request->class_id,
+            'session_id' => $request->session_id
+        ]);
+
+        // First, let's check if the class and session exist
+        $class = Schoolclass::find($request->class_id);
+        $session = Schoolsession::find($request->session_id);
+
+        Log::info('Class found:', ['id' => $class->id ?? null, 'name' => $class->schoolclass ?? 'Not found']);
+        Log::info('Session found:', ['id' => $session->id ?? null, 'name' => $session->session ?? 'Not found']);
+
+        // Build the query with explicit joins to see what's happening
         $query = Student::query()
             ->leftJoin('studentclass', 'studentclass.studentId', '=', 'studentRegistration.id')
             ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
@@ -2621,6 +2632,31 @@ public function getStudentsByClassAndSession(Request $request)
             ->where('studentclass.schoolclassid', $request->class_id)
             ->where('studentclass.sessionid', $request->session_id);
 
+        // Log the SQL query for debugging
+        $sql = $query->toSql();
+        $bindings = $query->getBindings();
+        Log::info('SQL Query:', ['sql' => $sql, 'bindings' => $bindings]);
+
+        // Get count first
+        $count = $query->count();
+        Log::info('Total students found:', ['count' => $count]);
+
+        if ($count === 0) {
+            Log::warning('No students found for this class/session combination');
+            return response()->json([
+                'success' => true,
+                'students' => [],
+                'stats' => [
+                    'total' => 0,
+                    'active' => 0,
+                    'inactive' => 0,
+                    'old_students' => 0,
+                    'new_students' => 0,
+                ]
+            ]);
+        }
+
+        // Get the students
         $students = $query->select([
             'studentRegistration.id',
             'studentRegistration.admissionNo',
@@ -2637,64 +2673,96 @@ public function getStudentsByClassAndSession(Request $request)
             'schoolarm.arm',
         ])->get();
 
-        // Format the students data to handle null values
-        $formattedStudents = $students->map(function($student) {
-            // Handle date of birth safely
-            $formattedDob = null;
-            if ($student->dateofbirth) {
-                try {
-                    $formattedDob = $student->dateofbirth instanceof \Carbon\Carbon
-                        ? $student->dateofbirth->format('Y-m-d')
-                        : date('Y-m-d', strtotime($student->dateofbirth));
-                } catch (\Exception $e) {
-                    $formattedDob = null;
-                }
-            }
+        Log::info('Students retrieved:', ['count' => $students->count()]);
 
-            return [
-                'id' => $student->id,
-                'admissionNo' => $student->admissionNo ?? 'N/A',
-                'firstname' => $student->firstname ?? '',
-                'lastname' => $student->lastname ?? '',
-                'othername' => $student->othername ?? '',
-                'fullname' => trim(($student->lastname ?? '') . ' ' . ($student->firstname ?? '') . ' ' . ($student->othername ?? '')),
-                'gender' => $student->gender ?? 'N/A',
-                'statusId' => $student->statusId,
-                'student_status' => $student->student_status ?? 'Inactive',
-                'dateofbirth' => $formattedDob,
-                'picture' => $student->picture ?? null,
-                'schoolclass' => $student->schoolclass ?? '',
-                'arm' => $student->arm ?? '',
-                'created_at' => $student->created_at ? $student->created_at->format('Y-m-d') : null,
-            ];
-        });
+        // Log first student for debugging (if any)
+        if ($students->count() > 0) {
+            $firstStudent = $students->first();
+            Log::info('First student data:', [
+                'id' => $firstStudent->id,
+                'admissionNo' => $firstStudent->admissionNo,
+                'firstname' => $firstStudent->firstname,
+                'lastname' => $firstStudent->lastname,
+                'dateofbirth' => $firstStudent->dateofbirth,
+                'created_at' => $firstStudent->created_at,
+                'student_status' => $firstStudent->student_status,
+                'statusId' => $firstStudent->statusId,
+                'schoolclass' => $firstStudent->schoolclass,
+                'arm' => $firstStudent->arm,
+            ]);
+        }
 
         // Calculate stats
         $stats = [
-            'total' => $formattedStudents->count(),
-            'active' => $formattedStudents->where('student_status', 'Active')->count(),
-            'inactive' => $formattedStudents->where('student_status', 'Inactive')->count(),
-            'old_students' => $formattedStudents->where('statusId', 1)->count(),
-            'new_students' => $formattedStudents->where('statusId', 2)->count(),
+            'total' => $students->count(),
+            'active' => $students->where('student_status', 'Active')->count(),
+            'inactive' => $students->where('student_status', 'Inactive')->count(),
+            'old_students' => $students->where('statusId', 1)->count(),
+            'new_students' => $students->where('statusId', 2)->count(),
         ];
+
+        Log::info('Stats calculated:', $stats);
+
+        // Process each student to ensure no N/A values in date fields
+        $processedStudents = $students->map(function($student) {
+            // Handle date fields - ensure they're not N/A or invalid
+            if ($student->dateofbirth && $student->dateofbirth !== 'N/A' && $student->dateofbirth !== '') {
+                try {
+                    // Try to parse and format consistently
+                    $date = new \Carbon\Carbon($student->dateofbirth);
+                    $student->dateofbirth = $date->format('Y-m-d');
+                } catch (\Exception $e) {
+                    Log::warning('Invalid dateofbirth for student ID ' . $student->id . ': ' . $student->dateofbirth);
+                    $student->dateofbirth = null;
+                }
+            } else {
+                $student->dateofbirth = null;
+            }
+
+            if ($student->created_at && $student->created_at !== 'N/A' && $student->created_at !== '') {
+                try {
+                    $date = new \Carbon\Carbon($student->created_at);
+                    $student->created_at = $date->format('Y-m-d H:i:s');
+                } catch (\Exception $e) {
+                    Log::warning('Invalid created_at for student ID ' . $student->id . ': ' . $student->created_at);
+                    $student->created_at = null;
+                }
+            } else {
+                $student->created_at = null;
+            }
+
+            return $student;
+        });
+
+        Log::info('=== getStudentsByClassAndSession COMPLETED SUCCESSFULLY ===');
 
         return response()->json([
             'success' => true,
-            'students' => $formattedStudents,
+            'students' => $processedStudents,
             'stats' => $stats
         ]);
 
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        Log::error('Validation error in getStudentsByClassAndSession:', [
+            'errors' => $e->errors(),
+            'message' => $e->getMessage()
+        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed: ' . json_encode($e->errors()),
+            'errors' => $e->errors()
+        ], 422);
     } catch (\Exception $e) {
-        Log::error('Error fetching students by class/session: ' . $e->getMessage());
-        Log::error($e->getTraceAsString());
+        Log::error('Error in getStudentsByClassAndSession: ' . $e->getMessage());
+        Log::error('Stack trace: ' . $e->getTraceAsString());
 
         return response()->json([
             'success' => false,
-            'message' => 'Failed to fetch students: ' . $e->getMessage()
+            'message' => 'Failed to fetch students: ' . $e->getMessage(),
+            'error_detail' => config('app.debug') ? $e->getTraceAsString() : null
         ], 500);
     }
 }
-
 
 /**
  * Bulk update student status (active/inactive and old/new)
@@ -2702,6 +2770,9 @@ public function getStudentsByClassAndSession(Request $request)
 public function bulkUpdateStatus(Request $request)
 {
     try {
+        Log::info('=== bulkUpdateStatus STARTED ===');
+        Log::info('Request data:', $request->all());
+
         $request->validate([
             'student_ids' => 'required|array',
             'student_ids.*' => 'exists:studentRegistration,id',
@@ -2709,26 +2780,58 @@ public function bulkUpdateStatus(Request $request)
             'value' => 'required'
         ]);
 
-        DB::beginTransaction();
-
         $studentIds = $request->student_ids;
         $updateType = $request->update_type;
         $value = $request->value;
 
+        Log::info('Update params:', [
+            'student_ids' => $studentIds,
+            'update_type' => $updateType,
+            'value' => $value,
+            'count' => count($studentIds)
+        ]);
+
+        // Verify each student exists
+        $existingStudents = Student::whereIn('id', $studentIds)->pluck('id')->toArray();
+        $missingStudents = array_diff($studentIds, $existingStudents);
+
+        if (!empty($missingStudents)) {
+            Log::warning('Some student IDs not found:', ['missing' => $missingStudents]);
+        }
+
+        DB::beginTransaction();
+
         $updated = 0;
 
         if ($updateType === 'activity_status') {
-            // Update student_status (Active/Inactive)
+            // Validate value
+            if (!in_array($value, ['Active', 'Inactive'])) {
+                throw new \Exception('Invalid activity status value: ' . $value);
+            }
+
+            Log::info('Updating activity status to: ' . $value);
             $updated = Student::whereIn('id', $studentIds)
                 ->update(['student_status' => $value]);
+
+            Log::info('Activity status update result:', ['updated_count' => $updated]);
         } else {
-            // Update statusId (1=Old, 2=New)
+            // Validate value
+            if (!in_array($value, ['old', 'new'])) {
+                throw new \Exception('Invalid student type value: ' . $value);
+            }
+
             $statusId = $value === 'old' ? 1 : 2;
+            Log::info('Updating student type to: ' . $value . ' (statusId: ' . $statusId . ')');
+
             $updated = Student::whereIn('id', $studentIds)
                 ->update(['statusId' => $statusId]);
+
+            Log::info('Student type update result:', ['updated_count' => $updated]);
         }
 
         DB::commit();
+
+        Log::info('=== bulkUpdateStatus COMPLETED SUCCESSFULLY ===');
 
         return response()->json([
             'success' => true,
@@ -2736,16 +2839,29 @@ public function bulkUpdateStatus(Request $request)
             'updated_count' => $updated
         ]);
 
-    } catch (\Exception $e) {
+    } catch (\Illuminate\Validation\ValidationException $e) {
         DB::rollBack();
-        Log::error('Error bulk updating student status: ' . $e->getMessage());
+        Log::error('Validation error in bulkUpdateStatus:', [
+            'errors' => $e->errors(),
+            'message' => $e->getMessage()
+        ]);
         return response()->json([
             'success' => false,
-            'message' => 'Failed to update students: ' . $e->getMessage()
+            'message' => 'Validation failed: ' . json_encode($e->errors()),
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error in bulkUpdateStatus: ' . $e->getMessage());
+        Log::error('Stack trace: ' . $e->getTraceAsString());
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update students: ' . $e->getMessage(),
+            'error_detail' => config('app.debug') ? $e->getTraceAsString() : null
         ], 500);
     }
 }
-
 /**
  * Get students registered in a specific term/session (via StudentCurrentTerm)
  */

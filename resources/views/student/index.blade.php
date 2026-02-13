@@ -5614,76 +5614,84 @@ use Spatie\Permission\Models\Role;
             modal.show();
         },
 
-        renderStudentRows: function(students) {
-            if (!students || students.length === 0) {
-                return '<tr><td colspan="7" class="text-center py-4">No students found</td></tr>';
-            }
+       renderStudentRows: function(students) {
+    if (!students || students.length === 0) {
+        return '<tr><td colspan="7" class="text-center py-4">No students found</td></tr>';
+    }
 
-            return students.map(student => {
-                const activityBadge = student.student_status === 'Active'
-                    ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>'
-                    : '<span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>';
+    return students.map(student => {
+        // Safely handle potentially null/undefined values
+        const firstName = student.firstname || '';
+        const lastName = student.lastname || '';
+        const otherName = student.othername || '';
+        const admissionNo = student.admissionNo || 'N/A';
+        const schoolClass = student.schoolclass || '';
+        const arm = student.arm || '';
 
-                const typeBadge = student.statusId == 2
-                    ? '<span class="badge bg-warning text-dark"><i class="fas fa-star me-1"></i>New</span>'
-                    : '<span class="badge bg-secondary"><i class="fas fa-history me-1"></i>Old</span>';
+        const activityBadge = student.student_status === 'Active'
+            ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>'
+            : '<span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>';
 
-                return `
-                    <tr>
-                        <td>
-                            <div class="form-check">
-                                <input class="form-check-input student-status-checkbox" type="checkbox"
-                                       value="${student.id}" data-student-id="${student.id}">
-                            </div>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm me-2">
-                                    <span class="avatar-title rounded-circle bg-primary text-white">
-                                        ${student.firstname?.charAt(0) || ''}${student.lastname?.charAt(0) || ''}
-                                    </span>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0">${Utils.escapeHtml(student.lastname || '')} ${Utils.escapeHtml(student.firstname || '')}</h6>
-                                    <small class="text-muted">${Utils.escapeHtml(student.othername || '')}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td><span class="fw-semibold">${Utils.escapeHtml(student.admissionNo || 'N/A')}</span></td>
-                        <td>${Utils.escapeHtml(student.schoolclass || '')} ${Utils.escapeHtml(student.arm || '')}</td>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                ${activityBadge}
-                                <button class="btn btn-sm btn-outline-success toggle-activity"
-                                        data-student-id="${student.id}"
-                                        data-current="${student.student_status}"
-                                        onclick="BulkStatusManager.toggleIndividualStatus(this, 'activity')">
-                                    <i class="fas fa-exchange-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                ${typeBadge}
-                                <button class="btn btn-sm btn-outline-warning toggle-type"
-                                        data-student-id="${student.id}"
-                                        data-current="${student.statusId}"
-                                        onclick="BulkStatusManager.toggleIndividualStatus(this, 'type')">
-                                    <i class="fas fa-exchange-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-info view-student-btn"
-                                    data-student-id="${student.id}"
-                                    onclick="StudentManager.viewStudent(${student.id})">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        },
+        const typeBadge = student.statusId == 2
+            ? '<span class="badge bg-warning text-dark"><i class="fas fa-star me-1"></i>New</span>'
+            : '<span class="badge bg-secondary"><i class="fas fa-history me-1"></i>Old</span>';
+
+        return `
+            <tr>
+                <td>
+                    <div class="form-check">
+                        <input class="form-check-input student-status-checkbox" type="checkbox"
+                               value="${student.id}" data-student-id="${student.id}">
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm me-2">
+                            <span class="avatar-title rounded-circle bg-primary text-white">
+                                ${firstName.charAt(0) || ''}${lastName.charAt(0) || ''}
+                            </span>
+                        </div>
+                        <div>
+                            <h6 class="mb-0">${Utils.escapeHtml(lastName)} ${Utils.escapeHtml(firstName)}</h6>
+                            <small class="text-muted">${Utils.escapeHtml(otherName)}</small>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="fw-semibold">${Utils.escapeHtml(admissionNo)}</span></td>
+                <td>${Utils.escapeHtml(schoolClass)} ${Utils.escapeHtml(arm)}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        ${activityBadge}
+                        <button class="btn btn-sm btn-outline-success toggle-activity"
+                                data-student-id="${student.id}"
+                                data-current="${student.student_status || 'Inactive'}"
+                                onclick="BulkStatusManager.toggleIndividualStatus(this, 'activity')">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        ${typeBadge}
+                        <button class="btn btn-sm btn-outline-warning toggle-type"
+                                data-student-id="${student.id}"
+                                data-current="${student.statusId || 1}"
+                                onclick="BulkStatusManager.toggleIndividualStatus(this, 'type')">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-info view-student-btn"
+                            data-student-id="${student.id}"
+                            onclick="StudentManager.viewStudent(${student.id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+},
 
         initializeCheckboxes: function() {
             const selectAll = document.getElementById('selectAllCheckbox');
