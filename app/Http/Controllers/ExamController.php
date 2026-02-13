@@ -1350,177 +1350,231 @@ public function getExamQuestions($examId)
         }
     }
 
+
+
     /**
-     * Update student's exam score to assessment scoresheet
-     */
-    public function updateAssessmentScore(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'exam_id' => 'required|exists:exams,id',
-                'student_id' => 'required|exists:studentRegistration,id',
-                'assessment_id' => 'required|exists:assessments,id',
-                'sub_assessment_id' => 'nullable|exists:sub_assessments,id',
-                'score' => 'required|numeric|min:0',
-                'max_score' => 'required|numeric|min:0',
-                'is_sub' => 'boolean'
-            ]);
+ * Update student's exam score to assessment scoresheet
+ */
+public function updateAssessmentScore(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'exam_id' => 'required|exists:exams,id',
+            'student_id' => 'required|exists:studentRegistration,id',
+            'assessment_id' => 'required|exists:assessments,id',
+            'sub_assessment_id' => 'nullable|exists:sub_assessments,id',
+            'score' => 'required|numeric|min:0',
+            'max_score' => 'required|numeric|min:0',
+            'is_sub' => 'boolean'
+        ]);
 
-            $isSub = $validated['is_sub'] ?? false;
+        $isSub = $validated['is_sub'] ?? false;
 
-            // Validate score doesn't exceed max
-            if ($validated['score'] > $validated['max_score']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Score cannot exceed maximum of {$validated['max_score']}"
-                ], 422);
-            }
+        // Validate score doesn't exceed max
+        if ($validated['score'] > $validated['max_score']) {
+            return response()->json([
+                'success' => false,
+                'message' => "Score cannot exceed maximum of {$validated['max_score']}"
+            ], 422);
+        }
 
-            DB::beginTransaction();
+        DB::beginTransaction();
 
-            // Get the exam to find the subjectclass_id
-            $exam = Exam::with(['subject', 'schoolclass'])->find($validated['exam_id']);
+        // Get the exam to find the subjectclass_id
+        $exam = Exam::with(['subject', 'schoolclass'])->find($validated['exam_id']);
 
-            // Find or create the broadsheet record for this student
-            $broadsheetRecord = BroadsheetRecord::firstOrCreate(
+        if (!$exam) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Exam not found'
+            ], 404);
+        }
+
+        // Find or create the broadsheet record for this student
+        $broadsheetRecord = BroadsheetRecord::firstOrCreate(
+            [
+                'student_id' => $validated['student_id'],
+                'session_id' => $exam->session,
+                'subject_id' => $exam->subject_id,
+                'schoolclass_id' => $exam->schoolclass_id,
+            ],
+            [
+                'created_at' => now(),
+                'updated_at' => now()
+            ]
+        );
+
+        // Find the subjectclass for this subject and class
+        $subjectclass = Subjectclass::where('subjectid', $exam->subject_id)
+            ->where('schoolclassid', $exam->schoolclass_id)
+            ->first();
+
+        if (!$subjectclass) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Subject class configuration not found'
+            ], 404);
+        }
+
+        // Find or create the broadsheet - FIXED: Include broadSheet_record_id in both conditions and values
+        $broadsheet = Broadsheets::firstOrCreate(
+            [
+                'broadSheet_record_id' => $broadsheetRecord->id,
+                'subjectclass_id' => $subjectclass->id,
+                'staff_id' => auth()->user()->id,
+                'term_id' => $exam->termid,
+            ],
+            [
+                'broadSheet_record_id' => $broadsheetRecord->id,
+                'subjectclass_id' => $subjectclass->id,
+                'staff_id' => auth()->user()->id,
+                'term_id' => $exam->termid,
+                'total' => 0,
+                'bf' => 0,
+                'cum' => 0,
+                'grade' => null,
+                'remark' => null,
+                'cmin' => 0,
+                'cmax' => 0,
+                'avg' => 0,
+                'subject_position_class' => 0,
+                'vettedstatus' => 0,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]
+        );
+
+        // Update or create the assessment score
+        if ($isSub && !empty($validated['sub_assessment_id'])) {
+            // Update sub-assessment score
+            BroadsheetSubAssessmentScore::updateOrCreate(
                 [
-                    'student_id' => $validated['student_id'],
-                    'session_id' => $exam->session,
-                    'subject_id' => $exam->subject_id,
-                    'schoolclass_id' => $exam->schoolclass_id,
+                    'broadsheet_id' => $broadsheet->id,
+                    'sub_assessment_id' => $validated['sub_assessment_id'],
+                    'assessment_id' => $validated['assessment_id'],
                 ],
-                [
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]
+                ['score' => $validated['score']]
             );
 
-            // Find the subjectclass for this subject and class
-            $subjectclass = Subjectclass::where('subjectid', $exam->subject_id)
-                ->where('schoolclassid', $exam->schoolclass_id)
-                ->first();
+            // Recalculate parent assessment score (sum of sub-assessments normalized)
+            $assessment = Assessment::with('subAssessments')->find($validated['assessment_id']);
+            if ($assessment && $assessment->subAssessments->isNotEmpty()) {
+                $subMaxSum = $assessment->subAssessments->sum('max_score');
+                $subTotal = BroadsheetSubAssessmentScore::where('broadsheet_id', $broadsheet->id)
+                    ->where('assessment_id', $validated['assessment_id'])
+                    ->sum('score');
 
-            if (!$subjectclass) {
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Subject class configuration not found'
-                ], 404);
-            }
+                $normalizedScore = $subMaxSum > 0 ? ($subTotal / $subMaxSum) * $assessment->max_score : 0;
+                $normalizedScore = max(0, min($normalizedScore, $assessment->max_score));
 
-            // Find or create the broadsheet
-            $broadsheet = Broadsheets::firstOrCreate(
-                [
-                    'broadSheet_record_id' => $broadsheetRecord->id,
-                    'subjectclass_id' => $subjectclass->id,
-                    'staff_id' => auth()->user()->id,
-                    'term_id' => $exam->termid,
-                ],
-                [
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]
-            );
-
-            // Update or create the assessment score
-            if ($isSub && $validated['sub_assessment_id']) {
-                // Update sub-assessment score
-                BroadsheetSubAssessmentScore::updateOrCreate(
-                    [
-                        'broadsheet_id' => $broadsheet->id,
-                        'sub_assessment_id' => $validated['sub_assessment_id'],
-                        'assessment_id' => $validated['assessment_id'],
-                    ],
-                    ['score' => $validated['score']]
-                );
-
-                // Recalculate parent assessment score (sum of sub-assessments normalized)
-                $assessment = Assessment::with('subAssessments')->find($validated['assessment_id']);
-                if ($assessment && $assessment->subAssessments->isNotEmpty()) {
-                    $subMaxSum = $assessment->subAssessments->sum('max_score');
-                    $subTotal = BroadsheetSubAssessmentScore::where('broadsheet_id', $broadsheet->id)
-                        ->where('assessment_id', $validated['assessment_id'])
-                        ->sum('score');
-
-                    $normalizedScore = $subMaxSum > 0 ? ($subTotal / $subMaxSum) * $assessment->max_score : 0;
-                    $normalizedScore = max(0, min($normalizedScore, $assessment->max_score));
-
-                    BroadsheetAssessmentScore::updateOrCreate(
-                        [
-                            'broadsheet_id' => $broadsheet->id,
-                            'assessment_id' => $validated['assessment_id'],
-                        ],
-                        ['score' => $normalizedScore]
-                    );
-                }
-            } else {
-                // Update main assessment score directly
                 BroadsheetAssessmentScore::updateOrCreate(
                     [
                         'broadsheet_id' => $broadsheet->id,
                         'assessment_id' => $validated['assessment_id'],
                     ],
-                    ['score' => $validated['score']]
+                    ['score' => $normalizedScore]
                 );
             }
-
-            // Trigger recalculations for this student
-            $schoolclass = Schoolclass::with('classcategories')->find($exam->schoolclass_id);
-            $assessments = Assessment::whereIn('classcategory_id',
-                $schoolclass->classcategories->pluck('id')
-            )->with('subAssessments')->get();
-
-            // Refresh broadsheet with relationships
-            $broadsheet->load(['assessmentScores', 'subAssessmentScores']);
-
-            // Recompute totals using your existing method
-            $myScoreSheetController = app(MyScoreSheetController::class);
-            $myScoreSheetController->computeDynamicTotals(
-                collect([$broadsheet]),
-                $assessments,
-                $schoolclass,
-                $exam->termid,
-                $exam->session
-            );
-
-            // Update positions
-            $myScoreSheetController->updateClassMetrics(
-                $subjectclass->id,
-                auth()->user()->id,
-                $exam->termid,
-                $exam->session
-            );
-            $myScoreSheetController->updateSubjectPositions(
-                $subjectclass->id,
-                auth()->user()->id,
-                $exam->termid,
-                $exam->session
-            );
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Score successfully transferred to assessment sheet',
-                'data' => [
+        } else {
+            // Update main assessment score directly
+            BroadsheetAssessmentScore::updateOrCreate(
+                [
                     'broadsheet_id' => $broadsheet->id,
-                    'total' => $broadsheet->total,
-                    'cum' => $broadsheet->cum,
-                    'grade' => $broadsheet->grade
-                ]
-            ]);
+                    'assessment_id' => $validated['assessment_id'],
+                ],
+                ['score' => $validated['score']]
+            );
+        }
 
-        } catch (\Exception $e) {
+        // Get the school class with its categories
+        $schoolclass = Schoolclass::with('classcategories')->find($exam->schoolclass_id);
+
+        if (!$schoolclass) {
             DB::rollBack();
-            \Log::error('Error updating assessment score: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all()
-            ]);
-
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update score: ' . $e->getMessage()
-            ], 500);
+                'message' => 'School class not found'
+            ], 404);
         }
+
+        // Get all assessments for this class category
+        $assessments = collect();
+        if ($schoolclass->classcategories->isNotEmpty()) {
+            $categoryIds = $schoolclass->classcategories->pluck('id');
+            $assessments = Assessment::whereIn('classcategory_id', $categoryIds)
+                ->with('subAssessments')
+                ->get();
+        }
+
+        // Refresh broadsheet with relationships
+        $broadsheet->load(['assessmentScores', 'subAssessmentScores']);
+
+        // Recompute totals using your existing method
+        $myScoreSheetController = app(MyScoreSheetController::class);
+        $myScoreSheetController->computeDynamicTotals(
+            collect([$broadsheet]),
+            $assessments,
+            $schoolclass,
+            $exam->termid,
+            $exam->session
+        );
+
+        // Update positions
+        $myScoreSheetController->updateClassMetrics(
+            $subjectclass->id,
+            auth()->user()->id,
+            $exam->termid,
+            $exam->session
+        );
+        $myScoreSheetController->updateSubjectPositions(
+            $subjectclass->id,
+            auth()->user()->id,
+            $exam->termid,
+            $exam->session
+        );
+
+        // Refresh the broadsheet to get updated values
+        $broadsheet->refresh();
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Score successfully transferred to assessment sheet',
+            'data' => [
+                'broadsheet_id' => $broadsheet->id,
+                'total' => $broadsheet->total,
+                'cum' => $broadsheet->cum,
+                'grade' => $broadsheet->grade,
+                'bf' => $broadsheet->bf
+            ]
+        ]);
+
+    } catch (\Illuminate\Database\QueryException $e) {
+        DB::rollBack();
+        \Log::error('Database error updating assessment score: ' . $e->getMessage(), [
+            'sql' => $e->getSql(),
+            'bindings' => $e->getBindings(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Database error: ' . $e->getMessage()
+        ], 500);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error updating assessment score: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString(),
+            'request' => $request->all()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update score: ' . $e->getMessage()
+        ], 500);
     }
+}
 }
