@@ -892,6 +892,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelectedQuestionsCount();
     });
 
+    // Fix for confirm-copy-questions button
     document.getElementById('confirm-copy-questions').addEventListener('click', function() {
         const copyAll = document.getElementById('copy-all-questions').checked;
         let selectedQuestions = [];
@@ -901,20 +902,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 .map(cb => cb.value);
         }
 
-        // Close copy modal
-        const copyModal = bootstrap.Modal.getInstance(document.getElementById('copyQuestionsModal'));
-        if (copyModal) copyModal.hide();
+        // Get the modal instance and hide it
+        const copyModalEl = document.getElementById('copyQuestionsModal');
+        const copyModal = bootstrap.Modal.getInstance(copyModalEl);
+        if (copyModal) {
+            copyModal.hide();
+        } else {
+            // If instance doesn't exist, create one and hide
+            const newModal = new bootstrap.Modal(copyModalEl);
+            newModal.hide();
+        }
+
+        // Remove any existing backdrops
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
 
         // Execute the form submission with copy parameters
         if (window.pendingEditFormData) {
-            executeEditFormSubmit(
-                window.pendingEditFormData.examId,
-                window.pendingEditFormData.formData,
-                true,
-                copyAll,
-                selectedQuestions
-            );
-            window.pendingEditFormData = null;
+            // Small delay to ensure modal is fully hidden
+            setTimeout(() => {
+                executeEditFormSubmit(
+                    window.pendingEditFormData.examId,
+                    window.pendingEditFormData.formData,
+                    true,
+                    copyAll,
+                    selectedQuestions
+                );
+                window.pendingEditFormData = null;
+            }, 300);
         }
     });
 });
@@ -951,6 +968,21 @@ function initModalFiltering() {
                 document.getElementById('addClassContainer').innerHTML =
                     '<p class="text-muted text-center mb-0"><i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes</p>';
             }
+        });
+    }
+
+    // Edit modal filtering
+    const editTerm = document.getElementById('edit-termid');
+    const editSession = document.getElementById('edit-session');
+    const editSubject = document.getElementById('edit-subject_id');
+
+    if (editTerm && editSession && editSubject) {
+        editTerm.addEventListener('change', function() {
+            fetchFilteredSubjects(this.value, editSession.value, 'edit');
+        });
+
+        editSession.addEventListener('change', function() {
+            fetchFilteredSubjects(editTerm.value, this.value, 'edit');
         });
     }
 }
@@ -1015,8 +1047,10 @@ function fetchFilteredSubjects(termId, sessionId, mode = 'add') {
 
     // Show loading
     subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
-    document.getElementById(subjectContainer).innerHTML =
-        '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i>Loading subjects...</p>';
+    if (document.getElementById(subjectContainer)) {
+        document.getElementById(subjectContainer).innerHTML =
+            '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i>Loading subjects...</p>';
+    }
 
     // Build query parameters
     const params = new URLSearchParams();
@@ -1048,21 +1082,27 @@ function fetchFilteredSubjects(termId, sessionId, mode = 'add') {
             subjectSelect.innerHTML = options;
         } else {
             subjectSelect.innerHTML = '<option value="">No subjects found for selected term/session</option>';
-            document.getElementById(subjectContainer).innerHTML =
-                '<p class="text-muted text-center mb-0">No subjects available for the selected term/session</p>';
+            if (document.getElementById(subjectContainer)) {
+                document.getElementById(subjectContainer).innerHTML =
+                    '<p class="text-muted text-center mb-0">No subjects available for the selected term/session</p>';
+            }
         }
     })
     .catch(error => {
         console.error('Error fetching subjects:', error);
         subjectSelect.innerHTML = '<option value="">Error loading subjects</option>';
-        document.getElementById(subjectContainer).innerHTML =
-            '<p class="text-danger text-center mb-0">Error loading subjects. Please try again.</p>';
+        if (document.getElementById(subjectContainer)) {
+            document.getElementById(subjectContainer).innerHTML =
+                '<p class="text-danger text-center mb-0">Error loading subjects. Please try again.</p>';
+        }
     });
 }
 
 function loadClassesForSubject(subjectId, mode = 'add') {
     const containerId = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
     const container = document.getElementById(containerId);
+
+    if (!container) return;
 
     container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i> Loading classes...</p>';
 
@@ -1141,6 +1181,13 @@ function loadExamForEdit(examId) {
             document.getElementById('source-exam-id').value = data.exam.id;
 
             populateEditForm(data);
+
+            // Remove any existing modal backdrops
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
             editModal.show();
             Swal.close();
@@ -1207,6 +1254,8 @@ function populateEditForm(data) {
 
 function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
     const container = document.getElementById('editClassContainer');
+
+    if (!container) return;
 
     container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i> Loading classes...</p>';
 
@@ -1302,7 +1351,7 @@ function formatDateForInput(date) {
 function submitAddForm() {
     const form = document.getElementById('add-exam-form');
     const submitBtn = document.getElementById('add-btn');
-    const originalText = submitBtn.textContent;
+    const originalText = submitBtn.innerHTML;
 
     // Validate duration first
     if (!validateDuration()) {
@@ -1340,6 +1389,9 @@ function submitAddForm() {
         }
     })
     .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
         return response.json();
     })
     .then(data => {
@@ -1356,8 +1408,11 @@ function submitAddForm() {
                 form.reset();
 
                 // Reset class container
-                document.getElementById('addClassContainer').innerHTML =
-                    '<p class="text-muted text-center mb-0"><i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes</p>';
+                const addClassContainer = document.getElementById('addClassContainer');
+                if (addClassContainer) {
+                    addClassContainer.innerHTML =
+                        '<p class="text-muted text-center mb-0"><i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes</p>';
+                }
 
                 // Reload page
                 window.location.reload();
@@ -1382,12 +1437,12 @@ function submitAddForm() {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'An error occurred. Please try again.',
+            text: error.message || 'An error occurred. Please try again.',
             timer: 3000
         });
     })
     .finally(() => {
-        submitBtn.textContent = originalText;
+        submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     });
 }
@@ -1436,7 +1491,19 @@ function submitEditForm() {
     const newClassIds = selectedClassIds.filter(id => !originalClassIds.includes(id));
 
     if (newClassIds.length > 0 && sourceExamId) {
-        // Show copy questions modal first
+        // Hide edit modal first
+        const editModal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+        if (editModal) {
+            editModal.hide();
+        }
+
+        // Remove any existing backdrops
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+
+        // Show copy questions modal
         newClassesToCreate = newClassIds;
         showCopyQuestionsModal();
 
@@ -1453,10 +1520,10 @@ function submitEditForm() {
     executeEditFormSubmit(examId, form);
 }
 
-// Execute the actual form submission
+// Execute the actual form submission - FIXED
 function executeEditFormSubmit(examId, form, copyQuestions = false, copyAll = true, selectedQuestions = []) {
     const submitBtn = document.getElementById('update-btn');
-    const originalText = submitBtn.textContent;
+    const originalText = submitBtn.innerHTML;
 
     const formData = new FormData(form);
     formData.append('_method', 'PUT');
@@ -1475,6 +1542,12 @@ function executeEditFormSubmit(examId, form, copyQuestions = false, copyAll = tr
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
     submitBtn.disabled = true;
 
+    // Close the edit modal if it's open
+    const editModal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+    if (editModal) {
+        editModal.hide();
+    }
+
     fetch(`/exams/${examId}`, {
         method: 'POST',
         body: formData,
@@ -1483,7 +1556,12 @@ function executeEditFormSubmit(examId, form, copyQuestions = false, copyAll = tr
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             Swal.fire({
@@ -1493,8 +1571,6 @@ function executeEditFormSubmit(examId, form, copyQuestions = false, copyAll = tr
                 timer: 2000,
                 showConfirmButton: false
             }).then(() => {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
-                if (modal) modal.hide();
                 window.location.reload();
             });
         } else {
@@ -1509,6 +1585,13 @@ function executeEditFormSubmit(examId, form, copyQuestions = false, copyAll = tr
                 title: 'Error',
                 html: errorMsg,
                 timer: 5000
+            }).then(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+
+                // Reopen edit modal if there was an error
+                const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                editModal.show();
             });
         }
     })
@@ -1517,19 +1600,32 @@ function executeEditFormSubmit(examId, form, copyQuestions = false, copyAll = tr
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'An error occurred. Please try again.',
+            text: error.message || 'An error occurred. Please try again.',
             timer: 3000
+        }).then(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+
+            // Reopen edit modal if there was an error
+            const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+            editModal.show();
         });
-    })
-    .finally(() => {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
     });
 }
 
 // Function to show copy questions modal
 function showCopyQuestionsModal() {
-    const modal = new bootstrap.Modal(document.getElementById('copyQuestionsModal'));
+    // Ensure any existing modal backdrop is removed
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+
+    const copyModalEl = document.getElementById('copyQuestionsModal');
+    const copyModal = new bootstrap.Modal(copyModalEl, {
+        backdrop: 'static',
+        keyboard: false
+    });
 
     // Update new classes count
     document.getElementById('new-classes-count').textContent = newClassesToCreate.length;
@@ -1539,13 +1635,14 @@ function showCopyQuestionsModal() {
     document.getElementById('copy-all-questions').checked = true;
     document.getElementById('questions-list-container').classList.add('d-none');
     document.getElementById('no-questions-message').classList.add('d-none');
+    document.getElementById('questions-loading').classList.add('d-none');
 
     // Load questions
     if (sourceExamId) {
         loadQuestionsForCopy(sourceExamId);
     }
 
-    modal.show();
+    copyModal.show();
 }
 
 // Function to load questions for copying
@@ -1554,6 +1651,8 @@ function loadQuestionsForCopy(examId) {
     const questionsLoading = document.getElementById('questions-loading');
     const questionsListContainer = document.getElementById('questions-list-container');
     const noQuestionsMessage = document.getElementById('no-questions-message');
+
+    if (!questionsList || !questionsLoading || !questionsListContainer || !noQuestionsMessage) return;
 
     questionsLoading.classList.remove('d-none');
     questionsListContainer.classList.add('d-none');
@@ -1565,7 +1664,10 @@ function loadQuestionsForCopy(examId) {
             'Accept': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
     .then(data => {
         questionsLoading.classList.add('d-none');
 
@@ -1669,6 +1771,9 @@ function deleteExam(examId) {
                 }
             })
             .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
                 return response.json();
             })
             .then(data => {
@@ -1697,7 +1802,7 @@ function deleteExam(examId) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Failed to delete exam. Please try again.',
+                    text: error.message || 'Failed to delete exam. Please try again.',
                     timer: 3000
                 });
             });
@@ -1753,6 +1858,9 @@ function deleteMultiple() {
                 body: JSON.stringify({ ids: ids })
             })
             .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
                 return response.json();
             })
             .then(data => {
@@ -1781,7 +1889,7 @@ function deleteMultiple() {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Failed to delete exams. Please try again.',
+                    text: error.message || 'Failed to delete exams. Please try again.',
                     timer: 3000
                 });
             });
