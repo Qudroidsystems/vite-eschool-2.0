@@ -11,7 +11,7 @@
                         <h4 class="mb-sm-0">{{ $pagetitle }}</h4>
                         <div class="page-title-right">
                             <ol class="breadcrumb m-0">
-                                <li class="breadcrumb-item"><a href="{{ route('exams.index') }}">Exams</a></li>
+                                <li class="breadcrumb-item"><a href="{{ route('exams.index') }}">Examsddd</a></li>
                                 <li class="breadcrumb-item"><a href="{{ route('exams.index') }}">All Exams</a></li>
                                 <li class="breadcrumb-item active">Questions</li>
                             </ol>
