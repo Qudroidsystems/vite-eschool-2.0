@@ -514,10 +514,12 @@
                     <input type="hidden" name="question_id" id="question_id_field">
                     <input type="hidden" name="exam_id" id="exam_id_field" value="{{ $exam->id }}">
 
+                    <!-- Quill Editor for Question Text -->
                     <div class="mb-3">
                         <label for="question_text" class="form-label required">Question Text</label>
-                        <textarea name="question_text" id="question_text" class="form-control" rows="4" required placeholder="Enter your question here..."></textarea>
-                        <div class="form-text">Enter the main question text here.</div>
+                        <div id="question-text-editor" style="height: 200px;"></div>
+                        <textarea name="question_text" id="question_text" style="display: none;" required></textarea>
+                        <div class="form-text">Enter the main question text here. You can use formatting tools.</div>
                     </div>
 
                     <div class="row">
@@ -688,7 +690,8 @@
             <i class="ri-alert-line me-2"></i> Enter the correct answer for this short answer question
         </div>
         <div class="mb-3">
-            <textarea name="options[answer][option_text]" id="short_answer_text" class="form-control" rows="3" required placeholder="Enter the correct answer..."></textarea>
+            <div id="short-answer-editor" style="height: 100px;"></div>
+            <textarea name="options[answer][option_text]" id="short_answer_text" style="display: none;" required></textarea>
 
             <!-- Hidden radio button for short answer (always checked) -->
             <div style="display: none;">
@@ -718,6 +721,10 @@
         </div>
     </div>
 </div>
+
+<!-- Include Quill CSS and JS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
 <style>
 .question-card {
@@ -806,6 +813,11 @@
         transform: none !important;
     }
 }
+
+/* Quill Editor Styles */
+.ql-editor {
+    min-height: 150px;
+}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -814,6 +826,29 @@
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const examId = {{ $exam->id }};
+
+    // Initialize Quill editor for question text
+    window.questionQuill = new Quill('#question-text-editor', {
+        theme: 'snow',
+        placeholder: 'Enter your question here...',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'script': 'sub'}, { 'script': 'super' }],
+                [{ 'indent': '-1'}, { 'indent': '+1' }],
+                [{ 'size': ['small', false, 'large', 'huge'] }],
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'align': [] }],
+                ['clean']
+            ]
+        }
+    });
+
+    // Initialize Quill for short answer (will be initialized when needed)
+    window.shortAnswerQuill = null;
 
     // Initialize Bootstrap modal
     const questionModal = new bootstrap.Modal(document.getElementById('questionFormModal'));
@@ -832,7 +867,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     tableView.classList.add('d-none');
                     toggleViewBtn.innerHTML = '<i class="ph-list ph-sm me-1"></i> Switch to Table View';
                 } else {
-                    // Show Table View
+                    // Show Grid View
                     gridView.classList.add('d-none');
                     tableView.classList.remove('d-none');
                     toggleViewBtn.innerHTML = '<i class="ph-grid-four ph-sm me-1"></i> Switch to Card View';
@@ -849,6 +884,12 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('method-field').innerHTML = '';
             document.getElementById('question_id_field').value = '';
             document.getElementById('exam_id_field').value = examId;
+
+            // Clear Quill editor
+            if (window.questionQuill) {
+                window.questionQuill.setText('');
+            }
+
             questionModal.show();
         });
     });
@@ -881,23 +922,75 @@ document.addEventListener('DOMContentLoaded', function() {
         if (type === 'mcq') {
             const template = document.getElementById('mcq-options-template');
             container.appendChild(template.content.cloneNode(true));
+
+            // Destroy short answer quill if it exists
+            if (window.shortAnswerQuill) {
+                window.shortAnswerQuill = null;
+            }
         } else if (type === 'true_false') {
             const template = document.getElementById('tf-options-template');
             container.appendChild(template.content.cloneNode(true));
+
+            // Destroy short answer quill if it exists
+            if (window.shortAnswerQuill) {
+                window.shortAnswerQuill = null;
+            }
         } else if (type === 'short_answer') {
             const template = document.getElementById('sa-options-template');
             container.appendChild(template.content.cloneNode(true));
+
+            // Initialize Quill for short answer
+            setTimeout(() => {
+                if (document.getElementById('short-answer-editor')) {
+                    window.shortAnswerQuill = new Quill('#short-answer-editor', {
+                        theme: 'snow',
+                        placeholder: 'Enter the correct answer...',
+                        modules: {
+                            toolbar: [
+                                ['bold', 'italic', 'underline'],
+                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                ['clean']
+                            ]
+                        }
+                    });
+                }
+            }, 100);
         }
     });
 
     // Form submission
     document.getElementById('question-form').addEventListener('submit', function(e) {
         e.preventDefault();
+
+        // Update hidden textarea with Quill content
+        if (window.questionQuill) {
+            const questionText = window.questionQuill.root.innerHTML;
+            document.getElementById('question_text').value = questionText;
+        }
+
+        // Update short answer if type is short_answer
+        if (document.getElementById('type').value === 'short_answer' && window.shortAnswerQuill) {
+            const shortAnswerText = window.shortAnswerQuill.root.innerHTML;
+            document.getElementById('short_answer_text').value = shortAnswerText;
+        }
+
         saveQuestion(false);
     });
 
     // Save & Add Another
     document.getElementById('save-and-add-another-btn').addEventListener('click', function() {
+        // Update hidden textarea with Quill content
+        if (window.questionQuill) {
+            const questionText = window.questionQuill.root.innerHTML;
+            document.getElementById('question_text').value = questionText;
+        }
+
+        // Update short answer if type is short_answer
+        if (document.getElementById('type').value === 'short_answer' && window.shortAnswerQuill) {
+            const shortAnswerText = window.shortAnswerQuill.root.innerHTML;
+            document.getElementById('short_answer_text').value = shortAnswerText;
+        }
+
         saveQuestion(true);
     });
 
@@ -971,6 +1064,14 @@ function resetQuestionForm() {
     document.getElementById('method-field').innerHTML = '';
     document.getElementById('question_id_field').value = '';
     document.getElementById('is_reusable').checked = false;
+
+    // Clear Quill editors
+    if (window.questionQuill) {
+        window.questionQuill.setText('');
+    }
+    if (window.shortAnswerQuill) {
+        window.shortAnswerQuill = null;
+    }
 }
 
 function loadQuestionForEdit(questionId) {
@@ -1005,7 +1106,9 @@ function loadQuestionForEdit(questionId) {
             document.getElementById('question_id_field').value = questionId;
 
             // Populate basic fields
-            document.getElementById('question_text').value = data.question.question_text;
+            if (window.questionQuill) {
+                window.questionQuill.root.innerHTML = data.question.question_text;
+            }
             document.getElementById('type').value = data.question.type;
             document.getElementById('marks').value = data.question.marks;
             document.getElementById('is_reusable').checked = data.question.is_reusable;
@@ -1037,12 +1140,16 @@ function loadQuestionForEdit(questionId) {
                         }
                     });
                 } else if (data.question.type === 'short_answer') {
-                    // Populate Short Answer
-                    data.options.forEach(option => {
-                        if (option.is_correct) {
-                            document.getElementById('short_answer_text').value = option.option_text;
+                    // Populate Short Answer with Quill
+                    setTimeout(() => {
+                        if (window.shortAnswerQuill) {
+                            data.options.forEach(option => {
+                                if (option.is_correct) {
+                                    window.shortAnswerQuill.root.innerHTML = option.option_text;
+                                }
+                            });
                         }
-                    });
+                    }, 200);
                 }
 
                 // Show image preview if exists
@@ -1119,6 +1226,11 @@ function saveQuestion(andAddAnother = false) {
                     document.getElementById('exam_id_field').value = examId;
                     document.getElementById('modal-title-text').textContent = 'Add';
                     document.getElementById('method-field').innerHTML = '';
+
+                    // Clear Quill
+                    if (window.questionQuill) {
+                        window.questionQuill.setText('');
+                    }
                 } else {
                     // Close modal and reload
                     const modal = bootstrap.Modal.getInstance(document.getElementById('questionFormModal'));
