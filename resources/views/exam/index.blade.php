@@ -783,1021 +783,6 @@
 <!-- Include SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Initialize modal filtering
-    initModalFiltering();
-
-    // Edit button click handler
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.edit-exam-btn')) {
-            e.preventDefault();
-            const examId = e.target.closest('.edit-exam-btn').dataset.id;
-            if (examId) {
-                loadExamForEdit(examId);
-            }
-        }
-
-        if (e.target.closest('.delete-exam-btn')) {
-            e.preventDefault();
-            const examId = e.target.closest('.delete-exam-btn').dataset.id;
-            if (examId) {
-                deleteExam(examId);
-            }
-        }
-
-        // Check all functionality
-        if (e.target.id === 'checkAll') {
-            const checkboxes = document.querySelectorAll('.exam-checkbox');
-            checkboxes.forEach(cb => cb.checked = e.target.checked);
-            toggleRemoveActions();
-        }
-
-        // Individual checkbox change
-        if (e.target.classList.contains('exam-checkbox')) {
-            toggleRemoveActions();
-        }
-    });
-
-    // Form submissions
-    const addForm = document.getElementById('add-exam-form');
-    if (addForm) {
-        addForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            submitAddForm();
-        });
-
-        // Duration validation for add form
-        addForm.querySelectorAll('input[name="duration"], input[name="start_time"], input[name="end_time"]').forEach(input => {
-            input.addEventListener('change', validateDuration);
-        });
-    }
-
-    const editForm = document.getElementById('edit-exam-form');
-    if (editForm) {
-        editForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            submitEditForm();
-        });
-
-        // Duration validation for edit form
-        editForm.querySelectorAll('input[name="duration"], input[name="start_time"], input[name="end_time"]').forEach(input => {
-            input.addEventListener('change', validateEditDuration);
-        });
-    }
-
-    // Search functionality
-    const searchInput = document.querySelector('.search');
-    if (searchInput) {
-        let searchTimeout;
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                window.location.href = `{{ route('exams.index') }}?search=${encodeURIComponent(this.value)}`;
-            }, 500);
-        });
-    }
-
-    // Copy questions modal event listeners
-    document.getElementById('copy-all-questions').addEventListener('change', function() {
-        const questionsListContainer = document.getElementById('questions-list-container');
-        if (this.checked) {
-            questionsListContainer.classList.add('d-none');
-        } else {
-            questionsListContainer.classList.remove('d-none');
-        }
-    });
-
-    document.getElementById('select-all-questions').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.querySelectorAll('#questions-list .question-checkbox').forEach(cb => {
-            cb.checked = true;
-        });
-        updateSelectedQuestionsCount();
-    });
-
-    document.getElementById('deselect-all-questions').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.querySelectorAll('#questions-list .question-checkbox').forEach(cb => {
-            cb.checked = false;
-        });
-        updateSelectedQuestionsCount();
-    });
-
-    document.getElementById('confirm-copy-questions').addEventListener('click', function() {
-        const copyAll = document.getElementById('copy-all-questions').checked;
-        let selectedQuestions = [];
-
-        if (!copyAll) {
-            selectedQuestions = Array.from(document.querySelectorAll('#questions-list .question-checkbox:checked'))
-                .map(cb => cb.value);
-        }
-
-        // Close copy modal
-        const copyModal = bootstrap.Modal.getInstance(document.getElementById('copyQuestionsModal'));
-        if (copyModal) copyModal.hide();
-
-        // Execute the form submission with copy parameters
-        if (window.pendingEditFormData) {
-            executeEditFormSubmit(
-                window.pendingEditFormData.examId,
-                window.pendingEditFormData.formData,
-                true,
-                copyAll,
-                selectedQuestions
-            );
-            window.pendingEditFormData = null;
-        }
-    });
-});
-
-// Global variables
-let newClassesToCreate = [];
-let sourceExamId = null;
-
-function initModalFiltering() {
-    // Add modal filtering
-    const addTerm = document.getElementById('addTerm');
-    const addSession = document.getElementById('addSession');
-    const addSubject = document.getElementById('addSubject');
-
-    if (addTerm && addSession && addSubject) {
-        addTerm.addEventListener('change', function() {
-            fetchFilteredSubjects(this.value, addSession.value, 'add');
-        });
-
-        addSession.addEventListener('change', function() {
-            fetchFilteredSubjects(addTerm.value, this.value, 'add');
-        });
-
-        // Load all subjects initially
-        fetchFilteredSubjects('', '', 'add');
-    }
-
-    // Subject change listener for add modal
-    if (addSubject) {
-        addSubject.addEventListener('change', function() {
-            if (this.value) {
-                loadClassesForSubject(this.value, 'add');
-            } else {
-                document.getElementById('addClassContainer').innerHTML =
-                    '<p class="text-muted text-center mb-0"><i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes</p>';
-            }
-        });
-    }
-}
-
-// Function to validate duration against start and end times
-function validateDuration() {
-    const form = document.getElementById('add-exam-form');
-    const duration = parseInt(form.querySelector('input[name="duration"]').value) || 0;
-    const startTime = form.querySelector('input[name="start_time"]').value;
-    const endTime = form.querySelector('input[name="end_time"]').value;
-
-    if (duration && startTime && endTime) {
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        const totalMinutes = Math.round((end - start) / (1000 * 60));
-
-        const alertDiv = document.getElementById('duration-alert');
-        const alertText = document.getElementById('duration-alert-text');
-
-        if (duration > totalMinutes) {
-            alertText.textContent = `Duration (${duration} minutes) exceeds the time between start and end (${totalMinutes} minutes). Please adjust the duration or extend the end time.`;
-            alertDiv.classList.remove('d-none');
-            return false;
-        } else {
-            alertDiv.classList.add('d-none');
-            return true;
-        }
-    }
-    return true;
-}
-
-function validateEditDuration() {
-    const form = document.getElementById('edit-exam-form');
-    const duration = parseInt(form.querySelector('input[name="duration"]').value) || 0;
-    const startTime = form.querySelector('input[name="start_time"]').value;
-    const endTime = form.querySelector('input[name="end_time"]').value;
-
-    if (duration && startTime && endTime) {
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        const totalMinutes = Math.round((end - start) / (1000 * 60));
-
-        const alertDiv = document.getElementById('edit-duration-alert');
-        const alertText = document.getElementById('edit-duration-alert-text');
-
-        if (duration > totalMinutes) {
-            alertText.textContent = `Duration (${duration} minutes) exceeds the time between start and end (${totalMinutes} minutes). Please adjust the duration or extend the end time.`;
-            alertDiv.classList.remove('d-none');
-            return false;
-        } else {
-            alertDiv.classList.add('d-none');
-            return true;
-        }
-    }
-    return true;
-}
-
-// Function to fetch subjects based on term and session
-function fetchFilteredSubjects(termId, sessionId, mode = 'add') {
-    const subjectSelect = document.getElementById(mode === 'add' ? 'addSubject' : 'edit-subject_id');
-    const subjectContainer = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
-
-    // Show loading
-    subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
-    document.getElementById(subjectContainer).innerHTML =
-        '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i>Loading subjects...</p>';
-
-    // Build query parameters
-    const params = new URLSearchParams();
-    if (termId) params.append('term_id', termId);
-    if (sessionId) params.append('session_id', sessionId);
-
-    fetch(`/exams/filtered-subjects?${params.toString()}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    })
-    .then(data => {
-        if (data.subjects && data.subjects.length > 0) {
-            let options = '<option value="" selected>Select Subject</option>';
-
-            data.subjects.forEach(subject => {
-                options += `<option value="${subject.id}"
-                    data-termid="${subject.termid}"
-                    data-sessionid="${subject.sessionid}">
-                    ${subject.display_text}
-                </option>`;
-            });
-
-            subjectSelect.innerHTML = options;
-        } else {
-            subjectSelect.innerHTML = '<option value="">No subjects found for selected term/session</option>';
-            document.getElementById(subjectContainer).innerHTML =
-                '<p class="text-muted text-center mb-0">No subjects available for the selected term/session</p>';
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching subjects:', error);
-        subjectSelect.innerHTML = '<option value="">Error loading subjects</option>';
-        document.getElementById(subjectContainer).innerHTML =
-            '<p class="text-danger text-center mb-0">Error loading subjects. Please try again.</p>';
-    });
-}
-
-function loadClassesForSubject(subjectId, mode = 'add') {
-    const containerId = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
-    const container = document.getElementById(containerId);
-
-    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i> Loading classes...</p>';
-
-    fetch(`/exams/subject-classes/${subjectId}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    })
-    .then(data => {
-        if (data.success && data.classes && data.classes.length > 0) {
-            let html = '<div class="row">';
-
-            data.classes.forEach(cls => {
-                html += `
-                    <div class="col-md-6 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input class-checkbox" type="checkbox"
-                                   name="schoolclass_ids[]"
-                                   value="${cls.id}"
-                                   id="class_${mode}_${cls.id}">
-                            <label class="form-check-label" for="class_${mode}_${cls.id}">
-                                <span class="fw-medium">${cls.schoolclass}</span>
-                                ${cls.arm ? `<span class="text-muted">(${cls.arm})</span>` : ''}
-                            </label>
-                        </div>
-                    </div>`;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-        } else {
-            container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
-        }
-    })
-    .catch(error => {
-        console.error('Error loading classes:', error);
-        container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
-    });
-}
-
-function loadExamForEdit(examId) {
-    Swal.fire({
-        title: 'Loading...',
-        allowOutsideClick: false,
-        showConfirmButton: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-
-    fetch(`/exams/${examId}/edit`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success && data.exam) {
-            // Store original class IDs for comparison
-            window.originalClassIds = data.schoolclass_ids || [];
-
-            // Store source exam ID for copying questions
-            sourceExamId = data.exam.id;
-            document.getElementById('source-exam-id').value = data.exam.id;
-
-            populateEditForm(data);
-            const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-            editModal.show();
-            Swal.close();
-        } else {
-            throw new Error(data.message || 'Invalid response format');
-        }
-    })
-    .catch(error => {
-        console.error('Error loading exam:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to load exam data. Please try again.',
-            timer: 3000
-        });
-    });
-}
-
-function populateEditForm(data) {
-    const exam = data.exam;
-
-    // Basic fields
-    document.getElementById('edit-id-field').value = exam.id;
-    document.getElementById('edit-title').value = exam.title || '';
-    document.getElementById('edit-description').value = exam.description || '';
-    document.getElementById('edit-duration').value = exam.duration || '';
-
-    // Date fields - format for datetime-local input
-    if (exam.start_time) {
-        let startDate = new Date(exam.start_time);
-        document.getElementById('edit-start_time').value = formatDateForInput(startDate);
-    }
-
-    if (exam.end_time) {
-        let endDate = new Date(exam.end_time);
-        document.getElementById('edit-end_time').value = formatDateForInput(endDate);
-    }
-
-    // Select fields
-    document.getElementById('edit-termid').value = data.termid || '';
-    document.getElementById('edit-session').value = data.sessionid || '';
-    document.getElementById('edit-publishStatus').checked = exam.is_published == 1;
-
-    // Load subjects for the selected term and session
-    setTimeout(() => {
-        const termId = data.termid || '';
-        const sessionId = data.sessionid || '';
-        fetchFilteredSubjects(termId, sessionId, 'edit');
-
-        // Wait for subjects to load, then select the correct one
-        setTimeout(() => {
-            const subjectSelect = document.getElementById('edit-subject_id');
-            if (subjectSelect && data.subject_id) {
-                subjectSelect.value = data.subject_id;
-
-                // Now load classes for this subject with selection
-                if (data.subject_id) {
-                    loadClassesForEditWithSelection(data.subject_id, data.schoolclass_ids || []);
-                }
-            }
-        }, 500);
-    }, 100);
-}
-
-function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
-    const container = document.getElementById('editClassContainer');
-
-    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i> Loading classes...</p>';
-
-    fetch(`/exams/subject-classes/${subjectId}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    })
-    .then(data => {
-        if (data.success && data.classes && data.classes.length > 0) {
-            // Get original class IDs from the exam group
-            const originalClassIds = window.originalClassIds || [];
-
-            let html = '<div class="row">';
-
-            data.classes.forEach(cls => {
-                const classId = parseInt(cls.id);
-                const isChecked = selectedClassIds.some(id => parseInt(id) === classId);
-
-                html += `
-                    <div class="col-md-6 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input class-checkbox"
-                                   type="checkbox"
-                                   name="schoolclass_ids[]"
-                                   value="${cls.id}"
-                                   id="class_edit_${cls.id}"
-                                   ${isChecked ? 'checked' : ''}>
-                            <label class="form-check-label" for="class_edit_${cls.id}">
-                                <span class="fw-medium">${cls.schoolclass}</span>
-                                ${cls.arm ? `<span class="text-muted">(${cls.arm})</span>` : ''}
-                                ${!originalClassIds.includes(classId) && isChecked ?
-                                    '<span class="badge bg-success ms-2">New</span>' : ''}
-                            </label>
-                        </div>
-                    </div>`;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-
-            // Track new classes that are checked
-            setTimeout(() => {
-                trackNewClasses(originalClassIds);
-            }, 100);
-        } else {
-            container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
-        }
-    })
-    .catch(error => {
-        console.error('Error loading classes:', error);
-        container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
-    });
-}
-
-// Function to track which classes are new
-function trackNewClasses(originalClassIds) {
-    const checkboxes = document.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
-    newClassesToCreate = [];
-
-    checkboxes.forEach(cb => {
-        const classId = parseInt(cb.value);
-        if (!originalClassIds.includes(classId)) {
-            newClassesToCreate.push(classId);
-        }
-    });
-
-    console.log('New classes to create:', newClassesToCreate);
-}
-
-function formatDateForInput(date) {
-    if (!date || isNaN(date)) return '';
-
-    try {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    } catch (error) {
-        console.error('Date formatting error:', error);
-        return '';
-    }
-}
-
-function submitAddForm() {
-    const form = document.getElementById('add-exam-form');
-    const submitBtn = document.getElementById('add-btn');
-    const originalText = submitBtn.textContent;
-
-    // Validate duration first
-    if (!validateDuration()) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Invalid Duration',
-            text: 'Duration exceeds the time between start and end. Please adjust.',
-            timer: 3000
-        });
-        return;
-    }
-
-    // Validate class selection
-    const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
-    if (classCheckboxes.length === 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Please select at least one class.',
-            timer: 3000
-        });
-        return;
-    }
-
-    const formData = new FormData(form);
-
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
-    submitBtn.disabled = true;
-
-    fetch('{{ route('exams.store') }}', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        }
-    })
-    .then(response => {
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: data.message || 'Exam created successfully!',
-                timer: 2000,
-                showConfirmButton: false
-            }).then(() => {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addExamModal'));
-                if (modal) modal.hide();
-                form.reset();
-
-                // Reset class container
-                document.getElementById('addClassContainer').innerHTML =
-                    '<p class="text-muted text-center mb-0"><i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes</p>';
-
-                // Reload page
-                window.location.reload();
-            });
-        } else {
-            let errorMsg = 'An error occurred.';
-            if (data.errors) {
-                errorMsg = Object.values(data.errors).flat().join('<br>');
-            } else if (data.message) {
-                errorMsg = data.message;
-            }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                html: errorMsg,
-                timer: 5000
-            });
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'An error occurred. Please try again.',
-            timer: 3000
-        });
-    })
-    .finally(() => {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    });
-}
-
-function submitEditForm() {
-    const form = document.getElementById('edit-exam-form');
-    const examId = document.getElementById('edit-id-field').value;
-    const submitBtn = document.getElementById('update-btn');
-
-    if (!examId) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Invalid exam ID.',
-            timer: 3000
-        });
-        return;
-    }
-
-    // Validate duration first
-    if (!validateEditDuration()) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Invalid Duration',
-            text: 'Duration exceeds the time between start and end. Please adjust.',
-            timer: 3000
-        });
-        return;
-    }
-
-    // Validate class selection
-    const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
-    if (classCheckboxes.length === 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Please select at least one class.',
-            timer: 3000
-        });
-        return;
-    }
-
-    // Check if there are new classes to create
-    const originalClassIds = window.originalClassIds || [];
-    const selectedClassIds = Array.from(classCheckboxes).map(cb => parseInt(cb.value));
-    const newClassIds = selectedClassIds.filter(id => !originalClassIds.includes(id));
-
-    if (newClassIds.length > 0 && sourceExamId) {
-        // Show copy questions modal first
-        newClassesToCreate = newClassIds;
-        showCopyQuestionsModal();
-
-        // Store form data to submit later
-        window.pendingEditFormData = {
-            examId: examId,
-            formData: new FormData(form)
-        };
-
-        return;
-    }
-
-    // If no new classes, submit directly
-    executeEditFormSubmit(examId, form);
-}
-
-// Execute the actual form submission
-function executeEditFormSubmit(examId, form, copyQuestions = false, copyAll = true, selectedQuestions = []) {
-    const submitBtn = document.getElementById('update-btn');
-    const originalText = submitBtn.textContent;
-
-    const formData = new FormData(form);
-    formData.append('_method', 'PUT');
-
-    // Add copy questions parameters
-    if (copyQuestions) {
-        formData.append('copy_questions', '1');
-        formData.append('copy_all_questions', copyAll ? '1' : '0');
-        if (!copyAll && selectedQuestions.length > 0) {
-            selectedQuestions.forEach(id => {
-                formData.append('selected_questions[]', id);
-            });
-        }
-    }
-
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
-    submitBtn.disabled = true;
-
-    fetch(`/exams/${examId}`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: data.message || 'Exam updated successfully!',
-                timer: 2000,
-                showConfirmButton: false
-            }).then(() => {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
-                if (modal) modal.hide();
-                window.location.reload();
-            });
-        } else {
-            let errorMsg = 'An error occurred.';
-            if (data.errors) {
-                errorMsg = Object.values(data.errors).flat().join('<br>');
-            } else if (data.message) {
-                errorMsg = data.message;
-            }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                html: errorMsg,
-                timer: 5000
-            });
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'An error occurred. Please try again.',
-            timer: 3000
-        });
-    })
-    .finally(() => {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    });
-}
-
-// Function to show copy questions modal
-function showCopyQuestionsModal() {
-    const modal = new bootstrap.Modal(document.getElementById('copyQuestionsModal'));
-
-    // Update new classes count
-    document.getElementById('new-classes-count').textContent = newClassesToCreate.length;
-    document.getElementById('new-class-ids').value = JSON.stringify(newClassesToCreate);
-
-    // Reset modal state
-    document.getElementById('copy-all-questions').checked = true;
-    document.getElementById('questions-list-container').classList.add('d-none');
-    document.getElementById('no-questions-message').classList.add('d-none');
-
-    // Load questions
-    if (sourceExamId) {
-        loadQuestionsForCopy(sourceExamId);
-    }
-
-    modal.show();
-}
-
-// Function to load questions for copying
-function loadQuestionsForCopy(examId) {
-    const questionsList = document.getElementById('questions-list');
-    const questionsLoading = document.getElementById('questions-loading');
-    const questionsListContainer = document.getElementById('questions-list-container');
-    const noQuestionsMessage = document.getElementById('no-questions-message');
-
-    questionsLoading.classList.remove('d-none');
-    questionsListContainer.classList.add('d-none');
-    noQuestionsMessage.classList.add('d-none');
-
-    fetch(`/exams/${examId}/questions`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        questionsLoading.classList.add('d-none');
-
-        if (data.success && data.questions && data.questions.length > 0) {
-            let html = '';
-            let typeBadges = {
-                'mcq': 'bg-info',
-                'true_false': 'bg-warning',
-                'short_answer': 'bg-success'
-            };
-
-            data.questions.forEach((question, index) => {
-                const typeClass = typeBadges[question.type] || 'bg-secondary';
-                const typeLabel = question.type.toUpperCase().replace('_', ' ');
-
-                html += `
-                    <div class="list-group-item list-group-item-action">
-                        <div class="form-check">
-                            <input class="form-check-input question-checkbox"
-                                   type="checkbox"
-                                   value="${question.id}"
-                                   id="copy_question_${question.id}"
-                                   checked>
-                            <label class="form-check-label w-100" for="copy_question_${question.id}">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1 me-3">
-                                        <span class="fw-medium">Q${index + 1}:</span>
-                                        ${question.text}
-                                        <div class="mt-2">
-                                            <span class="badge ${typeClass} me-1">${typeLabel}</span>
-                                            <span class="badge bg-primary me-1">${question.marks} marks</span>
-                                            <span class="badge bg-secondary">${question.options_count} options</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                `;
-            });
-
-            questionsList.innerHTML = html;
-            document.getElementById('total-questions-count').textContent = data.questions.length;
-            document.getElementById('selected-questions-count').textContent = data.questions.length;
-            questionsListContainer.classList.remove('d-none');
-
-            // Add event listeners to checkboxes
-            document.querySelectorAll('#questions-list .question-checkbox').forEach(cb => {
-                cb.addEventListener('change', updateSelectedQuestionsCount);
-            });
-        } else {
-            noQuestionsMessage.classList.remove('d-none');
-        }
-    })
-    .catch(error => {
-        console.error('Error loading questions:', error);
-        questionsLoading.classList.add('d-none');
-        noQuestionsMessage.classList.remove('d-none');
-        noQuestionsMessage.innerHTML = `
-            <i class="ph-warning-circle ph-sm me-2"></i>
-            Error loading questions. Please try again.
-        `;
-    });
-}
-
-// Update selected questions count
-function updateSelectedQuestionsCount() {
-    const checkboxes = document.querySelectorAll('#questions-list .question-checkbox:checked');
-    const count = checkboxes.length;
-    document.getElementById('selected-questions-count').textContent = count;
-}
-
-function deleteExam(examId) {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "This will delete the exam and all associated questions!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Deleting...',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            fetch(`/exams/${examId}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                return response.json();
-            })
-            .then(data => {
-                Swal.close();
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Deleted!',
-                        text: data.message || 'Exam deleted successfully!',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        window.location.reload();
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.message || 'Failed to delete exam.',
-                        timer: 3000
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to delete exam. Please try again.',
-                    timer: 3000
-                });
-            });
-        }
-    });
-}
-
-function deleteMultiple() {
-    const checkedBoxes = document.querySelectorAll('.exam-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'No Selection',
-            text: 'Please select at least one exam to delete.',
-            timer: 3000
-        });
-        return;
-    }
-
-    const ids = Array.from(checkedBoxes)
-        .map(cb => cb.dataset.id)
-        .filter(id => id);
-
-    Swal.fire({
-        title: `Delete ${ids.length} exam(s)?`,
-        text: "This will delete all selected exams and their associated questions!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete them!',
-        cancelButtonText: 'Cancel',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Deleting...',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            fetch(`/exams/bulk-destroy`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ ids: ids })
-            })
-            .then(response => {
-                return response.json();
-            })
-            .then(data => {
-                Swal.close();
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Deleted!',
-                        text: data.message || 'Exams deleted successfully!',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        window.location.reload();
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.message || 'Failed to delete exams.',
-                        timer: 3000
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to delete exams. Please try again.',
-                    timer: 3000
-                });
-            });
-        }
-    });
-}
-
-function toggleRemoveActions() {
-    const removeActions = document.getElementById('remove-actions');
-    if (removeActions) {
-        const checkedBoxes = document.querySelectorAll('.exam-checkbox:checked');
-        removeActions.classList.toggle('d-none', checkedBoxes.length === 0);
-    }
-}
-</script>
-
 <style>
 .card-animate {
     transition: transform 0.3s ease;
@@ -1918,5 +903,1173 @@ function toggleRemoveActions() {
     }
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    // Initialize tooltips
+    try {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    } catch (e) {
+        console.warn('Tooltips could not be initialized:', e);
+    }
+
+    // Initialize Copy Questions Modal
+    let copyQuestionsModal;
+    const copyModalElement = document.getElementById('copyQuestionsModal');
+    if (copyModalElement) {
+        try {
+            copyQuestionsModal = new bootstrap.Modal(copyModalElement, {
+                backdrop: 'static',
+                keyboard: false
+            });
+        } catch (e) {
+            console.error('Error initializing copy questions modal:', e);
+        }
+    }
+
+    // Initialize modal filtering
+    initModalFiltering();
+
+    // Global variables
+    window.newClassesToCreate = [];
+    window.sourceExamId = null;
+    window.originalClassIds = [];
+
+    // Edit button click handler
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-exam-btn')) {
+            e.preventDefault();
+            const examId = e.target.closest('.edit-exam-btn').dataset.id;
+            if (examId) {
+                loadExamForEdit(examId);
+            }
+        }
+
+        if (e.target.closest('.delete-exam-btn')) {
+            e.preventDefault();
+            const examId = e.target.closest('.delete-exam-btn').dataset.id;
+            if (examId) {
+                deleteExam(examId);
+            }
+        }
+
+        // Check all functionality
+        if (e.target.id === 'checkAll') {
+            const checkboxes = document.querySelectorAll('.exam-checkbox');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+            toggleRemoveActions();
+        }
+
+        // Individual checkbox change
+        if (e.target.classList.contains('exam-checkbox')) {
+            toggleRemoveActions();
+        }
+    });
+
+    // Form submissions
+    const addForm = document.getElementById('add-exam-form');
+    if (addForm) {
+        addForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitAddForm();
+        });
+
+        // Duration validation for add form
+        addForm.querySelectorAll('input[name="duration"], input[name="start_time"], input[name="end_time"]').forEach(input => {
+            input.addEventListener('change', validateDuration);
+        });
+    }
+
+    const editForm = document.getElementById('edit-exam-form');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitEditForm();
+        });
+
+        // Duration validation for edit form
+        editForm.querySelectorAll('input[name="duration"], input[name="start_time"], input[name="end_time"]').forEach(input => {
+            input.addEventListener('change', validateEditDuration);
+        });
+    }
+
+    // Search functionality
+    const searchInput = document.querySelector('.search');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                window.location.href = `{{ route('exams.index') }}?search=${encodeURIComponent(this.value)}`;
+            }, 500);
+        });
+    }
+
+    // Copy questions modal event listeners
+    const copyAllCheckbox = document.getElementById('copy-all-questions');
+    if (copyAllCheckbox) {
+        copyAllCheckbox.addEventListener('change', function() {
+            const questionsListContainer = document.getElementById('questions-list-container');
+            if (questionsListContainer) {
+                if (this.checked) {
+                    questionsListContainer.classList.add('d-none');
+                } else {
+                    questionsListContainer.classList.remove('d-none');
+                }
+            }
+        });
+    }
+
+    const selectAllBtn = document.getElementById('select-all-questions');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('#questions-list .question-checkbox').forEach(cb => {
+                cb.checked = true;
+            });
+            updateSelectedQuestionsCount();
+        });
+    }
+
+    const deselectAllBtn = document.getElementById('deselect-all-questions');
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('#questions-list .question-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            updateSelectedQuestionsCount();
+        });
+    }
+
+    const confirmCopyBtn = document.getElementById('confirm-copy-questions');
+    if (confirmCopyBtn) {
+        confirmCopyBtn.addEventListener('click', function() {
+            const copyAll = document.getElementById('copy-all-questions').checked;
+            let selectedQuestions = [];
+
+            if (!copyAll) {
+                selectedQuestions = Array.from(document.querySelectorAll('#questions-list .question-checkbox:checked'))
+                    .map(cb => cb.value);
+            }
+
+            // Close copy modal
+            if (copyQuestionsModal) {
+                copyQuestionsModal.hide();
+            } else {
+                // Fallback
+                const modalElement = document.getElementById('copyQuestionsModal');
+                if (modalElement) {
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    if (modal) modal.hide();
+                }
+            }
+
+            // Execute the form submission with copy parameters
+            if (window.pendingEditFormData) {
+                executeEditFormSubmit(
+                    window.pendingEditFormData.examId,
+                    window.pendingEditFormData.formData,
+                    true,  // copyQuestions
+                    copyAll,  // copyAllQuestions
+                    selectedQuestions  // selectedQuestions
+                );
+                window.pendingEditFormData = null;
+            } else {
+                // If no pending form data, try to get it from the edit form
+                const editForm = document.getElementById('edit-exam-form');
+                const examId = document.getElementById('edit-id-field')?.value;
+
+                if (examId && editForm) {
+                    executeEditFormSubmit(
+                        examId,
+                        new FormData(editForm),
+                        true,
+                        copyAll,
+                        selectedQuestions
+                    );
+                }
+            }
+        });
+    }
+
+    // Skip & Continue button - just proceed without copying
+    const skipCopyBtn = document.querySelector('#copyQuestionsModal .btn-light');
+    if (skipCopyBtn) {
+        skipCopyBtn.addEventListener('click', function(e) {
+            if (window.pendingEditFormData) {
+                // Close modal and submit without copying
+                if (copyQuestionsModal) {
+                    copyQuestionsModal.hide();
+                }
+
+                executeEditFormSubmit(
+                    window.pendingEditFormData.examId,
+                    window.pendingEditFormData.formData,
+                    false, // don't copy questions
+                    true,  // not used when copyQuestions is false
+                    []     // not used when copyQuestions is false
+                );
+                window.pendingEditFormData = null;
+            }
+        });
+    }
+});
+
+// Global variables
+let newClassesToCreate = [];
+let sourceExamId = null;
+
+function initModalFiltering() {
+    // Add modal filtering
+    const addTerm = document.getElementById('addTerm');
+    const addSession = document.getElementById('addSession');
+    const addSubject = document.getElementById('addSubject');
+
+    if (addTerm && addSession && addSubject) {
+        addTerm.addEventListener('change', function() {
+            fetchFilteredSubjects(this.value, addSession.value, 'add');
+        });
+
+        addSession.addEventListener('change', function() {
+            fetchFilteredSubjects(addTerm.value, this.value, 'add');
+        });
+
+        // Load all subjects initially
+        fetchFilteredSubjects('', '', 'add');
+    }
+
+    // Subject change listener for add modal
+    if (addSubject) {
+        addSubject.addEventListener('change', function() {
+            if (this.value) {
+                loadClassesForSubject(this.value, 'add');
+            } else {
+                const container = document.getElementById('addClassContainer');
+                if (container) {
+                    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes</p>';
+                }
+            }
+        });
+    }
+}
+
+// Function to validate duration against start and end times
+function validateDuration() {
+    const form = document.getElementById('add-exam-form');
+    if (!form) return true;
+
+    const duration = parseInt(form.querySelector('input[name="duration"]')?.value) || 0;
+    const startTime = form.querySelector('input[name="start_time"]')?.value;
+    const endTime = form.querySelector('input[name="end_time"]')?.value;
+
+    if (duration && startTime && endTime) {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const totalMinutes = Math.round((end - start) / (1000 * 60));
+
+        const alertDiv = document.getElementById('duration-alert');
+        const alertText = document.getElementById('duration-alert-text');
+
+        if (duration > totalMinutes) {
+            if (alertText) alertText.textContent = `Duration (${duration} minutes) exceeds the time between start and end (${totalMinutes} minutes). Please adjust the duration or extend the end time.`;
+            if (alertDiv) alertDiv.classList.remove('d-none');
+            return false;
+        } else {
+            if (alertDiv) alertDiv.classList.add('d-none');
+            return true;
+        }
+    }
+    return true;
+}
+
+function validateEditDuration() {
+    const form = document.getElementById('edit-exam-form');
+    if (!form) return true;
+
+    const duration = parseInt(form.querySelector('input[name="duration"]')?.value) || 0;
+    const startTime = form.querySelector('input[name="start_time"]')?.value;
+    const endTime = form.querySelector('input[name="end_time"]')?.value;
+
+    if (duration && startTime && endTime) {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const totalMinutes = Math.round((end - start) / (1000 * 60));
+
+        const alertDiv = document.getElementById('edit-duration-alert');
+        const alertText = document.getElementById('edit-duration-alert-text');
+
+        if (duration > totalMinutes) {
+            if (alertText) alertText.textContent = `Duration (${duration} minutes) exceeds the time between start and end (${totalMinutes} minutes). Please adjust the duration or extend the end time.`;
+            if (alertDiv) alertDiv.classList.remove('d-none');
+            return false;
+        } else {
+            if (alertDiv) alertDiv.classList.add('d-none');
+            return true;
+        }
+    }
+    return true;
+}
+
+// Function to fetch subjects based on term and session
+function fetchFilteredSubjects(termId, sessionId, mode = 'add') {
+    const subjectSelect = document.getElementById(mode === 'add' ? 'addSubject' : 'edit-subject_id');
+    const subjectContainer = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
+
+    const containerElement = document.getElementById(subjectContainer);
+    if (!subjectSelect || !containerElement) return;
+
+    // Show loading
+    subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
+    containerElement.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i>Loading subjects...</p>';
+
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (termId) params.append('term_id', termId);
+    if (sessionId) params.append('session_id', sessionId);
+
+    fetch(`/exams/filtered-subjects?${params.toString()}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (data.subjects && data.subjects.length > 0) {
+            let options = '<option value="" selected>Select Subject</option>';
+
+            data.subjects.forEach(subject => {
+                options += `<option value="${subject.id}"
+                    data-termid="${subject.termid}"
+                    data-sessionid="${subject.sessionid}">
+                    ${subject.display_text}
+                </option>`;
+            });
+
+            subjectSelect.innerHTML = options;
+        } else {
+            subjectSelect.innerHTML = '<option value="">No subjects found for selected term/session</option>';
+            containerElement.innerHTML = '<p class="text-muted text-center mb-0">No subjects available for the selected term/session</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching subjects:', error);
+        subjectSelect.innerHTML = '<option value="">Error loading subjects</option>';
+        containerElement.innerHTML = '<p class="text-danger text-center mb-0">Error loading subjects. Please try again.</p>';
+    });
+}
+
+function loadClassesForSubject(subjectId, mode = 'add') {
+    const containerId = mode === 'add' ? 'addClassContainer' : 'editClassContainer';
+    const container = document.getElementById(containerId);
+
+    if (!container) return;
+
+    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i> Loading classes...</p>';
+
+    fetch(`/exams/subject-classes/${subjectId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success && data.classes && data.classes.length > 0) {
+            let html = '<div class="row">';
+
+            data.classes.forEach(cls => {
+                html += `
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input class-checkbox" type="checkbox"
+                                   name="schoolclass_ids[]"
+                                   value="${cls.id}"
+                                   id="class_${mode}_${cls.id}">
+                            <label class="form-check-label" for="class_${mode}_${cls.id}">
+                                <span class="fw-medium">${cls.schoolclass}</span>
+                                ${cls.arm ? `<span class="text-muted">(${cls.arm})</span>` : ''}
+                            </label>
+                        </div>
+                    </div>`;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading classes:', error);
+        container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
+    });
+}
+
+function loadExamForEdit(examId) {
+    Swal.fire({
+        title: 'Loading...',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    fetch(`/exams/${examId}/edit`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success && data.exam) {
+            // Store original class IDs for comparison
+            window.originalClassIds = data.schoolclass_ids || [];
+
+            // Store source exam ID for copying questions
+            sourceExamId = data.exam.id;
+            const sourceExamIdField = document.getElementById('source-exam-id');
+            if (sourceExamIdField) {
+                sourceExamIdField.value = data.exam.id;
+            }
+
+            populateEditForm(data);
+
+            const editModalElement = document.getElementById('editModal');
+            if (editModalElement) {
+                const editModal = new bootstrap.Modal(editModalElement);
+                editModal.show();
+            }
+
+            Swal.close();
+        } else {
+            throw new Error(data.message || 'Invalid response format');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading exam:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load exam data. Please try again.',
+            timer: 3000
+        });
+    });
+}
+
+function populateEditForm(data) {
+    const exam = data.exam;
+
+    // Basic fields
+    const idField = document.getElementById('edit-id-field');
+    const titleField = document.getElementById('edit-title');
+    const descriptionField = document.getElementById('edit-description');
+    const durationField = document.getElementById('edit-duration');
+    const startTimeField = document.getElementById('edit-start_time');
+    const endTimeField = document.getElementById('edit-end_time');
+    const termidField = document.getElementById('edit-termid');
+    const sessionField = document.getElementById('edit-session');
+    const publishStatusField = document.getElementById('edit-publishStatus');
+
+    if (idField) idField.value = exam.id || '';
+    if (titleField) titleField.value = exam.title || '';
+    if (descriptionField) descriptionField.value = exam.description || '';
+    if (durationField) durationField.value = exam.duration || '';
+
+    // Date fields - format for datetime-local input
+    if (exam.start_time && startTimeField) {
+        let startDate = new Date(exam.start_time);
+        startTimeField.value = formatDateForInput(startDate);
+    }
+
+    if (exam.end_time && endTimeField) {
+        let endDate = new Date(exam.end_time);
+        endTimeField.value = formatDateForInput(endDate);
+    }
+
+    // Select fields
+    if (termidField) termidField.value = data.termid || '';
+    if (sessionField) sessionField.value = data.sessionid || '';
+    if (publishStatusField) publishStatusField.checked = exam.is_published == 1;
+
+    // Load subjects for the selected term and session
+    setTimeout(() => {
+        const termId = data.termid || '';
+        const sessionId = data.sessionid || '';
+        fetchFilteredSubjects(termId, sessionId, 'edit');
+
+        // Wait for subjects to load, then select the correct one
+        setTimeout(() => {
+            const subjectSelect = document.getElementById('edit-subject_id');
+            if (subjectSelect && data.subject_id) {
+                subjectSelect.value = data.subject_id;
+
+                // Now load classes for this subject with selection
+                if (data.subject_id) {
+                    loadClassesForEditWithSelection(data.subject_id, data.schoolclass_ids || []);
+                }
+            }
+        }, 500);
+    }, 100);
+}
+
+function loadClassesForEditWithSelection(subjectId, selectedClassIds = []) {
+    const container = document.getElementById('editClassContainer');
+    if (!container) return;
+
+    container.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-circle-notch ph-sm spin me-1"></i> Loading classes...</p>';
+
+    fetch(`/exams/subject-classes/${subjectId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success && data.classes && data.classes.length > 0) {
+            // Get original class IDs from the exam group
+            const originalClassIds = window.originalClassIds || [];
+
+            let html = '<div class="row">';
+
+            data.classes.forEach(cls => {
+                const classId = parseInt(cls.id);
+                const isChecked = selectedClassIds.some(id => parseInt(id) === classId);
+
+                html += `
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input class-checkbox"
+                                   type="checkbox"
+                                   name="schoolclass_ids[]"
+                                   value="${cls.id}"
+                                   id="class_edit_${cls.id}"
+                                   ${isChecked ? 'checked' : ''}>
+                            <label class="form-check-label" for="class_edit_${cls.id}">
+                                <span class="fw-medium">${cls.schoolclass}</span>
+                                ${cls.arm ? `<span class="text-muted">(${cls.arm})</span>` : ''}
+                                ${!originalClassIds.includes(classId) && isChecked ?
+                                    '<span class="badge bg-success ms-2">New</span>' : ''}
+                            </label>
+                        </div>
+                    </div>`;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Track new classes that are checked
+            setTimeout(() => {
+                trackNewClasses(originalClassIds);
+            }, 100);
+        } else {
+            container.innerHTML = '<p class="text-muted text-center mb-0">No classes assigned to this subject.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading classes:', error);
+        container.innerHTML = '<p class="text-danger text-center mb-0">Error loading classes. Please try again.</p>';
+    });
+}
+
+// Function to track which classes are new
+function trackNewClasses(originalClassIds) {
+    const checkboxes = document.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
+    newClassesToCreate = [];
+
+    checkboxes.forEach(cb => {
+        const classId = parseInt(cb.value);
+        if (!originalClassIds.includes(classId)) {
+            newClassesToCreate.push(classId);
+        }
+    });
+
+    console.log('New classes to create:', newClassesToCreate);
+}
+
+function formatDateForInput(date) {
+    if (!date || isNaN(date)) return '';
+
+    try {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+        console.error('Date formatting error:', error);
+        return '';
+    }
+}
+
+function submitAddForm() {
+    const form = document.getElementById('add-exam-form');
+    const submitBtn = document.getElementById('add-btn');
+
+    if (!form || !submitBtn) return;
+
+    const originalText = submitBtn.textContent;
+
+    // Validate duration first
+    if (!validateDuration()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Duration',
+            text: 'Duration exceeds the time between start and end. Please adjust.',
+            timer: 3000
+        });
+        return;
+    }
+
+    // Validate class selection
+    const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
+    if (classCheckboxes.length === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select at least one class.',
+            timer: 3000
+        });
+        return;
+    }
+
+    const formData = new FormData(form);
+
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+    submitBtn.disabled = true;
+
+    fetch('{{ route('exams.store') }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        }
+    })
+    .then(response => {
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message || 'Exam created successfully!',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addExamModal'));
+                if (modal) modal.hide();
+                form.reset();
+
+                // Reset class container
+                const classContainer = document.getElementById('addClassContainer');
+                if (classContainer) {
+                    classContainer.innerHTML = '<p class="text-muted text-center mb-0"><i class="ph-info ph-sm me-1"></i>Select a subject first to see available classes</p>';
+                }
+
+                // Reload page
+                window.location.reload();
+            });
+        } else {
+            let errorMsg = 'An error occurred.';
+            if (data.errors) {
+                errorMsg = Object.values(data.errors).flat().join('<br>');
+            } else if (data.message) {
+                errorMsg = data.message;
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMsg,
+                timer: 5000
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred. Please try again.',
+            timer: 3000
+        });
+    })
+    .finally(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+function submitEditForm() {
+    const form = document.getElementById('edit-exam-form');
+    const examId = document.getElementById('edit-id-field')?.value;
+    const submitBtn = document.getElementById('update-btn');
+
+    if (!examId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Invalid exam ID.',
+            timer: 3000
+        });
+        return;
+    }
+
+    // Validate duration first
+    if (!validateEditDuration()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Duration',
+            text: 'Duration exceeds the time between start and end. Please adjust.',
+            timer: 3000
+        });
+        return;
+    }
+
+    // Validate class selection
+    const classCheckboxes = form.querySelectorAll('input[name="schoolclass_ids[]"]:checked');
+    if (classCheckboxes.length === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select at least one class.',
+            timer: 3000
+        });
+        return;
+    }
+
+    // Check if there are new classes to create
+    const originalClassIds = window.originalClassIds || [];
+    const selectedClassIds = Array.from(classCheckboxes).map(cb => parseInt(cb.value));
+    const newClassIds = selectedClassIds.filter(id => !originalClassIds.includes(id));
+
+    if (newClassIds.length > 0 && sourceExamId) {
+        // Show copy questions modal first
+        newClassesToCreate = newClassIds;
+
+        // Store form data to submit later
+        window.pendingEditFormData = {
+            examId: examId,
+            formData: new FormData(form)
+        };
+
+        showCopyQuestionsModal();
+        return;
+    }
+
+    // If no new classes, submit directly
+    executeEditFormSubmit(examId, form);
+}
+
+// Execute the actual form submission
+function executeEditFormSubmit(examId, form, copyQuestions = false, copyAll = true, selectedQuestions = []) {
+    const submitBtn = document.getElementById('update-btn');
+    if (!submitBtn) return;
+
+    const originalText = submitBtn.textContent;
+
+    let formData;
+    if (form instanceof FormData) {
+        formData = form;
+    } else {
+        formData = new FormData(form);
+    }
+
+    formData.append('_method', 'PUT');
+
+    // Add copy questions parameters
+    if (copyQuestions) {
+        formData.append('copy_questions', '1');
+        formData.append('copy_all_questions', copyAll ? '1' : '0');
+        if (!copyAll && selectedQuestions.length > 0) {
+            selectedQuestions.forEach(id => {
+                formData.append('selected_questions[]', id);
+            });
+        }
+    }
+
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+    submitBtn.disabled = true;
+
+    fetch(`/exams/${examId}`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message || 'Exam updated successfully!',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+                if (modal) modal.hide();
+                window.location.reload();
+            });
+        } else {
+            let errorMsg = 'An error occurred.';
+            if (data.errors) {
+                errorMsg = Object.values(data.errors).flat().join('<br>');
+            } else if (data.message) {
+                errorMsg = data.message;
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMsg,
+                timer: 5000
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred. Please try again.',
+            timer: 3000
+        });
+    })
+    .finally(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// Function to show copy questions modal
+function showCopyQuestionsModal() {
+    const modalElement = document.getElementById('copyQuestionsModal');
+    if (!modalElement) {
+        console.error('Copy questions modal element not found');
+        return;
+    }
+
+    // Update new classes count
+    const newClassesCountEl = document.getElementById('new-classes-count');
+    if (newClassesCountEl) {
+        newClassesCountEl.textContent = newClassesToCreate.length;
+    }
+
+    const newClassIdsEl = document.getElementById('new-class-ids');
+    if (newClassIdsEl) {
+        newClassIdsEl.value = JSON.stringify(newClassesToCreate);
+    }
+
+    // Reset modal state
+    const copyAllCheckbox = document.getElementById('copy-all-questions');
+    if (copyAllCheckbox) copyAllCheckbox.checked = true;
+
+    const questionsListContainer = document.getElementById('questions-list-container');
+    if (questionsListContainer) questionsListContainer.classList.add('d-none');
+
+    const noQuestionsMessage = document.getElementById('no-questions-message');
+    if (noQuestionsMessage) noQuestionsMessage.classList.add('d-none');
+
+    // Load questions
+    if (sourceExamId) {
+        loadQuestionsForCopy(sourceExamId);
+    }
+
+    // Show modal
+    try {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    } catch (e) {
+        console.error('Error showing copy questions modal:', e);
+    }
+}
+
+// Function to load questions for copying
+function loadQuestionsForCopy(examId) {
+    const questionsList = document.getElementById('questions-list');
+    const questionsLoading = document.getElementById('questions-loading');
+    const questionsListContainer = document.getElementById('questions-list-container');
+    const noQuestionsMessage = document.getElementById('no-questions-message');
+
+    if (!questionsList || !questionsLoading || !questionsListContainer || !noQuestionsMessage) return;
+
+    questionsLoading.classList.remove('d-none');
+    questionsListContainer.classList.add('d-none');
+    noQuestionsMessage.classList.add('d-none');
+
+    fetch(`/exams/${examId}/questions`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        questionsLoading.classList.add('d-none');
+
+        if (data.success && data.questions && data.questions.length > 0) {
+            let html = '';
+            let typeBadges = {
+                'mcq': 'bg-info',
+                'true_false': 'bg-warning',
+                'short_answer': 'bg-success'
+            };
+
+            data.questions.forEach((question, index) => {
+                const typeClass = typeBadges[question.type] || 'bg-secondary';
+                const typeLabel = question.type.toUpperCase().replace('_', ' ');
+
+                html += `
+                    <div class="list-group-item list-group-item-action">
+                        <div class="form-check">
+                            <input class="form-check-input question-checkbox"
+                                   type="checkbox"
+                                   value="${question.id}"
+                                   id="copy_question_${question.id}"
+                                   checked>
+                            <label class="form-check-label w-100" for="copy_question_${question.id}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1 me-3">
+                                        <span class="fw-medium">Q${index + 1}:</span>
+                                        ${question.text}
+                                        <div class="mt-2">
+                                            <span class="badge ${typeClass} me-1">${typeLabel}</span>
+                                            <span class="badge bg-primary me-1">${question.marks} marks</span>
+                                            <span class="badge bg-secondary">${question.options_count} options</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+
+            questionsList.innerHTML = html;
+
+            const totalCountEl = document.getElementById('total-questions-count');
+            if (totalCountEl) totalCountEl.textContent = data.questions.length;
+
+            const selectedCountEl = document.getElementById('selected-questions-count');
+            if (selectedCountEl) selectedCountEl.textContent = data.questions.length;
+
+            questionsListContainer.classList.remove('d-none');
+
+            // Add event listeners to checkboxes
+            document.querySelectorAll('#questions-list .question-checkbox').forEach(cb => {
+                cb.addEventListener('change', updateSelectedQuestionsCount);
+            });
+        } else {
+            noQuestionsMessage.classList.remove('d-none');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading questions:', error);
+        questionsLoading.classList.add('d-none');
+        noQuestionsMessage.classList.remove('d-none');
+        if (noQuestionsMessage) {
+            noQuestionsMessage.innerHTML = `
+                <i class="ph-warning-circle ph-sm me-2"></i>
+                Error loading questions. Please try again.
+            `;
+        }
+    });
+}
+
+// Update selected questions count
+function updateSelectedQuestionsCount() {
+    const checkboxes = document.querySelectorAll('#questions-list .question-checkbox:checked');
+    const count = checkboxes.length;
+    const selectedCountEl = document.getElementById('selected-questions-count');
+    if (selectedCountEl) selectedCountEl.textContent = count;
+}
+
+function deleteExam(examId) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "This will delete the exam and all associated questions!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(`/exams/${examId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                return response.json();
+            })
+            .then(data => {
+                Swal.close();
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: data.message || 'Exam deleted successfully!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to delete exam.',
+                        timer: 3000
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to delete exam. Please try again.',
+                    timer: 3000
+                });
+            });
+        }
+    });
+}
+
+function deleteMultiple() {
+    const checkedBoxes = document.querySelectorAll('.exam-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Selection',
+            text: 'Please select at least one exam to delete.',
+            timer: 3000
+        });
+        return;
+    }
+
+    const ids = Array.from(checkedBoxes)
+        .map(cb => cb.dataset.id)
+        .filter(id => id);
+
+    Swal.fire({
+        title: `Delete ${ids.length} exam(s)?`,
+        text: "This will delete all selected exams and their associated questions!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete them!',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(`/exams/bulk-destroy`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ ids: ids })
+            })
+            .then(response => {
+                return response.json();
+            })
+            .then(data => {
+                Swal.close();
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: data.message || 'Exams deleted successfully!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to delete exams.',
+                        timer: 3000
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to delete exams. Please try again.',
+                    timer: 3000
+                });
+            });
+        }
+    });
+}
+
+function toggleRemoveActions() {
+    const removeActions = document.getElementById('remove-actions');
+    if (removeActions) {
+        const checkedBoxes = document.querySelectorAll('.exam-checkbox:checked');
+        removeActions.classList.toggle('d-none', checkedBoxes.length === 0);
+    }
+}
+</script>
 
 @endsection
