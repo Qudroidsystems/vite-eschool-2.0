@@ -1431,7 +1431,7 @@ public function updateAssessmentScore(Request $request)
             ], 404);
         }
 
-        // MANUAL APPROACH: Check if broadsheet exists, create if not
+        // Check if broadsheet exists, create if not
         $broadsheet = Broadsheets::where([
             'broadSheet_record_id' => $broadsheetRecord->id,
             'subjectclass_id' => $subjectclass->id,
@@ -1476,7 +1476,7 @@ public function updateAssessmentScore(Request $request)
         // Update or create the assessment score
         if ($isSub && !empty($validated['sub_assessment_id'])) {
             // Update sub-assessment score
-            $subScore = BroadsheetSubAssessmentScore::updateOrCreate(
+            BroadsheetSubAssessmentScore::updateOrCreate(
                 [
                     'broadsheet_id' => $broadsheet->id,
                     'sub_assessment_id' => $validated['sub_assessment_id'],
@@ -1551,29 +1551,85 @@ public function updateAssessmentScore(Request $request)
         // Refresh broadsheet with relationships
         $broadsheet->load(['assessmentScores', 'subAssessmentScores']);
 
-        // Recompute totals using your existing method
-        $myScoreSheetController = app(MyScoreSheetController::class);
-        $myScoreSheetController->computeDynamicTotals(
-            collect([$broadsheet]),
-            $assessments,
-            $schoolclass,
-            $exam->termid,
-            $exam->session
-        );
+        // MANUAL RECALCULATION of totals, cum, grade, remark
+        // Instead of calling a non-existent method, we'll do the calculation here
 
-        // Update positions
-        $myScoreSheetController->updateClassMetrics(
-            $subjectclass->id,
-            auth()->user()->id,
-            $exam->termid,
-            $exam->session
-        );
-        $myScoreSheetController->updateSubjectPositions(
-            $subjectclass->id,
-            auth()->user()->id,
-            $exam->termid,
-            $exam->session
-        );
+        // Calculate total from all assessment scores
+        $totalRaw = 0;
+        foreach ($assessments as $assessment) {
+            $scoreObj = $broadsheet->assessmentScores->where('assessment_id', $assessment->id)->first();
+            $totalRaw += $scoreObj ? $scoreObj->score : 0;
+        }
+
+        // Get BF (brought forward from previous term) - using existing method if available
+        $myScoreSheetController = app(MyScoreSheetController::class);
+
+        // Check if getPreviousTermCum method exists and is accessible
+        if (method_exists($myScoreSheetController, 'getPreviousTermCum')) {
+            $newBf = $myScoreSheetController->getPreviousTermCum(
+                $broadsheet->student_id,
+                $exam->subject_id,
+                $exam->termid,
+                $exam->session
+            );
+        } else {
+            // Fallback: try to get previous term cum directly
+            $previousTerm = Broadsheets::where('broadsheet_records.student_id', $broadsheet->student_id)
+                ->where('broadsheet_records.subject_id', $exam->subject_id)
+                ->where('broadsheets.term_id', $exam->termid - 1)
+                ->where('broadsheet_records.session_id', $exam->session)
+                ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadSheet_record_id')
+                ->value('broadsheets.cum');
+
+            $newBf = $previousTerm ? round($previousTerm, 2) : 0;
+        }
+
+        // Calculate cum
+        $newCum = $exam->termid == 1 ? round($totalRaw, 2) : round(($totalRaw + $newBf) / 2, 2);
+
+        // Calculate grade based on class category
+        $newGrade = 'F';
+        if ($schoolclass && $schoolclass->classcategories->isNotEmpty()) {
+            $category = $schoolclass->classcategories->first();
+            if (method_exists($category, 'calculateGrade')) {
+                $newGrade = $category->calculateGrade($newCum);
+            } else {
+                // Default grading logic
+                $newGrade = $this->getDefaultGrade($newCum);
+            }
+        } else {
+            $newGrade = $this->getDefaultGrade($newCum);
+        }
+
+        // Get remark
+        $newRemark = $this->getRemark($newGrade);
+
+        // Update broadsheet with calculated values
+        $broadsheet->total = $totalRaw;
+        $broadsheet->bf = $newBf;
+        $broadsheet->cum = $newCum;
+        $broadsheet->grade = $newGrade;
+        $broadsheet->remark = $newRemark;
+        $broadsheet->save();
+
+        // Update class metrics and positions using available methods
+        if (method_exists($myScoreSheetController, 'updateClassMetrics')) {
+            $myScoreSheetController->updateClassMetrics(
+                $subjectclass->id,
+                auth()->user()->id,
+                $exam->termid,
+                $exam->session
+            );
+        }
+
+        if (method_exists($myScoreSheetController, 'updateSubjectPositions')) {
+            $myScoreSheetController->updateSubjectPositions(
+                $subjectclass->id,
+                auth()->user()->id,
+                $exam->termid,
+                $exam->session
+            );
+        }
 
         // Refresh the broadsheet to get updated values
         $broadsheet->refresh();
@@ -1616,5 +1672,47 @@ public function updateAssessmentScore(Request $request)
             'message' => 'Failed to update score: ' . $e->getMessage()
         ], 500);
     }
+}
+
+/**
+ * Helper method to get default grade
+ */
+private function getDefaultGrade($score)
+{
+    if ($score >= 70 && $score <= 100) {
+        return 'A';
+    } elseif ($score >= 60) {
+        return 'B';
+    } elseif ($score >= 50) {
+        return 'C';
+    } elseif ($score >= 40) {
+        return 'D';
+    }
+    return 'F';
+}
+
+/**
+ * Helper method to get remark from grade
+ */
+private function getRemark($grade)
+{
+    $remarks = [
+        'A' => 'Excellent',
+        'B' => 'Very Good',
+        'C' => 'Good',
+        'D' => 'Pass',
+        'F' => 'Fail',
+        'A1' => 'Excellent',
+        'B2' => 'Very Good',
+        'B3' => 'Good',
+        'C4' => 'Credit',
+        'C5' => 'Credit',
+        'C6' => 'Credit',
+        'D7' => 'Pass',
+        'E8' => 'Pass',
+        'F9' => 'Fail',
+    ];
+
+    return $remarks[$grade] ?? 'Unknown';
 }
 }
