@@ -401,5 +401,664 @@
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 
+    // Initialize modals
+    const transferModal = new bootstrap.Modal(document.getElementById('assessmentTransferModal'));
+    const successModal = new bootstrap.Modal(document.getElementById('transferSuccessModal'));
+    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+
+    // DOM elements
+    const assessmentSelect = document.getElementById('assessmentSelect');
+    const subAssessmentSelect = document.getElementById('subAssessmentSelect');
+    const subAssessmentContainer = document.getElementById('subAssessmentContainer');
+    const maxScoreInput = document.getElementById('maxScore');
+    const transferScoreInput = document.getElementById('transferScore');
+    const isSubInput = document.getElementById('isSub');
+    const assessmentInfo = document.getElementById('assessmentInfo');
+    const assessmentDetails = document.getElementById('assessmentDetails');
+    const scoreValidationMsg = document.getElementById('scoreValidationMsg');
+    const assessmentLoader = document.getElementById('assessmentLoader');
+    const transferBtn = document.getElementById('transferScoreBtn');
+
+    // Global variables
+    let assessments = [];
+    let currentExamId = '{{ $exam->id }}';
+    let subjectclass_id = null;
+
+    // =============================================
+    // DEBUG: Check subjectclass_id every 3 seconds
+    // =============================================
+    setInterval(function() {
+        if (subjectclass_id) {
+            console.log('🔄 Current subjectclass_id value:', subjectclass_id, 'Type:', typeof subjectclass_id);
+        }
+    }, 3000);
+
+    // =============================================
+    // TRANSFER BUTTON CLICK HANDLER
+    // =============================================
+    document.querySelectorAll('.transfer-score-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const studentId = this.dataset.studentId;
+            const studentName = this.dataset.studentName;
+            const studentAdmission = this.dataset.studentAdmission;
+            const examScore = parseFloat(this.dataset.examScore) || 0;
+
+            console.log('=========================================');
+            console.log('TRANSFER BUTTON CLICKED');
+            console.log('=========================================');
+            console.log('Student ID:', studentId);
+            console.log('Student Name:', studentName);
+            console.log('Admission:', studentAdmission);
+            console.log('Exam Score:', examScore);
+
+            // Set student data in modal
+            document.getElementById('studentId').value = studentId;
+            document.getElementById('studentName').textContent = studentName;
+            document.getElementById('studentAdmission').textContent = studentAdmission;
+            document.getElementById('examScore').textContent = examScore.toFixed(1) + ' marks';
+            document.getElementById('examScoreHidden').value = examScore;
+            transferScoreInput.value = examScore.toFixed(1);
+
+            // Load assessments
+            loadAssessments(currentExamId);
+
+            // Show modal
+            transferModal.show();
+        });
+    });
+
+    // =============================================
+    // LOAD ASSESSMENTS FUNCTION
+    // =============================================
+    function loadAssessments(examId) {
+        // Show loader
+        assessmentLoader.style.display = 'block';
+        assessmentSelect.style.display = 'none';
+
+        console.log('=========================================');
+        console.log('LOADING ASSESSMENTS FOR EXAM:', examId);
+        console.log('=========================================');
+
+        fetch(`/exams/assessments/${examId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => {
+            console.log('API Response Status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('API Response Data:', data);
+
+            // Hide loader
+            assessmentLoader.style.display = 'none';
+            assessmentSelect.style.display = 'block';
+
+            if (data.success) {
+                // Store assessments
+                assessments = data.assessments;
+
+                // CRITICAL: Store subjectclass_id
+                subjectclass_id = data.subjectclass_id;
+
+                console.log('✅ ASSESSMENTS LOADED SUCCESSFULLY');
+                console.log('📊 Assessments Count:', assessments.length);
+                console.log('🆔 Subjectclass ID:', subjectclass_id);
+                console.log('📝 Type of subjectclass_id:', typeof subjectclass_id);
+                console.log('📊 Assessments with scores:', data.assessment_ids_with_scores);
+
+                if (!subjectclass_id) {
+                    console.error('❌ ERROR: subjectclass_id is null or undefined!');
+                    showError('No subject class found for this exam');
+                    return;
+                }
+
+                // Build assessment options
+                let options = '<option value="">Select an assessment</option>';
+
+                data.assessments.forEach(assessment => {
+                    const hasSub = assessment.sub_assessments && assessment.sub_assessments.length > 0;
+                    const hasScores = data.assessment_ids_with_scores && data.assessment_ids_with_scores.includes(assessment.id);
+
+                    options += `<option value="${assessment.id}"
+                                     data-max="${assessment.max_score}"
+                                     data-has-sub="${hasSub}"
+                                     ${hasScores ? 'data-has-scores="true"' : ''}>
+                                    ${assessment.name} (Max: ${assessment.max_score})
+                                    ${hasScores ? ' ✓' : ''}
+                                </option>`;
+                });
+
+                assessmentSelect.innerHTML = options;
+                console.log('✅ Assessment dropdown populated');
+            } else {
+                console.error('❌ API returned success: false', data.message);
+                assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
+                showError('Failed to load assessments: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('❌ NETWORK ERROR loading assessments:', error);
+            assessmentLoader.style.display = 'none';
+            assessmentSelect.style.display = 'block';
+            assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
+            showError('Network error while loading assessments');
+        });
+    }
+
+    // =============================================
+    // ASSESSMENT SELECTION HANDLER
+    // =============================================
+    assessmentSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const assessmentId = this.value;
+
+        console.log('=========================================');
+        console.log('ASSESSMENT SELECTED:', assessmentId);
+        console.log('=========================================');
+
+        // Set the assessment_id hidden field
+        document.getElementById('assessmentId').value = assessmentId;
+
+        if (!assessmentId) {
+            maxScoreInput.value = '';
+            assessmentInfo.style.display = 'none';
+            subAssessmentContainer.style.display = 'none';
+            isSubInput.value = '0';
+            return;
+        }
+
+        const maxScore = selectedOption.dataset.max;
+        const hasSub = selectedOption.dataset.hasSub === 'true';
+
+        console.log('Max Score:', maxScore);
+        console.log('Has Sub-assessments:', hasSub);
+
+        maxScoreInput.value = maxScore;
+        assessmentInfo.style.display = 'block';
+
+        const assessment = assessments.find(a => a.id == assessmentId);
+        if (assessment) {
+            let details = `
+                <strong>Name:</strong> ${assessment.name}<br>
+                <strong>Max Score:</strong> ${assessment.max_score}<br>
+            `;
+
+            if (assessment.sub_assessments && assessment.sub_assessments.length > 0) {
+                details += `<strong>Sub-assessments:</strong> ${assessment.sub_assessments.length}<br>`;
+                details += `<small class="text-muted">${assessment.sub_assessments.map(s => s.name).join(', ')}</small>`;
+            }
+
+            assessmentDetails.innerHTML = details;
+
+            // Handle sub-assessments
+            if (hasSub) {
+                loadSubAssessments(assessment.id);
+                subAssessmentContainer.style.display = 'block';
+                isSubInput.value = '1';
+            } else {
+                subAssessmentContainer.style.display = 'none';
+                subAssessmentSelect.innerHTML = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
+                isSubInput.value = '0';
+            }
+        }
+
+        validateScore();
+    });
+
+    // =============================================
+    // LOAD SUB-ASSESSMENTS FUNCTION
+    // =============================================
+    function loadSubAssessments(assessmentId) {
+        console.log('Loading sub-assessments for assessment:', assessmentId);
+
+        const assessment = assessments.find(a => a.id == assessmentId);
+        if (assessment && assessment.sub_assessments && assessment.sub_assessments.length > 0) {
+            let options = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
+            assessment.sub_assessments.forEach(sub => {
+                options += `<option value="${sub.id}" data-max="${sub.max_score}">
+                                ${sub.name} (Max: ${sub.max_score})
+                           </option>`;
+            });
+            subAssessmentSelect.innerHTML = options;
+            console.log('Sub-assessments loaded:', assessment.sub_assessments.length);
+        } else {
+            subAssessmentSelect.innerHTML = '<option value="">-- No sub-assessments available --</option>';
+            console.log('No sub-assessments found');
+        }
+    }
+
+    // =============================================
+    // SUB-ASSESSMENT SELECTION HANDLER
+    // =============================================
+    subAssessmentSelect.addEventListener('change', function() {
+        if (this.value) {
+            const selectedOption = this.options[this.selectedIndex];
+            maxScoreInput.value = selectedOption.dataset.max;
+            console.log('Sub-assessment selected, max score:', selectedOption.dataset.max);
+        } else {
+            // Revert to main assessment max
+            const mainOption = assessmentSelect.options[assessmentSelect.selectedIndex];
+            maxScoreInput.value = mainOption.dataset.max;
+            console.log('Reverted to main assessment max:', mainOption.dataset.max);
+        }
+        validateScore();
+    });
+
+    // =============================================
+    // VALIDATE SCORE FUNCTION
+    // =============================================
+    function validateScore() {
+        const score = parseFloat(transferScoreInput.value) || 0;
+        const maxScore = parseFloat(maxScoreInput.value) || 0;
+
+        if (score > maxScore) {
+            transferScoreInput.classList.add('is-invalid');
+            scoreValidationMsg.innerHTML = `Score cannot exceed ${maxScore}`;
+            return false;
+        } else if (score < 0) {
+            transferScoreInput.classList.add('is-invalid');
+            scoreValidationMsg.innerHTML = 'Score cannot be negative';
+            return false;
+        } else {
+            transferScoreInput.classList.remove('is-invalid');
+            scoreValidationMsg.innerHTML = '';
+            return true;
+        }
+    }
+
+    transferScoreInput.addEventListener('input', validateScore);
+    transferScoreInput.addEventListener('blur', validateScore);
+
+    // =============================================
+    // TRANSFER SCORE BUTTON CLICK HANDLER
+    // =============================================
+    transferBtn.addEventListener('click', function() {
+        console.log('=========================================');
+        console.log('TRANSFER SCORE BUTTON CLICKED');
+        console.log('=========================================');
+
+        // Validate assessment selected
+        if (!assessmentSelect.value) {
+            console.error('❌ No assessment selected');
+            showError('Please select an assessment');
+            return;
+        }
+
+        // Validate score
+        if (!validateScore()) {
+            console.error('❌ Score validation failed');
+            return;
+        }
+
+        // CRITICAL: Check if subjectclass_id exists
+        console.log('Current subjectclass_id value:', subjectclass_id);
+        console.log('Type of subjectclass_id:', typeof subjectclass_id);
+        console.log('Is subjectclass_id truthy?', !!subjectclass_id);
+
+        if (!subjectclass_id) {
+            console.error('❌ ERROR: subjectclass_id is null or undefined!');
+            console.log('Available data:', {
+                assessmentsLoaded: assessments.length > 0 ? 'yes' : 'no',
+                assessmentsCount: assessments.length,
+                assessments: assessments
+            });
+            showError('Subject class ID not found. Please refresh and try again.');
+            return;
+        }
+
+        const score = parseFloat(transferScoreInput.value);
+        const maxScore = parseFloat(maxScoreInput.value);
+
+        console.log('Score to transfer:', score);
+        console.log('Max score:', maxScore);
+        console.log('Subjectclass ID being sent:', subjectclass_id);
+
+        // Get the form
+        const form = document.getElementById('assessmentTransferForm');
+
+        // Remove any existing hidden subjectclass_id input
+        const existingInput = document.querySelector('input[name="subjectclass_id"]');
+        if (existingInput) {
+            console.log('Removing existing subjectclass_id input');
+            existingInput.remove();
+        }
+
+        // Create a new hidden input for subjectclass_id
+        const subjectClassInput = document.createElement('input');
+        subjectClassInput.type = 'hidden';
+        subjectClassInput.name = 'subjectclass_id';
+        subjectClassInput.value = subjectclass_id;
+        form.appendChild(subjectClassInput);
+
+        console.log('✅ Added hidden input for subjectclass_id with value:', subjectclass_id);
+        console.log('Hidden input HTML:', subjectClassInput.outerHTML);
+
+        // Prepare form data
+        const formData = new FormData(form);
+
+        // Add required fields that might not be in the form
+        formData.append('max_score', maxScore);
+
+        // Add sub-assessment if selected
+        if (subAssessmentSelect.value) {
+            formData.append('sub_assessment_id', subAssessmentSelect.value);
+            formData.append('is_sub', '1');
+            console.log('Sub-assessment selected:', subAssessmentSelect.value);
+        } else {
+            formData.append('is_sub', '0');
+        }
+
+        // DEBUG: Log ALL form data to verify
+        console.log('========== FORM DATA BEING SENT ==========');
+        console.log('FormData contents:');
+        let hasSubjectClassId = false;
+        let subjectClassValue = null;
+
+        for (let pair of formData.entries()) {
+            console.log(`  🔹 ${pair[0]}: ${pair[1]} (${typeof pair[1]})`);
+            if (pair[0] === 'subjectclass_id') {
+                hasSubjectClassId = true;
+                subjectClassValue = pair[1];
+                console.log(`  ✅ FOUND subjectclass_id with value: ${pair[1]}`);
+            }
+        }
+
+        console.log('FormData keys:', Array.from(formData.keys()));
+        console.log('==========================================');
+
+        // Verify subjectclass_id is in the form data
+        if (!hasSubjectClassId) {
+            console.error('❌ CRITICAL ERROR: subjectclass_id NOT found in FormData!');
+            console.log('FormData keys:', Array.from(formData.keys()));
+
+            // Try one more time to add it directly to FormData
+            formData.append('subjectclass_id', subjectclass_id);
+            console.log('⚠️ Added subjectclass_id directly to FormData as fallback');
+
+            // Check again
+            if (formData.has('subjectclass_id')) {
+                console.log('✅ subjectclass_id now in FormData after fallback:', formData.get('subjectclass_id'));
+                hasSubjectClassId = true;
+            } else {
+                showError('System error: subjectclass_id missing from request');
+                return;
+            }
+        } else {
+            console.log('✅ subjectclass_id successfully verified in FormData with value:', subjectClassValue);
+        }
+
+        // Show loading state
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Transferring...';
+        btn.disabled = true;
+
+        // Send request
+        fetch('{{ route("exams.update-assessment-score") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json().then(data => {
+                return { status: response.status, data: data };
+            });
+        })
+        .then(({ status, data }) => {
+            console.log('Response data:', data);
+
+            // Reset button
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            // Remove the hidden input we added
+            const addedInput = document.querySelector('input[name="subjectclass_id"]');
+            if (addedInput) {
+                addedInput.remove();
+                console.log('✅ Removed hidden subjectclass_id input');
+            }
+
+            if (data.success) {
+                console.log('✅ TRANSFER SUCCESSFUL!');
+                console.log('📊 Transfer data:', data.data);
+
+                // Hide transfer modal
+                transferModal.hide();
+
+                // Show success message with actual data
+                const successMsg = `Score transferred successfully!<br>
+                    <small>
+                        Student: ${data.data.student_name} (${data.data.admission_no})<br>
+                        Score: ${data.data.total} | Cum: ${data.data.cum} | Grade: ${data.data.grade}<br>
+                        Broadsheet ID: ${data.data.broadsheet_id}
+                    </small>`;
+                document.getElementById('successMessage').innerHTML = successMsg;
+                successModal.show();
+
+                // Mark the row as transferred
+                const studentId = formData.get('student_id');
+                const studentRow = document.querySelector(`tr[data-student-id="${studentId}"]`);
+                if (studentRow) {
+                    const transferBtn = studentRow.querySelector('.transfer-score-btn');
+                    if (transferBtn) {
+                        transferBtn.classList.remove('btn-subtle-success');
+                        transferBtn.classList.add('btn-success');
+                        transferBtn.innerHTML = '<i class="ph-check"></i>';
+                        transferBtn.setAttribute('title', 'Already transferred to assessment sheet');
+                        transferBtn.disabled = true;
+                    }
+                }
+            } else {
+                console.error('❌ TRANSFER FAILED:', data.message);
+                showError(data.message || 'Failed to transfer score');
+            }
+        })
+        .catch(error => {
+            console.error('❌ NETWORK ERROR:', error);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            // Remove the hidden input we added
+            const addedInput = document.querySelector('input[name="subjectclass_id"]');
+            if (addedInput) {
+                addedInput.remove();
+                console.log('✅ Removed hidden subjectclass_id input');
+            }
+
+            showError('Network error occurred. Please try again. Error: ' + error.message);
+        });
+    });
+
+    // =============================================
+    // SHOW ERROR FUNCTION
+    // =============================================
+    function showError(message) {
+        console.error('❌ ERROR:', message);
+        document.getElementById('errorMessage').textContent = message;
+        errorModal.show();
+    }
+
+    // =============================================
+    // RESET MODAL WHEN HIDDEN
+    // =============================================
+    document.getElementById('assessmentTransferModal').addEventListener('hidden.bs.modal', function() {
+        console.log('=========================================');
+        console.log('MODAL HIDDEN - RESETTING FORM');
+        console.log('=========================================');
+
+        // Remove any hidden subjectclass_id input we might have added
+        const subjectClassInput = document.querySelector('input[name="subjectclass_id"]');
+        if (subjectClassInput) {
+            subjectClassInput.remove();
+            console.log('✅ Removed hidden subjectclass_id input');
+        }
+
+        assessmentSelect.value = '';
+        subAssessmentSelect.innerHTML = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
+        subAssessmentContainer.style.display = 'none';
+        maxScoreInput.value = '';
+        transferScoreInput.value = '';
+        isSubInput.value = '0';
+        assessmentInfo.style.display = 'none';
+        transferScoreInput.classList.remove('is-invalid');
+        scoreValidationMsg.innerHTML = '';
+
+        console.log('✅ Form reset complete');
+    });
+
+    // =============================================
+    // DELETE ATTEMPT FUNCTIONALITY
+    // =============================================
+    const deleteButtons = document.querySelectorAll('.delete-attempt');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const examId = this.dataset.examId;
+            const studentId = this.dataset.studentId;
+            const studentName = this.dataset.studentName;
+            const deleteUrl = this.dataset.deleteUrl;
+            const row = this.closest('tr');
+            const isInProgress = row.querySelector('.badge.bg-warning') !== null;
+
+            const confirmMsg = isInProgress
+                ? `Are you sure you want to delete ${studentName}'s ongoing exam attempt? This will stop the exam and allow a retake.`
+                : `Are you sure you want to delete ${studentName}'s exam attempt? This will allow them to retake the exam.`;
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: confirmMsg,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Deleting...',
+                        text: 'Please wait',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch(deleteUrl, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            row.remove();
+                            updateCountBadge();
+                            updatePaginationText();
+                            updateSerialNumbers();
+                            checkEmptyTable();
+
+                            Swal.fire({
+                                title: 'Deleted!',
+                                text: data.message,
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: data.message || 'Error deleting attempt. Please try again.',
+                                icon: 'error',
+                                confirmButtonColor: '#3085d6'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Delete Error:', error);
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'An error occurred while deleting the attempt.',
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6'
+                        });
+                    });
+                }
+            });
+        });
+    });
+
+    // =============================================
+    // HELPER FUNCTIONS
+    // =============================================
+    function updateCountBadge() {
+        const badge = document.getElementById('students-count');
+        if (badge) {
+            let currentTotal = parseInt(badge.textContent.trim());
+            if (!isNaN(currentTotal)) {
+                badge.textContent = currentTotal - 1;
+            }
+        }
+    }
+
+    function updatePaginationText() {
+        const paginationText = document.getElementById('pagination-text');
+        if (paginationText) {
+            const match = paginationText.textContent.match(/of (\d+) Results/);
+            if (match) {
+                const newTotal = parseInt(match[1]) - 1;
+                paginationText.innerHTML = paginationText.innerHTML.replace(/of \d+ Results/, `of ${newTotal} Results`);
+            }
+        }
+    }
+
+    function updateSerialNumbers() {
+        const rows = document.querySelectorAll('#students-tbody tr:not(.empty-row)');
+        let i = (1 + (Math.max(0, rows.length - 15) / 15) * 15);
+        rows.forEach(row => {
+            const snCell = row.querySelector('.sn-number');
+            if (snCell) {
+                snCell.textContent = ++i;
+            }
+        });
+    }
+
+    function checkEmptyTable() {
+        const tbody = document.getElementById('students-tbody');
+        const rows = tbody.querySelectorAll('tr:not(.empty-row)');
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="11" class="text-center">No students found</td></tr>';
+            const paginationContainer = document.querySelector('.pagination-wrap');
+            const paginationText = document.getElementById('pagination-text');
+            if (paginationContainer) paginationContainer.style.display = 'none';
+            if (paginationText) paginationText.style.display = 'none';
+        }
+    }
+});
+</script>
 @endsection
