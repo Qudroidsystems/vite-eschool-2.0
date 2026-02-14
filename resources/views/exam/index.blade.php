@@ -433,6 +433,15 @@ document.addEventListener('DOMContentLoaded', function() {
     let subjectclass_id = null;
 
     // =============================================
+    // DEBUG: Check subjectclass_id every 3 seconds
+    // =============================================
+    setInterval(function() {
+        if (subjectclass_id) {
+            console.log('🔄 Current subjectclass_id value:', subjectclass_id, 'Type:', typeof subjectclass_id);
+        }
+    }, 3000);
+
+    // =============================================
     // TRANSFER BUTTON CLICK HANDLER
     // =============================================
     document.querySelectorAll('.transfer-score-btn').forEach(btn => {
@@ -508,7 +517,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ ASSESSMENTS LOADED SUCCESSFULLY');
                 console.log('📊 Assessments Count:', assessments.length);
                 console.log('🆔 Subjectclass ID:', subjectclass_id);
-                console.log('📝 Assessments with scores:', data.assessment_ids_with_scores);
+                console.log('📝 Type of subjectclass_id:', typeof subjectclass_id);
+                console.log('📊 Assessments with scores:', data.assessment_ids_with_scores);
 
                 if (!subjectclass_id) {
                     console.error('❌ ERROR: subjectclass_id is null or undefined!');
@@ -696,9 +706,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // CRITICAL: Check if subjectclass_id exists
         console.log('Current subjectclass_id value:', subjectclass_id);
+        console.log('Type of subjectclass_id:', typeof subjectclass_id);
+        console.log('Is subjectclass_id truthy?', !!subjectclass_id);
 
         if (!subjectclass_id) {
             console.error('❌ ERROR: subjectclass_id is null or undefined!');
+            console.log('Available data:', {
+                assessmentsLoaded: assessments.length > 0 ? 'yes' : 'no',
+                assessmentsCount: assessments.length,
+                assessments: assessments
+            });
             showError('Subject class ID not found. Please refresh and try again.');
             return;
         }
@@ -710,12 +727,31 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Max score:', maxScore);
         console.log('Subjectclass ID being sent:', subjectclass_id);
 
-        // Prepare form data
-        const formData = new FormData(document.getElementById('assessmentTransferForm'));
+        // Get the form
+        const form = document.getElementById('assessmentTransferForm');
 
-        // Add required fields
+        // Remove any existing hidden subjectclass_id input
+        const existingInput = document.querySelector('input[name="subjectclass_id"]');
+        if (existingInput) {
+            console.log('Removing existing subjectclass_id input');
+            existingInput.remove();
+        }
+
+        // Create a new hidden input for subjectclass_id
+        const subjectClassInput = document.createElement('input');
+        subjectClassInput.type = 'hidden';
+        subjectClassInput.name = 'subjectclass_id';
+        subjectClassInput.value = subjectclass_id;
+        form.appendChild(subjectClassInput);
+
+        console.log('✅ Added hidden input for subjectclass_id with value:', subjectclass_id);
+        console.log('Hidden input HTML:', subjectClassInput.outerHTML);
+
+        // Prepare form data
+        const formData = new FormData(form);
+
+        // Add required fields that might not be in the form
         formData.append('max_score', maxScore);
-        formData.append('subjectclass_id', subjectclass_id); // THIS IS CRITICAL
 
         // Add sub-assessment if selected
         if (subAssessmentSelect.value) {
@@ -729,18 +765,40 @@ document.addEventListener('DOMContentLoaded', function() {
         // DEBUG: Log ALL form data to verify
         console.log('========== FORM DATA BEING SENT ==========');
         console.log('FormData contents:');
+        let hasSubjectClassId = false;
+        let subjectClassValue = null;
+
         for (let pair of formData.entries()) {
-            console.log(`  🔹 ${pair[0]}: ${pair[1]}`);
+            console.log(`  🔹 ${pair[0]}: ${pair[1]} (${typeof pair[1]})`);
+            if (pair[0] === 'subjectclass_id') {
+                hasSubjectClassId = true;
+                subjectClassValue = pair[1];
+                console.log(`  ✅ FOUND subjectclass_id with value: ${pair[1]}`);
+            }
         }
+
+        console.log('FormData keys:', Array.from(formData.keys()));
         console.log('==========================================');
 
         // Verify subjectclass_id is in the form data
-        if (!formData.has('subjectclass_id')) {
-            console.error('❌ CRITICAL ERROR: subjectclass_id NOT added to FormData!');
-            showError('System error: subjectclass_id missing from request');
-            return;
+        if (!hasSubjectClassId) {
+            console.error('❌ CRITICAL ERROR: subjectclass_id NOT found in FormData!');
+            console.log('FormData keys:', Array.from(formData.keys()));
+
+            // Try one more time to add it directly to FormData
+            formData.append('subjectclass_id', subjectclass_id);
+            console.log('⚠️ Added subjectclass_id directly to FormData as fallback');
+
+            // Check again
+            if (formData.has('subjectclass_id')) {
+                console.log('✅ subjectclass_id now in FormData after fallback:', formData.get('subjectclass_id'));
+                hasSubjectClassId = true;
+            } else {
+                showError('System error: subjectclass_id missing from request');
+                return;
+            }
         } else {
-            console.log('✅ subjectclass_id successfully added to FormData');
+            console.log('✅ subjectclass_id successfully verified in FormData with value:', subjectClassValue);
         }
 
         // Show loading state
@@ -771,6 +829,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reset button
             btn.innerHTML = originalText;
             btn.disabled = false;
+
+            // Remove the hidden input we added
+            const addedInput = document.querySelector('input[name="subjectclass_id"]');
+            if (addedInput) {
+                addedInput.remove();
+                console.log('✅ Removed hidden subjectclass_id input');
+            }
 
             if (data.success) {
                 console.log('✅ TRANSFER SUCCESSFUL!');
@@ -811,6 +876,14 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('❌ NETWORK ERROR:', error);
             btn.innerHTML = originalText;
             btn.disabled = false;
+
+            // Remove the hidden input we added
+            const addedInput = document.querySelector('input[name="subjectclass_id"]');
+            if (addedInput) {
+                addedInput.remove();
+                console.log('✅ Removed hidden subjectclass_id input');
+            }
+
             showError('Network error occurred. Please try again. Error: ' + error.message);
         });
     });
@@ -828,7 +901,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // RESET MODAL WHEN HIDDEN
     // =============================================
     document.getElementById('assessmentTransferModal').addEventListener('hidden.bs.modal', function() {
-        console.log('Modal hidden - resetting form');
+        console.log('=========================================');
+        console.log('MODAL HIDDEN - RESETTING FORM');
+        console.log('=========================================');
+
+        // Remove any hidden subjectclass_id input we might have added
+        const subjectClassInput = document.querySelector('input[name="subjectclass_id"]');
+        if (subjectClassInput) {
+            subjectClassInput.remove();
+            console.log('✅ Removed hidden subjectclass_id input');
+        }
+
         assessmentSelect.value = '';
         subAssessmentSelect.innerHTML = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
         subAssessmentContainer.style.display = 'none';
@@ -838,6 +921,8 @@ document.addEventListener('DOMContentLoaded', function() {
         assessmentInfo.style.display = 'none';
         transferScoreInput.classList.remove('is-invalid');
         scoreValidationMsg.innerHTML = '';
+
+        console.log('✅ Form reset complete');
     });
 
     // =============================================
