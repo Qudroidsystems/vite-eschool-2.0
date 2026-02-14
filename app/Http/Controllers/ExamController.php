@@ -21,6 +21,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\SchoolInformation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -189,7 +190,7 @@ class ExamController extends Controller
 
             return redirect()->route('exams.index')->with('success', $message);
         } catch (\Exception $e) {
-            \Log::error('Error creating exam: ' . $e->getMessage());
+            Log::error('Error creating exam: ' . $e->getMessage());
 
             if ($request->ajax()) {
                 return response()->json([
@@ -272,80 +273,101 @@ class ExamController extends Controller
     }
 
    public function update(Request $request, string $id)
-{
-    try {
-        \Log::info('Update request received:', [
-            'exam_id' => $id,
-            'data' => $request->all(),
-            'user_id' => auth()->id()
-        ]);
+    {
+        try {
+            Log::info('Update request received:', [
+                'exam_id' => $id,
+                'data' => $request->all(),
+                'user_id' => auth()->id()
+            ]);
 
-        $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
+            $exam = Exam::where('id', $id)->where('staffId', auth()->user()->id)->firstOrFail();
 
-        $validated = $request->validate([
-            'title'           => 'required|string|max:255',
-            'description'     => 'nullable|string',
-            'duration'        => 'required|integer|min:1',
-            'start_time'      => 'required|date',
-            'end_time'        => 'required|date|after:start_time',
-            'termid'          => 'required|integer|exists:schoolterm,id',
-            'session'         => 'required|integer|exists:schoolsession,id',
-            'subject_id'      => 'required|integer|exists:subject,id',
-            'schoolclass_ids' => 'required|array|min:1',
-            'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
-            'is_published'    => 'boolean|nullable',
-            'copy_questions'  => 'boolean|nullable',
-            'copy_all_questions' => 'boolean|nullable',
-            'selected_questions' => 'nullable|array',
-            'selected_questions.*' => 'integer|exists:questions,id',
-        ]);
+            $validated = $request->validate([
+                'title'           => 'required|string|max:255',
+                'description'     => 'nullable|string',
+                'duration'        => 'required|integer|min:1',
+                'start_time'      => 'required|date',
+                'end_time'        => 'required|date|after:start_time',
+                'termid'          => 'required|integer|exists:schoolterm,id',
+                'session'         => 'required|integer|exists:schoolsession,id',
+                'subject_id'      => 'required|integer|exists:subject,id',
+                'schoolclass_ids' => 'required|array|min:1',
+                'schoolclass_ids.*' => 'integer|exists:schoolclass,id',
+                'is_published'    => 'boolean|nullable',
+                'copy_questions'  => 'boolean|nullable',
+                'copy_all_questions' => 'boolean|nullable',
+                'selected_questions' => 'nullable|array',
+                'selected_questions.*' => 'integer|exists:questions,id',
+            ]);
 
-        // Validate duration against start and end times
-        $startTime = strtotime($validated['start_time']);
-        $endTime = strtotime($validated['end_time']);
-        $durationMinutes = $validated['duration'];
-        $totalMinutes = round(($endTime - $startTime) / 60);
+            // Validate duration against start and end times
+            $startTime = strtotime($validated['start_time']);
+            $endTime = strtotime($validated['end_time']);
+            $durationMinutes = $validated['duration'];
+            $totalMinutes = round(($endTime - $startTime) / 60);
 
-        if ($durationMinutes > $totalMinutes) {
-            return response()->json([
-                'success' => false,
-                'message' => "Duration ({$durationMinutes} minutes) exceeds the time between start and end ({$totalMinutes} minutes). Please adjust.",
-                'errors' => ['duration' => 'Duration exceeds available time']
-            ], 422);
-        }
+            if ($durationMinutes > $totalMinutes) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Duration ({$durationMinutes} minutes) exceeds the time between start and end ({$totalMinutes} minutes). Please adjust.",
+                    'errors' => ['duration' => 'Duration exceeds available time']
+                ], 422);
+            }
 
-        $validated['is_published'] = $request->has('is_published');
-        $validated['staffId'] = $exam->staffId;
+            $validated['is_published'] = $request->has('is_published');
+            $validated['staffId'] = $exam->staffId;
 
-        \Log::info('Validated data:', $validated);
+            Log::info('Validated data:', $validated);
 
-        // Get all exams in the original group
-        $originalGroupExams = Exam::where('staffId', $exam->staffId)
-            ->where('title', $exam->title)
-            ->where('subject_id', $exam->subject_id)
-            ->where('termid', $exam->termid)
-            ->where('session', $exam->session)
-            ->get();
+            // Get all exams in the original group
+            $originalGroupExams = Exam::where('staffId', $exam->staffId)
+                ->where('title', $exam->title)
+                ->where('subject_id', $exam->subject_id)
+                ->where('termid', $exam->termid)
+                ->where('session', $exam->session)
+                ->get();
 
-        // Get original class IDs
-        $originalClassIds = $originalGroupExams->pluck('schoolclass_id')->toArray();
-        $newClassIds = $validated['schoolclass_ids'];
+            // Get original class IDs
+            $originalClassIds = $originalGroupExams->pluck('schoolclass_id')->toArray();
+            $newClassIds = $validated['schoolclass_ids'];
 
-        \Log::info('Original class IDs:', $originalClassIds);
-        \Log::info('New class IDs:', $newClassIds);
+            Log::info('Original class IDs:', $originalClassIds);
+            Log::info('New class IDs:', $newClassIds);
 
-        // Update existing exams
-        $updatedCount = 0;
-        $createdCount = 0;
-        $copiedQuestionsCount = 0;
+            // Update existing exams
+            $updatedCount = 0;
+            $createdCount = 0;
+            $copiedQuestionsCount = 0;
 
-        // Update exams for classes that exist in both original and new
-        $classesToUpdate = array_intersect($originalClassIds, $newClassIds);
+            // Update exams for classes that exist in both original and new
+            $classesToUpdate = array_intersect($originalClassIds, $newClassIds);
 
-        foreach ($classesToUpdate as $classId) {
-            $existingExam = $originalGroupExams->where('schoolclass_id', $classId)->first();
-            if ($existingExam) {
-                $existingExam->update([
+            foreach ($classesToUpdate as $classId) {
+                $existingExam = $originalGroupExams->where('schoolclass_id', $classId)->first();
+                if ($existingExam) {
+                    $existingExam->update([
+                        'title' => $validated['title'],
+                        'description' => $validated['description'],
+                        'duration' => $validated['duration'],
+                        'start_time' => $validated['start_time'],
+                        'end_time' => $validated['end_time'],
+                        'termid' => $validated['termid'],
+                        'session' => $validated['session'],
+                        'subject_id' => $validated['subject_id'],
+                        'is_published' => $validated['is_published']
+                    ]);
+                    $updatedCount++;
+                    Log::info("Updated existing exam for class {$classId}");
+                }
+            }
+
+            // Create new exams for classes that are new
+            $classesToCreate = array_diff($newClassIds, $originalClassIds);
+
+            foreach ($classesToCreate as $classId) {
+                $newExam = Exam::create([
+                    'staffId' => $validated['staffId'],
                     'title' => $validated['title'],
                     'description' => $validated['description'],
                     'duration' => $validated['duration'],
@@ -354,207 +376,186 @@ class ExamController extends Controller
                     'termid' => $validated['termid'],
                     'session' => $validated['session'],
                     'subject_id' => $validated['subject_id'],
+                    'schoolclass_id' => $classId,
                     'is_published' => $validated['is_published']
                 ]);
-                $updatedCount++;
-                \Log::info("Updated existing exam for class {$classId}");
-            }
-        }
+                $createdCount++;
+                Log::info("Created new exam for class {$classId}");
 
-        // Create new exams for classes that are new
-        $classesToCreate = array_diff($newClassIds, $originalClassIds);
+                // Copy questions to the new exam if requested
+                if ($request->has('copy_questions') && $request->copy_questions) {
+                    $sourceExam = $exam; // Use the current exam as source
 
-        foreach ($classesToCreate as $classId) {
-            $newExam = Exam::create([
-                'staffId' => $validated['staffId'],
-                'title' => $validated['title'],
-                'description' => $validated['description'],
-                'duration' => $validated['duration'],
-                'start_time' => $validated['start_time'],
-                'end_time' => $validated['end_time'],
-                'termid' => $validated['termid'],
-                'session' => $validated['session'],
-                'subject_id' => $validated['subject_id'],
-                'schoolclass_id' => $classId,
-                'is_published' => $validated['is_published']
-            ]);
-            $createdCount++;
-            \Log::info("Created new exam for class {$classId}");
-
-            // Copy questions to the new exam if requested
-            if ($request->has('copy_questions') && $request->copy_questions) {
-                $sourceExam = $exam; // Use the current exam as source
-
-                if ($request->has('copy_all_questions') && $request->copy_all_questions) {
-                    // Copy all questions from source exam
-                    $copiedCount = $this->copyQuestionsToExam($sourceExam->id, $newExam->id);
-                    $copiedQuestionsCount += $copiedCount;
-                    \Log::info("Copied {$copiedCount} questions to new exam for class {$classId}");
-                } elseif ($request->has('selected_questions') && !empty($request->selected_questions)) {
-                    // Copy only selected questions
-                    $copiedCount = $this->copySelectedQuestionsToExam($sourceExam->id, $newExam->id, $request->selected_questions);
-                    $copiedQuestionsCount += $copiedCount;
-                    \Log::info("Copied {$copiedCount} selected questions to new exam for class {$classId}");
+                    if ($request->has('copy_all_questions') && $request->copy_all_questions) {
+                        // Copy all questions from source exam
+                        $copiedCount = $this->copyQuestionsToExam($sourceExam->id, $newExam->id);
+                        $copiedQuestionsCount += $copiedCount;
+                        Log::info("Copied {$copiedCount} questions to new exam for class {$classId}");
+                    } elseif ($request->has('selected_questions') && !empty($request->selected_questions)) {
+                        // Copy only selected questions
+                        $copiedCount = $this->copySelectedQuestionsToExam($sourceExam->id, $newExam->id, $request->selected_questions);
+                        $copiedQuestionsCount += $copiedCount;
+                        Log::info("Copied {$copiedCount} selected questions to new exam for class {$classId}");
+                    }
                 }
             }
-        }
 
-        $message = "Exam updated successfully. ";
-        if ($updatedCount > 0) {
-            $message .= "Updated {$updatedCount} existing class" . ($updatedCount > 1 ? 'es' : '') . ". ";
-        }
-        if ($createdCount > 0) {
-            $message .= "Added {$createdCount} new class" . ($createdCount > 1 ? 'es' : '') . ". ";
-            if ($copiedQuestionsCount > 0) {
-                $message .= "Copied {$copiedQuestionsCount} questions to new class" . ($createdCount > 1 ? 'es' : '') . ". ";
+            $message = "Exam updated successfully. ";
+            if ($updatedCount > 0) {
+                $message .= "Updated {$updatedCount} existing class" . ($updatedCount > 1 ? 'es' : '') . ". ";
             }
+            if ($createdCount > 0) {
+                $message .= "Added {$createdCount} new class" . ($createdCount > 1 ? 'es' : '') . ". ";
+                if ($copiedQuestionsCount > 0) {
+                    $message .= "Copied {$copiedQuestionsCount} questions to new class" . ($createdCount > 1 ? 'es' : '') . ". ";
+                }
+            }
+
+            Log::info($message);
+
+            if ($request->ajax()) {
+                return response()->json(['success' => true, 'message' => $message]);
+            }
+
+            return redirect()->route('exams.index')->with('success', $message);
+        } catch (\Exception $e) {
+            Log::error('Error updating exam: ' . $e->getMessage());
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while updating the exam. Please try again.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'An error occurred while updating the exam.');
+        }
+    }
+
+    /**
+     * Copy all questions from source exam to target exam
+     */
+    private function copyQuestionsToExam($sourceExamId, $targetExamId)
+    {
+        $copiedCount = 0;
+
+        // Get all questions from source exam with their options
+        $questions = Question::with('options')
+            ->where('exam_id', $sourceExamId)
+            ->orderBy('order')
+            ->get();
+
+        foreach ($questions as $question) {
+            // Get next order number for target exam
+            $order = Question::where('exam_id', $targetExamId)->max('order') + 1;
+
+            // Create new question
+            $newQuestion = Question::create([
+                'exam_id' => $targetExamId,
+                'question_text' => $question->question_text,
+                'type' => $question->type,
+                'image' => $question->image,
+                'marks' => $question->marks,
+                'order' => $order,
+                'is_reusable' => $question->is_reusable,
+            ]);
+
+            // Copy options
+            foreach ($question->options as $option) {
+                $newQuestion->options()->create([
+                    'option_text' => $option->option_text,
+                    'is_correct' => $option->is_correct,
+                    'label' => $option->label,
+                ]);
+            }
+
+            $copiedCount++;
         }
 
-        \Log::info($message);
+        return $copiedCount;
+    }
 
-        if ($request->ajax()) {
-            return response()->json(['success' => true, 'message' => $message]);
+    /**
+     * Copy selected questions from source exam to target exam
+     */
+    private function copySelectedQuestionsToExam($sourceExamId, $targetExamId, $selectedQuestionIds)
+    {
+        $copiedCount = 0;
+
+        // Get selected questions from source exam with their options
+        $questions = Question::with('options')
+            ->where('exam_id', $sourceExamId)
+            ->whereIn('id', $selectedQuestionIds)
+            ->orderBy('order')
+            ->get();
+
+        foreach ($questions as $question) {
+            // Get next order number for target exam
+            $order = Question::where('exam_id', $targetExamId)->max('order') + 1;
+
+            // Create new question
+            $newQuestion = Question::create([
+                'exam_id' => $targetExamId,
+                'question_text' => $question->question_text,
+                'type' => $question->type,
+                'image' => $question->image,
+                'marks' => $question->marks,
+                'order' => $order,
+                'is_reusable' => $question->is_reusable,
+            ]);
+
+            // Copy options
+            foreach ($question->options as $option) {
+                $newQuestion->options()->create([
+                    'option_text' => $option->option_text,
+                    'is_correct' => $option->is_correct,
+                    'label' => $option->label,
+                ]);
+            }
+
+            $copiedCount++;
         }
 
-        return redirect()->route('exams.index')->with('success', $message);
-    } catch (\Exception $e) {
-        \Log::error('Error updating exam: ' . $e->getMessage());
+        return $copiedCount;
+    }
 
-        if ($request->ajax()) {
+    /**
+     * Get questions for a specific exam to display in copy modal
+     */
+    public function getExamQuestions($examId)
+    {
+        try {
+            $exam = Exam::where('id', $examId)
+                ->where('staffId', auth()->user()->id)
+                ->firstOrFail();
+
+            $questions = Question::where('exam_id', $examId)
+                ->orderBy('order')
+                ->get()
+                ->map(function($question) {
+                    return [
+                        'id' => $question->id,
+                        'text' => strip_tags($question->question_text),
+                        'type' => $question->type,
+                        'marks' => $question->marks,
+                        'options_count' => $question->options()->count(),
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'questions' => $questions,
+                'exam_title' => $exam->title
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting exam questions: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while updating the exam. Please try again.',
-                'error' => $e->getMessage()
+                'message' => 'Failed to load questions'
             ], 500);
         }
-
-        return redirect()->back()->with('error', 'An error occurred while updating the exam.');
     }
-}
-
-/**
- * Copy all questions from source exam to target exam
- */
-private function copyQuestionsToExam($sourceExamId, $targetExamId)
-{
-    $copiedCount = 0;
-
-    // Get all questions from source exam with their options
-    $questions = Question::with('options')
-        ->where('exam_id', $sourceExamId)
-        ->orderBy('order')
-        ->get();
-
-    foreach ($questions as $question) {
-        // Get next order number for target exam
-        $order = Question::where('exam_id', $targetExamId)->max('order') + 1;
-
-        // Create new question
-        $newQuestion = Question::create([
-            'exam_id' => $targetExamId,
-            'question_text' => $question->question_text,
-            'type' => $question->type,
-            'image' => $question->image,
-            'marks' => $question->marks,
-            'order' => $order,
-            'is_reusable' => $question->is_reusable,
-        ]);
-
-        // Copy options
-        foreach ($question->options as $option) {
-            $newQuestion->options()->create([
-                'option_text' => $option->option_text,
-                'is_correct' => $option->is_correct,
-                'label' => $option->label,
-            ]);
-        }
-
-        $copiedCount++;
-    }
-
-    return $copiedCount;
-}
-
-/**
- * Copy selected questions from source exam to target exam
- */
-private function copySelectedQuestionsToExam($sourceExamId, $targetExamId, $selectedQuestionIds)
-{
-    $copiedCount = 0;
-
-    // Get selected questions from source exam with their options
-    $questions = Question::with('options')
-        ->where('exam_id', $sourceExamId)
-        ->whereIn('id', $selectedQuestionIds)
-        ->orderBy('order')
-        ->get();
-
-    foreach ($questions as $question) {
-        // Get next order number for target exam
-        $order = Question::where('exam_id', $targetExamId)->max('order') + 1;
-
-        // Create new question
-        $newQuestion = Question::create([
-            'exam_id' => $targetExamId,
-            'question_text' => $question->question_text,
-            'type' => $question->type,
-            'image' => $question->image,
-            'marks' => $question->marks,
-            'order' => $order,
-            'is_reusable' => $question->is_reusable,
-        ]);
-
-        // Copy options
-        foreach ($question->options as $option) {
-            $newQuestion->options()->create([
-                'option_text' => $option->option_text,
-                'is_correct' => $option->is_correct,
-                'label' => $option->label,
-            ]);
-        }
-
-        $copiedCount++;
-    }
-
-    return $copiedCount;
-}
-
-/**
- * Get questions for a specific exam to display in copy modal
- */
-public function getExamQuestions($examId)
-{
-    try {
-        $exam = Exam::where('id', $examId)
-            ->where('staffId', auth()->user()->id)
-            ->firstOrFail();
-
-        $questions = Question::where('exam_id', $examId)
-            ->orderBy('order')
-            ->get()
-            ->map(function($question) {
-                return [
-                    'id' => $question->id,
-                    'text' => strip_tags($question->question_text),
-                    'type' => $question->type,
-                    'marks' => $question->marks,
-                    'options_count' => $question->options()->count(),
-                ];
-            });
-
-        return response()->json([
-            'success' => true,
-            'questions' => $questions,
-            'exam_title' => $exam->title
-        ]);
-    } catch (\Exception $e) {
-        \Log::error('Error getting exam questions: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load questions'
-        ], 500);
-    }
-}
 
     public function destroy(string $id)
     {
@@ -585,7 +586,7 @@ public function getExamQuestions($examId)
 
             return redirect()->route('exams.index')->with('success', 'Exam deleted successfully');
         } catch (\Exception $e) {
-            \Log::error('Error deleting exam: ' . $e->getMessage());
+            Log::error('Error deleting exam: ' . $e->getMessage());
 
             if (request()->ajax()) {
                 return response()->json([
@@ -628,7 +629,7 @@ public function getExamQuestions($examId)
                 'message' => "{$count} exam(s) deleted successfully."
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error bulk deleting exams: ' . $e->getMessage());
+            Log::error('Error bulk deleting exams: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while deleting exams. Please try again.'
@@ -692,7 +693,7 @@ public function getExamQuestions($examId)
 
             return response()->json(['subjects' => $subjects]);
         } catch (\Exception $e) {
-            \Log::error('Error getting filtered subjects: ' . $e->getMessage());
+            Log::error('Error getting filtered subjects: ' . $e->getMessage());
             return response()->json(['subjects' => []], 500);
         }
     }
@@ -722,7 +723,7 @@ public function getExamQuestions($examId)
                 'classes' => $classes
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error getting classes for subject: ' . $e->getMessage());
+            Log::error('Error getting classes for subject: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error loading classes. Please try again.',
@@ -975,7 +976,7 @@ public function getExamQuestions($examId)
 
             return redirect()->back()->with('success', $message);
         } catch (\Exception $e) {
-            \Log::error("Error deleting student attempt: " . $e->getMessage());
+            Log::error("Error deleting student attempt: " . $e->getMessage());
 
             if (request()->ajax() || request()->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'Error deleting attempt'], 500);
@@ -1299,16 +1300,27 @@ public function getExamQuestions($examId)
     public function getAssessments($examId)
     {
         try {
+            Log::info('Fetching assessments for exam', ['exam_id' => $examId, 'user_id' => auth()->id()]);
+
             $exam = Exam::where('id', $examId)
                 ->where('staffId', auth()->user()->id)
-                ->with('schoolclass')
+                ->with(['schoolclass', 'subject'])
                 ->firstOrFail();
 
             // Get the class category for this exam's class
             $schoolclass = Schoolclass::with('classcategories')
                 ->find($exam->schoolclass_id);
 
-            if (!$schoolclass || $schoolclass->classcategories->isEmpty()) {
+            if (!$schoolclass) {
+                Log::warning('School class not found', ['schoolclass_id' => $exam->schoolclass_id]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School class not found'
+                ]);
+            }
+
+            if ($schoolclass->classcategories->isEmpty()) {
+                Log::warning('No class categories found', ['schoolclass_id' => $exam->schoolclass_id]);
                 return response()->json([
                     'success' => false,
                     'message' => 'No class category found for this class'
@@ -1316,6 +1328,7 @@ public function getExamQuestions($examId)
             }
 
             $categoryIds = $schoolclass->classcategories->pluck('id');
+            Log::info('Found class categories', ['category_ids' => $categoryIds]);
 
             // Get all assessments for this class category with their sub-assessments
             $assessments = Assessment::whereIn('classcategory_id', $categoryIds)
@@ -1324,6 +1337,8 @@ public function getExamQuestions($examId)
                 }])
                 ->orderBy('name')
                 ->get();
+
+            Log::info('Found assessments', ['count' => $assessments->count()]);
 
             // Get current term and session from the exam
             $term = Schoolterm::find($exam->termid);
@@ -1342,7 +1357,10 @@ public function getExamQuestions($examId)
                 ]
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error getting assessments: ' . $e->getMessage());
+            Log::error('Error getting assessments: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'exam_id' => $examId
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load assessments: ' . $e->getMessage()
@@ -1350,170 +1368,290 @@ public function getExamQuestions($examId)
         }
     }
 
-
-
-
     /**
- * Update student's exam score to assessment scoresheet
- */
-public function updateAssessmentScore(Request $request)
-{
-    try {
-        $validated = $request->validate([
-            'exam_id' => 'required|exists:exams,id',
-            'student_id' => 'required|exists:studentRegistration,id',
-            'assessment_id' => 'required|exists:assessments,id',
-            'sub_assessment_id' => 'nullable|exists:sub_assessments,id',
-            'score' => 'required|numeric|min:0',
-            'max_score' => 'required|numeric|min:0',
-            'is_sub' => 'boolean'
-        ]);
+     * Update student's exam score to assessment scoresheet
+     */
+    public function updateAssessmentScore(Request $request)
+    {
+        try {
+            Log::info('Starting assessment score transfer', ['request' => $request->all()]);
 
-        $isSub = $validated['is_sub'] ?? false;
+            $validated = $request->validate([
+                'exam_id' => 'required|exists:exams,id',
+                'student_id' => 'required|exists:studentRegistration,id',
+                'assessment_id' => 'required|exists:assessments,id',
+                'sub_assessment_id' => 'nullable|exists:sub_assessments,id',
+                'score' => 'required|numeric|min:0',
+                'max_score' => 'required|numeric|min:0',
+                'is_sub' => 'boolean'
+            ]);
 
-        // Validate score doesn't exceed max
-        if ($validated['score'] > $validated['max_score']) {
-            return response()->json([
-                'success' => false,
-                'message' => "Score cannot exceed maximum of {$validated['max_score']}"
-            ], 422);
-        }
+            $isSub = $validated['is_sub'] ?? false;
 
-        DB::beginTransaction();
-
-        // Get the exam
-        $exam = Exam::find($validated['exam_id']);
-
-        if (!$exam) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Exam not found'
-            ], 404);
-        }
-
-        // Find or create the broadsheet record for this student
-        $broadsheetRecord = BroadsheetRecord::firstOrCreate(
-            [
-                'student_id' => $validated['student_id'],
-                'session_id' => $exam->session,
-                'subject_id' => $exam->subject_id,
-                'schoolclass_id' => $exam->schoolclass_id,
-            ],
-            [
-                'student_id' => $validated['student_id'],
-                'session_id' => $exam->session,
-                'subject_id' => $exam->subject_id,
-                'schoolclass_id' => $exam->schoolclass_id,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]
-        );
-
-        if (!$broadsheetRecord) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create broadsheet record'
-            ], 500);
-        }
-
-        // Find the subjectclass for this subject and class
-        $subjectclass = Subjectclass::where('subjectid', $exam->subject_id)
-            ->where('schoolclassid', $exam->schoolclass_id)
-            ->first();
-
-        if (!$subjectclass) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Subject class configuration not found'
-            ], 404);
-        }
-
-        // Check if broadsheet exists, create if not (with minimal fields)
-        $broadsheet = Broadsheets::where([
-            'broadSheet_record_id' => $broadsheetRecord->id,
-            'subjectclass_id' => $subjectclass->id,
-            'staff_id' => auth()->user()->id,
-            'term_id' => $exam->termid,
-        ])->first();
-
-        if (!$broadsheet) {
-            // Create new broadsheet with only essential fields
-            $broadsheet = new Broadsheets();
-            $broadsheet->broadSheet_record_id = $broadsheetRecord->id;
-            $broadsheet->subjectclass_id = $subjectclass->id;
-            $broadsheet->staff_id = auth()->user()->id;
-            $broadsheet->term_id = $exam->termid;
-            $broadsheet->total = 0;
-            $broadsheet->bf = 0;
-            $broadsheet->cum = 0;
-            $broadsheet->vettedstatus = 0;
-            $broadsheet->created_at = now();
-            $broadsheet->updated_at = now();
-
-            if (!$broadsheet->save()) {
-                DB::rollBack();
+            // Validate score doesn't exceed max
+            if ($validated['score'] > $validated['max_score']) {
+                Log::warning('Score exceeds maximum', [
+                    'score' => $validated['score'],
+                    'max_score' => $validated['max_score']
+                ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to create broadsheet'
+                    'message' => "Score cannot exceed maximum of {$validated['max_score']}"
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            // Get the exam
+            $exam = Exam::with(['subject', 'schoolclass'])->find($validated['exam_id']);
+
+            if (!$exam) {
+                DB::rollBack();
+                Log::error('Exam not found', ['exam_id' => $validated['exam_id']]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Exam not found'
+                ], 404);
+            }
+
+            Log::info('Exam details', [
+                'exam_id' => $exam->id,
+                'subject_id' => $exam->subject_id,
+                'schoolclass_id' => $exam->schoolclass_id,
+                'termid' => $exam->termid,
+                'session' => $exam->session
+            ]);
+
+            // Find or create the broadsheet record for this student
+            $broadsheetRecord = BroadsheetRecord::firstOrCreate(
+                [
+                    'student_id' => $validated['student_id'],
+                    'session_id' => $exam->session,
+                    'subject_id' => $exam->subject_id,
+                    'schoolclass_id' => $exam->schoolclass_id,
+                ],
+                [
+                    'student_id' => $validated['student_id'],
+                    'session_id' => $exam->session,
+                    'subject_id' => $exam->subject_id,
+                    'schoolclass_id' => $exam->schoolclass_id,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]
+            );
+
+            Log::info('Broadsheet record', [
+                'id' => $broadsheetRecord->id,
+                'student_id' => $broadsheetRecord->student_id,
+                'session_id' => $broadsheetRecord->session_id,
+                'subject_id' => $broadsheetRecord->subject_id,
+                'schoolclass_id' => $broadsheetRecord->schoolclass_id
+            ]);
+
+            if (!$broadsheetRecord) {
+                DB::rollBack();
+                Log::error('Failed to create broadsheet record');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create broadsheet record'
                 ], 500);
             }
-        }
 
-        // Update or create the assessment score (just transfer the score, no calculations)
-        if ($isSub && !empty($validated['sub_assessment_id'])) {
-            // Update sub-assessment score
-            BroadsheetSubAssessmentScore::updateOrCreate(
-                [
+            // Find the subjectclass for this subject and class
+            $subjectclass = Subjectclass::where('subjectid', $exam->subject_id)
+                ->where('schoolclassid', $exam->schoolclass_id)
+                ->first();
+
+            if (!$subjectclass) {
+                DB::rollBack();
+                Log::error('Subject class not found', [
+                    'subject_id' => $exam->subject_id,
+                    'schoolclass_id' => $exam->schoolclass_id
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Subject class configuration not found'
+                ], 404);
+            }
+
+            Log::info('Subject class found', ['subjectclass_id' => $subjectclass->id]);
+
+            // Check if broadsheet exists, create if not
+            $broadsheet = Broadsheets::where([
+                'broadSheet_record_id' => $broadsheetRecord->id,
+                'subjectclass_id' => $subjectclass->id,
+                'staff_id' => auth()->user()->id,
+                'term_id' => $exam->termid,
+            ])->first();
+
+            if (!$broadsheet) {
+                // Create new broadsheet
+                $broadsheet = new Broadsheets();
+                $broadsheet->broadSheet_record_id = $broadsheetRecord->id;
+                $broadsheet->subjectclass_id = $subjectclass->id;
+                $broadsheet->staff_id = auth()->user()->id;
+                $broadsheet->term_id = $exam->termid;
+                $broadsheet->total = 0;
+                $broadsheet->bf = 0;
+                $broadsheet->cum = 0;
+                $broadsheet->vettedstatus = 0;
+                $broadsheet->created_at = now();
+                $broadsheet->updated_at = now();
+
+                if (!$broadsheet->save()) {
+                    DB::rollBack();
+                    Log::error('Failed to create broadsheet');
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to create broadsheet'
+                    ], 500);
+                }
+
+                Log::info('Created new broadsheet', ['id' => $broadsheet->id]);
+            } else {
+                Log::info('Found existing broadsheet', ['id' => $broadsheet->id]);
+            }
+
+            // Update or create the assessment score
+            if ($isSub && !empty($validated['sub_assessment_id'])) {
+                Log::info('Saving sub-assessment score', [
                     'broadsheet_id' => $broadsheet->id,
                     'sub_assessment_id' => $validated['sub_assessment_id'],
                     'assessment_id' => $validated['assessment_id'],
-                ],
-                [
                     'score' => $validated['score']
-                ]
-            );
-        } else {
-            // Update main assessment score directly
-            BroadsheetAssessmentScore::updateOrCreate(
-                [
+                ]);
+
+                // Update sub-assessment score
+                $subScore = BroadsheetSubAssessmentScore::updateOrCreate(
+                    [
+                        'broadsheet_id' => $broadsheet->id,
+                        'sub_assessment_id' => $validated['sub_assessment_id'],
+                        'assessment_id' => $validated['assessment_id'],
+                    ],
+                    [
+                        'score' => $validated['score']
+                    ]
+                );
+
+                Log::info('Sub-assessment score saved', [
+                    'id' => $subScore->id,
+                    'score' => $subScore->score
+                ]);
+
+                // Also update the parent assessment score (sum of sub-assessments)
+                $assessment = Assessment::with('subAssessments')->find($validated['assessment_id']);
+                if ($assessment && $assessment->subAssessments->isNotEmpty()) {
+                    $subTotal = BroadsheetSubAssessmentScore::where('broadsheet_id', $broadsheet->id)
+                        ->where('assessment_id', $validated['assessment_id'])
+                        ->sum('score');
+
+                    Log::info('Updating parent assessment with sub-total', [
+                        'assessment_id' => $validated['assessment_id'],
+                        'sub_total' => $subTotal
+                    ]);
+
+                    BroadsheetAssessmentScore::updateOrCreate(
+                        [
+                            'broadsheet_id' => $broadsheet->id,
+                            'assessment_id' => $validated['assessment_id'],
+                        ],
+                        [
+                            'score' => $subTotal
+                        ]
+                    );
+                }
+            } else {
+                Log::info('Saving main assessment score', [
                     'broadsheet_id' => $broadsheet->id,
                     'assessment_id' => $validated['assessment_id'],
-                ],
-                [
                     'score' => $validated['score']
+                ]);
+
+                // Update main assessment score directly
+                $assessmentScore = BroadsheetAssessmentScore::updateOrCreate(
+                    [
+                        'broadsheet_id' => $broadsheet->id,
+                        'assessment_id' => $validated['assessment_id'],
+                    ],
+                    [
+                        'score' => $validated['score']
+                    ]
+                );
+
+                Log::info('Main assessment score saved', [
+                    'id' => $assessmentScore->id,
+                    'score' => $assessmentScore->score
+                ]);
+            }
+
+            DB::commit();
+
+            // Refresh the broadsheet to get any auto-calculated values
+            $broadsheet->refresh();
+
+            // Get the assessment score we just saved for verification
+            $savedScore = null;
+            if ($isSub && !empty($validated['sub_assessment_id'])) {
+                $savedScore = BroadsheetSubAssessmentScore::where([
+                    'broadsheet_id' => $broadsheet->id,
+                    'sub_assessment_id' => $validated['sub_assessment_id'],
+                    'assessment_id' => $validated['assessment_id'],
+                ])->first();
+            } else {
+                $savedScore = BroadsheetAssessmentScore::where([
+                    'broadsheet_id' => $broadsheet->id,
+                    'assessment_id' => $validated['assessment_id'],
+                ])->first();
+            }
+
+            // Final verification log
+            Log::info('Score transfer completed successfully', [
+                'broadsheet_id' => $broadsheet->id,
+                'assessment_id' => $validated['assessment_id'],
+                'sub_assessment_id' => $validated['sub_assessment_id'] ?? null,
+                'score_saved' => $savedScore ? $savedScore->score : null,
+                'broadsheet_record_id' => $broadsheetRecord->id,
+                'subjectclass_id' => $subjectclass->id,
+                'term_id' => $exam->termid,
+                'session_id' => $exam->session
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Score successfully transferred to assessment sheet',
+                'data' => [
+                    'broadsheet_id' => $broadsheet->id,
+                    'broadsheet_record_id' => $broadsheetRecord->id,
+                    'assessment_score' => $savedScore ? $savedScore->score : $validated['score'],
+                    'total' => $broadsheet->total ?? 0,
+                    'cum' => $broadsheet->cum ?? 0,
+                    'grade' => $broadsheet->grade ?? 'N/A'
                 ]
-            );
+            ]);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+            Log::error('Database error updating assessment score: ' . $e->getMessage(), [
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Database error: ' . $e->getMessage()
+            ], 500);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating assessment score: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update score: ' . $e->getMessage()
+            ], 500);
         }
-
-        DB::commit();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Score successfully transferred to assessment sheet',
-            'data' => [
-                'broadsheet_id' => $broadsheet->id
-            ]
-        ]);
-
-    } catch (\Illuminate\Database\QueryException $e) {
-        DB::rollBack();
-        \Log::error('Database error updating assessment score: ' . $e->getMessage());
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Database error: ' . $e->getMessage()
-        ], 500);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        \Log::error('Error updating assessment score: ' . $e->getMessage());
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to update score: ' . $e->getMessage()
-        ], 500);
     }
-}
 }
