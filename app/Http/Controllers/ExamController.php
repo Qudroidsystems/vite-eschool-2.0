@@ -1420,17 +1420,7 @@ public function updateAssessmentScore(Request $request)
         // Get assessment details
         $assessment = Assessment::with('subAssessments')->find($validated['assessment_id']);
 
-        // Find or create the broadsheet record
-        $broadsheetRecord = BroadsheetRecord::firstOrCreate(
-            [
-                'student_id' => $validated['student_id'],
-                'session_id' => $exam->session,
-                'subject_id' => $exam->subject_id,
-                'schoolclass_id' => $exam->schoolclass_id,
-            ]
-        );
-
-        // Find the subjectclass
+        // Find the subjectclass for this subject and class
         $subjectclass = Subjectclass::where('subjectid', $exam->subject_id)
             ->where('schoolclassid', $exam->schoolclass_id)
             ->first();
@@ -1443,23 +1433,48 @@ public function updateAssessmentScore(Request $request)
             ], 404);
         }
 
-        // Find or create the broadsheet
-        $broadsheet = Broadsheets::firstOrCreate(
-            [
+        // IMPORTANT: First check if there's already a broadsheet for this student/subject/term/session
+        // that matches what the scoresheet is using (subjectclass_id = 5 from logs)
+        $broadsheet = Broadsheets::whereHas('broadsheetRecord', function($q) use ($validated, $exam) {
+                $q->where('student_id', $validated['student_id'])
+                  ->where('session_id', $exam->session)
+                  ->where('subject_id', $exam->subject_id)
+                  ->where('schoolclass_id', $exam->schoolclass_id);
+            })
+            ->where('subjectclass_id', $subjectclass->id)
+            ->where('staff_id', auth()->user()->id)
+            ->where('term_id', $exam->termid)
+            ->first();
+
+        if (!$broadsheet) {
+            // If no existing broadsheet, create the broadsheet record first
+            $broadsheetRecord = BroadsheetRecord::firstOrCreate(
+                [
+                    'student_id' => $validated['student_id'],
+                    'session_id' => $exam->session,
+                    'subject_id' => $exam->subject_id,
+                    'schoolclass_id' => $exam->schoolclass_id,
+                ]
+            );
+
+            // Then create the broadsheet
+            $broadsheet = Broadsheets::create([
                 'broadSheet_record_id' => $broadsheetRecord->id,
                 'subjectclass_id' => $subjectclass->id,
                 'staff_id' => auth()->user()->id,
                 'term_id' => $exam->termid,
-            ],
-            [
                 'total' => 0,
                 'bf' => 0,
                 'cum' => 0,
                 'vettedstatus' => 0
-            ]
-        );
+            ]);
 
-        // Save the score - exactly like singleUpdateScore does
+            Log::info('Created new broadsheet', ['id' => $broadsheet->id]);
+        } else {
+            Log::info('Found existing broadsheet', ['id' => $broadsheet->id]);
+        }
+
+        // Save the score
         if ($isSub && !empty($validated['sub_assessment_id'])) {
             // Save sub-assessment score
             BroadsheetSubAssessmentScore::updateOrCreate(
@@ -1495,8 +1510,6 @@ public function updateAssessmentScore(Request $request)
                 ['score' => $validated['score']]
             );
         }
-
-        // ===== CRITICAL: Now we need to trigger all the same recalculations as singleUpdateScore =====
 
         // Get the school class with categories
         $schoolclass = Schoolclass::with('classcategories')->find($exam->schoolclass_id);
@@ -1548,25 +1561,21 @@ public function updateAssessmentScore(Request $request)
         $broadsheet->remark = $newRemark;
         $broadsheet->save();
 
-        // Update class metrics and positions - exactly like singleUpdateScore does
+        // Update class metrics and positions
         $this->updateClassMetrics($subjectclass->id, auth()->user()->id, $exam->termid, $exam->session);
         $this->updateSubjectPositions($subjectclass->id, auth()->user()->id, $exam->termid, $exam->session);
 
         DB::commit();
 
-        // Refresh to get latest data
-        $broadsheet->refresh();
-
         Log::info('TRANSFER COMPLETED:', [
             'student' => $student->firstname . ' ' . $student->lastname,
             'admission' => $student->admissionNo,
-            'subject' => $exam->subject->subject,
+            'broadsheet_id' => $broadsheet->id,
             'assessment' => $assessment->name,
             'score_saved' => $validated['score'],
             'total' => $totalRaw,
             'cum' => $newCum,
-            'grade' => $newGrade,
-            'broadsheet_id' => $broadsheet->id
+            'grade' => $newGrade
         ]);
 
         return response()->json([
