@@ -472,108 +472,177 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Load assessments function - exactly like scoresheet does
-    function loadAssessments(examId) {
-        // Show loader
-        assessmentLoader.style.display = 'block';
-        assessmentSelect.style.display = 'none';
+ // Load assessments function
+function loadAssessments(examId) {
+    // Show loader
+    assessmentLoader.style.display = 'block';
+    assessmentSelect.style.display = 'none';
 
-        console.log('Loading assessments for exam:', examId);
+    console.log('Loading assessments for exam:', examId);
 
-        fetch(`/exams/assessments/${examId}`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    fetch(`/exams/assessments/${examId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Assessments loaded:', data);
+
+        // Hide loader
+        assessmentLoader.style.display = 'none';
+        assessmentSelect.style.display = 'block';
+
+        if (data.success) {
+            assessments = data.assessments;
+            subjectclass_id = data.subjectclass_id;
+
+            console.log('Subjectclass ID:', subjectclass_id);
+            console.log('Assessments with scores:', data.assessment_ids_with_scores);
+
+            if (!subjectclass_id) {
+                showError('No subject class found for this exam');
+                return;
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Assessments loaded:', data);
 
-            // Hide loader
-            assessmentLoader.style.display = 'none';
-            assessmentSelect.style.display = 'block';
+            let options = '<option value="">Select an assessment</option>';
 
-            if (data.success) {
-                assessments = data.assessments;
-                subjectclass_id = data.subjectclass_id; // Store the subjectclass_id for later use
+            data.assessments.forEach(assessment => {
+                const hasSub = assessment.sub_assessments && assessment.sub_assessments.length > 0;
+                const hasScores = data.assessment_ids_with_scores.includes(assessment.id);
 
-                console.log('Subjectclass ID:', subjectclass_id);
-                console.log('Assessments count:', assessments.length);
+                options += `<option value="${assessment.id}"
+                                 data-max="${assessment.max_score}"
+                                 data-has-sub="${hasSub}"
+                                 ${hasScores ? 'data-has-scores="true"' : ''}>
+                                ${assessment.name} (Max: ${assessment.max_score})
+                                ${hasScores ? ' ✓' : ''}
+                            </option>`;
+            });
 
-                let options = '<option value="">Select an assessment</option>';
-
-                data.assessments.forEach(assessment => {
-                    const hasSub = assessment.sub_assessments && assessment.sub_assessments.length > 0;
-                    options += `<option value="${assessment.id}"
-                                     data-max="${assessment.max_score}"
-                                     data-has-sub="${hasSub}">
-                                    ${assessment.name} (Max: ${assessment.max_score})
-                                </option>`;
-                });
-
-                assessmentSelect.innerHTML = options;
-            } else {
-                assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
-                showError('Failed to load assessments: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error loading assessments:', error);
-            assessmentLoader.style.display = 'none';
-            assessmentSelect.style.display = 'block';
+            assessmentSelect.innerHTML = options;
+        } else {
             assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
-            showError('Network error while loading assessments');
-        });
+            showError('Failed to load assessments: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error loading assessments:', error);
+        assessmentLoader.style.display = 'none';
+        assessmentSelect.style.display = 'block';
+        assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
+        showError('Network error while loading assessments');
+    });
+}
+
+// Transfer score button click handler
+transferBtn.addEventListener('click', function() {
+    // Validate
+    if (!assessmentSelect.value) {
+        showError('Please select an assessment');
+        return;
     }
 
-    // Handle assessment selection
-    assessmentSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
+    if (!validateScore()) {
+        return;
+    }
 
-        if (!this.value) {
-            maxScoreInput.value = '';
-            assessmentInfo.style.display = 'none';
-            subAssessmentContainer.style.display = 'none';
-            isSubInput.value = '0';
-            return;
-        }
+    if (!subjectclass_id) {
+        showError('Subject class ID not found. Please refresh and try again.');
+        return;
+    }
 
-        const maxScore = selectedOption.dataset.max;
-        const hasSub = selectedOption.dataset.hasSub === 'true';
+    const score = parseFloat(transferScoreInput.value);
+    const maxScore = parseFloat(maxScoreInput.value);
 
-        maxScoreInput.value = maxScore;
-        assessmentInfo.style.display = 'block';
+    // Prepare form data
+    const formData = new FormData(document.getElementById('assessmentTransferForm'));
 
-        const assessment = assessments.find(a => a.id == this.value);
-        if (assessment) {
-            let details = `
-                <strong>Name:</strong> ${assessment.name}<br>
-                <strong>Max Score:</strong> ${assessment.max_score}<br>
-            `;
+    // Add required fields
+    formData.append('max_score', maxScore);
+    formData.append('subjectclass_id', subjectclass_id);
 
-            if (assessment.sub_assessments && assessment.sub_assessments.length > 0) {
-                details += `<strong>Sub-assessments:</strong> ${assessment.sub_assessments.length}<br>`;
-                details += `<small class="text-muted">${assessment.sub_assessments.map(s => s.name).join(', ')}</small>`;
+    // Log the form data for debugging
+    console.log('Form Data Contents:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+
+    // Add sub-assessment if selected
+    if (subAssessmentSelect.value) {
+        formData.append('sub_assessment_id', subAssessmentSelect.value);
+        formData.append('is_sub', '1');
+    }
+
+    // Show loading state
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Transferring...';
+    btn.disabled = true;
+
+    // Send request
+    fetch('{{ route("exams.update-assessment-score") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json().then(data => {
+            return { status: response.status, data: data };
+        });
+    })
+    .then(({ status, data }) => {
+        console.log('Response data:', data);
+
+        // Reset button
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+
+        if (data.success) {
+            // Hide transfer modal
+            transferModal.hide();
+
+            // Show success message
+            const successMsg = `Score transferred successfully!<br>
+                <small>
+                    Student: ${data.data.student_name} (${data.data.admission_no})<br>
+                    Score: ${data.data.total} | Cum: ${data.data.cum} | Grade: ${data.data.grade}<br>
+                    Broadsheet ID: ${data.data.broadsheet_id}
+                </small>`;
+            document.getElementById('successMessage').innerHTML = successMsg;
+            successModal.show();
+
+            // Mark the row as transferred
+            const studentId = formData.get('student_id');
+            const studentRow = document.querySelector(`tr[data-student-id="${studentId}"]`);
+            if (studentRow) {
+                const transferBtn = studentRow.querySelector('.transfer-score-btn');
+                if (transferBtn) {
+                    transferBtn.classList.remove('btn-subtle-success');
+                    transferBtn.classList.add('btn-success');
+                    transferBtn.innerHTML = '<i class="ph-check"></i>';
+                    transferBtn.setAttribute('title', 'Already transferred to assessment sheet');
+                    transferBtn.disabled = true;
+                }
             }
-
-            assessmentDetails.innerHTML = details;
-
-            // Handle sub-assessments
-            if (hasSub) {
-                loadSubAssessments(assessment.id);
-                subAssessmentContainer.style.display = 'block';
-                isSubInput.value = '1';
-            } else {
-                subAssessmentContainer.style.display = 'none';
-                subAssessmentSelect.innerHTML = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
-                isSubInput.value = '0';
-            }
+        } else {
+            showError(data.message || 'Failed to transfer score');
         }
-
-        validateScore();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        showError('Network error occurred. Please try again. Error: ' + error.message);
     });
+});
 
     // Load sub-assessments
     function loadSubAssessments(assessmentId) {
