@@ -61,7 +61,7 @@
                                     Students <span class="badge bg-dark-subtle text-dark ms-1" id="students-count">{{ $students->total() }}</span>
                                     <span class="ms-3 text-muted">
                                         <i class="ph-info me-1"></i>
-                                        Click <i class="ph-arrow-right text-success"></i> to transfer scores to assessment sheet
+                                        Click <i class="ph-arrow-right text-success"></i> bbbbbbto transfer scores to assessment sheet
                                     </span>
                                 </h5>
                             </div>
