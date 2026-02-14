@@ -1370,7 +1370,6 @@ public function getAssessments($examId)
 }
 
 
-
 /**
  * Update student's exam score to assessment scoresheet
  */
@@ -1389,8 +1388,6 @@ public function updateAssessmentScore(Request $request)
             'max_score' => 'required|numeric|min:0',
             'is_sub' => 'boolean'
         ]);
-
-        Log::info('VALIDATED DATA:', $validated);
 
         $isSub = $validated['is_sub'] ?? false;
 
@@ -1418,57 +1415,13 @@ public function updateAssessmentScore(Request $request)
         $term = Schoolterm::find($exam->termid);
         $session = Schoolsession::find($exam->session);
 
-        Log::info('EXAM DETAILS:', [
-            'exam_id' => $exam->id,
-            'exam_title' => $exam->title,
-            'subject_id' => $exam->subject_id,
-            'subject_name' => $exam->subject->subject ?? 'N/A',
-            'subject_code' => $exam->subject->subject_code ?? 'N/A',
-            'schoolclass_id' => $exam->schoolclass_id,
-            'schoolclass_name' => $exam->schoolclass->schoolclass ?? 'N/A',
-            'arm' => $exam->schoolclass->arm ?? 'N/A',
-            'term_id' => $exam->termid,
-            'term_name' => $term->term ?? 'N/A',
-            'session_id' => $exam->session,
-            'session_name' => $session->session ?? 'N/A'
-        ]);
-
         // Get student details
         $student = DB::table('studentRegistration')
             ->where('id', $validated['student_id'])
             ->first();
 
-        Log::info('STUDENT DETAILS:', [
-            'student_id' => $student->id,
-            'student_name' => $student->firstname . ' ' . $student->lastname,
-            'admission_no' => $student->admissionNo
-        ]);
-
         // Get assessment details
         $assessment = Assessment::with('subAssessments')->find($validated['assessment_id']);
-        Log::info('ASSESSMENT DETAILS:', [
-            'assessment_id' => $assessment->id,
-            'assessment_name' => $assessment->name,
-            'max_score' => $assessment->max_score,
-            'classcategory_id' => $assessment->classcategory_id,
-            'has_sub_assessments' => $assessment->subAssessments->count() > 0 ? 'yes' : 'no',
-            'sub_assessments' => $assessment->subAssessments->map(function($sub) {
-                return [
-                    'id' => $sub->id,
-                    'name' => $sub->name,
-                    'max_score' => $sub->max_score
-                ];
-            })
-        ]);
-
-        if ($isSub && !empty($validated['sub_assessment_id'])) {
-            $subAssessment = SubAssessment::find($validated['sub_assessment_id']);
-            Log::info('SUB-ASSESSMENT DETAILS:', [
-                'sub_assessment_id' => $subAssessment->id,
-                'sub_assessment_name' => $subAssessment->name,
-                'max_score' => $subAssessment->max_score
-            ]);
-        }
 
         // Find or create the broadsheet record
         $broadsheetRecord = BroadsheetRecord::firstOrCreate(
@@ -1483,15 +1436,6 @@ public function updateAssessmentScore(Request $request)
                 'updated_at' => now()
             ]
         );
-
-        Log::info('BROADSHEET RECORD:', [
-            'id' => $broadsheetRecord->id,
-            'student_id' => $broadsheetRecord->student_id,
-            'session_id' => $broadsheetRecord->session_id,
-            'subject_id' => $broadsheetRecord->subject_id,
-            'schoolclass_id' => $broadsheetRecord->schoolclass_id,
-            'was_created' => $broadsheetRecord->wasRecentlyCreated ? 'yes' : 'no'
-        ]);
 
         // Find the subjectclass
         $subjectclass = Subjectclass::where('subjectid', $exam->subject_id)
@@ -1509,11 +1453,6 @@ public function updateAssessmentScore(Request $request)
                 'message' => 'Subject class configuration not found'
             ], 404);
         }
-
-        Log::info('SUBJECTCLASS FOUND:', [
-            'subjectclass_id' => $subjectclass->id,
-            'subjectteacherid' => $subjectclass->subjectteacherid
-        ]);
 
         // Find or create the broadsheet
         $broadsheet = Broadsheets::where([
@@ -1542,27 +1481,12 @@ public function updateAssessmentScore(Request $request)
             $broadsheet->created_at = now();
             $broadsheet->updated_at = now();
             $broadsheet->save();
-
-            Log::info('CREATED NEW BROADSHEET:', [
-                'id' => $broadsheet->id,
-                'broadSheet_record_id' => $broadsheet->broadSheet_record_id,
-                'subjectclass_id' => $broadsheet->subjectclass_id,
-                'staff_id' => $broadsheet->staff_id,
-                'term_id' => $broadsheet->term_id
-            ]);
-        } else {
-            Log::info('FOUND EXISTING BROADSHEET:', [
-                'id' => $broadsheet->id,
-                'total' => $broadsheet->total,
-                'cum' => $broadsheet->cum,
-                'grade' => $broadsheet->grade
-            ]);
         }
 
-        // Save the score
+        // Save the score based on type
         if ($isSub && !empty($validated['sub_assessment_id'])) {
             // Save sub-assessment score
-            $subScore = BroadsheetSubAssessmentScore::updateOrCreate(
+            BroadsheetSubAssessmentScore::updateOrCreate(
                 [
                     'broadsheet_id' => $broadsheet->id,
                     'sub_assessment_id' => $validated['sub_assessment_id'],
@@ -1571,22 +1495,15 @@ public function updateAssessmentScore(Request $request)
                 ['score' => $validated['score']]
             );
 
-            Log::info('SUB-ASSESSMENT SCORE SAVED:', [
-                'id' => $subScore->id,
-                'broadsheet_id' => $subScore->broadsheet_id,
-                'sub_assessment_id' => $subScore->sub_assessment_id,
-                'assessment_id' => $subScore->assessment_id,
-                'score' => $subScore->score,
-                'was_created' => $subScore->wasRecentlyCreated ? 'yes' : 'no'
-            ]);
-
-            // Recalculate parent assessment score
+            // IMPORTANT: Recalculate and save the parent assessment score
+            // This is what the scoresheet displays!
             if ($assessment && $assessment->subAssessments->isNotEmpty()) {
                 $subTotal = BroadsheetSubAssessmentScore::where('broadsheet_id', $broadsheet->id)
                     ->where('assessment_id', $validated['assessment_id'])
                     ->sum('score');
 
-                $parentScore = BroadsheetAssessmentScore::updateOrCreate(
+                // Save to main assessment scores table (this is what the scoresheet reads)
+                BroadsheetAssessmentScore::updateOrCreate(
                     [
                         'broadsheet_id' => $broadsheet->id,
                         'assessment_id' => $validated['assessment_id'],
@@ -1594,47 +1511,25 @@ public function updateAssessmentScore(Request $request)
                     ['score' => $subTotal]
                 );
 
-                Log::info('PARENT ASSESSMENT SCORE UPDATED:', [
-                    'id' => $parentScore->id,
-                    'assessment_id' => $parentScore->assessment_id,
-                    'score' => $parentScore->score,
-                    'sub_total' => $subTotal
+                Log::info('Updated parent assessment score:', [
+                    'assessment_id' => $validated['assessment_id'],
+                    'sub_total' => $subTotal,
+                    'saved_to_main_table' => true
                 ]);
             }
         } else {
-            // Save main assessment score
-            $assessmentScore = BroadsheetAssessmentScore::updateOrCreate(
+            // Save main assessment score directly (this is what the scoresheet reads)
+            BroadsheetAssessmentScore::updateOrCreate(
                 [
                     'broadsheet_id' => $broadsheet->id,
                     'assessment_id' => $validated['assessment_id'],
                 ],
                 ['score' => $validated['score']]
             );
-
-            Log::info('MAIN ASSESSMENT SCORE SAVED:', [
-                'id' => $assessmentScore->id,
-                'broadsheet_id' => $assessmentScore->broadsheet_id,
-                'assessment_id' => $assessmentScore->assessment_id,
-                'score' => $assessmentScore->score,
-                'was_created' => $assessmentScore->wasRecentlyCreated ? 'yes' : 'no'
-            ]);
         }
 
         // Get the school class with categories
         $schoolclass = Schoolclass::with('classcategories')->find($exam->schoolclass_id);
-
-        Log::info('SCHOOL CLASS DETAILS:', [
-            'schoolclass_id' => $schoolclass->id,
-            'schoolclass' => $schoolclass->schoolclass,
-            'arm' => $schoolclass->arm,
-            'classcategories' => $schoolclass->classcategories->map(function($cat) {
-                return [
-                    'id' => $cat->id,
-                    'category' => $cat->category,
-                    'is_senior' => $cat->is_senior
-                ];
-            })
-        ]);
 
         // Get all assessments for this class category
         $assessments = collect();
@@ -1643,55 +1538,25 @@ public function updateAssessmentScore(Request $request)
             $assessments = Assessment::whereIn('classcategory_id', $categoryIds)
                 ->with('subAssessments')
                 ->get();
-
-            Log::info('ALL ASSESSMENTS FOR THIS CLASS:', [
-                'count' => $assessments->count(),
-                'assessments' => $assessments->map(function($a) {
-                    return [
-                        'id' => $a->id,
-                        'name' => $a->name,
-                        'max_score' => $a->max_score
-                    ];
-                })
-            ]);
         }
 
         // Refresh the broadsheet with relationships
         $broadsheet->load(['assessmentScores', 'subAssessmentScores']);
 
-        Log::info('CURRENT ASSESSMENT SCORES FOR THIS BROADSHEET:', [
-            'broadsheet_id' => $broadsheet->id,
-            'assessment_scores' => $broadsheet->assessmentScores->map(function($score) {
-                return [
-                    'id' => $score->id,
-                    'assessment_id' => $score->assessment_id,
-                    'score' => $score->score
-                ];
-            }),
-            'sub_assessment_scores' => $broadsheet->subAssessmentScores->map(function($score) {
-                return [
-                    'id' => $score->id,
-                    'sub_assessment_id' => $score->sub_assessment_id,
-                    'score' => $score->score
-                ];
-            })
-        ]);
-
-        // Calculate total from all assessment scores
+        // Calculate total from all assessment scores (using main assessment scores)
         $totalRaw = 0;
-        foreach ($assessments as $assessment) {
-            $scoreObj = $broadsheet->assessmentScores->where('assessment_id', $assessment->id)->first();
+        foreach ($assessments as $assess) {
+            $scoreObj = $broadsheet->assessmentScores->where('assessment_id', $assess->id)->first();
             $scoreValue = $scoreObj ? $scoreObj->score : 0;
             $totalRaw += $scoreValue;
 
-            Log::info('ASSESSMENT SCORE CONTRIBUTION:', [
-                'assessment_name' => $assessment->name,
-                'score' => $scoreValue,
-                'running_total' => $totalRaw
+            Log::info('Assessment contribution:', [
+                'name' => $assess->name,
+                'score' => $scoreValue
             ]);
         }
 
-        // Get BF (brought forward) from previous term
+        // Get BF from previous term
         $previousTerm = Broadsheets::where('broadsheet_records.student_id', $broadsheet->student_id)
             ->where('broadsheet_records.subject_id', $exam->subject_id)
             ->where('broadsheets.term_id', $exam->termid - 1)
@@ -1701,39 +1566,14 @@ public function updateAssessmentScore(Request $request)
 
         $newBf = $previousTerm ? round($previousTerm, 2) : 0;
 
-        Log::info('BF CALCULATION:', [
-            'previous_term_cum' => $previousTerm,
-            'new_bf' => $newBf
-        ]);
-
         // Calculate cum
         $newCum = $exam->termid == 1 ? round($totalRaw, 2) : round(($totalRaw + $newBf) / 2, 2);
 
-        Log::info('CUM CALCULATION:', [
-            'term_id' => $exam->termid,
-            'total_raw' => $totalRaw,
-            'bf' => $newBf,
-            'cum' => $newCum,
-            'formula' => $exam->termid == 1 ? 'total' : '(total + bf) / 2'
-        ]);
-
         // Calculate grade
-        $newGrade = 'F';
-        if ($schoolclass && $schoolclass->classcategories->isNotEmpty()) {
-            $category = $schoolclass->classcategories->first();
-            $newGrade = $this->calculateGrade($newCum, $category->is_senior ?? false);
-        } else {
-            $newGrade = $this->calculateGrade($newCum, false);
-        }
+        $newGrade = $this->calculateGrade($newCum, $schoolclass->classcategories->first()->is_senior ?? false);
 
         // Get remark
         $newRemark = $this->getRemark($newGrade);
-
-        Log::info('GRADE CALCULATION:', [
-            'cum' => $newCum,
-            'grade' => $newGrade,
-            'remark' => $newRemark
-        ]);
 
         // Update broadsheet with calculated values
         $broadsheet->total = $totalRaw;
@@ -1743,53 +1583,29 @@ public function updateAssessmentScore(Request $request)
         $broadsheet->remark = $newRemark;
         $broadsheet->save();
 
-        Log::info('BROADSHEET UPDATED WITH CALCULATED VALUES:', [
-            'id' => $broadsheet->id,
-            'total' => $broadsheet->total,
-            'bf' => $broadsheet->bf,
-            'cum' => $broadsheet->cum,
-            'grade' => $broadsheet->grade,
-            'remark' => $broadsheet->remark
-        ]);
-
-        // Update class metrics
+        // Update class metrics and positions
         $this->updateClassMetrics($subjectclass->id, auth()->user()->id, $exam->termid, $exam->session);
-
-        // Update subject positions
         $this->updateSubjectPositions($subjectclass->id, auth()->user()->id, $exam->termid, $exam->session);
-
-        // Final verification - query the database directly
-        $verifyBroadsheet = DB::table('broadsheets')
-            ->where('id', $broadsheet->id)
-            ->first();
-
-        $verifyScore = DB::table('broadsheet_assessment_scores')
-            ->where('broadsheet_id', $broadsheet->id)
-            ->where('assessment_id', $validated['assessment_id'])
-            ->first();
-
-        Log::info('FINAL DATABASE VERIFICATION:', [
-            'broadsheet_in_db' => $verifyBroadsheet ? 'yes' : 'no',
-            'broadsheet_data' => $verifyBroadsheet,
-            'score_in_db' => $verifyScore ? 'yes' : 'no',
-            'score_data' => $verifyScore
-        ]);
 
         DB::commit();
 
-        Log::info('========== ASSESSMENT SCORE TRANSFER COMPLETED SUCCESSFULLY ==========');
-        Log::info('TRANSFER SUMMARY:', [
-            'student' => $student->firstname . ' ' . $student->lastname . ' (' . $student->admissionNo . ')',
-            'subject' => $exam->subject->subject . ' (' . $exam->subject->subject_code . ')',
-            'class' => $exam->schoolclass->schoolclass . ' ' . ($exam->schoolclass->arm ?? ''),
-            'term' => $term->term,
-            'session' => $session->session,
+        // Get the final score that will be displayed (from main assessment scores)
+        $displayScore = BroadsheetAssessmentScore::where([
+            'broadsheet_id' => $broadsheet->id,
+            'assessment_id' => $validated['assessment_id']
+        ])->first();
+
+        Log::info('========== TRANSFER COMPLETED ==========');
+        Log::info('SUMMARY:', [
+            'student' => $student->firstname . ' ' . $student->lastname,
+            'admission' => $student->admissionNo,
+            'subject' => $exam->subject->subject,
+            'class' => $exam->schoolclass->schoolclass,
             'assessment' => $assessment->name,
-            'score_saved' => $validated['score'],
-            'total_calculated' => $totalRaw,
-            'cum_calculated' => $newCum,
-            'grade_calculated' => $newGrade,
-            'broadsheet_id' => $broadsheet->id
+            'score_saved_to_main_table' => $displayScore ? $displayScore->score : 'N/A',
+            'total' => $totalRaw,
+            'cum' => $newCum,
+            'grade' => $newGrade
         ]);
 
         return response()->json([
@@ -1799,12 +1615,9 @@ public function updateAssessmentScore(Request $request)
                 'broadsheet_id' => $broadsheet->id,
                 'student' => $student->firstname . ' ' . $student->lastname,
                 'admission_no' => $student->admissionNo,
-                'subject' => $exam->subject->subject . ' (' . $exam->subject->subject_code . ')',
-                'class' => $exam->schoolclass->schoolclass . ' ' . ($exam->schoolclass->arm ?? ''),
-                'term' => $term->term,
-                'session' => $session->session,
+                'subject' => $exam->subject->subject,
                 'assessment' => $assessment->name,
-                'score_saved' => $validated['score'],
+                'score_saved' => $displayScore ? $displayScore->score : $validated['score'],
                 'total' => $totalRaw,
                 'cum' => $newCum,
                 'grade' => $newGrade
@@ -1813,12 +1626,9 @@ public function updateAssessmentScore(Request $request)
 
     } catch (\Exception $e) {
         DB::rollBack();
-        Log::error('ERROR IN ASSESSMENT SCORE TRANSFER:', [
-            'error_message' => $e->getMessage(),
-            'error_file' => $e->getFile(),
-            'error_line' => $e->getLine(),
-            'trace' => $e->getTraceAsString(),
-            'request' => $request->all()
+        Log::error('ERROR IN TRANSFER:', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
         ]);
 
         return response()->json([
