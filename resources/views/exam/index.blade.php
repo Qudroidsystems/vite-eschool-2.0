@@ -401,7 +401,6 @@
     </div>
 </div>
 
-ripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips
@@ -428,11 +427,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const assessmentLoader = document.getElementById('assessmentLoader');
     const transferBtn = document.getElementById('transferScoreBtn');
 
+    // Global variables
     let assessments = [];
     let currentExamId = '{{ $exam->id }}';
     let subjectclass_id = null;
 
-    // Add click event to all transfer buttons
+    // =============================================
+    // TRANSFER BUTTON CLICK HANDLER
+    // =============================================
     document.querySelectorAll('.transfer-score-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -442,12 +444,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const studentAdmission = this.dataset.studentAdmission;
             const examScore = parseFloat(this.dataset.examScore) || 0;
 
-            console.log('Transfer button clicked:', {
-                studentId,
-                studentName,
-                studentAdmission,
-                examScore
-            });
+            console.log('=========================================');
+            console.log('TRANSFER BUTTON CLICKED');
+            console.log('=========================================');
+            console.log('Student ID:', studentId);
+            console.log('Student Name:', studentName);
+            console.log('Admission:', studentAdmission);
+            console.log('Exam Score:', examScore);
 
             // Set student data in modal
             document.getElementById('studentId').value = studentId;
@@ -465,13 +468,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Load assessments function
+    // =============================================
+    // LOAD ASSESSMENTS FUNCTION
+    // =============================================
     function loadAssessments(examId) {
         // Show loader
         assessmentLoader.style.display = 'block';
         assessmentSelect.style.display = 'none';
 
-        console.log('Loading assessments for exam:', examId);
+        console.log('=========================================');
+        console.log('LOADING ASSESSMENTS FOR EXAM:', examId);
+        console.log('=========================================');
 
         fetch(`/exams/assessments/${examId}`, {
             headers: {
@@ -480,26 +487,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('API Response Status:', response.status);
+            return response.json();
+        })
         .then(data => {
-            console.log('Assessments loaded:', data);
+            console.log('API Response Data:', data);
 
             // Hide loader
             assessmentLoader.style.display = 'none';
             assessmentSelect.style.display = 'block';
 
             if (data.success) {
+                // Store assessments
                 assessments = data.assessments;
+
+                // CRITICAL: Store subjectclass_id
                 subjectclass_id = data.subjectclass_id;
 
-                console.log('Subjectclass ID stored:', subjectclass_id);
-                console.log('Assessments with scores:', data.assessment_ids_with_scores);
+                console.log('✅ ASSESSMENTS LOADED SUCCESSFULLY');
+                console.log('📊 Assessments Count:', assessments.length);
+                console.log('🆔 Subjectclass ID:', subjectclass_id);
+                console.log('📝 Assessments with scores:', data.assessment_ids_with_scores);
 
                 if (!subjectclass_id) {
+                    console.error('❌ ERROR: subjectclass_id is null or undefined!');
                     showError('No subject class found for this exam');
                     return;
                 }
 
+                // Build assessment options
                 let options = '<option value="">Select an assessment</option>';
 
                 data.assessments.forEach(assessment => {
@@ -516,13 +533,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 assessmentSelect.innerHTML = options;
+                console.log('✅ Assessment dropdown populated');
             } else {
+                console.error('❌ API returned success: false', data.message);
                 assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
                 showError('Failed to load assessments: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
-            console.error('Error loading assessments:', error);
+            console.error('❌ NETWORK ERROR loading assessments:', error);
             assessmentLoader.style.display = 'none';
             assessmentSelect.style.display = 'block';
             assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
@@ -530,10 +549,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle assessment selection
+    // =============================================
+    // ASSESSMENT SELECTION HANDLER
+    // =============================================
     assessmentSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const assessmentId = this.value;
+
+        console.log('=========================================');
+        console.log('ASSESSMENT SELECTED:', assessmentId);
+        console.log('=========================================');
 
         // Set the assessment_id hidden field
         document.getElementById('assessmentId').value = assessmentId;
@@ -548,6 +573,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const maxScore = selectedOption.dataset.max;
         const hasSub = selectedOption.dataset.hasSub === 'true';
+
+        console.log('Max Score:', maxScore);
+        console.log('Has Sub-assessments:', hasSub);
 
         maxScoreInput.value = maxScore;
         assessmentInfo.style.display = 'block';
@@ -581,8 +609,12 @@ document.addEventListener('DOMContentLoaded', function() {
         validateScore();
     });
 
-    // Load sub-assessments
+    // =============================================
+    // LOAD SUB-ASSESSMENTS FUNCTION
+    // =============================================
     function loadSubAssessments(assessmentId) {
+        console.log('Loading sub-assessments for assessment:', assessmentId);
+
         const assessment = assessments.find(a => a.id == assessmentId);
         if (assessment && assessment.sub_assessments && assessment.sub_assessments.length > 0) {
             let options = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
@@ -592,25 +624,33 @@ document.addEventListener('DOMContentLoaded', function() {
                            </option>`;
             });
             subAssessmentSelect.innerHTML = options;
+            console.log('Sub-assessments loaded:', assessment.sub_assessments.length);
         } else {
             subAssessmentSelect.innerHTML = '<option value="">-- No sub-assessments available --</option>';
+            console.log('No sub-assessments found');
         }
     }
 
-    // Handle sub-assessment selection
+    // =============================================
+    // SUB-ASSESSMENT SELECTION HANDLER
+    // =============================================
     subAssessmentSelect.addEventListener('change', function() {
         if (this.value) {
             const selectedOption = this.options[this.selectedIndex];
             maxScoreInput.value = selectedOption.dataset.max;
+            console.log('Sub-assessment selected, max score:', selectedOption.dataset.max);
         } else {
             // Revert to main assessment max
             const mainOption = assessmentSelect.options[assessmentSelect.selectedIndex];
             maxScoreInput.value = mainOption.dataset.max;
+            console.log('Reverted to main assessment max:', mainOption.dataset.max);
         }
         validateScore();
     });
 
-    // Validate score
+    // =============================================
+    // VALIDATE SCORE FUNCTION
+    // =============================================
     function validateScore() {
         const score = parseFloat(transferScoreInput.value) || 0;
         const maxScore = parseFloat(maxScoreInput.value) || 0;
@@ -633,19 +673,32 @@ document.addEventListener('DOMContentLoaded', function() {
     transferScoreInput.addEventListener('input', validateScore);
     transferScoreInput.addEventListener('blur', validateScore);
 
-    // Transfer score button click handler
+    // =============================================
+    // TRANSFER SCORE BUTTON CLICK HANDLER
+    // =============================================
     transferBtn.addEventListener('click', function() {
-        // Validate
+        console.log('=========================================');
+        console.log('TRANSFER SCORE BUTTON CLICKED');
+        console.log('=========================================');
+
+        // Validate assessment selected
         if (!assessmentSelect.value) {
+            console.error('❌ No assessment selected');
             showError('Please select an assessment');
             return;
         }
 
+        // Validate score
         if (!validateScore()) {
+            console.error('❌ Score validation failed');
             return;
         }
 
+        // CRITICAL: Check if subjectclass_id exists
+        console.log('Current subjectclass_id value:', subjectclass_id);
+
         if (!subjectclass_id) {
+            console.error('❌ ERROR: subjectclass_id is null or undefined!');
             showError('Subject class ID not found. Please refresh and try again.');
             return;
         }
@@ -653,27 +706,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const score = parseFloat(transferScoreInput.value);
         const maxScore = parseFloat(maxScoreInput.value);
 
+        console.log('Score to transfer:', score);
+        console.log('Max score:', maxScore);
+        console.log('Subjectclass ID being sent:', subjectclass_id);
+
         // Prepare form data
         const formData = new FormData(document.getElementById('assessmentTransferForm'));
 
         // Add required fields
         formData.append('max_score', maxScore);
-        formData.append('subjectclass_id', subjectclass_id);
+        formData.append('subjectclass_id', subjectclass_id); // THIS IS CRITICAL
 
         // Add sub-assessment if selected
         if (subAssessmentSelect.value) {
             formData.append('sub_assessment_id', subAssessmentSelect.value);
             formData.append('is_sub', '1');
+            console.log('Sub-assessment selected:', subAssessmentSelect.value);
         } else {
             formData.append('is_sub', '0');
         }
 
-        // DEBUG: Log all form data to verify
+        // DEBUG: Log ALL form data to verify
         console.log('========== FORM DATA BEING SENT ==========');
+        console.log('FormData contents:');
         for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
+            console.log(`  🔹 ${pair[0]}: ${pair[1]}`);
         }
         console.log('==========================================');
+
+        // Verify subjectclass_id is in the form data
+        if (!formData.has('subjectclass_id')) {
+            console.error('❌ CRITICAL ERROR: subjectclass_id NOT added to FormData!');
+            showError('System error: subjectclass_id missing from request');
+            return;
+        } else {
+            console.log('✅ subjectclass_id successfully added to FormData');
+        }
 
         // Show loading state
         const btn = this;
@@ -705,6 +773,9 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.disabled = false;
 
             if (data.success) {
+                console.log('✅ TRANSFER SUCCESSFUL!');
+                console.log('📊 Transfer data:', data.data);
+
                 // Hide transfer modal
                 transferModal.hide();
 
@@ -732,25 +803,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             } else {
+                console.error('❌ TRANSFER FAILED:', data.message);
                 showError(data.message || 'Failed to transfer score');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('❌ NETWORK ERROR:', error);
             btn.innerHTML = originalText;
             btn.disabled = false;
             showError('Network error occurred. Please try again. Error: ' + error.message);
         });
     });
 
-    // Show error function
+    // =============================================
+    // SHOW ERROR FUNCTION
+    // =============================================
     function showError(message) {
+        console.error('❌ ERROR:', message);
         document.getElementById('errorMessage').textContent = message;
         errorModal.show();
     }
 
-    // Reset modal when hidden
+    // =============================================
+    // RESET MODAL WHEN HIDDEN
+    // =============================================
     document.getElementById('assessmentTransferModal').addEventListener('hidden.bs.modal', function() {
+        console.log('Modal hidden - resetting form');
         assessmentSelect.value = '';
         subAssessmentSelect.innerHTML = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
         subAssessmentContainer.style.display = 'none';
@@ -762,7 +840,9 @@ document.addEventListener('DOMContentLoaded', function() {
         scoreValidationMsg.innerHTML = '';
     });
 
-    // Delete attempt functionality
+    // =============================================
+    // DELETE ATTEMPT FUNCTIONALITY
+    // =============================================
     const deleteButtons = document.querySelectorAll('.delete-attempt');
     deleteButtons.forEach(button => {
         button.addEventListener('click', function(e) {
@@ -848,6 +928,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // =============================================
+    // HELPER FUNCTIONS
+    // =============================================
     function updateCountBadge() {
         const badge = document.getElementById('students-count');
         if (badge) {
