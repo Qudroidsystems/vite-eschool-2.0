@@ -437,6 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let assessments = [];
     let currentExamId = '{{ $exam->id }}';
+    let subjectclass_id = null;
 
     // Add click event to all transfer buttons
     document.querySelectorAll('.transfer-score-btn').forEach(btn => {
@@ -471,7 +472,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Load assessments function
+    // Load assessments function - exactly like scoresheet does
     function loadAssessments(examId) {
         // Show loader
         assessmentLoader.style.display = 'block';
@@ -496,6 +497,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (data.success) {
                 assessments = data.assessments;
+                subjectclass_id = data.subjectclass_id; // Store the subjectclass_id for later use
+
+                console.log('Subjectclass ID:', subjectclass_id);
+                console.log('Assessments count:', assessments.length);
+
                 let options = '<option value="">Select an assessment</option>';
 
                 data.assessments.forEach(assessment => {
@@ -621,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
     transferScoreInput.addEventListener('input', validateScore);
     transferScoreInput.addEventListener('blur', validateScore);
 
-    // Transfer score button click
+    // Transfer score button click handler
     transferBtn.addEventListener('click', function() {
         // Validate
         if (!assessmentSelect.value) {
@@ -630,6 +636,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (!validateScore()) {
+            return;
+        }
+
+        if (!subjectclass_id) {
+            showError('Subject class ID not found. Please reload assessments.');
             return;
         }
 
@@ -642,6 +653,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add max score
         formData.append('max_score', maxScore);
 
+        // Add subjectclass_id - CRITICAL for matching scoresheet
+        formData.append('subjectclass_id', subjectclass_id);
+
         // Add sub-assessment if selected
         if (subAssessmentSelect.value) {
             formData.append('sub_assessment_id', subAssessmentSelect.value);
@@ -649,10 +663,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Log the data being sent (for debugging)
-        console.log('Sending transfer data:');
+        console.log('========== SENDING TRANSFER DATA ==========');
         for (let pair of formData.entries()) {
             console.log(pair[0] + ': ' + pair[1]);
         }
+        console.log('==========================================');
 
         // Show loading state
         const btn = this;
@@ -690,12 +705,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show success message with actual data
                 const successMsg = `Score transferred successfully!<br>
                     <small>
-                        Score: ${data.data.assessment_score} |
+                        Student: ${data.data.student_name} (${data.data.admission_no})<br>
+                        Score: ${data.data.score_saved} |
                         Total: ${data.data.total} |
                         Cum: ${data.data.cum} |
                         Grade: ${data.data.grade}<br>
                         Broadsheet ID: ${data.data.broadsheet_id} |
-                        Record ID: ${data.data.broadsheet_record_id}
+                        Subject Class ID: ${data.data.subjectclass_id}
                     </small>`;
                 document.getElementById('successMessage').innerHTML = successMsg;
                 successModal.show();
@@ -711,6 +727,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         transferBtn.innerHTML = '<i class="ph-check"></i>';
                         transferBtn.setAttribute('title', 'Already transferred to assessment sheet');
                         transferBtn.disabled = true;
+
+                        // Add a badge to show it's transferred
+                        const scoreCell = studentRow.querySelector('td:last-child .badge');
+                        if (scoreCell) {
+                            scoreCell.classList.add('bg-success');
+                            scoreCell.setAttribute('title', 'Score transferred to assessment sheet');
+                        }
                     }
                 }
             } else {
@@ -744,7 +767,7 @@ document.addEventListener('DOMContentLoaded', function() {
         scoreValidationMsg.innerHTML = '';
     });
 
-    // Delete attempt functionality
+    // Delete attempt functionality (existing)
     const deleteButtons = document.querySelectorAll('.delete-attempt');
     deleteButtons.forEach(button => {
         button.addEventListener('click', function(e) {
@@ -830,6 +853,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Helper functions for UI updates
     function updateCountBadge() {
         const badge = document.getElementById('students-count');
         if (badge) {
