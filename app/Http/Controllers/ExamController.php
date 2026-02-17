@@ -1296,12 +1296,12 @@ class ExamController extends Controller
 
 
     /**
- * Get available assessments for the student based on existing broadsheet records
- * This mimics the logic in MyScoreSheetController's getBroadsheets method
+ * Get available assessments for the exam's class
  */
 public function getAssessments($examId)
 {
     try {
+        Log::info('========== GET ASSESSMENTS CALLED ==========');
         Log::info('Fetching assessments for exam', ['exam_id' => $examId, 'user_id' => auth()->id()]);
 
         $exam = Exam::where('id', $examId)
@@ -1309,33 +1309,35 @@ public function getAssessments($examId)
             ->with(['schoolclass', 'subject'])
             ->firstOrFail();
 
-        // Get the subjectclass for this subject and class
-        $subjectclass = Subjectclass::where('subjectid', $exam->subject_id)
-            ->where('schoolclassid', $exam->schoolclass_id)
-            ->first();
-
-        if (!$subjectclass) {
-            Log::error('Subject class not found', [
-                'subject_id' => $exam->subject_id,
-                'schoolclass_id' => $exam->schoolclass_id
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Subject class not found for this exam'
-            ], 404);
-        }
+        Log::info('Exam details:', [
+            'exam_id' => $exam->id,
+            'subject_id' => $exam->subject_id,
+            'schoolclass_id' => $exam->schoolclass_id,
+            'term_id' => $exam->termid,
+            'session_id' => $exam->session
+        ]);
 
         // Get the school class with categories
         $schoolclass = Schoolclass::with('classcategories')->find($exam->schoolclass_id);
 
-        if (!$schoolclass || $schoolclass->classcategories->isEmpty()) {
+        if (!$schoolclass) {
+            Log::error('School class not found', ['schoolclass_id' => $exam->schoolclass_id]);
             return response()->json([
                 'success' => false,
-                'message' => 'No class categories found for this class'
-            ]);
+                'message' => 'School class not found'
+            ], 404);
+        }
+
+        if ($schoolclass->classcategories->isEmpty()) {
+            Log::error('No class categories found', ['schoolclass_id' => $exam->schoolclass_id]);
+            return response()->json([
+                'success' => false,
+                'message' => 'No class category found for this class'
+            ], 404);
         }
 
         $categoryIds = $schoolclass->classcategories->pluck('id');
+        Log::info('Class categories:', ['category_ids' => $categoryIds]);
 
         // Get all assessments for this class category
         $allAssessments = Assessment::whereIn('classcategory_id', $categoryIds)
@@ -1345,12 +1347,45 @@ public function getAssessments($examId)
             ->orderBy('name')
             ->get();
 
-        // Get existing broadsheet records for this subject/class/term/session
-        // This is exactly how the scoresheet loads data
-        $existingBroadsheets = Broadsheets::where('subjectclass_id', $subjectclass->id)
+        Log::info('All assessments found:', ['count' => $allAssessments->count()]);
+
+        // CRITICAL: Find the correct subjectclass_id that the scoresheet uses
+        // This mimics the join logic in getBroadsheets method
+        $correctSubjectclass = Subjectclass::where('subjectid', $exam->subject_id)
+            ->where('schoolclassid', $exam->schoolclass_id)
+            ->first();
+
+        if (!$correctSubjectclass) {
+            Log::error('No subjectclass found for subject and class', [
+                'subject_id' => $exam->subject_id,
+                'schoolclass_id' => $exam->schoolclass_id
+            ]);
+
+            // Try to find any subjectclass for this subject
+            $alternativeSubjectclass = Subjectclass::where('subjectid', $exam->subject_id)->first();
+
+            if ($alternativeSubjectclass) {
+                Log::info('Found alternative subjectclass:', ['id' => $alternativeSubjectclass->id]);
+                $correctSubjectclass = $alternativeSubjectclass;
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Subject class configuration not found'
+                ], 404);
+            }
+        }
+
+        Log::info('Correct subjectclass found:', [
+            'id' => $correctSubjectclass->id,
+            'subjectid' => $correctSubjectclass->subjectid,
+            'schoolclassid' => $correctSubjectclass->schoolclassid
+        ]);
+
+        // Get existing broadsheet records to see which assessments already have scores
+        $existingBroadsheets = Broadsheets::where('subjectclass_id', $correctSubjectclass->id)
             ->where('term_id', $exam->termid)
             ->where('staff_id', auth()->user()->id)
-            ->with(['assessmentScores.assessment', 'broadsheetRecord'])
+            ->with(['assessmentScores.assessment'])
             ->get();
 
         Log::info('Existing broadsheets found:', [
@@ -1371,25 +1406,29 @@ public function getAssessments($examId)
         $term = Schoolterm::find($exam->termid);
         $session = Schoolsession::find($exam->session);
 
-        Log::info('Assessment data:', [
+        Log::info('========== ASSESSMENT DATA SUMMARY ==========');
+        Log::info('Final assessment data:', [
             'all_assessments_count' => $allAssessments->count(),
             'assessments_with_scores_count' => $assessmentIdsWithScores->count(),
-            'assessment_ids_with_scores' => $assessmentIdsWithScores,
-            'subjectclass_id' => $subjectclass->id,
-            'existing_broadsheet_ids' => $existingBroadsheets->pluck('id')->toArray()
+            'assessment_ids_with_scores' => $assessmentIdsWithScores->toArray(),
+            'correct_subjectclass_id' => $correctSubjectclass->id,
+            'existing_broadsheet_ids' => $existingBroadsheets->pluck('id')->toArray(),
+            'term' => $term->term ?? 'N/A',
+            'session' => $session->session ?? 'N/A'
         ]);
 
         return response()->json([
             'success' => true,
             'assessments' => $allAssessments,
             'assessment_ids_with_scores' => $assessmentIdsWithScores,
-            'subjectclass_id' => $subjectclass->id,
+            'subjectclass_id' => $correctSubjectclass->id,
             'existing_broadsheet_ids' => $existingBroadsheets->pluck('id')->toArray(),
             'exam' => [
                 'id' => $exam->id,
                 'title' => $exam->title,
                 'subject' => $exam->subject->subject ?? 'N/A',
                 'subject_id' => $exam->subject_id,
+                'subject_code' => $exam->subject->subject_code ?? 'N/A',
                 'class' => $schoolclass->schoolclass . ' ' . ($schoolclass->arm ?? ''),
                 'schoolclass_id' => $exam->schoolclass_id,
                 'term' => $term->term ?? 'N/A',
@@ -1399,6 +1438,12 @@ public function getAssessments($examId)
             ]
         ]);
 
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        Log::error('Exam not found:', ['exam_id' => $examId, 'error' => $e->getMessage()]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Exam not found'
+        ], 404);
     } catch (\Exception $e) {
         Log::error('Error getting assessments: ' . $e->getMessage(), [
             'trace' => $e->getTraceAsString(),
@@ -1410,6 +1455,7 @@ public function getAssessments($examId)
         ], 500);
     }
 }
+
 
 
 
@@ -1460,8 +1506,32 @@ public function updateAssessmentScore(Request $request)
             ->where('id', $validated['student_id'])
             ->first();
 
+        if (!$student) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Student not found'
+            ], 404);
+        }
+
         // Get assessment details
         $assessment = Assessment::with('subAssessments')->find($validated['assessment_id']);
+
+        if (!$assessment) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Assessment not found'
+            ], 404);
+        }
+
+        Log::info('Transfer details:', [
+            'student' => $student->firstname . ' ' . $student->lastname,
+            'admission' => $student->admissionNo,
+            'subject' => $exam->subject->subject ?? 'N/A',
+            'assessment' => $assessment->name,
+            'score' => $validated['score']
+        ]);
 
         // Find or create the broadsheet record
         $broadsheetRecord = BroadsheetRecord::firstOrCreate(
@@ -1477,15 +1547,18 @@ public function updateAssessmentScore(Request $request)
             ]
         );
 
-        Log::info('Broadsheet record', [
+        Log::info('Broadsheet record:', [
             'id' => $broadsheetRecord->id,
-            'student_id' => $broadsheetRecord->student_id
+            'student_id' => $broadsheetRecord->student_id,
+            'session_id' => $broadsheetRecord->session_id,
+            'subject_id' => $broadsheetRecord->subject_id,
+            'schoolclass_id' => $broadsheetRecord->schoolclass_id
         ]);
 
-        // CRITICAL: Use the correct subjectclass_id (5 for ENGLISH LANGUAGE based on logs)
-        $correctSubjectclassId = 5; // Hardcoded based on your logs
+        // Use the subjectclass_id from the request (now dynamically fetched)
+        $correctSubjectclassId = $validated['subjectclass_id'];
 
-        Log::info('Using correct subjectclass_id:', ['id' => $correctSubjectclassId]);
+        Log::info('Using subjectclass_id from request:', ['id' => $correctSubjectclassId]);
 
         // Try to find the existing broadsheet that matches what the scoresheet uses
         $broadsheet = Broadsheets::whereHas('broadsheetRecord', function($q) use ($validated, $exam) {
@@ -1543,14 +1616,15 @@ public function updateAssessmentScore(Request $request)
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
-            }
-        }
 
-        Log::info('Using broadsheet:', [
-            'id' => $broadsheet->id,
-            'subjectclass_id' => $broadsheet->subjectclass_id,
-            'broadsheet_record_id' => $broadsheet->broadSheet_record_id
-        ]);
+                Log::info('Created new broadsheet:', ['id' => $broadsheet->id]);
+            }
+        } else {
+            Log::info('Found existing broadsheet with correct subjectclass_id:', [
+                'id' => $broadsheet->id,
+                'subjectclass_id' => $broadsheet->subjectclass_id
+            ]);
+        }
 
         // Save the score
         if ($isSub && !empty($validated['sub_assessment_id'])) {
@@ -1608,6 +1682,22 @@ public function updateAssessmentScore(Request $request)
         // Get the school class with categories
         $schoolclass = Schoolclass::with('classcategories')->find($exam->schoolclass_id);
 
+        if (!$schoolclass) {
+            Log::error('School class not found for recalculation', ['schoolclass_id' => $exam->schoolclass_id]);
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Score saved but class metrics could not be updated',
+                'data' => [
+                    'broadsheet_id' => $broadsheet->id,
+                    'subjectclass_id' => $correctSubjectclassId,
+                    'student_name' => $student->firstname . ' ' . $student->lastname,
+                    'admission_no' => $student->admissionNo
+                ]
+            ]);
+        }
+
         // Get all assessments for this class category
         $allAssessments = collect();
         if ($schoolclass && $schoolclass->classcategories->isNotEmpty()) {
@@ -1649,22 +1739,35 @@ public function updateAssessmentScore(Request $request)
         $broadsheet->remark = $newRemark;
         $broadsheet->save();
 
+        Log::info('Broadsheet updated with calculated values:', [
+            'total' => $totalRaw,
+            'bf' => $newBf,
+            'cum' => $newCum,
+            'grade' => $newGrade,
+            'remark' => $newRemark
+        ]);
+
         // Update class metrics and positions with the correct subjectclass_id
         $this->updateClassMetrics($correctSubjectclassId, auth()->user()->id, $exam->termid, $exam->session);
         $this->updateSubjectPositions($correctSubjectclassId, auth()->user()->id, $exam->termid, $exam->session);
 
         DB::commit();
 
-        Log::info('TRANSFER COMPLETED:', [
+        Log::info('========== TRANSFER COMPLETED SUCCESSFULLY ==========');
+        Log::info('Transfer summary:', [
             'student' => $student->firstname . ' ' . $student->lastname,
             'admission' => $student->admissionNo,
+            'subject' => $exam->subject->subject ?? 'N/A',
+            'class' => $exam->schoolclass->schoolclass ?? 'N/A',
+            'term' => $exam->termid,
+            'session' => $exam->session,
             'broadsheet_id' => $broadsheet->id,
             'subjectclass_id' => $correctSubjectclassId,
             'assessment' => $assessment->name,
             'score_saved' => $validated['score'],
-            'total' => $totalRaw,
-            'cum' => $newCum,
-            'grade' => $newGrade
+            'total_calculated' => $totalRaw,
+            'cum_calculated' => $newCum,
+            'grade_calculated' => $newGrade
         ]);
 
         return response()->json([
@@ -1687,10 +1790,23 @@ public function updateAssessmentScore(Request $request)
             'success' => false,
             'message' => 'Validation error: ' . json_encode($e->errors())
         ], 422);
+    } catch (\Illuminate\Database\QueryException $e) {
+        DB::rollBack();
+        Log::error('Database error:', [
+            'message' => $e->getMessage(),
+            'sql' => $e->getSql(),
+            'bindings' => $e->getBindings()
+        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Database error occurred: ' . $e->getMessage()
+        ], 500);
     } catch (\Exception $e) {
         DB::rollBack();
         Log::error('ERROR IN TRANSFER:', [
             'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
             'trace' => $e->getTraceAsString()
         ]);
 
@@ -1855,5 +1971,176 @@ private function updateSubjectPositions($subjectclass_id, $staff_id, $term_id, $
     }
 
     Log::info('Subject positions updated for subjectclass_id: ' . $subjectclass_id);
+}
+
+
+/**
+ * Calculate grade based on score and level
+ */
+private function calculateGrade($score, $isSenior = false)
+{
+    if (!$isSenior) {
+        // Junior secondary grading
+        if ($score >= 70) return 'A';
+        if ($score >= 60) return 'B';
+        if ($score >= 50) return 'C';
+        if ($score >= 45) return 'D';
+        if ($score >= 40) return 'E';
+        return 'F';
+    } else {
+        // Senior secondary grading
+        if ($score >= 75) return 'A1';
+        if ($score >= 70) return 'B2';
+        if ($score >= 65) return 'B3';
+        if ($score >= 60) return 'C4';
+        if ($score >= 55) return 'C5';
+        if ($score >= 50) return 'C6';
+        if ($score >= 45) return 'D7';
+        if ($score >= 40) return 'E8';
+        return 'F9';
+    }
+}
+
+/**
+ * Get remark based on grade
+ */
+private function getRemark($grade)
+{
+    $remarks = [
+        'A' => 'Excellent',
+        'B' => 'Very Good',
+        'C' => 'Good',
+        'D' => 'Credit',
+        'E' => 'Pass',
+        'F' => 'Fail',
+        'A1' => 'Excellent',
+        'B2' => 'Very Good',
+        'B3' => 'Good',
+        'C4' => 'Credit',
+        'C5' => 'Credit',
+        'C6' => 'Credit',
+        'D7' => 'Pass',
+        'E8' => 'Pass',
+        'F9' => 'Fail',
+    ];
+
+    return $remarks[$grade] ?? 'Unknown';
+}
+
+/**
+ * Update class metrics (copied from MyScoreSheetController)
+ */
+private function updateClassMetrics($subjectclassid, $staffid, $termid, $sessionid)
+{
+    try {
+        $subjectClass = DB::table('subjectclass')
+            ->where('id', $subjectclassid)
+            ->first(['subjectteacherid']);
+
+        if (!$subjectClass) {
+            Log::warning('Subjectclass not found', ['subjectclass_id' => $subjectclassid]);
+            return;
+        }
+
+        $subjectTeacher = DB::table('subjectteacher')
+            ->where('id', $subjectClass->subjectteacherid)
+            ->first(['subjectid']);
+
+        if (!$subjectTeacher) {
+            Log::warning('Subjectteacher not found', ['subjectteacherid' => $subjectClass->subjectteacherid]);
+            return;
+        }
+
+        $subjectId = $subjectTeacher->subjectid;
+
+        $metrics = Broadsheets::where('broadsheets.subjectclass_id', $subjectclassid)
+            ->where('broadsheets.staff_id', $staffid)
+            ->where('broadsheets.term_id', $termid)
+            ->leftJoin('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadSheet_record_id')
+            ->where('broadsheet_records.session_id', $sessionid)
+            ->where('broadsheet_records.subject_id', $subjectId)
+            ->select([
+                DB::raw('MIN(broadsheets.cum) as class_min'),
+                DB::raw('MAX(broadsheets.cum) as class_max'),
+                DB::raw('SUM(broadsheets.cum) as cum_sum'),
+                DB::raw('COUNT(broadsheets.id) as student_count')
+            ])
+            ->first();
+
+        $classMin = $metrics->class_min ?? 0;
+        $classMax = $metrics->class_max ?? 0;
+        $classAvg = $metrics->student_count > 0 ? round($metrics->cum_sum / $metrics->student_count, 1) : 0;
+
+        Broadsheets::where('subjectclass_id', $subjectclassid)
+            ->where('staff_id', $staffid)
+            ->where('term_id', $termid)
+            ->leftJoin('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadSheet_record_id')
+            ->where('broadsheet_records.session_id', $sessionid)
+            ->where('broadsheet_records.subject_id', $subjectId)
+            ->update([
+                'cmin' => $classMin,
+                'cmax' => $classMax,
+                'avg' => $classAvg,
+            ]);
+
+        Log::info('Class metrics updated:', [
+            'subjectclass_id' => $subjectclassid,
+            'cmin' => $classMin,
+            'cmax' => $classMax,
+            'avg' => $classAvg
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Error updating class metrics:', [
+            'message' => $e->getMessage(),
+            'subjectclass_id' => $subjectclassid
+        ]);
+    }
+}
+
+/**
+ * Update subject positions (copied from MyScoreSheetController)
+ */
+private function updateSubjectPositions($subjectclass_id, $staff_id, $term_id, $session_id)
+{
+    try {
+        $broadsheets = Broadsheets::where('subjectclass_id', $subjectclass_id)
+            ->where('staff_id', $staff_id)
+            ->where('term_id', $term_id)
+            ->where('broadsheet_records.session_id', $session_id)
+            ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadSheet_record_id')
+            ->orderByDesc('broadsheets.cum')
+            ->orderBy('broadsheets.id')
+            ->get();
+
+        if ($broadsheets->isEmpty()) {
+            return;
+        }
+
+        $rank = 0;
+        $lastCum = null;
+        $lastPosition = 0;
+
+        foreach ($broadsheets as $broadsheet) {
+            $rank++;
+            if ($lastCum !== null && $broadsheet->cum == $lastCum) {
+                // Tied rank - keep same position
+            } else {
+                $lastPosition = $rank;
+                $lastCum = $broadsheet->cum;
+            }
+
+            if ($broadsheet->subject_position_class != $lastPosition) {
+                $broadsheet->subject_position_class = $lastPosition;
+                $broadsheet->save();
+            }
+        }
+
+        Log::info('Subject positions updated for subjectclass_id: ' . $subjectclass_id);
+    } catch (\Exception $e) {
+        Log::error('Error updating subject positions:', [
+            'message' => $e->getMessage(),
+            'subjectclass_id' => $subjectclass_id
+        ]);
+    }
 }
 }
