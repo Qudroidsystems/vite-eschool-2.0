@@ -2125,4 +2125,182 @@ public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid
             ]);
         }
     }
+
+    /**
+ * Generate question paper PDF with student's answers.
+ */
+public function generateQuestionPaperPdf(Exam $exam, $studentId)
+{
+    try {
+        Log::info('========== GENERATING QUESTION PAPER PDF ==========');
+        Log::info('Parameters:', ['exam_id' => $exam->id, 'student_id' => $studentId]);
+
+        // Verify the exam belongs to the logged-in teacher
+        if ($exam->staffId != auth()->user()->id) {
+            abort(403, 'Unauthorized access');
+        }
+
+        // Get student details
+        $student = DB::table('studentRegistration')
+            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+            ->where('studentRegistration.id', $studentId)
+            ->select(
+                'studentRegistration.id',
+                'studentRegistration.firstname',
+                'studentRegistration.lastname',
+                'studentRegistration.admissionNo',
+                'studentpicture.picture as picture'
+            )
+            ->firstOrFail();
+
+        // Set student picture
+        if ($student->picture && Storage::disk('public')->exists($student->picture)) {
+            $student->picture_path = asset('storage/' . $student->picture);
+        } else {
+            $student->picture_path = asset('storage/student_avatars/unnamed.jpg');
+        }
+
+        // Get exam result
+        $result = DB::table('results')
+            ->where('user_id', $studentId)
+            ->where('exam_id', $exam->id)
+            ->first();
+
+        // Get school information
+        $school = SchoolInformation::where('is_active', true)->first();
+
+        // Get exam attempt details
+        $attempt = ExamAttempt::where('exam_id', $exam->id)
+            ->where('student_id', $studentId)
+            ->whereIn('status', ['completed', 'in_progress'])
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        // Get all questions with options and student's answers
+        $questions = Question::where('exam_id', $exam->id)
+            ->with(['options' => function($query) {
+                $query->orderBy('label');
+            }])
+            ->orderBy('order')
+            ->get();
+
+        // Get all answers for this student
+        $answers = Answer::where('exam_id', $exam->id)
+            ->where('user_id', $studentId)
+            ->get()
+            ->keyBy('question_id');
+
+        // Process each question to add student's answer and correctness
+        foreach ($questions as $question) {
+            $studentAnswer = $answers->get($question->id);
+
+            // Get the correct option for this question
+            $correctOption = $question->options->where('is_correct', true)->first();
+
+            // Set student's answer text
+            if ($studentAnswer) {
+                if ($question->type === 'short_answer') {
+                    $question->student_answer = $studentAnswer->short_answer ?? 'Not answered';
+                    $question->is_correct = $this->checkShortAnswerCorrectness(
+                        $studentAnswer->short_answer,
+                        $correctOption ? $correctOption->option_text : ''
+                    );
+                } else {
+                    // For MCQ and True/False
+                    $selectedOption = $question->options->where('id', $studentAnswer->option_id)->first();
+                    $question->student_answer = $selectedOption ? $selectedOption->option_text : 'Not answered';
+                    $question->selected_option_id = $studentAnswer->option_id;
+                    $question->is_correct = $selectedOption ? $selectedOption->is_correct : false;
+                }
+
+                $question->student_option_id = $studentAnswer->option_id;
+            } else {
+                $question->student_answer = 'Not Attempted';
+                $question->is_correct = false;
+                $question->student_option_id = null;
+            }
+
+            // Mark correct option for reference
+            if ($correctOption) {
+                $question->correct_option_id = $correctOption->id;
+                $question->correct_answer_text = $correctOption->option_text;
+                if ($question->type === 'true_false') {
+                    $question->correct_answer_text = ucfirst($correctOption->label);
+                }
+            }
+        }
+
+        // Calculate statistics
+        $totalQuestions = $questions->count();
+        $attemptedQuestions = $answers->count();
+        $correctAnswers = $questions->filter(function($q) {
+            return $q->is_correct ?? false;
+        })->count();
+
+        $score = $result->score ?? 0;
+        $percentage = $totalQuestions > 0 ? round(($correctAnswers / $totalQuestions) * 100, 1) : 0;
+
+        $data = compact(
+            'exam',
+            'student',
+            'result',
+            'school',
+            'attempt',
+            'questions',
+            'totalQuestions',
+            'attemptedQuestions',
+            'correctAnswers',
+            'score',
+            'percentage'
+        );
+
+        $pdf = Pdf::loadView('exam.question-paper-pdf', $data);
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'sans-serif'
+        ]);
+
+        $filename = "Question-Paper-{$student->admissionNo}-{$exam->title}.pdf";
+
+        Log::info('PDF generated successfully', ['filename' => $filename]);
+
+        return $pdf->download($filename);
+
+    } catch (\Exception $e) {
+        Log::error('Error generating PDF: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString(),
+            'exam_id' => $exam->id,
+            'student_id' => $studentId
+        ]);
+
+        return back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Helper method to check if short answer is correct
+ */
+private function checkShortAnswerCorrectness($studentAnswer, $correctAnswer)
+{
+    if (empty($studentAnswer) || empty($correctAnswer)) {
+        return false;
+    }
+
+    // Clean and normalize both answers
+    $studentAnswer = trim(strip_tags($studentAnswer));
+    $correctAnswer = trim(strip_tags($correctAnswer));
+
+    // Remove extra spaces and convert to lowercase
+    $studentAnswer = preg_replace('/\s+/', ' ', strtolower($studentAnswer));
+    $correctAnswer = preg_replace('/\s+/', ' ', strtolower($correctAnswer));
+
+    // Remove punctuation for comparison
+    $studentAnswer = preg_replace('/[^\p{L}\p{N}\s]/u', '', $studentAnswer);
+    $correctAnswer = preg_replace('/[^\p{L}\p{N}\s]/u', '', $correctAnswer);
+
+    return $studentAnswer === $correctAnswer;
+}
 }
