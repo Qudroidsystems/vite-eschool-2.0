@@ -59,6 +59,7 @@
         }
         .student-details table {
             width: 100%;
+            border-collapse: collapse;
         }
         .student-details td {
             padding: 5px;
@@ -76,6 +77,7 @@
         }
         .stats table {
             width: 100%;
+            border-collapse: collapse;
         }
         .stats td {
             padding: 5px;
@@ -100,48 +102,69 @@
             border-radius: 5px 5px 0 0;
             border-bottom: 1px solid #dee2e6;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         .question-text {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             font-weight: 500;
         }
-        .question-image {
-            max-width: 300px;
-            max-height: 200px;
-            margin: 10px 0;
+        .question-image-container {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
             border: 1px solid #dee2e6;
             border-radius: 5px;
-            padding: 5px;
+            background: #fafafa;
+        }
+        .question-image {
+            max-width: 400px;
+            max-height: 300px;
+            object-fit: contain;
         }
         .options {
             margin-left: 20px;
         }
         .option {
-            margin-bottom: 5px;
-            padding: 5px;
+            margin-bottom: 8px;
+            padding: 8px 10px;
             border-radius: 3px;
+            border: 1px solid #e9ecef;
         }
         .option.correct {
             background-color: #d4edda;
             border-left: 4px solid #28a745;
+            border-top: 1px solid #c3e6cb;
+            border-right: 1px solid #c3e6cb;
+            border-bottom: 1px solid #c3e6cb;
         }
         .option.selected {
             background-color: #fff3cd;
             border-left: 4px solid #ffc107;
+            border-top: 1px solid #ffeeba;
+            border-right: 1px solid #ffeeba;
+            border-bottom: 1px solid #ffeeba;
         }
         .option.selected.correct {
             background-color: #d4edda;
             border-left: 4px solid #28a745;
-            background-image: linear-gradient(45deg, rgba(40,167,69,0.1) 0%, rgba(40,167,69,0.1) 100%);
+            border-top: 1px solid #c3e6cb;
+            border-right: 1px solid #c3e6cb;
+            border-bottom: 1px solid #c3e6cb;
         }
         .option.selected.incorrect {
             background-color: #f8d7da;
             border-left: 4px solid #dc3545;
+            border-top: 1px solid #f5c6cb;
+            border-right: 1px solid #f5c6cb;
+            border-bottom: 1px solid #f5c6cb;
         }
         .mark {
             font-size: 11px;
             color: #6c757d;
-            margin-left: 10px;
+            margin-left: auto;
         }
         .badge {
             display: inline-block;
@@ -149,7 +172,6 @@
             font-size: 11px;
             font-weight: bold;
             border-radius: 3px;
-            margin-left: 10px;
         }
         .badge-success {
             background-color: #28a745;
@@ -163,6 +185,25 @@
             background-color: #ffc107;
             color: #212529;
         }
+        .badge-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .correct-answer-box {
+            margin-top: 12px;
+            padding: 12px 15px;
+            background-color: #e8f4fd;
+            border-left: 4px solid #17a2b8;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        .correct-answer-box p {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: white;
+            border-radius: 3px;
+            border: 1px solid #b8e2f2;
+        }
         .footer {
             margin-top: 30px;
             text-align: center;
@@ -174,11 +215,11 @@
         .page-break {
             page-break-after: always;
         }
-        .correct-answer {
-            margin-top: 10px;
-            padding: 8px;
-            background-color: #e8f4fd;
-            border-left: 4px solid #17a2b8;
+        .examiner-info {
+            margin-top: 5px;
+            font-size: 11px;
+            color: #555;
+            text-align: right;
             font-style: italic;
         }
     </style>
@@ -202,6 +243,7 @@
         @endif
         <div class="exam-title">{{ strtoupper($exam->title) }}</div>
         <div>{{ $exam->subject->subject ?? 'Subject' }} ({{ $exam->subject->subject_code ?? 'Code' }})</div>
+        <div class="examiner-info">Examiner: {{ auth()->user()->name ?? 'N/A' }}</div>
     </div>
 
     <div class="student-info">
@@ -262,8 +304,8 @@
     @foreach($questions as $index => $question)
         <div class="question">
             <div class="question-header">
-                Question {{ $index + 1 }}
-                <span class="mark">({{ number_format($question->marks, 1) }} marks)</span>
+                <span>Question {{ $index + 1 }}</span>
+                <span class="mark">{{ number_format($question->marks, 1) }} marks</span>
                 @if(isset($question->is_correct))
                     @if($question->is_correct)
                         <span class="badge badge-success">Correct</span>
@@ -280,7 +322,7 @@
             </div>
 
             @if($question->image)
-                <div style="text-align: center;">
+                <div class="question-image-container">
                     <img src="{{ $question->image }}" alt="Question image" class="question-image">
                 </div>
             @endif
@@ -291,8 +333,9 @@
                         <strong>Student's Answer:</strong> {{ $question->student_answer ?? 'Not answered' }}
                     </div>
                     @if(isset($question->correct_answer_text) && $question->student_answer !== $question->correct_answer_text)
-                        <div class="correct-answer">
-                            <strong>Correct Answer:</strong> {{ $question->correct_answer_text }}
+                        <div class="correct-answer-box">
+                            <strong>Correct Answer:</strong>
+                            <p>{!! nl2br(e($question->correct_answer_text)) !!}</p>
                         </div>
                     @endif
                 </div>
@@ -333,7 +376,7 @@
 
     <div class="footer">
         <p>Generated on {{ now()->format('F j, Y \a\t h:i A') }} | {{ $school->school_name ?? 'School Name' }}</p>
-        <p>This is a computer-generated document. No signature is required.</p>
+        <p>Examiner: {{ auth()->user()->name ?? 'N/A' }} | This is a computer-generated document. No signature is required.</p>
     </div>
 </body>
 </html>
