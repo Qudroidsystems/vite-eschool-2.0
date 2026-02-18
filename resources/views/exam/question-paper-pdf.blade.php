@@ -1,685 +1,404 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $exam->title }} - {{ $student->lastname }} {{ $student->firstname }}</title>
+    <meta charset="utf-8">
+    <title>{{ $exam->title }} - {{ $student->firstname }} {{ $student->lastname }}</title>
     <style>
-        /* Reset and Base Styles */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'DejaVu Sans', 'Helvetica', 'Arial', sans-serif;
-            background: #ffffff;
-            color: #2d3748;
-            line-height: 1.5;
-            font-size: 11pt;
-            margin: 0;
-            padding: 0;
+            font-family: 'DejaVu Sans', sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #333;
+            margin: 20px;
         }
 
-        /* Professional Header with School Info */
-        .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 20px 25px;
-            border-radius: 0 0 20px 20px;
-            margin-bottom: 25px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            transform: rotate(30deg);
-        }
-
+        /* School Header */
         .school-header {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            position: relative;
-            z-index: 1;
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #0d6efd;
         }
 
         .school-logo {
-            width: 80px;
-            height: 80px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-
-        .school-logo img {
-            max-width: 60px;
-            max-height: 60px;
-            border-radius: 50%;
-        }
-
-        .school-info {
-            flex: 1;
+            max-height: 80px;
+            margin-bottom: 10px;
         }
 
         .school-name {
-            font-size: 24pt;
-            font-weight: 700;
+            font-size: 20px;
+            font-weight: bold;
+            color: #0d6efd;
             margin-bottom: 5px;
-            letter-spacing: 1px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
 
-        .school-details {
-            font-size: 10pt;
-            opacity: 0.95;
-            line-height: 1.6;
-        }
-
-        .school-details i {
-            margin-right: 8px;
-            opacity: 0.8;
+        .school-address {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 3px;
         }
 
         .school-motto {
-            margin-top: 8px;
+            font-size: 11px;
             font-style: italic;
-            font-size: 11pt;
-            border-top: 1px solid rgba(255,255,255,0.2);
-            padding-top: 8px;
-            color: #ffd700;
+            color: #555;
+            margin-top: 5px;
         }
 
-        /* Student Info Card */
-        .student-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 25px;
-            color: white;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-            position: relative;
-            overflow: hidden;
+        .school-contact {
+            font-size: 9px;
+            color: #777;
+            margin-top: 5px;
         }
 
-        .student-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 150px;
-            height: 150px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-            transform: translate(50%, -50%);
+        /* Title */
+        .exam-title {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+            color: #0d6efd;
         }
 
-        .student-header {
+        /* Student Info Card - Original Style */
+        .student-info {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
             display: flex;
             align-items: center;
-            gap: 20px;
-            position: relative;
-            z-index: 1;
         }
 
         .student-photo {
-            width: 100px;
-            height: 100px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
-            border: 4px solid white;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            overflow: hidden;
-            background: white;
-        }
-
-        .student-photo img {
-            width: 100%;
-            height: 100%;
             object-fit: cover;
+            border: 2px solid #0d6efd;
+            margin-right: 15px;
         }
 
         .student-details {
             flex: 1;
         }
 
-        .student-name {
-            font-size: 22pt;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        .student-details table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .student-meta {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            font-size: 11pt;
+        .student-details td {
+            padding: 4px 8px;
+            font-size: 11px;
         }
 
-        .student-meta-item {
-            background: rgba(255,255,255,0.2);
-            padding: 8px 12px;
+        .student-details .label {
+            font-weight: bold;
+            color: #555;
+            width: 100px;
+        }
+
+        /* Exam Info Card */
+        .exam-info {
+            background: #e7f3ff;
+            padding: 12px;
             border-radius: 8px;
-            backdrop-filter: blur(5px);
+            margin-bottom: 20px;
+            border: 1px solid #0d6efd;
+            display: flex;
+            justify-content: space-between;
         }
 
-        .student-meta-item strong {
-            display: block;
-            font-size: 9pt;
-            opacity: 0.9;
+        .exam-info-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .exam-info-label {
+            font-size: 9px;
+            color: #666;
             margin-bottom: 3px;
         }
 
-        /* Exam Info Bar */
-        .exam-info-bar {
-            background: #f7fafc;
-            border-left: 5px solid #4299e1;
-            padding: 15px 25px;
-            margin: 20px 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        .exam-info-value {
+            font-size: 13px;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+
+        /* Stats Grid - Original Style */
+        .stats-container {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
         }
 
-        .exam-title-section h3 {
-            color: #2d3748;
-            font-size: 16pt;
-            margin-bottom: 5px;
-        }
-
-        .exam-title-section p {
-            color: #718096;
-            font-size: 10pt;
-        }
-
-        .exam-badge {
-            background: #4299e1;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 25px;
-            font-weight: 600;
-            font-size: 11pt;
-            box-shadow: 0 2px 5px rgba(66, 153, 225, 0.3);
-        }
-
-        /* Performance Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
-            margin: 20px 25px;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0;
+        .stat-box {
+            flex: 1;
+            min-width: 80px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px 5px;
             text-align: center;
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-        }
-
-        .stat-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #4299e1 0%, #667eea 100%);
-            border-radius: 10px;
-            margin: 0 auto 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 18px;
         }
 
         .stat-value {
-            font-size: 20pt;
-            font-weight: 700;
-            color: #2d3748;
+            font-size: 18px;
+            font-weight: bold;
+            color: #0d6efd;
             line-height: 1.2;
-            margin-bottom: 5px;
         }
 
         .stat-label {
-            font-size: 9pt;
-            color: #718096;
+            font-size: 9px;
+            color: #666;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .stat-card.success .stat-value { color: #48bb78; }
-        .stat-card.warning .stat-value { color: #ecc94b; }
-        .stat-card.info .stat-value { color: #4299e1; }
-
-        /* Questions Section */
-        .questions-section {
-            margin: 25px;
-        }
-
-        .section-title {
-            font-size: 16pt;
-            font-weight: 600;
-            color: #2d3748;
+        /* Questions */
+        .question {
             margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #4299e1;
-            display: inline-block;
-        }
-
-        .question-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
             page-break-inside: avoid;
         }
 
         .question-header {
-            background: #f8fafc;
-            padding: 15px 20px;
-            border-bottom: 2px solid #e2e8f0;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            margin: -12px -12px 10px -12px;
+            border-radius: 6px 6px 0 0;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: bold;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-        }
-
-        .question-number {
-            font-weight: 700;
-            color: #4299e1;
-            font-size: 12pt;
-        }
-
-        .question-marks {
-            background: #edf2f7;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 10pt;
-            color: #4a5568;
-        }
-
-        .question-body {
-            padding: 20px;
         }
 
         .question-text {
-            font-size: 12pt;
-            color: #2d3748;
-            margin-bottom: 15px;
-            line-height: 1.6;
+            margin-bottom: 10px;
+            font-weight: 500;
         }
 
-        .question-image {
-            margin: 15px 0;
-            text-align: center;
+        .options {
+            margin-left: 20px;
         }
 
-        .question-image img {
-            max-width: 400px;
-            max-height: 250px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        .option {
+            margin-bottom: 5px;
+            padding: 5px 8px;
+            border-radius: 4px;
         }
 
-        .options-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 15px;
+        .option.correct {
+            background-color: #d4edda;
+            border-left: 3px solid #28a745;
         }
 
-        .option-item {
-            padding: 12px 15px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            position: relative;
-            font-size: 11pt;
+        .option.selected {
+            background-color: #fff3cd;
+            border-left: 3px solid #ffc107;
         }
 
-        .option-item.correct {
-            background: #f0fff4;
-            border-color: #48bb78;
-            border-width: 2px;
+        .option.selected.correct {
+            background-color: #d4edda;
+            border-left: 3px solid #28a745;
         }
 
-        .option-item.selected {
-            background: #ebf8ff;
-            border-color: #4299e1;
-            border-width: 2px;
+        .option.selected.incorrect {
+            background-color: #f8d7da;
+            border-left: 3px solid #dc3545;
         }
 
-        .option-item.selected.correct {
-            background: #c6f6d5;
-            border-color: #48bb78;
-            border-width: 2px;
-            position: relative;
-        }
-
-        .option-item.selected.correct::after {
-            content: '✓';
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            color: #48bb78;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .option-item.selected.incorrect {
-            background: #fff5f5;
-            border-color: #fc8181;
-            border-width: 2px;
-            position: relative;
-        }
-
-        .option-item.selected.incorrect::after {
-            content: '✗';
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            color: #fc8181;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .option-label {
-            font-weight: 600;
-            color: #4a5568;
-            margin-right: 8px;
-        }
-
-        .student-answer-badge {
+        .badge {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 9pt;
-            margin-left: 8px;
-            background: #edf2f7;
+            padding: 2px 6px;
+            font-size: 9px;
+            font-weight: bold;
+            border-radius: 3px;
+            margin-left: 5px;
+        }
+
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .badge-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .badge-warning {
+            background-color: #ffc107;
+            color: #212529;
         }
 
         .correct-answer-box {
-            margin-top: 15px;
-            padding: 12px 15px;
-            background: #f0fff4;
-            border-left: 4px solid #48bb78;
-            border-radius: 6px;
-            font-size: 11pt;
-        }
-
-        .short-answer-box {
-            background: #f7fafc;
-            padding: 15px;
-            border-radius: 8px;
             margin-top: 10px;
+            padding: 8px;
+            background-color: #e8f4fd;
+            border-left: 3px solid #17a2b8;
+            font-size: 10px;
         }
 
-        .short-answer-student {
-            background: #ebf8ff;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
-
-        .short-answer-correct {
-            background: #f0fff4;
-            padding: 10px;
-            border-radius: 6px;
-        }
-
-        /* Footer */
         .footer {
-            margin-top: 40px;
-            padding: 20px 25px;
-            background: #f8fafc;
-            border-top: 2px solid #e2e8f0;
-            color: #718096;
-            font-size: 9pt;
+            margin-top: 30px;
             text-align: center;
-        }
-
-        .footer-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .footer-logo img {
-            max-height: 30px;
-            opacity: 0.7;
-        }
-
-        .generated-date {
-            color: #a0aec0;
-        }
-
-        /* Page Break */
-        .page-break {
-            page-break-after: always;
-        }
-
-        /* Print Styles */
-        @media print {
-            body { background: white; }
-            .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .student-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .stat-card { break-inside: avoid; }
-            .question-card { break-inside: avoid; }
+            font-size: 9px;
+            color: #666;
+            border-top: 1px solid #dee2e6;
+            padding-top: 10px;
         }
     </style>
 </head>
 <body>
-    <!-- Header with School Info -->
-    <div class="header">
-        <div class="school-header">
-            @if($school && $school->school_logo)
-                <div class="school-logo">
-                    <img src="{{ $school->logo_url }}" alt="School Logo">
-                </div>
-            @endif
-            <div class="school-info">
-                <div class="school-name">{{ $school->school_name ?? 'School Name' }}</div>
-                <div class="school-details">
-                    @if($school && $school->school_address)
-                        <div><i>📍</i> {{ $school->school_address }}</div>
-                    @endif
-                    @if($school && ($school->school_phone || $school->school_email))
-                        <div>
-                            @if($school->school_phone)<i>📞</i> {{ $school->school_phone }}@endif
-                            @if($school->school_email) | <i>✉️</i> {{ $school->school_email }}@endif
-                        </div>
-                    @endif
-                    @if($school && $school->school_motto)
-                        <div class="school-motto"><i>"</i>{{ $school->school_motto }}<i>"</i></div>
-                    @endif
-                </div>
+    <!-- School Header -->
+    <div class="school-header">
+        @if($school && $school->school_logo)
+            <img src="{{ $school->logo_url }}" class="school-logo" alt="School Logo">
+        @endif
+        <div class="school-name">{{ $school->school_name ?? 'School Name' }}</div>
+        @if($school && $school->school_address)
+            <div class="school-address">{{ $school->school_address }}</div>
+        @endif
+        @if($school && $school->school_motto)
+            <div class="school-motto">"{{ $school->school_motto }}"</div>
+        @endif
+        @if($school && ($school->school_phone || $school->school_email))
+            <div class="school-contact">
+                {{ $school->school_phone ?? '' }} {{ $school->school_phone && $school->school_email ? '|' : '' }} {{ $school->school_email ?? '' }}
             </div>
-        </div>
+        @endif
     </div>
 
-    <!-- Student Info Card with Photo -->
-    <div class="student-card">
-        <div class="student-header">
-            <div class="student-photo">
-                <img src="{{ $student->picture_path }}" alt="Student Photo">
-            </div>
-            <div class="student-details">
-                <div class="student-name">{{ strtoupper($student->lastname) }}, {{ $student->firstname }}</div>
-                <div class="student-meta">
-                    <div class="student-meta-item">
-                        <strong>Admission No</strong>
-                        {{ $student->admissionNo }}
-                    </div>
-                    <div class="student-meta-item">
-                        <strong>Class</strong>
-                        {{ $exam->schoolclass->schoolclass ?? 'N/A' }} {{ $exam->schoolclass->arm ?? '' }}
-                    </div>
-                    <div class="student-meta-item">
-                        <strong>Term</strong>
-                        {{ $exam->termRelation->term ?? 'N/A' }}
-                    </div>
-                    <div class="student-meta-item">
-                        <strong>Session</strong>
-                        {{ $exam->sessionRelation->session ?? 'N/A' }}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Exam Title -->
+    <div class="exam-title">{{ strtoupper($exam->title) }}</div>
 
-    <!-- Exam Info Bar -->
-    <div class="exam-info-bar">
-        <div class="exam-title-section">
-            <h3>{{ $exam->title }}</h3>
-            <p>{{ $exam->subject->subject ?? 'Subject' }} ({{ $exam->subject->subject_code ?? 'Code' }})</p>
-        </div>
-        <div class="exam-badge">
-            {{ $exam->duration }} Minutes
+    <!-- Student Info Card -->
+    <div class="student-info">
+        <img src="{{ $student->picture_path }}" class="student-photo" alt="Student Photo">
+        <div class="student-details">
+            <table>
+                <tr>
+                    <td class="label">Name:</td>
+                    <td><strong>{{ $student->lastname }} {{ $student->firstname }}</strong></td>
+                    <td class="label">Admission:</td>
+                    <td><strong>{{ $student->admissionNo }}</strong></td>
+                </tr>
+                <tr>
+                    <td class="label">Class:</td>
+                    <td>{{ $exam->schoolclass->schoolclass ?? 'N/A' }} {{ $exam->schoolclass->arm ?? '' }}</td>
+                    <td class="label">Term/Session:</td>
+                    <td>{{ $exam->termRelation->term ?? 'N/A' }} {{ $exam->sessionRelation->session ?? 'N/A' }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Subject:</td>
+                    <td>{{ $exam->subject->subject ?? 'N/A' }} ({{ $exam->subject->subject_code ?? 'N/A' }})</td>
+                    <td class="label">Duration:</td>
+                    <td>{{ $exam->duration }} mins</td>
+                </tr>
+            </table>
         </div>
     </div>
 
     <!-- Performance Stats -->
-    <div class="stats-grid">
-        <div class="stat-card info">
-            <div class="stat-icon">📋</div>
-            <div class="stat-value">{{ $totalQuestions }}</div>
-            <div class="stat-label">Total Questions</div>
+    <div class="stats-container">
+        <div class="stat-box">
+            <div class="stat-value">{{ $totalQuestions ?? 0 }}</div>
+            <div class="stat-label">Total Ques</div>
         </div>
-        <div class="stat-card warning">
-            <div class="stat-icon">✍️</div>
-            <div class="stat-value">{{ $attemptedQuestions }}</div>
+        <div class="stat-box">
+            <div class="stat-value">{{ $attemptedQuestions ?? 0 }}</div>
             <div class="stat-label">Attempted</div>
         </div>
-        <div class="stat-card success">
-            <div class="stat-icon">✅</div>
-            <div class="stat-value">{{ $correctAnswers }}</div>
+        <div class="stat-box">
+            <div class="stat-value">{{ $correctAnswers ?? 0 }}</div>
             <div class="stat-label">Correct</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">📊</div>
-            <div class="stat-value">{{ $score }}</div>
+        <div class="stat-box">
+            <div class="stat-value">{{ $score ?? 0 }}</div>
             <div class="stat-label">Score</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">📈</div>
-            <div class="stat-value">{{ $percentage }}%</div>
+        <div class="stat-box">
+            <div class="stat-value">{{ $percentage ?? 0 }}%</div>
             <div class="stat-label">Percentage</div>
         </div>
     </div>
 
-    <!-- Questions Section -->
-    <div class="questions-section">
-        <h2 class="section-title">Question Paper with Answers</h2>
+    <!-- Questions -->
+    <h3 style="margin-bottom: 15px; font-size: 14px;">Questions and Answers</h3>
 
-        @foreach($questions as $index => $question)
-            <div class="question-card">
-                <div class="question-header">
-                    <span class="question-number">Question {{ $index + 1 }}</span>
-                    <span class="question-marks">{{ number_format($question->marks, 1) }} marks</span>
-                </div>
-                <div class="question-body">
-                    <div class="question-text">
-                        {!! $question->question_text !!}
+    @foreach($questions as $index => $question)
+        <div class="question">
+            <div class="question-header">
+                <span>Question {{ $index + 1 }}</span>
+                <span>{{ number_format($question->marks, 1) }} marks</span>
+            </div>
+
+            <div class="question-text">
+                <strong>{!! $question->question_text !!}</strong>
+                @if($question->image)
+                    <div style="margin-top: 10px;">
+                        <img src="{{ $question->image }}" alt="Question image" style="max-width: 300px; max-height: 200px;">
+                    </div>
+                @endif
+            </div>
+
+            @if($question->type === 'short_answer')
+                <div class="options">
+                    <div class="option {{ isset($question->is_correct) ? ($question->is_correct ? 'correct' : 'selected incorrect') : '' }}">
+                        <strong>Student's Answer:</strong> {{ $question->student_answer ?? 'Not answered' }}
                         @if(isset($question->is_correct))
                             @if($question->is_correct)
-                                <span style="color: #48bb78; margin-left: 10px;">✓ Correct</span>
-                            @elseif($question->student_answer !== 'Not Attempted' && $question->student_answer !== 'Not answered')
-                                <span style="color: #fc8181; margin-left: 10px;">✗ Incorrect</span>
+                                <span class="badge badge-success">Correct</span>
                             @else
-                                <span style="color: #ecc94b; margin-left: 10px;">⚠ Not Attempted</span>
+                                <span class="badge badge-danger">Incorrect</span>
                             @endif
                         @endif
                     </div>
-
-                    @if($question->image)
-                        <div class="question-image">
-                            <img src="{{ $question->image }}" alt="Question image">
+                    @if(isset($question->correct_answer_text) && $question->student_answer !== $question->correct_answer_text)
+                        <div class="correct-answer-box">
+                            <strong>Correct Answer:</strong> {{ $question->correct_answer_text }}
                         </div>
-                    @endif
-
-                    @if($question->type === 'short_answer')
-                        <div class="short-answer-box">
-                            <div class="short-answer-student">
-                                <strong>Student's Answer:</strong>
-                                {{ $question->student_answer ?? 'Not answered' }}
-                            </div>
-                            @if(isset($question->correct_answer_text) && $question->student_answer !== $question->correct_answer_text)
-                                <div class="short-answer-correct">
-                                    <strong>Correct Answer:</strong> {{ $question->correct_answer_text }}
-                                </div>
-                            @endif
-                        </div>
-                    @else
-                        <div class="options-grid">
-                            @foreach($question->options as $option)
-                                @php
-                                    $optionClass = '';
-                                    if ($option->is_correct) {
-                                        $optionClass = 'correct';
-                                    }
-                                    if (isset($question->selected_option_id) && $question->selected_option_id == $option->id) {
-                                        $optionClass .= ' selected';
-                                    }
-                                @endphp
-                                <div class="option-item {{ $optionClass }}">
-                                    <span class="option-label">{{ $option->label }}.</span>
-                                    {{ $option->option_text }}
-                                    @if(isset($question->selected_option_id) && $question->selected_option_id == $option->id)
-                                        <span class="student-answer-badge">Your Answer</span>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
-
-                        @if(isset($question->correct_answer_text) && isset($question->selected_option_id) && !$question->is_correct)
-                            <div class="correct-answer-box">
-                                <strong>Correct Answer:</strong> {{ $question->correct_answer_text }}
-                            </div>
-                        @endif
                     @endif
                 </div>
-            </div>
-        @endforeach
-    </div>
+            @else
+                <div class="options">
+                    @foreach($question->options as $option)
+                        @php
+                            $optionClass = '';
+                            if ($option->is_correct) {
+                                $optionClass = 'correct';
+                            }
+                            if (isset($question->selected_option_id) && $question->selected_option_id == $option->id) {
+                                $optionClass .= ' selected';
+                            }
+                        @endphp
+                        <div class="option {{ $optionClass }}">
+                            <strong>{{ $option->label }}.</strong> {{ $option->option_text }}
+                            @if($option->is_correct)
+                                <span class="badge badge-success">✓ Correct</span>
+                            @endif
+                            @if(isset($question->selected_option_id) && $question->selected_option_id == $option->id)
+                                <span class="badge badge-warning">Your Answer</span>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    @endforeach
 
     <!-- Footer -->
     <div class="footer">
-        <div class="footer-content">
-            <div class="footer-logo">
-                @if($school && $school->app_logo)
-                    <img src="{{ $school->app_logo_url }}" alt="App Logo">
-                @else
-                    <span>{{ config('app.name') }}</span>
-                @endif
-            </div>
-            <div class="generated-date">
-                Generated on {{ now()->format('F j, Y \a\t g:i A') }}
-            </div>
-            <div>
-                Page {PAGE_NUM} of {PAGE_COUNT}
-            </div>
-        </div>
+        <p>Generated on {{ now()->format('F j, Y \a\t h:i A') }} | {{ $school->school_name ?? 'School Name' }}</p>
+        <p>This is a computer-generated document. No signature is required.</p>
     </div>
 </body>
 </html>
