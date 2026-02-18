@@ -539,6 +539,13 @@ Route::post('/students/bulk-remove-from-term', [StudentController::class, 'bulkR
 Route::get('/exams/assessments/for-subject/{subjectclassId}/{termId}/{sessionId}', [ExamController::class, 'getAssessmentsForSubject'])->name('exams.assessments.for-subject');
 
 
+// Exam Transfer Subject Selection
+Route::get('/exams/transfer/subjects', [ExamController::class, 'showTransferSubjects'])->name('exams.transfer.subjects');
+Route::post('/exams/transfer/subjects', [ExamController::class, 'getTransferSubjects'])->name('exams.transfer.subjects.post');
+Route::get('/exams/transfer/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}', [ExamController::class, 'showTransferScoresheet'])->name('exams.transfer.scoresheet');
+
+
+
     // Specific routes FIRST
     Route::get('/questions/get-exams', [QuestionController::class, 'getExamsForSelection'])->name('questions.getExams');
     Route::get('/questions/all-questions', [QuestionController::class, 'index'])->name('questions.all');
