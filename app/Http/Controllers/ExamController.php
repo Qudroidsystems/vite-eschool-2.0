@@ -2055,7 +2055,8 @@ public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid
     }
 
 
-    /**
+
+/**
  * Generate question paper PDF with student's answers.
  */
 public function generateQuestionPaperPdf(Exam $exam, $studentId)
@@ -2228,7 +2229,10 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
             'defaultFont' => 'sans-serif'
         ]);
 
-        $filename = "Question-Paper-{$student->admissionNo}-{$exam->title}.pdf";
+        // FIX: Replace invalid characters in filename
+        $safeAdmission = str_replace('/', '-', $student->admissionNo);
+        $safeTitle = str_replace(['/', '\\', ' '], '-', $exam->title);
+        $filename = "Question-Paper-{$safeAdmission}-{$safeTitle}.pdf";
 
         Log::info('Step 12: PDF generated successfully', ['filename' => $filename]);
 
@@ -2251,6 +2255,7 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
         return back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
     }
 }
+
 
 /**
  * Helper method to check if short answer is correct
