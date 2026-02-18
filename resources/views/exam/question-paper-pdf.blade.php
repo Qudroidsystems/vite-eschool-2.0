@@ -121,15 +121,18 @@
         .question-image-container {
             text-align: center;
             margin: 15px 0;
-            padding: 10px;
+            padding: 15px;
             border: 1px solid #dee2e6;
             border-radius: 5px;
             background: #fafafa;
         }
         .question-image {
-            max-width: 400px;
+            max-width: 100%;
             max-height: 300px;
+            width: auto;
+            height: auto;
             object-fit: contain;
+            display: inline-block;
         }
         .options {
             margin-left: 20px;
@@ -321,7 +324,28 @@
 
             @if($question->image)
                 <div class="question-image-container">
-                    <img src="{{ $question->image }}" alt="Question image" class="question-image">
+                    @php
+                        // Get the raw image path from the database
+                        $imagePath = $question->image;
+
+                        // Base URL for storage (update this to match your domain)
+                        $baseStorageUrl = 'https://csskabba.qudroid.co/storage/';
+
+                        // Clean the path - remove any storage/app/public/ or public/ prefixes
+                        $cleanPath = preg_replace('/^(.*?)(storage\/app\/public\/|public\/)/', '', $imagePath);
+
+                        // If the path already starts with http, use it as is
+                        if (filter_var($imagePath, FILTER_VALIDATE_URL)) {
+                            $imageUrl = $imagePath;
+                        }
+                        // If it's a relative path, construct the full URL
+                        else {
+                            // Remove any leading slashes
+                            $cleanPath = ltrim($cleanPath, '/');
+                            $imageUrl = $baseStorageUrl . $cleanPath;
+                        }
+                    @endphp
+                    <img src="{{ $imageUrl }}" alt="Question image" class="question-image">
                 </div>
             @endif
 
