@@ -1105,7 +1105,7 @@ class ExamController extends Controller
         ));
     }
 
-    
+
 
     /**
      * Display exam analytics.
@@ -2054,6 +2054,7 @@ public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid
         }
     }
 
+
     /**
  * Generate question paper PDF with student's answers.
  */
@@ -2061,12 +2062,22 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
 {
     try {
         Log::info('========== GENERATING QUESTION PAPER PDF ==========');
-        Log::info('Parameters:', ['exam_id' => $exam->id, 'student_id' => $studentId]);
+        Log::info('Step 1: Parameters received', [
+            'exam_id' => $exam->id,
+            'exam_title' => $exam->title,
+            'student_id' => $studentId,
+            'user_id' => auth()->user()->id
+        ]);
 
         // Verify the exam belongs to the logged-in teacher
         if ($exam->staffId != auth()->user()->id) {
+            Log::error('Step 2: Unauthorized access', [
+                'exam_staff_id' => $exam->staffId,
+                'user_id' => auth()->user()->id
+            ]);
             abort(403, 'Unauthorized access');
         }
+        Log::info('Step 2: Authorization passed');
 
         // Get student details
         $student = DB::table('studentRegistration')
@@ -2079,13 +2090,24 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
                 'studentRegistration.admissionNo',
                 'studentpicture.picture as picture'
             )
-            ->firstOrFail();
+            ->first();
+
+        if (!$student) {
+            Log::error('Step 3: Student not found', ['student_id' => $studentId]);
+            abort(404, 'Student not found');
+        }
+        Log::info('Step 3: Student found', [
+            'student_name' => $student->firstname . ' ' . $student->lastname,
+            'admission' => $student->admissionNo
+        ]);
 
         // Set student picture
         if ($student->picture && Storage::disk('public')->exists($student->picture)) {
             $student->picture_path = asset('storage/' . $student->picture);
+            Log::info('Step 4: Student picture found', ['path' => $student->picture_path]);
         } else {
             $student->picture_path = asset('storage/student_avatars/unnamed.jpg');
+            Log::info('Step 4: Using default student picture');
         }
 
         // Get exam result
@@ -2093,9 +2115,11 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
             ->where('user_id', $studentId)
             ->where('exam_id', $exam->id)
             ->first();
+        Log::info('Step 5: Exam result', ['result' => $result ? 'found' : 'not found']);
 
         // Get school information
         $school = SchoolInformation::where('is_active', true)->first();
+        Log::info('Step 6: School information', ['school' => $school ? $school->schoolname : 'not found']);
 
         // Get exam attempt details
         $attempt = ExamAttempt::where('exam_id', $exam->id)
@@ -2103,22 +2127,25 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
             ->whereIn('status', ['completed', 'in_progress'])
             ->orderBy('created_at', 'desc')
             ->first();
+        Log::info('Step 7: Exam attempt', ['attempt' => $attempt ? 'found' : 'not found']);
 
-        // Get all questions with options and student's answers
+        // Get all questions with options
         $questions = Question::where('exam_id', $exam->id)
             ->with(['options' => function($query) {
                 $query->orderBy('label');
             }])
             ->orderBy('order')
             ->get();
+        Log::info('Step 8: Questions loaded', ['count' => $questions->count()]);
 
         // Get all answers for this student
         $answers = Answer::where('exam_id', $exam->id)
             ->where('user_id', $studentId)
             ->get()
             ->keyBy('question_id');
+        Log::info('Step 9: Answers loaded', ['count' => $answers->count()]);
 
-        // Process each question to add student's answer and correctness
+        // Process each question
         foreach ($questions as $question) {
             $studentAnswer = $answers->get($question->id);
 
@@ -2168,6 +2195,14 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
         $score = $result->score ?? 0;
         $percentage = $totalQuestions > 0 ? round(($correctAnswers / $totalQuestions) * 100, 1) : 0;
 
+        Log::info('Step 10: Statistics calculated', [
+            'totalQuestions' => $totalQuestions,
+            'attemptedQuestions' => $attemptedQuestions,
+            'correctAnswers' => $correctAnswers,
+            'score' => $score,
+            'percentage' => $percentage
+        ]);
+
         $data = compact(
             'exam',
             'student',
@@ -2182,6 +2217,8 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
             'percentage'
         );
 
+        Log::info('Step 11: Rendering PDF view');
+
         $pdf = Pdf::loadView('exam.question-paper-pdf', $data);
         $pdf->setPaper('A4', 'portrait');
         $pdf->setOptions([
@@ -2193,16 +2230,23 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
 
         $filename = "Question-Paper-{$student->admissionNo}-{$exam->title}.pdf";
 
-        Log::info('PDF generated successfully', ['filename' => $filename]);
+        Log::info('Step 12: PDF generated successfully', ['filename' => $filename]);
 
         return $pdf->download($filename);
 
     } catch (\Exception $e) {
-        Log::error('Error generating PDF: ' . $e->getMessage(), [
-            'trace' => $e->getTraceAsString(),
-            'exam_id' => $exam->id,
-            'student_id' => $studentId
+        Log::error('ERROR in generateQuestionPaperPdf: ' . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
         ]);
+
+        if (request()->ajax()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 500);
+        }
 
         return back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
     }
