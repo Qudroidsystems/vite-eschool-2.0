@@ -508,9 +508,9 @@ Route::post('/students/bulk-remove-from-term', [StudentController::class, 'bulkR
     Route::get('exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])
         ->name('exams.student.answers');
 
-    // Download question paper PDF with student's answers
-    Route::get('exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
-        ->name('exams.student.question-paper');
+    // // Download question paper PDF with student's answers
+    // Route::get('exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
+    //     ->name('exams.student.question-paper');
 
 
     // Analytics dashboard for the exam
