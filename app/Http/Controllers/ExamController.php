@@ -1991,5 +1991,279 @@ private function updateSubjectPositions($subjectclass_id, $staff_id, $term_id, $
 
 
 
+/**
+ * Show the term/session selection for exam transfer
+ */
+public function showTransferSubjects(Request $request)
+{
+    $pagetitle = "Transfer Exam Scores - Select Term and Session";
+    $terms = Schoolterm::orderBy('id')->get();
+    $sessions = Schoolsession::orderBy('id', 'desc')->get();
 
+    return view('exam.transfer-subjects', compact('pagetitle', 'terms', 'sessions'));
+}
+
+/**
+ * Get subjects for the selected term and session (AJAX)
+ */
+public function getTransferSubjects(Request $request)
+{
+    try {
+        Log::info('========== GET TRANSFER SUBJECTS ==========');
+        Log::info('Request data:', $request->all());
+
+        $validated = $request->validate([
+            'termid' => 'required|exists:schoolterm,id',
+            'sessionid' => 'required|exists:schoolsession,id',
+        ]);
+
+        $user = auth()->user();
+
+        // EXACTLY like MyResultRoomController - get all subjects for this teacher in this term/session
+        $subjectsQuery = SubjectTeacher::where('subjectteacher.staffid', $user->id)
+            ->leftJoin('users', 'users.id', '=', 'subjectteacher.staffid')
+            ->leftJoin('subjectclass', 'subjectclass.subjectteacherid', '=', 'subjectteacher.id')
+            ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
+            ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+            ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+            ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+            ->leftJoin('schoolclass_classcategory', 'schoolclass_classcategory.schoolclass_id', '=', 'schoolclass.id')
+            ->leftJoin('classcategories', 'classcategories.id', '=', 'schoolclass_classcategory.classcategory_id')
+            ->where('subjectteacher.sessionid', $validated['sessionid'])
+            ->where('subjectteacher.termid', $validated['termid'])
+            ->whereNotNull('subjectclass.id')
+            ->groupBy(
+                'subjectteacher.id',
+                'users.id',
+                'users.name',
+                'subject.subject',
+                'subject.subject_code',
+                'schoolterm.id',
+                'subjectclass.id',
+                'schoolclass.id',
+                'subjectteacher.sessionid',
+                DB::raw("CONCAT(schoolclass.schoolclass, ' ', COALESCE(schoolarm.arm, ''))"),
+                'schoolterm.term',
+                'schoolsession.session'
+            )
+            ->orderBy('schoolclass.schoolclass')
+            ->orderBy('schoolarm.arm');
+
+        $subjectTeachersData = $subjectsQuery->get([
+            'subjectteacher.id as id',
+            'users.id as userid',
+            'users.name as staffname',
+            'subject.subject as subject',
+            'subject.subject_code as subjectcode',
+            'schoolterm.id as termid',
+            'subjectclass.id as subjectclassid',
+            'schoolclass.id as schoolclassid',
+            'subjectteacher.sessionid as sessionid',
+            DB::raw("CONCAT(schoolclass.schoolclass, ' ', COALESCE(schoolarm.arm, '')) as schoolclass"),
+            DB::raw("GROUP_CONCAT(DISTINCT classcategories.category ORDER BY classcategories.category SEPARATOR ', ') as classcategories"),
+            'schoolterm.term as term',
+            'schoolsession.session as session',
+        ]);
+
+        Log::info('Found subjects:', ['count' => $subjectTeachersData->count()]);
+
+        // Process the subjects - exactly like MyResultRoomController
+        $mysubjects = $subjectTeachersData->map(function ($subject) use ($user) {
+            // Check if broadsheet exists for this subject
+            $broadsheetExists = Broadsheets::where('staff_id', $user->id)
+                ->where('subjectclass_id', $subject->subjectclassid)
+                ->where('term_id', $subject->termid)
+                ->whereHas('broadsheetRecord', function ($query) use ($subject) {
+                    $query->where('session_id', $subject->sessionid);
+                })
+                ->exists();
+
+            return (object) [
+                'id' => $subject->id,
+                'schoolclass' => $subject->schoolclass,
+                'classcategories' => $subject->classcategories ?? 'N/A',
+                'subject' => $subject->subject,
+                'subjectcode' => $subject->subjectcode,
+                'term' => $subject->term,
+                'session' => $subject->session,
+                'userid' => $subject->userid,
+                'subjectclassid' => $subject->subjectclassid,
+                'schoolclassid' => $subject->schoolclassid,
+                'session_id' => $subject->sessionid,
+                'termid' => $subject->termid,
+                'broadsheet_exists' => $broadsheetExists,
+                'staffname' => $subject->staffname ?? 'Unknown'
+            ];
+        })->filter()->values();
+
+        Log::info('Processed subjects:', ['count' => $mysubjects->count()]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'mysubjects' => $mysubjects,
+                'term' => Schoolterm::find($validated['termid'])->term,
+                'session' => Schoolsession::find($validated['sessionid'])->session
+            ]
+        ]);
+
+    } catch (ValidationException $e) {
+        Log::warning('Validation failed', ['errors' => $e->errors()]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid input: ' . implode(', ', array_merge(...array_values($e->errors()))),
+        ], 422);
+    } catch (\Exception $e) {
+        Log::error('Error getting transfer subjects:', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Server error: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Show the scoresheet for transferring exam scores
+ */
+public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid, $termid, $sessionid)
+{
+    try {
+        Log::info('========== SHOW TRANSFER SCORESHEET ==========');
+        Log::info('Parameters:', compact('schoolclassid', 'subjectclassid', 'staffid', 'termid', 'sessionid'));
+
+        // Store in session like MyScoreSheetController does
+        session([
+            'schoolclass_id' => $schoolclassid,
+            'subjectclass_id' => $subjectclassid,
+            'staff_id' => $staffid,
+            'term_id' => $termid,
+            'session_id' => $sessionid,
+        ]);
+
+        // Get the subject details
+        $subjectclass = Subjectclass::with(['subject', 'schoolClass'])->find($subjectclassid);
+
+        if (!$subjectclass) {
+            abort(404, 'Subject class not found');
+        }
+
+        // Get the school class with categories
+        $schoolclass = Schoolclass::with('classcategories')->find($schoolclassid);
+
+        if (!$schoolclass) {
+            abort(404, 'School class not found');
+        }
+
+        // Get all assessments for this class category
+        $assessments = collect();
+        if ($schoolclass->classcategories->isNotEmpty()) {
+            $categoryIds = $schoolclass->classcategories->pluck('id');
+            $assessments = Assessment::whereIn('classcategory_id', $categoryIds)
+                ->with('subAssessments')
+                ->orderBy('name')
+                ->get();
+        }
+
+        // Get students who attempted exams for this subject/class/term/session
+        $students = DB::table('exam_attempts')
+            ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
+            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+            ->leftJoin('results', function ($join) {
+                $join->on('exam_attempts.student_id', '=', 'results.user_id')
+                     ->on('exam_attempts.exam_id', '=', 'results.exam_id');
+            })
+            ->whereIn('exam_attempts.status', ['completed'])
+            ->whereExists(function ($query) use ($subjectclassid, $termid, $sessionid) {
+                $query->select(DB::raw(1))
+                      ->from('exams')
+                      ->whereColumn('exams.id', 'exam_attempts.exam_id')
+                      ->where('exams.subject_id', $subjectclass->subjectid)
+                      ->where('exams.schoolclass_id', $schoolclassid)
+                      ->where('exams.termid', $termid)
+                      ->where('exams.session', $sessionid);
+            })
+            ->select(
+                'studentRegistration.id',
+                'studentRegistration.firstname',
+                'studentRegistration.lastname',
+                'studentRegistration.admissionNo',
+                'studentpicture.picture',
+                'results.score',
+                'results.total_marks',
+                'exam_attempts.status'
+            )
+            ->orderBy('studentRegistration.lastname')
+            ->get();
+
+        Log::info('Found students:', ['count' => $students->count()]);
+
+        $pagetitle = "Transfer Exam Scores - " . $subjectclass->subject->subject . " (" . $schoolclass->schoolclass . " " . ($schoolclass->arm ?? '') . ")";
+
+        return view('exam.transfer-scoresheet', compact(
+            'pagetitle',
+            'schoolclassid',
+            'subjectclassid',
+            'staffid',
+            'termid',
+            'sessionid',
+            'subjectclass',
+            'schoolclass',
+            'assessments',
+            'students'
+        ));
+
+    } catch (\Exception $e) {
+        Log::error('Error showing transfer scoresheet:', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        abort(500, 'Error loading scoresheet: ' . $e->getMessage());
+    }
+}
+
+
+/**
+ * Get assessments for a specific subjectclass
+ */
+public function getAssessmentsForSubject($subjectclassId, $termId, $sessionId)
+{
+    try {
+        $subjectclass = Subjectclass::with(['schoolClass.classcategories'])->find($subjectclassId);
+
+        if (!$subjectclass) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Subject class not found'
+            ], 404);
+        }
+
+        $schoolclass = $subjectclass->schoolClass;
+        $categoryIds = $schoolclass->classcategories->pluck('id');
+
+        $assessments = Assessment::whereIn('classcategory_id', $categoryIds)
+            ->with(['subAssessments'])
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'assessments' => $assessments,
+            'subjectclass_id' => $subjectclassId
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error getting assessments for subject:', [
+            'message' => $e->getMessage(),
+            'subjectclassId' => $subjectclassId
+        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load assessments'
+        ], 500);
+    }
+}
 }
