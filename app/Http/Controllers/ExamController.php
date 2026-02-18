@@ -2229,10 +2229,12 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
             'defaultFont' => 'sans-serif'
         ]);
 
-        // FIX: Replace invalid characters in filename
+                // Create filename with student name
+        $safeFirstName = str_replace(['/', '\\', ' '], '-', $student->firstname);
+        $safeLastName = str_replace(['/', '\\', ' '], '-', $student->lastname);
         $safeAdmission = str_replace('/', '-', $student->admissionNo);
-        $safeTitle = str_replace(['/', '\\', ' '], '-', $exam->title);
-        $filename = "Question-Paper-{$safeAdmission}-{$safeTitle}.pdf";
+        $safeExamTitle = str_replace(['/', '\\', ' '], '-', $exam->title);
+        $filename = "{$safeLastName}_{$safeFirstName}_{$safeAdmission}_{$safeExamTitle}.pdf";
 
         Log::info('Step 12: PDF generated successfully', ['filename' => $filename]);
 
