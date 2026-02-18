@@ -1393,7 +1393,10 @@ class ExamController extends Controller
         }
     }
 
-    public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid, $termid, $sessionid)
+/**
+ * Show the scoresheet for transferring exam scores.
+ */
+public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid, $termid, $sessionid)
 {
     try {
         Log::info('========== SHOW TRANSFER SCORESHEET ==========');
@@ -1478,7 +1481,7 @@ class ExamController extends Controller
                      ->on('exam_attempts.exam_id', '=', 'results.exam_id');
             })
             ->whereIn('exam_attempts.status', ['completed'])
-            ->whereExists(function ($query) use ($subjectclassid, $termid, $sessionid, $subjectclass) {
+            ->whereExists(function ($query) use ($subjectclass, $schoolclassid, $termid, $sessionid) {
                 $query->select(DB::raw(1))
                       ->from('exams')
                       ->whereColumn('exams.id', 'exam_attempts.exam_id')
@@ -1541,7 +1544,6 @@ class ExamController extends Controller
         abort(500, 'Error loading scoresheet. Please check the logs.');
     }
 }
-
     /**
      * Get available assessments for the exam's class.
      */
