@@ -1393,7 +1393,9 @@ class ExamController extends Controller
         }
     }
 
-/**
+
+
+    /**
  * Show the scoresheet for transferring exam scores.
  */
 public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid, $termid, $sessionid)
@@ -1420,7 +1422,7 @@ public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid
         ]);
         Log::info('Step 2: Session data set');
 
-        // Find subjectclass
+        // Find subjectclass with relationships
         $subjectclass = Subjectclass::with(['subject', 'schoolClass'])->find($subjectclassid);
 
         if (!$subjectclass) {
@@ -1433,16 +1435,26 @@ public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid
             'schoolclass_id' => $subjectclass->schoolclassid
         ]);
 
-        // Find schoolclass
-        $schoolclass = Schoolclass::with('classcategories')->find($schoolclassid);
+        // Find schoolclass with arm relationship - FIXED: properly join with schoolarm
+        $schoolclass = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+            ->where('schoolclass.id', $schoolclassid)
+            ->select(
+                'schoolclass.*',
+                'schoolarm.arm as arm_name'
+            )
+            ->first();
 
         if (!$schoolclass) {
             Log::error('Step 4: School class not found', ['schoolclassid' => $schoolclassid]);
             abort(404, 'School class not found');
         }
+
+        // Also load classcategories
+        $schoolclass->load('classcategories');
+
         Log::info('Step 4: School class found', [
             'schoolclass' => $schoolclass->schoolclass,
-            'arm' => $schoolclass->arm
+            'arm' => $schoolclass->arm_name ?? 'No arm'
         ]);
 
         // Get term and session
@@ -1505,7 +1517,17 @@ public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid
 
         Log::info('Step 9: Students found', ['count' => $students->count()]);
 
-        $pagetitle = "Transfer Exam Scores - " . $subjectclass->subject->subject . " (" . $schoolclass->schoolclass . " " . ($schoolclass->arm ?? '') . ")";
+        // Format the arm display
+        $armDisplay = '';
+        if (!empty($schoolclass->arm_name)) {
+            $armDisplay = $schoolclass->arm_name;
+        } elseif (!empty($schoolclass->arm)) {
+            // Try to get arm name if arm is an ID
+            $armRecord = DB::table('schoolarm')->where('id', $schoolclass->arm)->first();
+            $armDisplay = $armRecord ? $armRecord->arm : '';
+        }
+
+        $pagetitle = "Transfer Exam Scores - " . $subjectclass->subject->subject . " (" . $schoolclass->schoolclass . " " . $armDisplay . ")";
 
         Log::info('Step 10: Rendering view', ['pagetitle' => $pagetitle]);
 
@@ -1518,6 +1540,7 @@ public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid
             'sessionid',
             'subjectclass',
             'schoolclass',
+            'armDisplay',  // Pass the formatted arm display
             'term',
             'session',
             'assessments',
@@ -1544,6 +1567,8 @@ public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid
         abort(500, 'Error loading scoresheet. Please check the logs.');
     }
 }
+
+
     /**
      * Get available assessments for the exam's class.
      */

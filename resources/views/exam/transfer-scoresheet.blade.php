@@ -56,14 +56,14 @@
                                         <span class="badge bg-primary">{{ $subjectclass->subject->subject_code ?? 'N/A' }}</span>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                               <div class="col-md-3">
                                     <div class="text-center p-3 border rounded">
                                         <h6 class="text-muted mb-2">Class</h6>
-                                        <h4>{{ $schoolclass->schoolclass ?? 'N/A' }} {{ $schoolclass->arm ?? '' }}</h4>
+                                        <h4>{{ $schoolclass->schoolclass ?? 'N/A' }} {{ $armDisplay ?? '' }}</h4>
                                         <span class="badge bg-info">{{ $subjectclass->classcategories ?? 'N/A' }}</span>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                 <div class="col-md-3">
                                     <div class="text-center p-3 border rounded">
                                         <h6 class="text-muted mb-2">Term</h6>
                                         <h4>{{ $term->term ?? 'Term ' . $termid }}</h4>
