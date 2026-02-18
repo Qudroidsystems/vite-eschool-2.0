@@ -2056,7 +2056,9 @@ public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid
 
 
 
-/**
+
+
+    /**
  * Generate question paper PDF with student's answers.
  */
 public function generateQuestionPaperPdf(Exam $exam, $studentId)
@@ -2102,7 +2104,7 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
             'admission' => $student->admissionNo
         ]);
 
-        // Set student picture
+        // Set student picture path
         if ($student->picture && Storage::disk('public')->exists($student->picture)) {
             $student->picture_path = asset('storage/' . $student->picture);
             Log::info('Step 4: Student picture found', ['path' => $student->picture_path]);
@@ -2120,7 +2122,7 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
 
         // Get school information
         $school = SchoolInformation::where('is_active', true)->first();
-        Log::info('Step 6: School information', ['school' => $school ? $school->schoolname : 'not found']);
+        Log::info('Step 6: School information', ['school' => $school ? $school->school_name : 'not found']);
 
         // Get exam attempt details
         $attempt = ExamAttempt::where('exam_id', $exam->id)
@@ -2146,27 +2148,47 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
             ->keyBy('question_id');
         Log::info('Step 9: Answers loaded', ['count' => $answers->count()]);
 
-        // Process each question
+        // Process each question to add student's answer and correctness
+        $totalQuestions = $questions->count();
+        $attemptedQuestions = 0;
+        $correctAnswers = 0;
+
         foreach ($questions as $question) {
             $studentAnswer = $answers->get($question->id);
 
             // Get the correct option for this question
             $correctOption = $question->options->where('is_correct', true)->first();
 
-            // Set student's answer text
+            // Set student's answer text and strip HTML tags
             if ($studentAnswer) {
+                $attemptedQuestions++;
+
                 if ($question->type === 'short_answer') {
-                    $question->student_answer = $studentAnswer->short_answer ?? 'Not answered';
-                    $question->is_correct = $this->checkShortAnswerCorrectness(
-                        $studentAnswer->short_answer,
-                        $correctOption ? $correctOption->option_text : ''
-                    );
+                    // Strip HTML tags from short answer
+                    $question->student_answer = strip_tags($studentAnswer->short_answer ?? 'Not answered');
+
+                    // Get correct answer text with HTML stripped
+                    $correctText = $correctOption ? strip_tags($correctOption->option_text) : '';
+                    $studentText = strip_tags($studentAnswer->short_answer ?? '');
+
+                    // Check if correct
+                    $question->is_correct = $this->checkShortAnswerCorrectness($studentText, $correctText);
+                    if ($question->is_correct) {
+                        $correctAnswers++;
+                    }
+
+                    // Store stripped correct answer for display
+                    $question->correct_answer_text = $correctText;
                 } else {
                     // For MCQ and True/False
                     $selectedOption = $question->options->where('id', $studentAnswer->option_id)->first();
-                    $question->student_answer = $selectedOption ? $selectedOption->option_text : 'Not answered';
+                    $question->student_answer = $selectedOption ? strip_tags($selectedOption->option_text) : 'Not answered';
                     $question->selected_option_id = $studentAnswer->option_id;
                     $question->is_correct = $selectedOption ? $selectedOption->is_correct : false;
+
+                    if ($question->is_correct) {
+                        $correctAnswers++;
+                    }
                 }
 
                 $question->student_option_id = $studentAnswer->option_id;
@@ -2176,10 +2198,10 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
                 $question->student_option_id = null;
             }
 
-            // Mark correct option for reference
+            // Store correct option text for reference (strip HTML tags)
             if ($correctOption) {
                 $question->correct_option_id = $correctOption->id;
-                $question->correct_answer_text = $correctOption->option_text;
+                $question->correct_answer_text = strip_tags($correctOption->option_text);
                 if ($question->type === 'true_false') {
                     $question->correct_answer_text = ucfirst($correctOption->label);
                 }
@@ -2187,12 +2209,6 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
         }
 
         // Calculate statistics
-        $totalQuestions = $questions->count();
-        $attemptedQuestions = $answers->count();
-        $correctAnswers = $questions->filter(function($q) {
-            return $q->is_correct ?? false;
-        })->count();
-
         $score = $result->score ?? 0;
         $percentage = $totalQuestions > 0 ? round(($correctAnswers / $totalQuestions) * 100, 1) : 0;
 
@@ -2204,6 +2220,7 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
             'percentage' => $percentage
         ]);
 
+        // Prepare data for the view
         $data = compact(
             'exam',
             'student',
@@ -2220,6 +2237,14 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
 
         Log::info('Step 11: Rendering PDF view');
 
+        // Create safe filename
+        $safeFirstName = str_replace(['/', '\\', ' '], '-', $student->firstname);
+        $safeLastName = str_replace(['/', '\\', ' '], '-', $student->lastname);
+        $safeAdmission = str_replace('/', '-', $student->admissionNo);
+        $safeExamTitle = str_replace(['/', '\\', ' '], '-', $exam->title);
+        $filename = "{$safeLastName}_{$safeFirstName}_{$safeAdmission}_{$safeExamTitle}.pdf";
+
+        // Load PDF view
         $pdf = Pdf::loadView('exam.question-paper-pdf', $data);
         $pdf->setPaper('A4', 'portrait');
         $pdf->setOptions([
@@ -2228,13 +2253,6 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
             'isPhpEnabled' => true,
             'defaultFont' => 'sans-serif'
         ]);
-
-                // Create filename with student name
-        $safeFirstName = str_replace(['/', '\\', ' '], '-', $student->firstname);
-        $safeLastName = str_replace(['/', '\\', ' '], '-', $student->lastname);
-        $safeAdmission = str_replace('/', '-', $student->admissionNo);
-        $safeExamTitle = str_replace(['/', '\\', ' '], '-', $exam->title);
-        $filename = "{$safeLastName}_{$safeFirstName}_{$safeAdmission}_{$safeExamTitle}.pdf";
 
         Log::info('Step 12: PDF generated successfully', ['filename' => $filename]);
 
@@ -2258,7 +2276,6 @@ public function generateQuestionPaperPdf(Exam $exam, $studentId)
     }
 }
 
-
 /**
  * Helper method to check if short answer is correct
  */
@@ -2269,8 +2286,8 @@ private function checkShortAnswerCorrectness($studentAnswer, $correctAnswer)
     }
 
     // Clean and normalize both answers
-    $studentAnswer = trim(strip_tags($studentAnswer));
-    $correctAnswer = trim(strip_tags($correctAnswer));
+    $studentAnswer = trim($studentAnswer);
+    $correctAnswer = trim($correctAnswer);
 
     // Remove extra spaces and convert to lowercase
     $studentAnswer = preg_replace('/\s+/', ' ', strtolower($studentAnswer));

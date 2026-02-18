@@ -37,6 +37,13 @@
             font-weight: bold;
             margin: 10px 0;
         }
+        .examiner-info {
+            margin-top: 5px;
+            font-size: 11px;
+            color: #555;
+            text-align: right;
+            font-style: italic;
+        }
         .student-info {
             background: #f8f9fa;
             padding: 15px;
@@ -185,24 +192,22 @@
             background-color: #ffc107;
             color: #212529;
         }
-        .badge-info {
-            background-color: #17a2b8;
-            color: white;
-        }
         .correct-answer-box {
             margin-top: 12px;
             padding: 12px 15px;
             background-color: #e8f4fd;
             border-left: 4px solid #17a2b8;
             border-radius: 5px;
-            font-size: 12px;
         }
-        .correct-answer-box p {
-            margin: 5px 0;
-            padding: 5px;
-            background-color: white;
-            border-radius: 3px;
+        .correct-answer-text {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background-color: #ffffff;
             border: 1px solid #b8e2f2;
+            border-radius: 4px;
+            font-family: 'DejaVu Sans', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         .footer {
             margin-top: 30px;
@@ -214,13 +219,6 @@
         }
         .page-break {
             page-break-after: always;
-        }
-        .examiner-info {
-            margin-top: 5px;
-            font-size: 11px;
-            color: #555;
-            text-align: right;
-            font-style: italic;
         }
     </style>
 </head>
@@ -330,12 +328,20 @@
             @if($question->type === 'short_answer')
                 <div class="options">
                     <div class="option {{ isset($question->is_correct) ? ($question->is_correct ? 'correct' : 'selected incorrect') : '' }}">
-                        <strong>Student's Answer:</strong> {{ $question->student_answer ?? 'Not answered' }}
+                        <strong>Student's Answer:</strong>
+                        {{ $question->student_answer ?? 'Not answered' }}
+                        @if(isset($question->is_correct))
+                            @if($question->is_correct)
+                                <span class="badge badge-success">Correct</span>
+                            @else
+                                <span class="badge badge-danger">Incorrect</span>
+                            @endif
+                        @endif
                     </div>
                     @if(isset($question->correct_answer_text) && $question->student_answer !== $question->correct_answer_text)
                         <div class="correct-answer-box">
                             <strong>Correct Answer:</strong>
-                            <p>{!! nl2br(e($question->correct_answer_text)) !!}</p>
+                            <div class="correct-answer-text">{{ $question->correct_answer_text }}</div>
                         </div>
                     @endif
                 </div>
