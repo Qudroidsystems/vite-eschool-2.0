@@ -489,91 +489,55 @@ Route::post('/students/bulk-remove-from-term', [StudentController::class, 'bulkR
 
 
 
-//     // Main resource routes (index, create, store, show, edit, update, destroy)
-//     Route::resource('exams', ExamController::class)->except(['show']); // 'show' not used
+    // Main resource routes (index, create, store, show, edit, update, destroy)
+    Route::resource('exams', ExamController::class)->except(['show']); // 'show' not used
 
-//     // Custom routes (override or add what resource doesn't cover)
-//     Route::delete('exams/bulk-destroy', [ExamController::class, 'bulkDestroy'])
-//         ->name('exams.bulk-destroy');
+    // Custom routes (override or add what resource doesn't cover)
+    Route::delete('exams/bulk-destroy', [ExamController::class, 'bulkDestroy'])
+        ->name('exams.bulk-destroy');
 
-//     // View students who attempted this exam + class filter support
-//     Route::get('exams/{exam}/students', [ExamController::class, 'showStudents'])
-//         ->name('exams.students');
+    // View students who attempted this exam + class filter support
+    Route::get('exams/{exam}/students', [ExamController::class, 'showStudents'])
+        ->name('exams.students');
 
-//     // Delete a student's attempt (allow retake)
-//     Route::delete('exams/{exam}/students/{student}/attempt', [ExamController::class, 'deleteStudentAttempt'])
-//         ->name('exams.student.attempt.delete');
+    // Delete a student's attempt (allow retake)
+    Route::delete('exams/{exam}/students/{student}/attempt', [ExamController::class, 'deleteStudentAttempt'])
+        ->name('exams.student.attempt.delete');
 
-//     // View detailed answers for one student
-//     Route::get('exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])
-//         ->name('exams.student.answers');
+    // View detailed answers for one student
+    Route::get('exams/{exam}/students/{student}/answers', [ExamController::class, 'showStudentAnswers'])
+        ->name('exams.student.answers');
 
-//     // Download question paper PDF with student's answers
-//     Route::get('exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
-//         ->name('exams.student.question-paper');
-
-
-//     // Analytics dashboard for the exam
-//     Route::get('exams/{exam}/analytics', [ExamController::class, 'analytics'])
-//         ->name('exams.analytics');
-
-//     // Get filtered subjects based on term/session
-//     Route::get('exams/filtered-subjects', [ExamController::class, 'getFilteredSubjects'])
-//         ->name('exams.filtered-subjects');
-
-//     // Helper route: get classes for a subject (used in AJAX for modals)
-//     Route::get('exams/subject-classes/{subjectTeacherId}', [ExamController::class, 'getClassesForSubject'])
-//         ->name('exams.subject-classes');
+    // Download question paper PDF with student's answers
+    Route::get('exams/{exam}/students/{student}/question-paper', [ExamController::class, 'generateQuestionPaperPdf'])
+        ->name('exams.student.question-paper');
 
 
-//          // Get exam questions for copy modal
-//     Route::get('/exams/{exam}/questions', [ExamController::class, 'getExamQuestions'])->name('exams.questions');
+    // Analytics dashboard for the exam
+    Route::get('exams/{exam}/analytics', [ExamController::class, 'analytics'])
+        ->name('exams.analytics');
 
-//     Route::post('/exams/update-assessment-score', [ExamController::class, 'updateAssessmentScore'])->name('exams.update-assessment-score');
-//     Route::get('/exams/assessments/{examId}', [ExamController::class, 'getAssessments'])->name('exams.get-assessments');
-//     // Exam Transfer Subject Selection
-//     Route::get('/exams/transfer/subjects', [ExamController::class, 'showTransferSubjects'])->name('exams.transfer.subjects');
-//     Route::post('/exams/transfer/subjects', [ExamController::class, 'getTransferSubjects'])->name('exams.transfer.subjects.post');
-//     Route::get('/exams/transfer/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}', [ExamController::class, 'showTransferScoresheet'])->name('exams.transfer.scoresheet');
+    // Get filtered subjects based on term/session
+    Route::get('exams/filtered-subjects', [ExamController::class, 'getFilteredSubjects'])
+        ->name('exams.filtered-subjects');
 
-// Route::get('/exams/assessments/for-subject/{subjectclassId}/{termId}/{sessionId}', [ExamController::class, 'getAssessmentsForSubject'])->name('exams.assessments.for-subject');
-
+    // Helper route: get classes for a subject (used in AJAX for modals)
+    Route::get('exams/subject-classes/{subjectTeacherId}', [ExamController::class, 'getClassesForSubject'])
+        ->name('exams.subject-classes');
 
 
-// =============================================
-// EXISTING EXAM ROUTES
-// =============================================
-Route::resource('exams', ExamController::class);
-Route::post('/exams/bulk-destroy', [ExamController::class, 'bulkDestroy'])->name('exams.bulk-destroy');
-Route::get('/exams/filtered-subjects', [ExamController::class, 'getFilteredSubjects'])->name('exams.filtered-subjects');
-Route::get('/exams/classes-for-subject/{subjectId}', [ExamController::class, 'getClassesForSubject'])->name('exams.classes-for-subject');
-Route::get('/exams/students/{exam}', [ExamController::class, 'showStudents'])->name('exams.students');
-Route::get('/exams/{exam}/student/{student}/answers', [ExamController::class, 'showStudentAnswers'])->name('exams.student.answers');
-Route::delete('/exams/{exam}/student/{student}/attempt', [ExamController::class, 'deleteStudentAttempt'])->name('exams.student.attempt.delete');
-Route::get('/exams/{exam}/generate-pdf/{student}', [ExamController::class, 'generateQuestionPaperPdf'])->name('exams.generate-pdf');
-Route::get('/exams/analytics/{exam}', [ExamController::class, 'analytics'])->name('exams.analytics');
-Route::get('/exams/questions/{exam}', [ExamController::class, 'getExamQuestions'])->name('exams.questions');
+         // Get exam questions for copy modal
+    Route::get('/exams/{exam}/questions', [ExamController::class, 'getExamQuestions'])->name('exams.questions');
 
-// =============================================
-// EXAM TRANSFER ROUTES (New)
-// =============================================
-Route::prefix('exams/transfer')->name('exams.transfer.')->group(function () {
-    // Subject selection page
-    Route::get('/subjects', [ExamController::class, 'showTransferSubjects'])->name('subjects');
-    Route::post('/subjects', [ExamController::class, 'getTransferSubjects'])->name('subjects.post');
+    Route::post('/exams/update-assessment-score', [ExamController::class, 'updateAssessmentScore'])->name('exams.update-assessment-score');
+    Route::get('/exams/assessments/{examId}', [ExamController::class, 'getAssessments'])->name('exams.get-assessments');
+    // Exam Transfer Subject Selection
+    Route::get('/exams/transfer/subjects', [ExamController::class, 'showTransferSubjects'])->name('exams.transfer.subjects');
+    Route::post('/exams/transfer/subjects', [ExamController::class, 'getTransferSubjects'])->name('exams.transfer.subjects.post');
+    Route::get('/exams/transfer/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}', [ExamController::class, 'showTransferScoresheet'])->name('exams.transfer.scoresheet');
 
-    // Scoresheet for specific subject
-    Route::get('/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}',
-        [ExamController::class, 'showTransferScoresheet'])->name('scoresheet');
-});
+Route::get('/exams/assessments/for-subject/{subjectclassId}/{termId}/{sessionId}', [ExamController::class, 'getAssessmentsForSubject'])->name('exams.assessments.for-subject');
 
-// =============================================
-// ASSESSMENT ROUTES (New)
-// =============================================
-Route::get('/exams/assessments/{examId}', [ExamController::class, 'getAssessments'])->name('exams.get-assessments');
-Route::get('/exams/assessments/for-subject/{subjectclassId}/{termId}/{sessionId}',
-    [ExamController::class, 'getAssessmentsForSubject'])->name('exams.assessments.for-subject');
-Route::post('/exams/update-assessment-score', [ExamController::class, 'updateAssessmentScore'])->name('exams.update-assessment-score');
 
     // Specific routes FIRST
     Route::get('/questions/get-exams', [QuestionController::class, 'getExamsForSelection'])->name('questions.getExams');
