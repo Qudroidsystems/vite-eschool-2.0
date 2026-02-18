@@ -1393,104 +1393,154 @@ class ExamController extends Controller
         }
     }
 
-    /**
-     * Show the scoresheet for transferring exam scores.
-     */
     public function showTransferScoresheet($schoolclassid, $subjectclassid, $staffid, $termid, $sessionid)
-    {
-        try {
-            Log::info('========== SHOW TRANSFER SCORESHEET ==========');
-            Log::info('Parameters:', compact('schoolclassid', 'subjectclassid', 'staffid', 'termid', 'sessionid'));
+{
+    try {
+        Log::info('========== SHOW TRANSFER SCORESHEET ==========');
+        Log::info('Step 1: Parameters received', compact('schoolclassid', 'subjectclassid', 'staffid', 'termid', 'sessionid'));
 
-            session([
-                'schoolclass_id' => $schoolclassid,
-                'subjectclass_id' => $subjectclassid,
-                'staff_id' => $staffid,
-                'term_id' => $termid,
-                'session_id' => $sessionid,
+        // Validate that the logged-in user matches the staffid
+        if (auth()->user()->id != $staffid) {
+            Log::error('Step 1.1: User ID mismatch', [
+                'logged_in_user' => auth()->user()->id,
+                'staffid' => $staffid
             ]);
+            abort(403, 'Unauthorized access');
+        }
 
-            $subjectclass = Subjectclass::with(['subject', 'schoolClass'])->find($subjectclassid);
+        session([
+            'schoolclass_id' => $schoolclassid,
+            'subjectclass_id' => $subjectclassid,
+            'staff_id' => $staffid,
+            'term_id' => $termid,
+            'session_id' => $sessionid,
+        ]);
+        Log::info('Step 2: Session data set');
 
-            if (!$subjectclass) {
-                abort(404, 'Subject class not found');
-            }
+        // Find subjectclass
+        $subjectclass = Subjectclass::with(['subject', 'schoolClass'])->find($subjectclassid);
 
-            $schoolclass = Schoolclass::with('classcategories')->find($schoolclassid);
+        if (!$subjectclass) {
+            Log::error('Step 3: Subject class not found', ['subjectclassid' => $subjectclassid]);
+            abort(404, 'Subject class not found');
+        }
+        Log::info('Step 3: Subject class found', [
+            'subjectclass_id' => $subjectclass->id,
+            'subject_id' => $subjectclass->subjectid,
+            'schoolclass_id' => $subjectclass->schoolclassid
+        ]);
 
-            if (!$schoolclass) {
-                abort(404, 'School class not found');
-            }
+        // Find schoolclass
+        $schoolclass = Schoolclass::with('classcategories')->find($schoolclassid);
 
-            $term = Schoolterm::find($termid);
-            $session = Schoolsession::find($sessionid);
+        if (!$schoolclass) {
+            Log::error('Step 4: School class not found', ['schoolclassid' => $schoolclassid]);
+            abort(404, 'School class not found');
+        }
+        Log::info('Step 4: School class found', [
+            'schoolclass' => $schoolclass->schoolclass,
+            'arm' => $schoolclass->arm
+        ]);
 
-            $assessments = collect();
-            if ($schoolclass->classcategories->isNotEmpty()) {
-                $categoryIds = $schoolclass->classcategories->pluck('id');
-                $assessments = Assessment::whereIn('classcategory_id', $categoryIds)
-                    ->with('subAssessments')
-                    ->orderBy('name')
-                    ->get();
-            }
+        // Get term and session
+        $term = Schoolterm::find($termid);
+        $session = Schoolsession::find($sessionid);
 
-            $students = DB::table('exam_attempts')
-                ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
-                ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
-                ->leftJoin('results', function ($join) {
-                    $join->on('exam_attempts.student_id', '=', 'results.user_id')
-                         ->on('exam_attempts.exam_id', '=', 'results.exam_id');
-                })
-                ->whereIn('exam_attempts.status', ['completed'])
-                ->whereExists(function ($query) use ($subjectclassid, $termid, $sessionid, $subjectclass) {
-                    $query->select(DB::raw(1))
-                          ->from('exams')
-                          ->whereColumn('exams.id', 'exam_attempts.exam_id')
-                          ->where('exams.subject_id', $subjectclass->subjectid)
-                          ->where('exams.schoolclass_id', $schoolclassid)
-                          ->where('exams.termid', $termid)
-                          ->where('exams.session', $sessionid);
-                })
-                ->select(
-                    'studentRegistration.id',
-                    'studentRegistration.firstname',
-                    'studentRegistration.lastname',
-                    'studentRegistration.admissionNo',
-                    'studentpicture.picture',
-                    'results.score',
-                    'results.total_marks',
-                    'exam_attempts.status'
-                )
-                ->orderBy('studentRegistration.lastname')
+        Log::info('Step 5: Term and session found', [
+            'term' => $term ? $term->term : 'Not found',
+            'session' => $session ? $session->session : 'Not found'
+        ]);
+
+        // Get assessments
+        $assessments = collect();
+        if ($schoolclass->classcategories->isNotEmpty()) {
+            $categoryIds = $schoolclass->classcategories->pluck('id');
+            Log::info('Step 6: Class categories', ['category_ids' => $categoryIds]);
+
+            $assessments = Assessment::whereIn('classcategory_id', $categoryIds)
+                ->with('subAssessments')
+                ->orderBy('name')
                 ->get();
 
-            Log::info('Found students:', ['count' => $students->count()]);
-
-            $pagetitle = "Transfer Exam Scores - " . $subjectclass->subject->subject . " (" . $schoolclass->schoolclass . " " . ($schoolclass->arm ?? '') . ")";
-
-            return view('exam.transfer-scoresheet', compact(
-                'pagetitle',
-                'schoolclassid',
-                'subjectclassid',
-                'staffid',
-                'termid',
-                'sessionid',
-                'subjectclass',
-                'schoolclass',
-                'term',
-                'session',
-                'assessments',
-                'students'
-            ));
-
-        } catch (\Exception $e) {
-            Log::error('Error showing transfer scoresheet:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            abort(500, 'Error loading scoresheet: ' . $e->getMessage());
+            Log::info('Step 7: Assessments found', ['count' => $assessments->count()]);
+        } else {
+            Log::warning('Step 6: No class categories found');
         }
+
+        // Get students who attempted exams
+        Log::info('Step 8: Fetching students who attempted exams');
+
+        $students = DB::table('exam_attempts')
+            ->join('studentRegistration', 'exam_attempts.student_id', '=', 'studentRegistration.id')
+            ->leftJoin('studentpicture', 'studentRegistration.id', '=', 'studentpicture.studentid')
+            ->leftJoin('results', function ($join) {
+                $join->on('exam_attempts.student_id', '=', 'results.user_id')
+                     ->on('exam_attempts.exam_id', '=', 'results.exam_id');
+            })
+            ->whereIn('exam_attempts.status', ['completed'])
+            ->whereExists(function ($query) use ($subjectclassid, $termid, $sessionid, $subjectclass) {
+                $query->select(DB::raw(1))
+                      ->from('exams')
+                      ->whereColumn('exams.id', 'exam_attempts.exam_id')
+                      ->where('exams.subject_id', $subjectclass->subjectid)
+                      ->where('exams.schoolclass_id', $schoolclassid)
+                      ->where('exams.termid', $termid)
+                      ->where('exams.session', $sessionid);
+            })
+            ->select(
+                'studentRegistration.id',
+                'studentRegistration.firstname',
+                'studentRegistration.lastname',
+                'studentRegistration.admissionNo',
+                'studentpicture.picture',
+                'results.score',
+                'results.total_marks',
+                'exam_attempts.status'
+            )
+            ->orderBy('studentRegistration.lastname')
+            ->get();
+
+        Log::info('Step 9: Students found', ['count' => $students->count()]);
+
+        $pagetitle = "Transfer Exam Scores - " . $subjectclass->subject->subject . " (" . $schoolclass->schoolclass . " " . ($schoolclass->arm ?? '') . ")";
+
+        Log::info('Step 10: Rendering view', ['pagetitle' => $pagetitle]);
+
+        return view('exam.transfer-scoresheet', compact(
+            'pagetitle',
+            'schoolclassid',
+            'subjectclassid',
+            'staffid',
+            'termid',
+            'sessionid',
+            'subjectclass',
+            'schoolclass',
+            'term',
+            'session',
+            'assessments',
+            'students'
+        ));
+
+    } catch (\Exception $e) {
+        Log::error('ERROR in showTransferScoresheet: ' . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        // Return a more detailed error page for debugging
+        if (config('app.debug')) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => explode("\n", $e->getTraceAsString())
+            ], 500);
+        }
+
+        abort(500, 'Error loading scoresheet. Please check the logs.');
     }
+}
 
     /**
      * Get available assessments for the exam's class.
