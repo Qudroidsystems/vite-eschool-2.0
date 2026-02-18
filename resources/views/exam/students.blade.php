@@ -205,41 +205,39 @@
                                                             </span>
                                                         @endif
                                                     </td>
-                                                    <td>
-                                                        <div class="btn-group" role="group">
-                                                            @if($student->attempt_status === 'completed')
-                                                                <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}"
-                                                                   class="btn btn-subtle-info btn-icon btn-sm"
-                                                                   data-bs-toggle="tooltip"
-                                                                   data-bs-placement="top"
-                                                                   title="View Answers">
-                                                                    <i class="ph-eye"></i>
-                                                                </a>
-                                                                <button type="button"
-                                                                        class="btn btn-subtle-success btn-icon btn-sm transfer-score-btn"
-                                                                        data-bs-toggle="tooltip"
-                                                                        data-bs-placement="top"
-                                                                        title="Transfer to Assessment Sheet"
-                                                                        data-student-id="{{ $student->id }}"
-                                                                        data-student-name="{{ $student->lastname }} {{ $student->firstname }}"
-                                                                        data-student-admission="{{ $student->admissionNo }}"
-                                                                        data-exam-score="{{ $score }}">
-                                                                    <i class="ph-arrow-right"></i>
-                                                                </button>
-                                                            @endif
-                                                            <button type="button"
-                                                                    class="btn btn-subtle-danger btn-icon btn-sm delete-attempt"
-                                                                    data-bs-toggle="tooltip"
-                                                                    data-bs-placement="top"
-                                                                    title="Delete Attempt (allows retake)"
-                                                                    data-exam-id="{{ $exam->id }}"
-                                                                    data-student-id="{{ $student->id }}"
-                                                                    data-student-name="{{ $student->lastname }} {{ $student->firstname }}"
-                                                                    data-delete-url="{{ route('exams.student.attempt.delete', ['exam' => $exam->id, 'student' => $student->id]) }}">
-                                                                <i class="ph-trash-simple"></i>
-                                                            </button>
-                                                        </div>
-                                                    </td>
+                                                   <td>
+    <div class="btn-group" role="group">
+        @if($student->attempt_status === 'completed')
+            <a href="{{ route('exams.student.answers', [$exam->id, $student->id]) }}"
+               class="btn btn-subtle-info btn-icon btn-sm"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="View Answers">
+                <i class="ph-eye"></i>
+            </a>
+            <!-- PDF Download Button -->
+            <a href="{{ route('exams.generate-pdf', ['exam' => $exam->id, 'student' => $student->id]) }}"
+               class="btn btn-subtle-danger btn-icon btn-sm"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="Download Question Paper with Answers"
+               target="_blank">
+                <i class="ph-file-pdf"></i>
+            </a>
+        @endif
+        <button type="button"
+                class="btn btn-subtle-danger btn-icon btn-sm delete-attempt"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="Delete Attempt (allows retake)"
+                data-exam-id="{{ $exam->id }}"
+                data-student-id="{{ $student->id }}"
+                data-student-name="{{ $student->lastname }} {{ $student->firstname }}"
+                data-delete-url="{{ route('exams.student.attempt.delete', ['exam' => $exam->id, 'student' => $student->id]) }}">
+            <i class="ph-trash-simple"></i>
+        </button>
+    </div>
+</td>
                                                 </tr>
                                             @endif
                                         @empty
