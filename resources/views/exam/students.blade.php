@@ -31,6 +31,14 @@
     color: #6c757d;
     font-size: 0.85rem;
 }
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
 </style>
 
 <div class="main-content">
@@ -65,9 +73,14 @@
                                     </span>
                                 </h5>
                             </div>
-                            <div>
-                                <span class="text-muted me-2">Total Questions: <strong>{{ $examTotals['total_questions'] ?? 0 }}</strong></span>
-                                <span class="text-muted">Total Marks: <strong>{{ number_format($examTotals['total_marks'] ?? 0, 1) }}</strong></span>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#termSessionModal">
+                                    <i class="ph-arrow-circle-right me-1"></i> Bulk Transfer to Assessment
+                                </button>
+                                <div>
+                                    <span class="text-muted me-2">Total Questions: <strong>{{ $examTotals['total_questions'] ?? 0 }}</strong></span>
+                                    <span class="text-muted">Total Marks: <strong>{{ number_format($examTotals['total_marks'] ?? 0, 1) }}</strong></span>
+                                </div>
                             </div>
                         </div>
                         <div class="card-body">
@@ -114,7 +127,7 @@
                                             <th class="min-w-80px">Incorrect</th>
                                             <th class="min-w-100px">Not Attempted</th>
                                             <th class="min-w-120px">Score (Marks)</th>
-                                            <th class="min-w-180px">Actions</th>
+                                            <th class="min-w-250px">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="students-tbody">
@@ -255,6 +268,64 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Term/Session Selection Modal -->
+<div class="modal fade" id="termSessionModal" tabindex="-1" aria-labelledby="termSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="termSessionModalLabel">
+                    <i class="ph-calendar me-2"></i>Select Term and Session
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="ph-info me-2"></i>
+                    Select the term and session to view subjects for bulk transfer.
+                </div>
+
+                <form id="termSessionForm">
+                    @csrf
+                    <div class="mb-3">
+                        <label for="modalSession" class="form-label fw-bold">Session <span class="text-danger">*</span></label>
+                        <select class="form-select" id="modalSession" name="sessionid" required>
+                            <option value="">Select Session</option>
+                            @foreach($sessions as $session)
+                                <option value="{{ $session->id }}">{{ $session->session }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modalTerm" class="form-label fw-bold">Term <span class="text-danger">*</span></label>
+                        <select class="form-select" id="modalTerm" name="termid" required>
+                            <option value="">Select Term</option>
+                            @foreach($terms as $term)
+                                <option value="{{ $term->id }}">{{ $term->term }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </form>
+
+                <div id="termSessionLoader" style="display: none;" class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Fetching your subjects...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="ph-x me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="proceedToSubjectsBtn">
+                    <i class="ph-arrow-right me-1"></i>Proceed to Subjects
+                </button>
             </div>
         </div>
     </div>
@@ -437,9 +508,11 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ Transfer buttons exist');
         }
 
-        // Test if we can find the modal
-        const modal = document.getElementById('assessmentTransferModal');
-        console.log('🔍 Assessment modal found:', modal ? '✅ Yes' : '❌ No');
+        // Test if we can find the modals
+        const termSessionModal = document.getElementById('termSessionModal');
+        const assessmentModal = document.getElementById('assessmentTransferModal');
+        console.log('🔍 Term/Session modal found:', termSessionModal ? '✅ Yes' : '❌ No');
+        console.log('🔍 Assessment modal found:', assessmentModal ? '✅ Yes' : '❌ No');
 
         // Test if we can find the form
         const form = document.getElementById('assessmentTransferForm');
@@ -463,9 +536,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Initialize modals
-        let transferModal, successModal, errorModal;
+        let bsTermSessionModal, assessmentModal, successModal, errorModal;
         try {
-            transferModal = new bootstrap.Modal(document.getElementById('assessmentTransferModal'));
+            bsTermSessionModal = new bootstrap.Modal(document.getElementById('termSessionModal'));
+            assessmentModal = new bootstrap.Modal(document.getElementById('assessmentTransferModal'));
             successModal = new bootstrap.Modal(document.getElementById('transferSuccessModal'));
             errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
             console.log('✅ Modals initialized');
@@ -486,6 +560,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const assessmentLoader = document.getElementById('assessmentLoader');
         const transferBtn = document.getElementById('transferScoreBtn');
 
+        // Term/Session modal elements
+        const modalSession = document.getElementById('modalSession');
+        const modalTerm = document.getElementById('modalTerm');
+        const termSessionLoader = document.getElementById('termSessionLoader');
+        const proceedBtn = document.getElementById('proceedToSubjectsBtn');
+
         // Log DOM elements status
         console.log('🔍 DOM Elements check:');
         console.log('  - assessmentSelect:', assessmentSelect ? '✅' : '❌');
@@ -493,6 +573,9 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('  - transferBtn:', transferBtn ? '✅' : '❌');
         console.log('  - maxScoreInput:', maxScoreInput ? '✅' : '❌');
         console.log('  - transferScoreInput:', transferScoreInput ? '✅' : '❌');
+        console.log('  - modalSession:', modalSession ? '✅' : '❌');
+        console.log('  - modalTerm:', modalTerm ? '✅' : '❌');
+        console.log('  - proceedBtn:', proceedBtn ? '✅' : '❌');
 
         // Global variables
         let assessments = [];
@@ -500,6 +583,34 @@ document.addEventListener('DOMContentLoaded', function() {
         let subjectclass_id = null;
 
         console.log('📝 Current Exam ID:', currentExamId);
+
+        // =============================================
+        // TERM/SESSION MODAL HANDLER
+        // =============================================
+        if (proceedBtn) {
+            proceedBtn.addEventListener('click', function() {
+                const sessionId = modalSession.value;
+                const termId = modalTerm.value;
+
+                console.log('Term/Session selected:', { termId, sessionId });
+
+                if (!sessionId || !termId) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Selection Required',
+                        text: 'Please select both term and session.'
+                    });
+                    return;
+                }
+
+                // Show loader
+                termSessionLoader.style.display = 'block';
+                proceedBtn.disabled = true;
+
+                // Redirect to subject selection page
+                window.location.href = `{{ route('exams.transfer.subjects') }}?termid=${termId}&sessionid=${sessionId}`;
+            });
+        }
 
         // =============================================
         // DEBUG: Check subjectclass_id every 3 seconds
@@ -545,11 +656,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         loadAssessments(currentExamId);
 
                         // Show modal
-                        if (transferModal) {
-                            transferModal.show();
+                        if (assessmentModal) {
+                            assessmentModal.show();
                             console.log('✅ Modal shown');
                         } else {
-                            console.error('❌ transferModal is not initialized');
+                            console.error('❌ assessmentModal is not initialized');
                         }
                     } catch (e) {
                         console.error('❌ Error in transfer button click handler:', e);
@@ -557,7 +668,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
         } else {
-            console.error('❌ No transfer buttons to attach events to');
+            console.log('ℹ️ No transfer buttons to attach events to (this is normal if no completed attempts)');
         }
 
         // =============================================
@@ -947,7 +1058,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.log('📊 Transfer data:', data.data);
 
                             // Hide transfer modal
-                            if (transferModal) transferModal.hide();
+                            if (assessmentModal) assessmentModal.hide();
 
                             // Show success message with actual data
                             const successMsg = `Score transferred successfully!<br>
@@ -998,7 +1109,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         } else {
-            console.error('❌ transferBtn element not found!');
+            console.log('ℹ️ transferBtn element not found (this is normal if no students with completed attempts)');
         }
 
         // =============================================
@@ -1018,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // =============================================
         // RESET MODAL WHEN HIDDEN
         // =============================================
-        if (transferModal) {
+        if (assessmentModal) {
             document.getElementById('assessmentTransferModal').addEventListener('hidden.bs.modal', function() {
                 console.log('=========================================');
                 console.log('MODAL HIDDEN - RESETTING FORM');

@@ -14,67 +14,65 @@
     background-color: #28a745;
     color: white;
 }
-.score-input.is-invalid {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+.student-row-transferred {
+    background-color: #d4edda;
+}
+.badge-transferred {
+    background-color: #28a745;
+    color: white;
 }
 </style>
 
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
+            <!-- Start page title -->
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                        <h4 class="mb-sm-0">{{ $pagetitle }}</h4>
+                        <h4 class="mb-sm-0">Transfer Exam Scores - {{ $subjectclass->subject->subject ?? 'Subject' }}</h4>
                         <div class="page-title-right">
                             <ol class="breadcrumb m-0">
-                                <li class="breadcrumb-item"><a href="{{ route('exams.transfer.subjects') }}">Transfer Subjects</a></li>
+                                <li class="breadcrumb-item"><a href="{{ route('exams.index') }}">Exams</a></li>
+                                <li class="breadcrumb-item"><a href="{{ route('exams.transfer.subjects') }}?termid={{ $termid }}&sessionid={{ $sessionid }}">Select Subject</a></li>
                                 <li class="breadcrumb-item active">Transfer Scores</li>
                             </ol>
                         </div>
                     </div>
                 </div>
             </div>
+            <!-- End page title -->
 
             <!-- Subject Info Cards -->
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card">
                         <div class="card-body">
-                            <div class="row g-3">
-                                <div class="d-flex flex-wrap flex-stack mb-2">
-                                    <div class="d-flex flex-column flex-grow-1 pe-8">
-                                        <div class="d-flex flex-wrap">
-                                            <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi bi-book fs-3 text-primary me-2"></i>
-                                                    <div class="fs-2 fw-bold text-success">{{ $subjectclass->subject->subject }}</div>
-                                                </div>
-                                                <div class="fw-semibold fs-6 text-gray-400">Subject</div>
-                                            </div>
-                                            <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi bi-code fs-3 text-success me-2"></i>
-                                                    <div class="fs-2 fw-bold text-success">{{ $subjectclass->subject->subject_code }}</div>
-                                                </div>
-                                                <div class="fw-semibold fs-6 text-gray-400">Subject Code</div>
-                                            </div>
-                                            <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi bi-building fs-3 text-success me-2"></i>
-                                                    <div class="fs-2 fw-bold text-success">{{ $schoolclass->schoolclass }} {{ $schoolclass->arm ?? '' }}</div>
-                                                </div>
-                                                <div class="fw-semibold fs-6 text-gray-400">Class</div>
-                                            </div>
-                                            <div class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi bi-calendar fs-3 text-success me-2"></i>
-                                                    <div class="fs-2 fw-bold text-success">{{ $subjectclass->term->term ?? 'Term' }} | {{ $subjectclass->session->session ?? 'Session' }}</div>
-                                                </div>
-                                                <div class="fw-semibold fs-6 text-gray-400">Term | Session</div>
-                                            </div>
-                                        </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 border rounded">
+                                        <h6 class="text-muted mb-2">Subject</h6>
+                                        <h4>{{ $subjectclass->subject->subject ?? 'N/A' }}</h4>
+                                        <span class="badge bg-primary">{{ $subjectclass->subject->subject_code ?? 'N/A' }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 border rounded">
+                                        <h6 class="text-muted mb-2">Class</h6>
+                                        <h4>{{ $schoolclass->schoolclass ?? 'N/A' }} {{ $schoolclass->arm ?? '' }}</h4>
+                                        <span class="badge bg-info">{{ $subjectclass->classcategories ?? 'N/A' }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 border rounded">
+                                        <h6 class="text-muted mb-2">Term</h6>
+                                        <h4>{{ $term->term ?? 'Term ' . $termid }}</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 border rounded">
+                                        <h6 class="text-muted mb-2">Session</h6>
+                                        <h4>{{ $session->session ?? 'Session ' . $sessionid }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -90,52 +88,55 @@
                         <div class="card-header d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <h5 class="card-title mb-0">
-                                    Students Who Attempted Exam
-                                    <span class="badge bg-info-subtle text-info ms-2" id="studentsCount">{{ $students->count() }}</span>
+                                    <i class="ph-users me-2"></i>Students Who Attempted Exam
+                                    <span class="badge bg-primary ms-2" id="studentsCount">{{ $students->count() }}</span>
                                 </h5>
                             </div>
                             <div class="flex-shrink-0">
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="searchInput" placeholder="Search students..." style="min-width: 200px;">
+                                <div class="input-group" style="width: 300px;">
+                                    <input type="text" class="form-control" id="searchInput" placeholder="Search students...">
                                     <button class="btn btn-outline-secondary" type="button" id="clearSearch">
-                                        <i class="ri-close-line"></i>
+                                        <i class="ph-x"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <div class="card-body">
                             @if($students->isEmpty())
-                                <div class="alert alert-info text-center">
-                                    <i class="ri-information-line me-2"></i>
-                                    No students have attempted exams for this subject.
+                                <div class="alert alert-info text-center py-5">
+                                    <i class="ph-users fs-1 mb-3 d-block"></i>
+                                    <h5>No Students Found</h5>
+                                    <p class="mb-0">No students have attempted exams for this subject.</p>
                                 </div>
                             @else
                                 <div class="table-responsive">
-                                    <table class="table table-centered align-middle table-nowrap mb-0">
-                                        <thead class="table-active">
+                                    <table class="table table-hover align-middle">
+                                        <thead class="table-light">
                                             <tr>
-                                                <th>SN</th>
-                                                <th>Photo</th>
+                                                <th width="50">#</th>
+                                                <th width="60">Photo</th>
                                                 <th>Student Name</th>
                                                 <th>Admission No</th>
                                                 <th>Exam Score</th>
-                                                <th>Action</th>
+                                                <th width="200">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody id="studentsTableBody">
                                             @foreach($students as $index => $student)
-                                                <tr data-student-id="{{ $student->id }}">
+                                                <tr class="student-row" data-student-id="{{ $student->id }}" data-student-name="{{ $student->lastname }} {{ $student->firstname }}" data-admission="{{ $student->admissionNo }}" data-score="{{ $student->score ?? 0 }}">
                                                     <td>{{ $loop->iteration }}</td>
                                                     <td>
                                                         <img src="{{ $student->picture ? asset('storage/student_avatars/' . basename($student->picture)) : asset('storage/student_avatars/unnamed.jpg') }}"
                                                              alt="{{ $student->lastname }} {{ $student->firstname }}"
-                                                             class="rounded-circle avatar-xs"
+                                                             class="rounded-circle" width="40" height="40"
                                                              onerror="this.src='{{ asset('storage/student_avatars/unnamed.jpg') }}';">
                                                     </td>
-                                                    <td>{{ $student->lastname }} {{ $student->firstname }}</td>
+                                                    <td>
+                                                        <strong>{{ $student->lastname }}</strong> {{ $student->firstname }}
+                                                    </td>
                                                     <td>{{ $student->admissionNo }}</td>
                                                     <td>
-                                                        <span class="badge bg-primary">{{ number_format($student->score ?? 0, 1) }}</span>
+                                                        <span class="badge bg-primary fs-6">{{ number_format($student->score ?? 0, 1) }}</span>
                                                     </td>
                                                     <td>
                                                         <button type="button"
@@ -163,26 +164,170 @@
     </div>
 </div>
 
-<!-- Assessment Transfer Modal (same as before) -->
-@include('exam.partials.transfer-modal')
+<!-- Assessment Transfer Modal -->
+<div class="modal fade" id="assessmentTransferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="ph-arrow-circle-right me-2"></i>Transfer Exam Score to Assessment Sheet
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Student Info -->
+                <div class="card bg-light mb-4">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">Student Information</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Name:</strong> <span id="studentName"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Admission No:</strong> <span id="studentAdmission"></span>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-12">
+                                <strong>Exam Score:</strong>
+                                <span class="badge bg-primary" id="examScore"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="assessmentTransferForm">
+                    @csrf
+                    <input type="hidden" name="student_id" id="studentId">
+                    <input type="hidden" name="exam_score" id="examScoreHidden">
+                    <input type="hidden" name="subjectclass_id" value="{{ $subjectclassid }}">
+                    <input type="hidden" name="term_id" value="{{ $termid }}">
+                    <input type="hidden" name="session_id" value="{{ $sessionid }}">
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-bold">Select Assessment <span class="text-danger">*</span></label>
+                            <select class="form-select" id="assessmentSelect" name="assessment_id" required>
+                                <option value="">Select an assessment</option>
+                                @foreach($assessments as $assessment)
+                                    <option value="{{ $assessment->id }}"
+                                            data-max="{{ $assessment->max_score }}"
+                                            data-has-sub="{{ $assessment->subAssessments->isNotEmpty() ? 'true' : 'false' }}">
+                                        {{ $assessment->name }} (Max: {{ $assessment->max_score }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-12 mb-3" id="subAssessmentContainer" style="display: none;">
+                            <label class="form-label fw-bold">Select Sub-Assessment</label>
+                            <select class="form-select" id="subAssessmentSelect" name="sub_assessment_id">
+                                <option value="">-- Select Sub-Assessment (Optional) --</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Maximum Score</label>
+                            <input type="number" class="form-control" id="maxScore" readonly>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Score to Transfer <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="transferScore" name="score"
+                                   step="0.1" min="0" required>
+                            <div class="form-text text-danger" id="scoreValidationMsg"></div>
+                        </div>
+
+                        <input type="hidden" name="is_sub" id="isSub" value="0">
+                    </div>
+                </form>
+
+                <div id="assessmentInfo" class="mt-3 p-3 bg-light rounded" style="display: none;">
+                    <h6 class="fw-bold">Assessment Details:</h6>
+                    <div id="assessmentDetails" class="small"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="ph-x me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="transferScoreBtn">
+                    <i class="ph-check me-1"></i>Transfer Score
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="transferSuccessModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="text-success mb-3">
+                    <i class="ph-check-circle" style="font-size: 48px;"></i>
+                </div>
+                <h5 class="mb-3">Score Transferred Successfully!</h5>
+                <div id="successMessage" class="text-muted mb-3"></div>
+                <button type="button" class="btn btn-success w-100" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="text-danger mb-3">
+                    <i class="ph-x-circle" style="font-size: 48px;"></i>
+                </div>
+                <h5 class="mb-3">Transfer Failed</h5>
+                <div id="errorMessage" class="text-muted mb-3"></div>
+                <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize modals
+    const assessmentModal = new bootstrap.Modal(document.getElementById('assessmentTransferModal'));
+    const successModal = new bootstrap.Modal(document.getElementById('transferSuccessModal'));
+    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+
+    // DOM elements
+    const assessmentSelect = document.getElementById('assessmentSelect');
+    const subAssessmentSelect = document.getElementById('subAssessmentSelect');
+    const subAssessmentContainer = document.getElementById('subAssessmentContainer');
+    const maxScoreInput = document.getElementById('maxScore');
+    const transferScoreInput = document.getElementById('transferScore');
+    const isSubInput = document.getElementById('isSub');
+    const assessmentInfo = document.getElementById('assessmentInfo');
+    const assessmentDetails = document.getElementById('assessmentDetails');
+    const scoreValidationMsg = document.getElementById('scoreValidationMsg');
+    const transferBtn = document.getElementById('transferScoreBtn');
+
+    // Store assessments data
+    const assessments = @json($assessments);
+
     // Search functionality
     const searchInput = document.getElementById('searchInput');
     const clearSearch = document.getElementById('clearSearch');
     const tableRows = document.querySelectorAll('#studentsTableBody tr');
     const studentsCount = document.getElementById('studentsCount');
 
-    function updateSearch() {
-        const searchQuery = searchInput.value.trim().toLowerCase();
+    function filterStudents() {
+        const searchTerm = searchInput.value.toLowerCase();
         let visibleCount = 0;
 
         tableRows.forEach(row => {
-            const name = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
-            const admission = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+            const name = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+            const admission = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
 
-            if (searchQuery === '' || name.includes(searchQuery) || admission.includes(searchQuery)) {
+            if (name.includes(searchTerm) || admission.includes(searchTerm)) {
                 row.style.display = '';
                 visibleCount++;
             } else {
@@ -190,21 +335,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        if (studentsCount) {
-            studentsCount.textContent = visibleCount;
-        }
+        studentsCount.textContent = visibleCount;
     }
 
-    if (searchInput) {
-        searchInput.addEventListener('input', updateSearch);
-    }
+    searchInput.addEventListener('input', filterStudents);
 
-    if (clearSearch) {
-        clearSearch.addEventListener('click', function() {
-            searchInput.value = '';
-            updateSearch();
-        });
-    }
+    clearSearch.addEventListener('click', function() {
+        searchInput.value = '';
+        filterStudents();
+    });
 
     // Transfer button click handler
     document.querySelectorAll('.transfer-score-btn').forEach(btn => {
@@ -219,60 +358,188 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('studentAdmission').textContent = studentAdmission;
             document.getElementById('examScore').textContent = examScore.toFixed(1) + ' marks';
             document.getElementById('examScoreHidden').value = examScore;
-            document.getElementById('transferScore').value = examScore.toFixed(1);
+            transferScoreInput.value = examScore.toFixed(1);
 
-            // Load assessments
-            loadAssessments('{{ $subjectclassid }}', '{{ $termid }}', '{{ $sessionid }}');
+            // Reset assessment selection
+            assessmentSelect.value = '';
+            maxScoreInput.value = '';
+            assessmentInfo.style.display = 'none';
+            subAssessmentContainer.style.display = 'none';
+            subAssessmentSelect.innerHTML = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
+            isSubInput.value = '0';
+            transferScoreInput.classList.remove('is-invalid');
+            scoreValidationMsg.innerHTML = '';
         });
     });
 
-    // Load assessments function
-    function loadAssessments(subjectclassId, termId, sessionId) {
-        const assessmentSelect = document.getElementById('assessmentSelect');
-        const assessmentLoader = document.getElementById('assessmentLoader');
+    // Assessment selection handler
+    assessmentSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const assessmentId = this.value;
 
-        assessmentLoader.style.display = 'block';
-        assessmentSelect.style.display = 'none';
+        if (!assessmentId) {
+            maxScoreInput.value = '';
+            assessmentInfo.style.display = 'none';
+            subAssessmentContainer.style.display = 'none';
+            isSubInput.value = '0';
+            return;
+        }
 
-        // Get assessments for this subject class
-        fetch(`/exams/assessments/for-subject/${subjectclassId}/${termId}/${sessionId}`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        const maxScore = selectedOption.dataset.max;
+        const hasSub = selectedOption.dataset.hasSub === 'true';
+
+        maxScoreInput.value = maxScore;
+        assessmentInfo.style.display = 'block';
+
+        const assessment = assessments.find(a => a.id == assessmentId);
+        if (assessment) {
+            let details = `
+                <strong>Name:</strong> ${assessment.name}<br>
+                <strong>Max Score:</strong> ${assessment.max_score}<br>
+            `;
+
+            if (assessment.sub_assessments && assessment.sub_assessments.length > 0) {
+                details += `<strong>Sub-assessments:</strong> ${assessment.sub_assessments.length}<br>`;
+                details += `<small class="text-muted">${assessment.sub_assessments.map(s => s.name).join(', ')}</small>`;
+
+                // Load sub-assessments
+                let subOptions = '<option value="">-- Select Sub-Assessment (Optional) --</option>';
+                assessment.sub_assessments.forEach(sub => {
+                    subOptions += `<option value="${sub.id}" data-max="${sub.max_score}">${sub.name} (Max: ${sub.max_score})</option>`;
+                });
+                subAssessmentSelect.innerHTML = subOptions;
+                subAssessmentContainer.style.display = 'block';
+                isSubInput.value = '1';
+            } else {
+                subAssessmentContainer.style.display = 'none';
+                isSubInput.value = '0';
             }
+
+            assessmentDetails.innerHTML = details;
+        }
+
+        validateScore();
+    });
+
+    // Sub-assessment selection handler
+    subAssessmentSelect.addEventListener('change', function() {
+        if (this.value) {
+            const selectedOption = this.options[this.selectedIndex];
+            maxScoreInput.value = selectedOption.dataset.max;
+        } else {
+            const mainOption = assessmentSelect.options[assessmentSelect.selectedIndex];
+            maxScoreInput.value = mainOption.dataset.max;
+        }
+        validateScore();
+    });
+
+    // Validate score
+    function validateScore() {
+        const score = parseFloat(transferScoreInput.value) || 0;
+        const maxScore = parseFloat(maxScoreInput.value) || 0;
+
+        if (score > maxScore) {
+            transferScoreInput.classList.add('is-invalid');
+            scoreValidationMsg.innerHTML = `Score cannot exceed ${maxScore}`;
+            return false;
+        } else if (score < 0) {
+            transferScoreInput.classList.add('is-invalid');
+            scoreValidationMsg.innerHTML = 'Score cannot be negative';
+            return false;
+        } else {
+            transferScoreInput.classList.remove('is-invalid');
+            scoreValidationMsg.innerHTML = '';
+            return true;
+        }
+    }
+
+    transferScoreInput.addEventListener('input', validateScore);
+    transferScoreInput.addEventListener('blur', validateScore);
+
+    // Transfer button click handler
+    transferBtn.addEventListener('click', function() {
+        if (!assessmentSelect.value) {
+            showError('Please select an assessment');
+            return;
+        }
+
+        if (!validateScore()) {
+            return;
+        }
+
+        const formData = new FormData(document.getElementById('assessmentTransferForm'));
+        formData.append('max_score', maxScoreInput.value);
+
+        if (subAssessmentSelect.value) {
+            formData.append('sub_assessment_id', subAssessmentSelect.value);
+            formData.append('is_sub', '1');
+        }
+
+        // Show loading
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Transferring...';
+        btn.disabled = true;
+
+        fetch('{{ route("exams.update-assessment-score") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            },
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
-            assessmentLoader.style.display = 'none';
-            assessmentSelect.style.display = 'block';
+            btn.innerHTML = originalText;
+            btn.disabled = false;
 
             if (data.success) {
-                window.assessments = data.assessments;
-                window.subjectclass_id = data.subjectclass_id;
+                assessmentModal.hide();
 
-                let options = '<option value="">Select an assessment</option>';
-                data.assessments.forEach(assessment => {
-                    const hasSub = assessment.sub_assessments && assessment.sub_assessments.length > 0;
-                    options += `<option value="${assessment.id}"
-                                     data-max="${assessment.max_score}"
-                                     data-has-sub="${hasSub}">
-                                    ${assessment.name} (Max: ${assessment.max_score})
-                                </option>`;
-                });
-                assessmentSelect.innerHTML = options;
+                const successMsg = `Score transferred successfully!<br>
+                    <small>
+                        Student: ${data.data.student_name}<br>
+                        Score: ${data.data.total} | Cum: ${data.data.cum} | Grade: ${data.data.grade}
+                    </small>`;
+                document.getElementById('successMessage').innerHTML = successMsg;
+                successModal.show();
+
+                // Mark row as transferred
+                const studentId = formData.get('student_id');
+                const studentRow = document.querySelector(`tr[data-student-id="${studentId}"]`);
+                if (studentRow) {
+                    studentRow.classList.add('student-row-transferred');
+                    const actionCell = studentRow.querySelector('td:last-child');
+                    actionCell.innerHTML = '<span class="badge bg-success"><i class="ph-check me-1"></i>Transferred</span>';
+                }
             } else {
-                assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
-                Swal.fire('Error', 'Failed to load assessments', 'error');
+                showError(data.message || 'Failed to transfer score');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            assessmentLoader.style.display = 'none';
-            assessmentSelect.style.display = 'block';
-            assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            showError('Network error occurred');
         });
+    });
+
+    function showError(message) {
+        document.getElementById('errorMessage').textContent = message;
+        errorModal.show();
     }
+
+    // Reset modal on hide
+    document.getElementById('assessmentTransferModal').addEventListener('hidden.bs.modal', function() {
+        assessmentSelect.value = '';
+        maxScoreInput.value = '';
+        transferScoreInput.value = '';
+        assessmentInfo.style.display = 'none';
+        subAssessmentContainer.style.display = 'none';
+        transferScoreInput.classList.remove('is-invalid');
+        scoreValidationMsg.innerHTML = '';
+    });
 });
 </script>
 @endsection
