@@ -1091,21 +1091,32 @@ use Spatie\Permission\Models\Role;
                 }
 
                 .drag-handle {
-                    cursor: move;
-                    opacity: 0.5;
-                    transition: opacity 0.2s;
+                    cursor: grab !important;
+                    color: #6c757d;
+                    padding: 8px;
+                    margin: -8px 8px -8px -8px;
+                    border-radius: 4px;
+                    transition: all 0.2s ease;
                     display: inline-flex;
                     align-items: center;
                 }
 
                 .drag-handle:hover {
-                    opacity: 1;
+                    color: #4361ee;
+                    background: rgba(67, 97, 238, 0.1);
+                }
+
+                .drag-handle:active {
+                    cursor: grabbing !important;
                 }
 
                 .draggable-item {
                     user-select: none;
                     transition: all 0.3s ease;
                     position: relative;
+                    cursor: default !important;
+                    background: white;
+                    border: 1px solid #e9ecef;
                 }
 
                 .draggable-item.dragging {
@@ -1122,28 +1133,63 @@ use Spatie\Permission\Models\Role;
                 /* Sortable.js specific classes */
                 .sortable-ghost {
                     opacity: 0.4;
-                    background-color: #f8f9fa !important;
+                    background-color: #e9ecef !important;
                     transform: rotate(2deg);
+                    border: 2px dashed #4361ee !important;
                 }
 
                 .sortable-chosen {
-                    background-color: #405189 !important;
+                    background-color: #ffffff !important;
                     color: white !important;
-                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
                     transform: scale(1.02);
                     z-index: 1000;
+                    border: 2px solid #4361ee !important;
                 }
 
                 .sortable-chosen .form-check-label {
-                    color: white !important;
+                    color: #4361ee !important;
                 }
 
                 .sortable-chosen .drag-handle {
-                    color: white !important;
+                    color: #4361ee !important;
                 }
 
                 .sortable-drag {
                     opacity: 0.8;
+                    transform: rotate(2deg);
+                    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+                }
+
+                /* Order badges */
+                .order-badge {
+                    font-size: 10px;
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                    float: right;
+                }
+
+                /* Dragging state */
+                body.sortable-dragging {
+                    cursor: grabbing !important;
+                }
+
+                body.sortable-dragging .drag-handle {
+                    cursor: grabbing !important;
+                }
+
+                /* Preview styling */
+                #columnOrderPreview {
+                    min-height: 38px;
+                    padding: 8px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    border: 1px solid #e9ecef;
+                }
+
+                #columnOrderPreview .badge {
+                    font-size: 11px;
+                    padding: 4px 8px;
                 }
             </style>
 
@@ -1701,12 +1747,12 @@ use Spatie\Permission\Models\Role;
                                         <div class="col-md-4 col-sm-6">
                                             <div class="form-check border rounded p-2 mb-2 bg-light draggable-item" data-column="{{ $key }}">
                                                 <div class="d-flex align-items-center">
-                                                    <span class="drag-handle me-2 cursor-move">
+                                                    <span class="drag-handle me-2">
                                                         <i class="ri-draggable"></i>
                                                     </span>
                                                     <input class="form-check-input column-checkbox" type="checkbox" name="columns[]" value="{{ $key }}" id="col_{{ $key }}"
                                                         {{ in_array($key, ['admissionNo','lastname','firstname','class','gender']) ? 'checked' : '' }}>
-                                                    <label class="form-check-label w-100 cursor-move" for="col_{{ $key }}">
+                                                    <label class="form-check-label w-100" for="col_{{ $key }}">
                                                         {{ $label }}
                                                     </label>
                                                 </div>
@@ -1714,7 +1760,7 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                     @endforeach
                                 </div>
-                                <small class="text-muted">Drag columns to arrange their order in the report</small>
+                                <small class="text-muted">Drag columns by the handle <i class="ri-draggable"></i> to arrange their order in the report</small>
                             </div>
 
                             <!-- Report Header Options -->
@@ -5614,96 +5660,93 @@ use Spatie\Permission\Models\Role;
             modal.show();
         },
 
-
-
         renderStudentRows: function(students) {
-    if (!students || students.length === 0) {
-        return '<tr><td colspan="7" class="text-center py-4">No students found</td></tr>';
-    }
+            if (!students || students.length === 0) {
+                return '<tr><td colspan="7" class="text-center py-4">No students found</td></tr>';
+            }
 
-    return students.map(student => {
-        // Ensure student.id is valid and is a number
-        const studentId = student.id ? parseInt(student.id) : null;
+            return students.map(student => {
+                // Ensure student.id is valid and is a number
+                const studentId = student.id ? parseInt(student.id) : null;
 
-        // Skip if no valid ID
-        if (!studentId) {
-            console.warn('Student has no valid ID:', student);
-            return '';
-        }
+                // Skip if no valid ID
+                if (!studentId) {
+                    console.warn('Student has no valid ID:', student);
+                    return '';
+                }
 
-        // Safely handle potentially null/undefined values
-        const firstName = student.firstname || '';
-        const lastName = student.lastname || '';
-        const otherName = student.othername || '';
-        const admissionNo = student.admissionNo || 'N/A';
-        const schoolClass = student.schoolclass || '';
-        const arm = student.arm || '';
+                // Safely handle potentially null/undefined values
+                const firstName = student.firstname || '';
+                const lastName = student.lastname || '';
+                const otherName = student.othername || '';
+                const admissionNo = student.admissionNo || 'N/A';
+                const schoolClass = student.schoolclass || '';
+                const arm = student.arm || '';
 
-        const activityBadge = student.student_status === 'Active'
-            ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>'
-            : '<span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>';
+                const activityBadge = student.student_status === 'Active'
+                    ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>'
+                    : '<span class="badge bg-secondary"><i class="fas fa-pause-circle me-1"></i>Inactive</span>';
 
-        const typeBadge = student.statusId == 2
-            ? '<span class="badge bg-warning text-dark"><i class="fas fa-star me-1"></i>New</span>'
-            : '<span class="badge bg-secondary"><i class="fas fa-history me-1"></i>Old</span>';
+                const typeBadge = student.statusId == 2
+                    ? '<span class="badge bg-warning text-dark"><i class="fas fa-star me-1"></i>New</span>'
+                    : '<span class="badge bg-secondary"><i class="fas fa-history me-1"></i>Old</span>';
 
-        return `
-            <tr data-student-id="${studentId}">
-                <td>
-                    <div class="form-check">
-                        <input class="form-check-input student-status-checkbox" type="checkbox"
-                               value="${studentId}" data-student-id="${studentId}">
-                    </div>
-                </td>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm me-2">
-                            <span class="avatar-title rounded-circle bg-primary text-white">
-                                ${firstName.charAt(0) || ''}${lastName.charAt(0) || ''}
-                            </span>
-                        </div>
-                        <div>
-                            <h6 class="mb-0">${Utils.escapeHtml(lastName)} ${Utils.escapeHtml(firstName)}</h6>
-                            <small class="text-muted">${Utils.escapeHtml(otherName)}</small>
-                        </div>
-                    </div>
-                </td>
-                <td><span class="fw-semibold">${Utils.escapeHtml(admissionNo)}</span></td>
-                <td>${Utils.escapeHtml(schoolClass)} ${Utils.escapeHtml(arm)}</td>
-                <td>
-                    <div class="d-flex align-items-center gap-2">
-                        ${activityBadge}
-                        <button class="btn btn-sm btn-outline-success toggle-activity"
-                                data-student-id="${studentId}"
-                                data-current="${student.student_status || 'Inactive'}"
-                                onclick="BulkStatusManager.toggleIndividualStatus(this, 'activity')">
-                            <i class="fas fa-exchange-alt"></i>
-                        </button>
-                    </div>
-                </td>
-                <td>
-                    <div class="d-flex align-items-center gap-2">
-                        ${typeBadge}
-                        <button class="btn btn-sm btn-outline-warning toggle-type"
-                                data-student-id="${studentId}"
-                                data-current="${student.statusId || 1}"
-                                onclick="BulkStatusManager.toggleIndividualStatus(this, 'type')">
-                            <i class="fas fa-exchange-alt"></i>
-                        </button>
-                    </div>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-info view-student-btn"
-                            data-student-id="${studentId}"
-                            onclick="StudentManager.viewStudent(${studentId})">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-},
-
+                return `
+                    <tr data-student-id="${studentId}">
+                        <td>
+                            <div class="form-check">
+                                <input class="form-check-input student-status-checkbox" type="checkbox"
+                                       value="${studentId}" data-student-id="${studentId}">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-2">
+                                    <span class="avatar-title rounded-circle bg-primary text-white">
+                                        ${firstName.charAt(0) || ''}${lastName.charAt(0) || ''}
+                                    </span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">${Utils.escapeHtml(lastName)} ${Utils.escapeHtml(firstName)}</h6>
+                                    <small class="text-muted">${Utils.escapeHtml(otherName)}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="fw-semibold">${Utils.escapeHtml(admissionNo)}</span></td>
+                        <td>${Utils.escapeHtml(schoolClass)} ${Utils.escapeHtml(arm)}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                ${activityBadge}
+                                <button class="btn btn-sm btn-outline-success toggle-activity"
+                                        data-student-id="${studentId}"
+                                        data-current="${student.student_status || 'Inactive'}"
+                                        onclick="BulkStatusManager.toggleIndividualStatus(this, 'activity')">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                ${typeBadge}
+                                <button class="btn btn-sm btn-outline-warning toggle-type"
+                                        data-student-id="${studentId}"
+                                        data-current="${student.statusId || 1}"
+                                        onclick="BulkStatusManager.toggleIndividualStatus(this, 'type')">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info view-student-btn"
+                                    data-student-id="${studentId}"
+                                    onclick="StudentManager.viewStudent(${studentId})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        },
 
         initializeCheckboxes: function() {
             const selectAll = document.getElementById('selectAllCheckbox');
@@ -5725,67 +5768,65 @@ use Spatie\Permission\Models\Role;
             });
         },
 
-      handleSelectAll: function(e) {
-    const isChecked = e.target.checked;
-    // Only select checkboxes with valid numeric values
-    const checkboxes = document.querySelectorAll('.student-status-checkbox');
+        handleSelectAll: function(e) {
+            const isChecked = e.target.checked;
+            // Only select checkboxes with valid numeric values
+            const checkboxes = document.querySelectorAll('.student-status-checkbox');
 
-    checkboxes.forEach(checkbox => {
-        const value = checkbox.value;
-        // Only check if it has a valid numeric value
-        if (value && value !== 'on' && !isNaN(parseInt(value))) {
-            checkbox.checked = isChecked;
-        }
-    });
+            checkboxes.forEach(checkbox => {
+                const value = checkbox.value;
+                // Only check if it has a valid numeric value
+                if (value && value !== 'on' && !isNaN(parseInt(value))) {
+                    checkbox.checked = isChecked;
+                }
+            });
 
-    this.updateSelectedCount();
-},
+            this.updateSelectedCount();
+        },
 
-updateSelectedCount: function() {
-    const selected = document.querySelectorAll('.student-status-checkbox:checked').length;
-    const selectAll = document.getElementById('selectAllCheckbox');
-    const selectAllStatus = document.getElementById('selectAllStatusStudents');
-    const total = document.querySelectorAll('.student-status-checkbox:not([disabled])').length;
+        updateSelectedCount: function() {
+            const selected = document.querySelectorAll('.student-status-checkbox:checked').length;
+            const selectAll = document.getElementById('selectAllCheckbox');
+            const selectAllStatus = document.getElementById('selectAllStatusStudents');
+            const total = document.querySelectorAll('.student-status-checkbox:not([disabled])').length;
 
-    console.log('Selected count:', selected, 'Total enabled:', total); // Debug log
+            if (selectAll) {
+                selectAll.checked = selected === total && total > 0;
+                selectAll.indeterminate = selected > 0 && selected < total;
+            }
 
-    if (selectAll) {
-        selectAll.checked = selected === total && total > 0;
-        selectAll.indeterminate = selected > 0 && selected < total;
-    }
+            if (selectAllStatus) {
+                selectAllStatus.checked = selected === total && total > 0;
+                selectAllStatus.indeterminate = selected > 0 && selected < total;
+            }
 
-    if (selectAllStatus) {
-        selectAllStatus.checked = selected === total && total > 0;
-        selectAllStatus.indeterminate = selected > 0 && selected < total;
-    }
+            // Update the bulk actions button text if needed
+            const bulkActionsDropdown = document.getElementById('bulkActionsDropdown');
+            if (bulkActionsDropdown) {
+                if (selected > 0) {
+                    bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions (${selected})`;
+                } else {
+                    bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions`;
+                }
+            }
+        },
 
-    // Update the bulk actions button text if needed
-    const bulkActionsDropdown = document.getElementById('bulkActionsDropdown');
-    if (bulkActionsDropdown) {
-        if (selected > 0) {
-            bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions (${selected})`;
-        } else {
-            bulkActionsDropdown.innerHTML = `<i class="fas fa-cog me-2"></i>Actions`;
-        }
-    }
-},
-      getSelectedStudentIds: function() {
-    const checkedBoxes = document.querySelectorAll('.student-status-checkbox:checked');
-    const ids = [];
+        getSelectedStudentIds: function() {
+            const checkedBoxes = document.querySelectorAll('.student-status-checkbox:checked');
+            const ids = [];
 
-    checkedBoxes.forEach(cb => {
-        const value = cb.value;
-        // Only include valid numeric IDs (not "on" or empty)
-        if (value && value !== 'on' && !isNaN(parseInt(value))) {
-            ids.push(parseInt(value));
-        } else {
-            console.warn('Invalid checkbox value:', value, cb);
-        }
-    });
+            checkedBoxes.forEach(cb => {
+                const value = cb.value;
+                // Only include valid numeric IDs (not "on" or empty)
+                if (value && value !== 'on' && !isNaN(parseInt(value))) {
+                    ids.push(parseInt(value));
+                } else {
+                    console.warn('Invalid checkbox value:', value, cb);
+                }
+            });
 
-    console.log('Filtered selected student IDs:', ids);
-    return ids;
-},
+            return ids;
+        },
 
         async toggleIndividualStatus(button, type) {
             const studentId = button.dataset.studentId;
@@ -5837,57 +5878,54 @@ updateSelectedCount: function() {
             }
         },
 
-      async bulkUpdateStatus(updateType, value) {
-    const selectedIds = this.getSelectedStudentIds();
+        async bulkUpdateStatus(updateType, value) {
+            const selectedIds = this.getSelectedStudentIds();
 
-    console.log('Bulk update - selected IDs:', selectedIds); // Debug log
-    console.log('Selected count:', selectedIds.length); // Debug log
-
-    if (selectedIds.length === 0) {
-        Utils.showError('Please select at least one student', 'No Selection');
-        return;
-    }
-
-    let displayValue = value;
-    if (updateType === 'student_type') {
-        displayValue = value === 'old' ? 'Old Student' : 'New Student';
-    }
-
-    // Show the correct count in the confirmation dialog
-    const confirmed = await Utils.showConfirm(
-        'Confirm Bulk Update',
-        `Update ${selectedIds.length} student(s) to "${displayValue}"?`,
-        'Yes, update'
-    );
-
-    if (confirmed) {
-        try {
-            Swal.fire({
-                title: 'Updating...',
-                html: `Updating ${selectedIds.length} student(s)`,
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            const response = await ApiService.bulkUpdateStatus({
-                student_ids: selectedIds,
-                update_type: updateType,
-                value: value
-            });
-
-            Swal.close();
-
-            if (response.success) {
-                Utils.showSuccess(response.message);
-                this.refreshData();
+            if (selectedIds.length === 0) {
+                Utils.showError('Please select at least one student', 'No Selection');
+                return;
             }
-        } catch (error) {
-            Swal.close();
-            console.error('Bulk update error:', error);
-            Utils.showError('Failed to update students: ' + (error.response?.data?.message || error.message));
-        }
-    }
-},
+
+            let displayValue = value;
+            if (updateType === 'student_type') {
+                displayValue = value === 'old' ? 'Old Student' : 'New Student';
+            }
+
+            // Show the correct count in the confirmation dialog
+            const confirmed = await Utils.showConfirm(
+                'Confirm Bulk Update',
+                `Update ${selectedIds.length} student(s) to "${displayValue}"?`,
+                'Yes, update'
+            );
+
+            if (confirmed) {
+                try {
+                    Swal.fire({
+                        title: 'Updating...',
+                        html: `Updating ${selectedIds.length} student(s)`,
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+
+                    const response = await ApiService.bulkUpdateStatus({
+                        student_ids: selectedIds,
+                        update_type: updateType,
+                        value: value
+                    });
+
+                    Swal.close();
+
+                    if (response.success) {
+                        Utils.showSuccess(response.message);
+                        this.refreshData();
+                    }
+                } catch (error) {
+                    Swal.close();
+                    console.error('Bulk update error:', error);
+                    Utils.showError('Failed to update students: ' + (error.response?.data?.message || error.message));
+                }
+            }
+        },
 
         async refreshData() {
             if (!AppState.bulkStatusFilters) return;
@@ -6236,17 +6274,19 @@ updateSelectedCount: function() {
     };
 
     // ============================================================================
-    // REPORT MANAGER
+    // REPORT MANAGER - FIXED DRAG AND DROP
     // ============================================================================
     const ReportManager = {
         sortableInstance: null,
         columnOrder: [],
 
         initializeReportModal: function() {
-            this.columnOrder = [];
-            this.initSortable();
-            this.updatePreview();
+            console.log('Initializing report modal with drag and drop...');
 
+            // Initialize column order array
+            this.columnOrder = [];
+
+            // Make sure default columns are checked
             const defaultColumns = ['admissionNo', 'lastname', 'firstname', 'class', 'gender'];
             defaultColumns.forEach(col => {
                 const checkbox = document.getElementById(`col_${col}`);
@@ -6255,70 +6295,157 @@ updateSelectedCount: function() {
                 }
             });
 
-            this.updateColumnOrder();
+            // Initialize Sortable after a small delay to ensure DOM is ready
+            setTimeout(() => {
+                this.initSortable();
+                this.updateColumnOrder();
+                this.updatePreview();
+            }, 100);
         },
 
         initSortable: function() {
             const container = document.getElementById('columnsContainer');
-            if (!container) return;
+            if (!container) {
+                console.error('Columns container not found!');
+                return;
+            }
 
-            if (typeof Sortable === 'undefined') return;
+            // Check if Sortable is available
+            if (typeof Sortable === 'undefined') {
+                console.error('Sortable library not loaded!');
+                // Try to load Sortable dynamically
+                this.loadSortableLibrary();
+                return;
+            }
 
+            // Destroy existing instance if any
             if (this.sortableInstance) {
                 this.sortableInstance.destroy();
             }
 
+            console.log('Initializing Sortable on container:', container);
+
+            // Make all draggable items actually draggable
+            document.querySelectorAll('.draggable-item').forEach(item => {
+                item.style.cursor = 'grab';
+                item.setAttribute('draggable', 'false'); // Let Sortable handle dragging
+            });
+
+            // Create new Sortable instance
             this.sortableInstance = new Sortable(container, {
-                animation: 150,
+                animation: 250,
                 handle: '.drag-handle',
                 draggable: '.draggable-item',
                 ghostClass: 'sortable-ghost',
                 chosenClass: 'sortable-chosen',
                 dragClass: 'sortable-drag',
-                onEnd: () => {
+                forceFallback: false,
+                fallbackClass: 'sortable-fallback',
+                fallbackOnBody: true,
+
+                onStart: function(evt) {
+                    console.log('Drag started', evt);
+                    document.body.style.cursor = 'grabbing';
+                },
+
+                onEnd: (evt) => {
+                    console.log('Drag ended', evt);
+                    document.body.style.cursor = '';
                     this.updateColumnOrder();
+                    this.updatePreview();
+                },
+
+                onSort: (evt) => {
+                    console.log('Sorted', evt);
                 }
             });
 
-            this.updateColumnOrder();
-
+            // Add event listeners to checkboxes
             document.querySelectorAll('.column-checkbox').forEach(checkbox => {
-                checkbox.removeEventListener('change', () => this.updateColumnOrder());
-                checkbox.addEventListener('change', () => this.updateColumnOrder());
+                checkbox.removeEventListener('change', (e) => this.handleCheckboxChange(e));
+                checkbox.addEventListener('change', (e) => this.handleCheckboxChange(e));
             });
+
+            console.log('Sortable initialized successfully');
+        },
+
+        handleCheckboxChange: function(e) {
+            this.updateColumnOrder();
+            this.updatePreview();
+        },
+
+        loadSortableLibrary: function() {
+            // Dynamically load Sortable if not available
+            if (document.querySelector('script[src*="Sortable"]')) return;
+
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
+            script.onload = () => {
+                console.log('Sortable library loaded dynamically');
+                setTimeout(() => this.initSortable(), 100);
+            };
+            document.head.appendChild(script);
         },
 
         updateColumnOrder: function() {
-            const items = document.querySelectorAll('#columnsContainer .draggable-item');
-            this.columnOrder = Array.from(items)
-                .map(item => item.dataset.column)
-                .filter((col, index) => {
-                    const checkbox = items[index].querySelector('.column-checkbox');
-                    return checkbox && checkbox.checked;
-                });
+            const container = document.getElementById('columnsContainer');
+            if (!container) return;
 
+            const items = container.querySelectorAll('.draggable-item');
             const orderInput = document.getElementById('columnsOrderInput');
+
+            // Get the current order from DOM
+            this.columnOrder = Array.from(items).map(item => {
+                return item.dataset.column;
+            });
+
+            // Filter to only include checked columns
+            const checkedInOrder = this.columnOrder.filter(col => {
+                const checkbox = document.getElementById(`col_${col}`);
+                return checkbox && checkbox.checked;
+            });
+
+            // Update hidden input with the order
             if (orderInput) {
-                orderInput.value = this.columnOrder.join(',');
+                orderInput.value = checkedInOrder.join(',');
+                console.log('Column order updated:', orderInput.value);
             }
 
-            this.updatePreview();
+            // Update visual indicators
+            items.forEach((item, index) => {
+                const numberBadge = item.querySelector('.order-badge');
+                if (!numberBadge) {
+                    const badge = document.createElement('span');
+                    badge.className = 'order-badge badge bg-primary ms-2';
+                    badge.style.cssText = 'float: right; font-size: 10px;';
+                    badge.textContent = index + 1;
+                    item.querySelector('.drag-handle').after(badge);
+                } else {
+                    numberBadge.textContent = index + 1;
+                }
+            });
         },
 
         updatePreview: function() {
             const previewEl = document.getElementById('columnOrderPreview');
             if (!previewEl) return;
 
-            const checkedColumns = Array.from(document.querySelectorAll('.column-checkbox:checked'))
-                .map(cb => {
-                    const label = document.querySelector(`label[for="${cb.id}"]`)?.innerText.trim() || cb.value;
-                    return label;
-                });
+            const checkedColumns = [];
+            const checkboxes = document.querySelectorAll('.column-checkbox:checked');
+
+            checkboxes.forEach(cb => {
+                const label = document.querySelector(`label[for="${cb.id}"]`);
+                if (label) {
+                    checkedColumns.push(label.innerText.trim());
+                }
+            });
 
             if (checkedColumns.length === 0) {
-                previewEl.innerHTML = '<span class="text-danger">No columns selected</span>';
+                previewEl.innerHTML = '<span class="text-danger">⚠️ No columns selected</span>';
             } else {
-                previewEl.innerHTML = checkedColumns.join(' <span class="text-muted">→</span> ');
+                previewEl.innerHTML = checkedColumns.map(col =>
+                    `<span class="badge bg-light text-dark me-1">${col}</span>`
+                ).join(' <span class="text-muted">→</span> ');
             }
         },
 
@@ -6329,12 +6456,16 @@ updateSelectedCount: function() {
                 return;
             }
 
-            const selectedColumns = Array.from(form.querySelectorAll('.column-checkbox:checked')).map(cb => cb.value);
+            // Get selected columns
+            const selectedColumns = Array.from(form.querySelectorAll('.column-checkbox:checked'))
+                .map(cb => cb.value);
+
             if (selectedColumns.length === 0) {
                 Utils.showError('Please select at least one column to display in the report', 'No Columns Selected');
                 return;
             }
 
+            // Build params
             const formData = new FormData(form);
             const params = {};
 
@@ -6345,18 +6476,22 @@ updateSelectedCount: function() {
                     }
                     params.columns.push(value);
                 } else if (key === 'columns_order') {
-                    if (value) {
-                        params.columns_order = value;
+                    // Get the latest order from hidden input
+                    const orderInput = document.getElementById('columnsOrderInput');
+                    if (orderInput && orderInput.value) {
+                        params.columns_order = orderInput.value;
                     }
                 } else if (value) {
                     params[key] = value;
                 }
             }
 
+            // Format columns as comma-separated string
             if (params.columns && Array.isArray(params.columns)) {
                 params.columns = params.columns.join(',');
             }
 
+            // Add format and orientation
             if (!params.format) {
                 const formatRadio = form.querySelector('input[name="format"]:checked');
                 params.format = formatRadio ? formatRadio.value : 'pdf';
@@ -6367,31 +6502,42 @@ updateSelectedCount: function() {
                 params.orientation = orientationSelect ? orientationSelect.value : 'portrait';
             }
 
+            // Add header options
             params.include_header = form.querySelector('input[name="include_header"]')?.checked ? '1' : '0';
             params.include_logo = form.querySelector('input[name="include_logo"]')?.checked ? '1' : '0';
             params.exclude_photos = '0';
 
+            console.log('Report params:', params);
+
+            // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('printStudentReportModal'));
             if (modal) modal.hide();
 
+            // Show loading
             Swal.fire({
                 title: 'Generating Report',
                 html: 'Please wait while your report is being generated...',
                 allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                didOpen: () => Swal.showLoading()
             });
 
             try {
-                const response = await ApiService.generateReport(params);
+                const response = await axios({
+                    method: 'GET',
+                    url: '/students/report',
+                    params: params,
+                    responseType: 'blob',
+                    timeout: 120000
+                });
 
                 Swal.close();
 
+                // Create download link
                 const url = window.URL.createObjectURL(new Blob([response.data]));
                 const link = document.createElement('a');
                 link.href = url;
 
+                // Get filename
                 let filename = 'student-report.pdf';
                 const contentDisposition = response.headers['content-disposition'];
                 if (contentDisposition) {
@@ -6415,8 +6561,20 @@ updateSelectedCount: function() {
 
             } catch (error) {
                 Swal.close();
-                Utils.log('Error generating report', error, 'error');
-                Utils.showError('Failed to generate report. Please try again.', 'Report Generation Failed');
+                console.error('Error generating report:', error);
+
+                let errorMessage = 'Failed to generate report.';
+                if (error.response?.data instanceof Blob) {
+                    try {
+                        const text = await error.response.data.text();
+                        const json = JSON.parse(text);
+                        errorMessage = json.message || errorMessage;
+                    } catch (e) {}
+                } else if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                }
+
+                Utils.showError(errorMessage, 'Report Generation Failed');
             }
         }
     };
