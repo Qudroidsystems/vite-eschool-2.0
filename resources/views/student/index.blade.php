@@ -3329,8 +3329,8 @@ use Spatie\Permission\Models\Role;
     // GLOBAL CONFIGURATION
     // ============================================================================
     const CONFIG = {
-        DEFAULT_PER_PAGE: 12,
-        PER_PAGE_OPTIONS: [12, 25, 50, 100, 250, 500],
+        DEFAULT_PER_PAGE: 25,
+        PER_PAGE_OPTIONS: [25, 50, 100, 250, 500],
         SEARCH_DEBOUNCE_DELAY: 500,
         MAX_API_RETRIES: 3,
         CACHE_DURATION: 300000,
