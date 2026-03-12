@@ -456,7 +456,7 @@ public function getStudentsOptimized(Request $request)
             $lgas = collect($statesLgas)->pluck('lgas', 'state')->toArray();
 
             $validator = Validator::make($request->all(), [
-                'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:5048',
                 'admissionMode' => 'required|in:auto,manual',
                 'title' => 'nullable|in:Master,Miss',
                 'admissionNo' => [
