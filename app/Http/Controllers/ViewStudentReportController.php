@@ -78,7 +78,7 @@ class ViewStudentReportController extends Controller
             return 'F9';
         }
 
-        // WAEC/NECO Grading Scheme
+        // WAEC/NECO Grading Scheme - Based on TOTAL score
         if ($score >= 75 && $score <= 100) {
             return 'A1';
         } elseif ($score >= 70 && $score <= 74) {
@@ -211,8 +211,14 @@ class ViewStudentReportController extends Controller
             'total_scores' => $currentTermBroadsheets->pluck('total')->toArray()
         ]);
 
+        // Get class category for grade point calculation
+        $classCategory = $schoolclass->classcategories->first();
+
         // Calculate grade points based on TOTAL scores
-        $termGradePoints = $currentTermBroadsheets->map(function ($b) {
+        $termGradePoints = $currentTermBroadsheets->map(function ($b) use ($classCategory) {
+            if ($classCategory) {
+                return $classCategory->getGradePoint($b->total);
+            }
             return $this->getGradePoint($b->total);
         });
 
@@ -239,7 +245,10 @@ class ViewStudentReportController extends Controller
                 ->get(['total']);
 
             if ($termBroadsheets->isNotEmpty()) {
-                $termGradePointsPast = $termBroadsheets->map(function ($b) {
+                $termGradePointsPast = $termBroadsheets->map(function ($b) use ($classCategory) {
+                    if ($classCategory) {
+                        return $classCategory->getGradePoint($b->total);
+                    }
                     return $this->getGradePoint($b->total);
                 });
 
@@ -278,7 +287,7 @@ class ViewStudentReportController extends Controller
 
     /**
      * Calculate class positions, averages, and grades for all subjects
-     * Uses TOTAL score for position calculation
+     * Uses TOTAL score for grading and position calculation
      */
     protected function calculateClassPositionsAndAverages($schoolclassid, $sessionid, $termid)
     {
@@ -385,6 +394,10 @@ class ViewStudentReportController extends Controller
                 return false;
             }
 
+            // Get class category for grade calculation
+            $schoolclass = Schoolclass::with('classcategories')->find($schoolclassid);
+            $classCategory = $schoolclass->classcategories->first();
+
             $subjectGroups = $broadsheets->groupBy('subject_id');
             Log::info('Grouped broadsheets by subject', ['subject_count' => $subjectGroups->count()]);
 
@@ -434,14 +447,33 @@ class ViewStudentReportController extends Controller
 
                 $updatesCount = 0;
                 foreach ($subjectRecords as $record) {
-                    // Calculate grade based on TOTAL score using WAEC scheme
-                    $grade = $record->total == 0 ? '-' : $this->calculateGrade($record->total);
+                    // CRITICAL: Use TOTAL score for grade calculation
+                    $scoreForGrading = $record->total;
+
+                    // Calculate grade based on TOTAL score
+                    if ($classCategory && $scoreForGrading > 0) {
+                        $grade = $classCategory->calculateGrade($scoreForGrading);
+                    } else {
+                        // Fallback to direct calculation if no category
+                        $grade = $this->calculateGrade($scoreForGrading);
+                    }
+
                     $remark = $this->getRemark($grade);
 
-                    // Format position with ordinal suffix
+                    // Format position with ordinal suffix (based on TOTAL score)
                     $newPosition = $record->total == 0 ? '-' : (
                         isset($positionMap[$record->id]) ? $this->formatOrdinal($positionMap[$record->id]) : '-'
                     );
+
+                    Log::debug('Grade calculation check', [
+                        'subject_name' => $subjectName,
+                        'student_id' => $record->student_id,
+                        'total_score' => $record->total,
+                        'calculated_grade' => $grade,
+                        'current_grade' => $record->grade,
+                        'position' => $newPosition,
+                        'has_category' => !is_null($classCategory)
+                    ]);
 
                     if (
                         $record->avg != $classAvg ||
@@ -460,16 +492,15 @@ class ViewStudentReportController extends Controller
                             $updatesCount++;
                         }
 
-                        Log::debug('Broadsheet updated', [
+                        Log::info('Broadsheet updated', [
                             'broadsheet_id' => $record->id,
                             'student_id' => $record->student_id,
                             'subject_name' => $subjectName,
-                            'old_avg' => $record->avg,
-                            'new_avg' => $classAvg,
-                            'old_position' => $record->subject_position_class,
-                            'new_position' => $newPosition,
+                            'total_score' => $record->total,
                             'old_grade' => $record->grade,
-                            'new_grade' => $grade
+                            'new_grade' => $grade,
+                            'old_position' => $record->subject_position_class,
+                            'new_position' => $newPosition
                         ]);
                     }
                 }
@@ -1097,7 +1128,13 @@ class ViewStudentReportController extends Controller
         ]);
 
         $schoolclass = Schoolclass::with('classcategories')->findOrFail($request->schoolclass_id);
-        $grade = $this->calculateGrade($request->total);
+        $classCategory = $schoolclass->classcategories->first();
+
+        if ($classCategory) {
+            $grade = $classCategory->calculateGrade($request->total);
+        } else {
+            $grade = $this->calculateGrade($request->total);
+        }
 
         Log::debug('Grade preview result', [
             'schoolclass_id' => $request->schoolclass_id,
