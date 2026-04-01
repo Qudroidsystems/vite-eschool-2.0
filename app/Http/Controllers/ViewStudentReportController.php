@@ -68,31 +68,35 @@ class ViewStudentReportController extends Controller
     }
 
     /**
-     * Calculate grade based on TOTAL score using WAEC/NECO standard for SENIOR classes.
+     * Calculate grade based on TOTAL score using WAEC/NECO standard for SENIOR classes
+     * This is the MASTER grading function that should be used for all senior classes
      */
     protected function calculateGrade($score)
     {
         Log::debug('Calculating grade', ['score' => $score]);
 
+        // Handle null, zero, or negative scores
         if ($score === null || $score <= 0) {
             return 'F9';
         }
 
-        if ($score >= 75) {
+        // WAEC/NECO Grading Scheme - Based on TOTAL score for SENIOR classes
+        // Year 10, 11, 12 are senior classes
+        if ($score >= 75 && $score <= 100) {
             return 'A1';
-        } elseif ($score >= 70) {
+        } elseif ($score >= 70 && $score <= 74) {
             return 'B2';
-        } elseif ($score >= 65) {
+        } elseif ($score >= 65 && $score <= 69) {
             return 'B3';
-        } elseif ($score >= 60) {
+        } elseif ($score >= 60 && $score <= 64) {
             return 'C4';
-        } elseif ($score >= 55) {
+        } elseif ($score >= 55 && $score <= 59) {
             return 'C5';
-        } elseif ($score >= 50) {
+        } elseif ($score >= 50 && $score <= 54) {
             return 'C6';
-        } elseif ($score >= 45) {
+        } elseif ($score >= 45 && $score <= 49) {
             return 'D7';
-        } elseif ($score >= 40) {
+        } elseif ($score >= 40 && $score <= 44) {
             return 'E8';
         } else {
             return 'F9';
@@ -100,7 +104,7 @@ class ViewStudentReportController extends Controller
     }
 
     /**
-     * Get grade point based on score using WAEC/NECO standard.
+     * Get grade point based on score using WAEC/NECO standard
      */
     protected function getGradePoint($score)
     {
@@ -110,21 +114,22 @@ class ViewStudentReportController extends Controller
             return 0.0;
         }
 
-        if ($score >= 75) {
+        // WAEC/NECO Grade Point System
+        if ($score >= 75 && $score <= 100) {
             return 5.0; // A1
-        } elseif ($score >= 70) {
+        } elseif ($score >= 70 && $score <= 74) {
             return 4.5; // B2
-        } elseif ($score >= 65) {
+        } elseif ($score >= 65 && $score <= 69) {
             return 4.0; // B3
-        } elseif ($score >= 60) {
+        } elseif ($score >= 60 && $score <= 64) {
             return 3.5; // C4
-        } elseif ($score >= 55) {
+        } elseif ($score >= 55 && $score <= 59) {
             return 3.0; // C5
-        } elseif ($score >= 50) {
+        } elseif ($score >= 50 && $score <= 54) {
             return 2.5; // C6
-        } elseif ($score >= 45) {
+        } elseif ($score >= 45 && $score <= 49) {
             return 2.0; // D7
-        } elseif ($score >= 40) {
+        } elseif ($score >= 40 && $score <= 44) {
             return 1.0; // E8
         } else {
             return 0.0; // F9
@@ -136,6 +141,8 @@ class ViewStudentReportController extends Controller
      */
     protected function getRemark($grade)
     {
+        Log::debug('Getting remark for grade', ['grade' => $grade]);
+
         $remarks = [
             'A1' => 'Excellent',
             'B2' => 'Very Good',
@@ -152,7 +159,7 @@ class ViewStudentReportController extends Controller
     }
 
     /**
-     * Get GPA letter grade based on GPA value.
+     * Get GPA letter grade based on GPA value
      */
     protected function getGpaGrade($gpa)
     {
@@ -178,31 +185,41 @@ class ViewStudentReportController extends Controller
     }
 
     /**
-     * Compute overall GPA and CGPA for a student.
+     * Compute overall GPA and CGPA for a student
+     * GPA = Average of grade points for current term using TOTAL score
+     * CGPA = Average of GPAs for all completed terms in current session
      */
     protected function computeOverallGPAAndCGPAForStudent($studentId, $schoolclass, $termId, $sessionId)
     {
         Log::info('Computing GPA/CGPA for student', [
             'student_id' => $studentId,
-            'term_id'    => $termId,
+            'term_id' => $termId,
             'session_id' => $sessionId,
         ]);
 
+        // Get current term scores - use TOTAL for GPA calculation
         $currentTermBroadsheets = Broadsheets::where('term_id', $termId)
             ->whereHas('broadsheetRecord', function ($q) use ($studentId, $sessionId) {
                 $q->where('student_id', $studentId)->where('session_id', $sessionId);
             })
             ->get(['total']);
 
+        Log::debug('Current term broadsheets', [
+            'student_id' => $studentId,
+            'count' => $currentTermBroadsheets->count(),
+            'total_scores' => $currentTermBroadsheets->pluck('total')->toArray()
+        ]);
+
+        // Calculate grade points based on TOTAL scores
         $termGradePoints = $currentTermBroadsheets->map(function ($b) {
             return $this->getGradePoint($b->total);
         });
 
-        $gpa               = $termGradePoints->avg() ?? 0.0;
-        $num_subjects      = $currentTermBroadsheets->count();
+        $gpa = $termGradePoints->avg() ?? 0.0;
+        $num_subjects = $currentTermBroadsheets->count();
         $total_grade_points = $termGradePoints->sum();
 
-        // CGPA — average of all completed terms in the current session
+        // Calculate CGPA - Average of all completed terms in the current session
         $termGPAs = [];
 
         for ($t = 1; $t <= $termId; $t++) {
@@ -224,21 +241,22 @@ class ViewStudentReportController extends Controller
             }
         }
 
-        $cgpa     = !empty($termGPAs) ? collect($termGPAs)->avg() : 0.0;
+        $cgpa = !empty($termGPAs) ? collect($termGPAs)->avg() : 0.0;
         $gpaGrade = $this->getGpaGrade($gpa);
 
         return [
-            'gpa'               => round($gpa, 2),
-            'cgpa'              => round($cgpa, 2),
-            'gpa_grade'         => $gpaGrade,
-            'num_subjects'      => $num_subjects,
+            'gpa' => round($gpa, 2),
+            'cgpa' => round($cgpa, 2),
+            'gpa_grade' => $gpaGrade,
+            'num_subjects' => $num_subjects,
             'total_grade_points' => round($total_grade_points, 1),
-            'calculated_gpa'    => $num_subjects > 0 ? round($total_grade_points / $num_subjects, 2) : 0.0,
+            'calculated_gpa' => $num_subjects > 0 ? round($total_grade_points / $num_subjects, 2) : 0.0,
         ];
     }
 
     /**
-     * Calculate class positions, averages, and grades for all subjects.
+     * Calculate class positions, averages, and grades for all subjects
+     * CRITICAL: Uses TOTAL score for grading and position calculation
      */
     protected function calculateClassPositionsAndAverages($schoolclassid, $sessionid, $termid)
     {
@@ -246,8 +264,8 @@ class ViewStudentReportController extends Controller
 
         Log::info('Starting class metrics calculation', [
             'schoolclassid' => $schoolclassid,
-            'sessionid'     => $sessionid,
-            'termid'        => $termid,
+            'sessionid' => $sessionid,
+            'termid' => $termid,
         ]);
 
         Cache::forget($cacheKey);
@@ -277,7 +295,6 @@ class ViewStudentReportController extends Controller
         }
 
         $success = DB::transaction(function () use ($schoolclassid, $sessionid, $termid, $classIds, $students) {
-
             $broadsheets = Broadsheets::whereIn('broadsheet_records.student_id', $students)
                 ->where('broadsheets.term_id', $termid)
                 ->where('broadsheet_records.session_id', $sessionid)
@@ -310,39 +327,54 @@ class ViewStudentReportController extends Controller
             foreach ($subjectGroups as $subjectId => $subjectRecords) {
                 $subjectName = $subjectRecords->first()->subject_name;
 
+                // Calculate class average using TOTAL scores
                 $validRecords = $subjectRecords->filter(function ($record) {
                     return $record->total != 0 && $record->total !== null;
                 });
 
-                $totalScores  = $validRecords->sum('total');
+                $totalScores = $validRecords->sum('total');
                 $studentCount = $validRecords->count();
                 $classAvg = $studentCount > 0 ? round($totalScores / $studentCount, 1) : 0;
 
+                // Calculate positions based on TOTAL scores
                 $sortedRecords = $validRecords->sortByDesc('total')->values();
 
-                $rank         = 0;
-                $lastTotal    = null;
+                $rank = 0;
+                $lastTotal = null;
                 $lastPosition = 0;
-                $positionMap  = [];
+                $positionMap = [];
 
                 foreach ($sortedRecords as $record) {
                     $rank++;
                     if ($lastTotal !== null && $record->total == $lastTotal) {
                         $positionMap[$record->id] = $lastPosition;
                     } else {
-                        $lastPosition             = $rank;
-                        $lastTotal                = $record->total;
+                        $lastPosition = $rank;
+                        $lastTotal = $record->total;
                         $positionMap[$record->id] = $lastPosition;
                     }
                 }
 
                 foreach ($subjectRecords as $record) {
-                    $grade  = $this->calculateGrade($record->total);
+                    // CRITICAL: Use TOTAL score for grade calculation
+                    $scoreForGrading = $record->total;
+
+                    // Calculate grade based on TOTAL score using WAEC scheme
+                    $grade = $this->calculateGrade($scoreForGrading);
                     $remark = $this->getRemark($grade);
 
+                    // Format position with ordinal suffix
                     $newPosition = $record->total == 0 ? '-' : (
                         isset($positionMap[$record->id]) ? $this->formatOrdinal($positionMap[$record->id]) : '-'
                     );
+
+                    Log::debug('Grade calculation', [
+                        'subject' => $subjectName,
+                        'total_score' => $record->total,
+                        'calculated_grade' => $grade,
+                        'old_grade' => $record->grade,
+                        'position' => $newPosition
+                    ]);
 
                     if (
                         $record->avg != $classAvg ||
@@ -351,10 +383,17 @@ class ViewStudentReportController extends Controller
                         $record->remark != $remark
                     ) {
                         Broadsheets::where('id', $record->id)->update([
-                            'avg'                   => $classAvg,
+                            'avg' => $classAvg,
                             'subject_position_class' => $newPosition,
-                            'grade'                 => $grade,
-                            'remark'                => $remark,
+                            'grade' => $grade,
+                            'remark' => $remark,
+                        ]);
+
+                        Log::info('Broadsheet updated', [
+                            'subject' => $subjectName,
+                            'total_score' => $record->total,
+                            'new_grade' => $grade,
+                            'new_position' => $newPosition
                         ]);
                     }
                 }
@@ -365,24 +404,26 @@ class ViewStudentReportController extends Controller
 
         if ($success) {
             Cache::put($cacheKey, true, now()->addHours(1));
+            Log::info('Class metrics calculation completed successfully');
         }
 
         return $success;
     }
 
     /**
-     * Get complete student result data with images
+     * Get complete student result data
      */
     private function getStudentResultData($id, $schoolclassid, $sessionid, $termid)
     {
         try {
             Log::info('getStudentResultData called', [
-                'student_id'   => $id,
+                'student_id' => $id,
                 'schoolclassid' => $schoolclassid,
-                'sessionid'    => $sessionid,
-                'termid'       => $termid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
             ]);
 
+            // Fetch student basic info
             $students = Student::where('studentRegistration.id', $id)
                 ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
                 ->select([
@@ -393,24 +434,13 @@ class ViewStudentReportController extends Controller
                     'studentRegistration.othername as othername',
                     'studentRegistration.dateofbirth as dateofbirth',
                     'studentRegistration.gender as gender',
-                    'studentpicture.picture as picture',
+                    'studentpicture.picture as picture'
                 ])
                 ->get();
 
             $schoolclass = Schoolclass::with(['arms', 'classcategories'])->find($schoolclassid);
 
-            // Get assessments for the class category
-            $assessments = collect();
-            if ($schoolclass && $schoolclass->classcategories->isNotEmpty()) {
-                $categoryIds = $schoolclass->classcategories->pluck('id');
-                if (class_exists(\App\Models\Assessment::class)) {
-                    $assessments = \App\Models\Assessment::whereIn('classcategory_id', $categoryIds)
-                        ->with('subAssessments')
-                        ->orderBy('id')
-                        ->get();
-                }
-            }
-
+            // Fetch scores - IMPORTANT: Use TOTAL for display and grading
             $scores = Broadsheets::where('broadsheet_records.student_id', $id)
                 ->where('broadsheets.term_id', $termid)
                 ->where('broadsheet_records.session_id', $sessionid)
@@ -432,37 +462,42 @@ class ViewStudentReportController extends Controller
                     'broadsheets.id as broadsheet_id',
                 ])->get();
 
-            // Load assessment scores for each subject
-            foreach ($scores as $score) {
-                $assessmentScores = BroadsheetAssessmentScore::where('broadsheet_id', $score->broadsheet_id)
-                    ->with('assessment')
-                    ->orderBy('assessment_id')
-                    ->get();
+            Log::info('Scores fetched', [
+                'student_id' => $id,
+                'scores_count' => $scores->count(),
+                'scores_data' => $scores->map(function($s) {
+                    return [
+                        'subject' => $s->subject_name,
+                        'total' => $s->total,
+                        'current_grade' => $s->grade
+                    ];
+                })->toArray()
+            ]);
 
-                $score->assessment_scores = $assessmentScores;
-                $score->assessments = $assessments;
-
-                // Map to individual fields for display
-                $assessmentArray = $assessmentScores->values();
-                $score->ca1 = $assessmentArray[0]->score ?? 0;
-                $score->ca2 = $assessmentArray[1]->score ?? 0;
-                $score->ca3 = $assessmentArray[2]->score ?? 0;
-                $score->exam = $assessmentArray[3]->score ?? 0;
-            }
-
-            // Force-recalculate grades from TOTAL
+            // CRITICAL: Force recalculate grades based on TOTAL score
             foreach ($scores as $score) {
                 $correctGrade = $this->calculateGrade($score->total);
-                if ($score->grade !== $correctGrade) {
-                    $score->grade  = $correctGrade;
+
+                if ($score->grade != $correctGrade) {
+                    Log::warning('Grade mismatch - FIXING', [
+                        'subject' => $score->subject_name,
+                        'total_score' => $score->total,
+                        'old_grade' => $score->grade,
+                        'new_grade' => $correctGrade
+                    ]);
+
+                    $score->grade = $correctGrade;
                     $score->remark = $this->getRemark($correctGrade);
+
+                    // Update database
                     Broadsheets::where('id', $score->broadsheet_id)->update([
-                        'grade'  => $correctGrade,
-                        'remark' => $this->getRemark($correctGrade),
+                        'grade' => $correctGrade,
+                        'remark' => $this->getRemark($correctGrade)
                     ]);
                 }
             }
 
+            // Calculate GPA/CGPA
             $gpaData = $this->computeOverallGPAAndCGPAForStudent(
                 $id,
                 $schoolclass,
@@ -470,14 +505,8 @@ class ViewStudentReportController extends Controller
                 $sessionid
             );
 
-            $studentpp = Studentpersonalityprofile::where('studentpersonalityprofiles.studentid', $id)
-                ->where('studentpersonalityprofiles.termid', $termid)
-                ->where('studentpersonalityprofiles.sessionid', $sessionid)
-                ->where('studentpersonalityprofiles.schoolclassid', $schoolclassid)
-                ->get();
-
             $schoolsession = Schoolsession::where('id', $sessionid)->first();
-            $schoolterm    = Schoolterm::where('id', $termid)->first();
+            $schoolterm = Schoolterm::where('id', $termid)->first();
 
             $numberOfStudents = Studentclass::where('schoolclassid', $schoolclassid)
                 ->where('sessionid', $sessionid)
@@ -487,50 +516,25 @@ class ViewStudentReportController extends Controller
             if (!$schoolInfo) {
                 $schoolInfo = new \stdClass();
                 $schoolInfo->school_name = 'School Name Not Found';
-                $schoolInfo->school_logo = null;
-                $schoolInfo->school_motto = 'Motto Not Found';
-                $schoolInfo->school_address = 'Address Not Found';
-                $schoolInfo->school_phone = 'Phone Not Found';
-                $schoolInfo->date_school_opened = null;
-                $schoolInfo->date_next_term_begins = null;
-            }
-
-            $promotionStatusValue = null;
-            $promotionStatus = PromotionStatus::where('student_id', $id)
-                ->where('session_id', $sessionid)
-                ->where('term_id', $termid)
-                ->first();
-            if ($promotionStatus) {
-                $promotionStatusValue = $promotionStatus->status;
-            }
-
-            $compulsorySubjects = CompulsorySubjectClass::where('class_id', $schoolclassid)
-                ->pluck('subject_id')
-                ->toArray();
-
-            if ($scores) {
-                foreach ($scores as $score) {
-                    $score->is_compulsory = in_array($score->subject_id, $compulsorySubjects);
-                }
             }
 
             return [
-                'students'             => $students,
-                'studentpp'            => $studentpp,
-                'scores'               => $scores,
-                'studentid'            => $id,
-                'schoolclassid'        => $schoolclassid,
-                'sessionid'            => $sessionid,
-                'termid'               => $termid,
-                'schoolclass'          => $schoolclass,
-                'schoolterm'           => $schoolterm,
-                'schoolsession'        => $schoolsession,
-                'numberOfStudents'     => $numberOfStudents,
-                'schoolInfo'           => $schoolInfo,
-                'promotionStatusValue' => $promotionStatusValue,
-                'assessments'          => $assessments,
-                'compulsorySubjects'   => $compulsorySubjects,
-                'gpa_data'             => $gpaData,
+                'students' => $students,
+                'scores' => $scores,
+                'studentid' => $id,
+                'schoolclassid' => $schoolclassid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
+                'schoolclass' => $schoolclass,
+                'schoolterm' => $schoolterm,
+                'schoolsession' => $schoolsession,
+                'numberOfStudents' => $numberOfStudents,
+                'schoolInfo' => $schoolInfo,
+                'gpa_data' => $gpaData,
+                'assessments' => collect(),
+                'studentpp' => collect(),
+                'compulsorySubjects' => [],
+                'promotionStatusValue' => null,
             ];
         } catch (Exception $e) {
             Log::error('Error in getStudentResultData', ['error' => $e->getMessage()]);
@@ -539,98 +543,7 @@ class ViewStudentReportController extends Controller
     }
 
     /**
-     * Get column options for PDF generation - COMPLETE VERSION
-     */
-    public function getColumnOptions(Request $request)
-    {
-        Log::info('Getting column options', ['request' => $request->all()]);
-
-        $schoolclassid = $request->input('schoolclassid');
-        $sessionid = $request->input('sessionid');
-        $termid = $request->input('termid');
-
-        if (!$schoolclassid || !$sessionid || !$termid) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Missing parameters'
-            ], 400);
-        }
-
-        $schoolclass = Schoolclass::with('classcategories')->find($schoolclassid);
-        $assessments = collect();
-
-        if ($schoolclass && $schoolclass->classcategories->isNotEmpty()) {
-            $categoryIds = $schoolclass->classcategories->pluck('id');
-            try {
-                if (class_exists(\App\Models\Assessment::class)) {
-                    $assessments = \App\Models\Assessment::whereIn('classcategory_id', $categoryIds)
-                        ->with('subAssessments')
-                        ->orderBy('id')
-                        ->get();
-
-                    Log::debug('Assessments for column options', [
-                        'schoolclassid' => $schoolclassid,
-                        'assessment_count' => $assessments->count(),
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::error('Error loading assessments for column options', ['error' => $e->getMessage()]);
-            }
-        }
-
-        $columns = [
-            'student_info' => [
-                'sn' => ['label' => 'SN', 'default' => true],
-                'admission_no' => ['label' => 'Admission No', 'default' => true],
-                'name' => ['label' => 'Name', 'default' => true],
-                'picture' => ['label' => 'Picture', 'default' => true],
-                'gender' => ['label' => 'Gender', 'default' => false],
-                'dob' => ['label' => 'Date of Birth', 'default' => false],
-            ],
-            'assessments' => [],
-            'scores' => [
-                'total' => ['label' => 'Total', 'default' => true],
-                'bf' => ['label' => 'BF', 'default' => true],
-                'cum' => ['label' => 'Cum', 'default' => true],
-                'grade' => ['label' => 'Grade', 'default' => true],
-                'position' => ['label' => 'Position', 'default' => true],
-                'class_average' => ['label' => 'Class Avg', 'default' => true],
-            ],
-            'gpa_metrics' => [
-                'num_subjects' => ['label' => 'Num Subjects', 'default' => true],
-                'total_grade_points' => ['label' => 'Total GP', 'default' => true],
-                'gpa' => ['label' => 'GPA', 'default' => true],
-                'calculated_gpa' => ['label' => 'Calc GPA', 'default' => true],
-                'gpa_grade' => ['label' => 'GPA Grade', 'default' => true],
-                'cgpa' => ['label' => 'CGPA', 'default' => true],
-            ],
-            'other' => [
-                'compulsory_flag' => ['label' => 'Compulsory', 'default' => false],
-                'vetted_status' => ['label' => 'Vetted Status', 'default' => true],
-            ]
-        ];
-
-        foreach ($assessments as $assessment) {
-            $columns['assessments'][$assessment->id] = [
-                'label' => $assessment->name . ' (' . $assessment->max_score . ')',
-                'default' => true,
-                'is_assessment' => true,
-                'max_score' => $assessment->max_score,
-                'has_sub_assessments' => $assessment->subAssessments->isNotEmpty()
-            ];
-        }
-
-        return response()->json([
-            'success' => true,
-            'columns' => $columns,
-            'assessments_count' => $assessments->count(),
-            'is_senior' => $schoolclass && $schoolclass->classcategories->isNotEmpty() ?
-                ($schoolclass->classcategories->first()->is_senior ?? false) : false,
-        ]);
-    }
-
-    /**
-     * Export class results as PDF - DISPLAY IN BROWSER
+     * Export class results as PDF
      */
     public function exportClassResultsPdf(Request $request)
     {
@@ -638,31 +551,29 @@ class ViewStudentReportController extends Controller
             ini_set('max_execution_time', 300);
             ini_set('memory_limit', '512M');
 
-            $schoolclassid   = $request->input('schoolclassid');
-            $sessionid       = $request->input('sessionid');
-            $termid          = $request->input('termid', 3);
-            $studentIds      = $request->input('studentIds', []);
+            $schoolclassid = $request->input('schoolclassid');
+            $sessionid = $request->input('sessionid');
+            $termid = $request->input('termid', 3);
+            $studentIds = $request->input('studentIds', []);
             $selectedColumns = $request->input('selectedColumns', []);
 
             if (!$schoolclassid || !$sessionid || !$termid) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Missing required parameters',
+                    'message' => 'Missing required parameters'
                 ], 400);
             }
 
+            // CRITICAL: Recalculate all grades and positions first
             $metricsCalculated = $this->calculateClassPositionsAndAverages($schoolclassid, $sessionid, $termid);
             if (!$metricsCalculated) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to calculate class metrics',
+                    'message' => 'Failed to calculate class metrics'
                 ], 500);
             }
 
             $allStudentData = [];
-
-            // Fix image paths for all students
-            $this->fixImagePathsForStudents($studentIds, $schoolclassid, $sessionid, $termid);
 
             foreach ($studentIds as $studentId) {
                 $studentData = $this->getStudentResultData(
@@ -674,37 +585,32 @@ class ViewStudentReportController extends Controller
 
                 if (!empty($studentData) && !empty($studentData['scores'])) {
                     $studentData['selected_columns'] = $selectedColumns;
-                    $allStudentData[]                = $studentData;
+                    $allStudentData[] = $studentData;
                 }
             }
 
             if (empty($allStudentData)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No valid student data found',
+                    'message' => 'No valid student data found'
                 ], 500);
             }
 
-            $schoolclass   = Schoolclass::find($schoolclassid);
+            $schoolclass = Schoolclass::find($schoolclassid);
             $schoolsession = Schoolsession::where('id', $sessionid)->value('session') ?? 'N/A';
-            $term          = $this->getTermName($termid);
-            $className     = $schoolclass
-                ? ($schoolclass->schoolclass . ($schoolclass->arm ? $schoolclass->arm : ''))
-                : 'Class';
-
-            $filename = 'Class_Results_'
-                . preg_replace('/[^A-Za-z0-9_-]/', '_', $className) . '_'
-                . preg_replace('/[^A-Za-z0-9_-]/', '_', $schoolsession) . '_'
-                . $term . '.pdf';
+            $term = $this->getTermName($termid);
+            $className = $schoolclass ? ($schoolclass->schoolclass . ($schoolclass->arm ? $schoolclass->arm : '')) : 'Class';
+            $filename = 'Class_Results_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $className) . '_' .
+                        preg_replace('/[^A-Za-z0-9_-]/', '_', $schoolsession) . '_' . $term . '.pdf';
 
             $viewData = [
                 'allStudentData' => $allStudentData,
-                'metadata'       => [
-                    'class_name'      => $className,
-                    'session'         => $schoolsession,
-                    'term'            => $term,
+                'metadata' => [
+                    'class_name' => $className,
+                    'session' => $schoolsession,
+                    'term' => $term,
                     'generation_date' => now()->format('Y-m-d H:i:s'),
-                    'student_count'   => count($allStudentData),
+                    'student_count' => count($allStudentData),
                     'selected_columns' => $selectedColumns,
                 ],
             ];
@@ -712,51 +618,26 @@ class ViewStudentReportController extends Controller
             $pdf = Pdf::loadView('studentreports.class_results_pdf', $viewData)
                 ->setPaper('A4', 'portrait')
                 ->setOptions([
-                    'dpi'                    => 96,
-                    'defaultFont'            => 'DejaVu Sans',
-                    'isRemoteEnabled'        => true,
-                    'isHtml5ParserEnabled'   => true,
+                    'dpi' => 96,
+                    'defaultFont' => 'DejaVu Sans',
+                    'isRemoteEnabled' => true,
+                    'isHtml5ParserEnabled' => true,
                     'isFontSubsettingEnabled' => true,
                 ]);
 
-            $pdfContent = $pdf->output();
-
-            // Return inline response to display in browser
-            return response($pdfContent)
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'inline; filename="' . $filename . '"')
-                ->header('Content-Length', strlen($pdfContent));
+            return $pdf->download($filename);
 
         } catch (Exception $e) {
             Log::error('Error in exportClassResultsPdf', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate PDF: ' . $e->getMessage(),
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Fix image paths for students - convert to base64 for PDF
-     */
-    private function fixImagePathsForStudents($studentIds, $schoolclassid, $sessionid, $termid)
-    {
-        foreach ($studentIds as $studentId) {
-            $student = Student::find($studentId);
-            if ($student && $student->picture) {
-                $imagePath = public_path('storage/' . $student->picture);
-                if (file_exists($imagePath)) {
-                    $imageData = file_get_contents($imagePath);
-                    $base64 = base64_encode($imageData);
-                    $mime = mime_content_type($imagePath);
-                    $student->picture_base64 = "data:{$mime};base64,{$base64}";
-                }
-            }
-        }
-    }
-
-    /**
-     * Export single student result as PDF - DISPLAY IN BROWSER
+     * Export single student result as PDF
      */
     public function exportStudentResultPdf($id, $schoolclassid, $sessionid, $termid)
     {
@@ -775,52 +656,21 @@ class ViewStudentReportController extends Controller
                 return back()->with('error', 'No student data found');
             }
 
-            // Fix student image
             $student = $data['students']->first();
-            if ($student && $student->picture) {
-                $imagePath = public_path('storage/' . $student->picture);
-                if (file_exists($imagePath)) {
-                    $imageData = file_get_contents($imagePath);
-                    $base64 = base64_encode($imageData);
-                    $mime = mime_content_type($imagePath);
-                    $data['student_image_base64'] = "data:{$mime};base64,{$base64}";
-                }
-            }
-
-            // Fix school logo
-            if ($data['schoolInfo'] && !empty($data['schoolInfo']->school_logo)) {
-                $logoPath = public_path('storage/' . $data['schoolInfo']->school_logo);
-                if (file_exists($logoPath)) {
-                    $imageData = file_get_contents($logoPath);
-                    $base64 = base64_encode($imageData);
-                    $mime = mime_content_type($logoPath);
-                    $data['school_logo_base64'] = "data:{$mime};base64,{$base64}";
-                }
-            }
-
             $studentName = $student ? $student->fname . '_' . $student->lastname : 'Student';
-            $filename    = 'Terminal_Report_' . $studentName
-                . '_' . $data['schoolsession']->session
-                . '_Term_' . $data['termid'] . '.pdf';
+            $filename = 'Terminal_Report_' . $studentName . '_' . $data['schoolsession']->session . '_Term_' . $data['termid'] . '.pdf';
 
             $pdf = Pdf::loadView('studentreports.studentresult_pdf', ['data' => $data])
                 ->setPaper('A4', 'portrait')
                 ->setOptions([
-                    'dpi'                    => 150,
-                    'defaultFont'            => 'DejaVu Sans',
-                    'isRemoteEnabled'        => true,
-                    'isHtml5ParserEnabled'   => true,
+                    'dpi' => 150,
+                    'defaultFont' => 'DejaVu Sans',
+                    'isRemoteEnabled' => true,
+                    'isHtml5ParserEnabled' => true,
                     'isFontSubsettingEnabled' => true,
                 ]);
 
-            $pdfContent = $pdf->output();
-
-            // Return inline response to display in browser
-            return response($pdfContent)
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'inline; filename="' . $filename . '"')
-                ->header('Content-Length', strlen($pdfContent));
-
+            return $pdf->download($filename);
         } catch (Exception $e) {
             Log::error('Error in exportStudentResultPdf', ['error' => $e->getMessage()]);
             return back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
@@ -835,25 +685,39 @@ class ViewStudentReportController extends Controller
         $terms = [
             1 => 'First Term',
             2 => 'Second Term',
-            3 => 'Third Term',
+            3 => 'Third Term'
         ];
 
         return $terms[$termid] ?? 'Unknown Term';
     }
 
     /**
-     * Calculate grade preview for AJAX requests
+     * Get column options for PDF generation
      */
-    public function calculateGradePreview(Request $request)
+    public function getColumnOptions(Request $request)
     {
-        $request->validate([
-            'schoolclass_id' => 'required|exists:schoolclass,id',
-            'total' => 'required|numeric|min:0|max:100',
+        return response()->json([
+            'success' => true,
+            'columns' => [
+                'student_info' => [
+                    'sn' => ['label' => 'SN', 'default' => true],
+                    'admission_no' => ['label' => 'Admission No', 'default' => true],
+                    'name' => ['label' => 'Name', 'default' => true],
+                    'picture' => ['label' => 'Picture', 'default' => true],
+                ],
+                'scores' => [
+                    'total' => ['label' => 'Total', 'default' => true],
+                    'grade' => ['label' => 'Grade', 'default' => true],
+                    'position' => ['label' => 'Position', 'default' => true],
+                    'class_average' => ['label' => 'Class Avg', 'default' => true],
+                ],
+                'gpa_metrics' => [
+                    'gpa' => ['label' => 'GPA', 'default' => true],
+                    'cgpa' => ['label' => 'CGPA', 'default' => true],
+                    'gpa_grade' => ['label' => 'GPA Grade', 'default' => true],
+                ],
+            ],
         ]);
-
-        $grade = $this->calculateGrade($request->total);
-
-        return response()->json(['grade' => $grade]);
     }
 
     /**
@@ -895,8 +759,8 @@ class ViewStudentReportController extends Controller
      */
     public function classBroadsheet($schoolclassid, $sessionid, $termid): View
     {
-        $class     = Schoolclass::findOrFail($schoolclassid);
-        $session   = Schoolsession::findOrFail($sessionid);
+        $class = Schoolclass::findOrFail($schoolclassid);
+        $session = Schoolsession::findOrFail($sessionid);
         $pagetitle = "Broadsheet for {$class->schoolclass} - {$session->session} - Term {$termid}";
 
         return view('studentreports.broadsheet', compact('class', 'session', 'termid', 'pagetitle'));
@@ -907,7 +771,7 @@ class ViewStudentReportController extends Controller
      */
     public function registeredClasses(Request $request)
     {
-        $classId   = $request->query('class_id');
+        $classId = $request->query('class_id');
         $sessionId = $request->query('session_id');
 
         if (!$classId || !$sessionId) {
@@ -936,14 +800,13 @@ class ViewStudentReportController extends Controller
      */
     public function index(Request $request): View|JsonResponse
     {
-        $pagetitle  = "Student Terminal Report Management";
-        $current    = "Current";
+        $pagetitle = "Student Terminal Report Management";
+        $current = "Current";
         $allstudents = new LengthAwarePaginator([], 0, 10);
 
-        if (
-            $request->filled('schoolclassid') && $request->filled('sessionid') &&
-            $request->input('schoolclassid') !== 'ALL' && $request->input('sessionid') !== 'ALL'
-        ) {
+        if ($request->filled('schoolclassid') && $request->filled('sessionid') &&
+            $request->input('schoolclassid') !== 'ALL' && $request->input('sessionid') !== 'ALL') {
+
             $query = Studentclass::query()
                 ->where('schoolclassid', $request->input('schoolclassid'))
                 ->where('sessionid', $request->input('sessionid'))
@@ -978,13 +841,13 @@ class ViewStudentReportController extends Controller
         }
 
         $schoolsessions = Schoolsession::where('status', 'Current')->get();
-        $schoolclasses  = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+        $schoolclasses = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
             ->get(['schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm']);
 
         if ($request->ajax()) {
             return response()->json([
-                'tableBody'    => view('studentreports.partials.student_rows', compact('allstudents'))->render(),
-                'pagination'   => $allstudents->links('pagination::bootstrap-5')->render(),
+                'tableBody' => view('studentreports.partials.student_rows', compact('allstudents'))->render(),
+                'pagination' => $allstudents->links('pagination::bootstrap-5')->render(),
                 'studentCount' => $allstudents->total(),
             ]);
         }
