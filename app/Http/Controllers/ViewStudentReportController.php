@@ -68,15 +68,13 @@ class ViewStudentReportController extends Controller
     }
 
     /**
-     * Calculate grade based on TOTAL score using WAEC/NECO standard
-     * This is the master grading function
+     * Calculate grade based on total score using WAEC/NECO standard
      */
     protected function calculateGrade($score)
     {
         Log::debug('Calculating grade', ['score' => $score]);
 
-        // Handle null, zero, or negative scores
-        if ($score === null || $score <= 0) {
+        if ($score === null || $score == 0) {
             return 'F9';
         }
 
@@ -109,7 +107,7 @@ class ViewStudentReportController extends Controller
     {
         Log::debug('Calculating grade point', ['score' => $score]);
 
-        if ($score === null || $score <= 0) {
+        if ($score === null || $score == 0) {
             return 0.0;
         }
 
@@ -213,8 +211,14 @@ class ViewStudentReportController extends Controller
             'total_scores' => $currentTermBroadsheets->pluck('total')->toArray()
         ]);
 
+        // Get class category for grade point calculation
+        $classCategory = $schoolclass->classcategories->first();
+
         // Calculate grade points based on TOTAL scores
-        $termGradePoints = $currentTermBroadsheets->map(function ($b) {
+        $termGradePoints = $currentTermBroadsheets->map(function ($b) use ($classCategory) {
+            if ($classCategory) {
+                return $classCategory->getGradePoint($b->total);
+            }
             return $this->getGradePoint($b->total);
         });
 
@@ -241,7 +245,10 @@ class ViewStudentReportController extends Controller
                 ->get(['total']);
 
             if ($termBroadsheets->isNotEmpty()) {
-                $termGradePointsPast = $termBroadsheets->map(function ($b) {
+                $termGradePointsPast = $termBroadsheets->map(function ($b) use ($classCategory) {
+                    if ($classCategory) {
+                        return $classCategory->getGradePoint($b->total);
+                    }
                     return $this->getGradePoint($b->total);
                 });
 
@@ -280,7 +287,7 @@ class ViewStudentReportController extends Controller
 
     /**
      * Calculate class positions, averages, and grades for all subjects
-     * CRITICAL: Uses TOTAL score for grading and position calculation
+     * Uses TOTAL score for grading and position calculation
      */
     protected function calculateClassPositionsAndAverages($schoolclassid, $sessionid, $termid)
     {
@@ -542,6 +549,8 @@ class ViewStudentReportController extends Controller
                 'sessionid' => $sessionid,
                 'termid' => $termid,
                 'timestamp' => now()->toDateTimeString(),
+                'server_ip' => request()->server('SERVER_ADDR') ?? 'unknown',
+                'client_ip' => request()->ip(),
             ]);
 
             if (!is_numeric($id) || !is_numeric($schoolclassid) || !is_numeric($sessionid) || !is_numeric($termid)) {
@@ -550,11 +559,21 @@ class ViewStudentReportController extends Controller
                     'schoolclassid' => $schoolclassid,
                     'sessionid' => $sessionid,
                     'termid' => $termid,
+                    'types' => [
+                        'id' => gettype($id),
+                        'schoolclassid' => gettype($schoolclassid),
+                        'sessionid' => gettype($sessionid),
+                        'termid' => gettype($termid)
+                    ]
                 ]);
                 return [];
             }
 
-            // Fetch student basic info
+            Log::debug('Fetching student basic info', [
+                'student_id' => $id,
+                'query_params' => compact('schoolclassid', 'sessionid', 'termid')
+            ]);
+
             $students = Student::where('studentRegistration.id', $id)
                 ->leftJoin('studentpicture', 'studentpicture.studentid', '=', 'studentRegistration.id')
                 ->select([
@@ -565,21 +584,52 @@ class ViewStudentReportController extends Controller
                     'studentRegistration.othername as othername',
                     'studentRegistration.dateofbirth as dateofbirth',
                     'studentRegistration.gender as gender',
+                    'studentRegistration.home_address2 as present_address',
+                    'studentRegistration.home_address2 as permanent_address',
+                    'studentRegistration.updated_at as updated_at',
                     'studentpicture.picture as picture'
                 ])
+                ->orderBy('studentRegistration.lastname', 'asc')
                 ->get();
 
+            Log::debug('Student query executed', [
+                'student_id' => $id,
+                'query_success' => !is_null($students),
+                'found_students' => $students->count(),
+                'student_names' => $students->pluck('fname')->toArray(),
+                'has_picture' => $students->isNotEmpty() && !empty($students->first()->picture)
+            ]);
+
             if ($students->isEmpty()) {
-                Log::error('No active student found for ID', ['student_id' => $id]);
+                Log::error('No active student found for ID', [
+                    'student_id' => $id,
+                    'schoolclassid' => $schoolclassid,
+                    'sessionid' => $sessionid,
+                    'termid' => $termid,
+                    'query_time' => now()->toDateTimeString()
+                ]);
                 $students = collect([]);
             }
 
             $schoolclass = Schoolclass::with(['arms', 'classcategories'])->find($schoolclassid);
 
+            Log::debug('School class fetched', [
+                'schoolclassid' => $schoolclassid,
+                'class_found' => !is_null($schoolclass),
+                'class_name' => $schoolclass->schoolclass ?? 'Not found',
+                'arm' => $schoolclass->arms->arm ?? 'No arm',
+                'category_count' => $schoolclass->classcategories->count() ?? 0
+            ]);
+
             $assessments = collect();
 
             if ($schoolclass && $schoolclass->classcategories->isNotEmpty()) {
                 $categoryIds = $schoolclass->classcategories->pluck('id');
+
+                Log::debug('Class category info', [
+                    'category_ids' => $categoryIds->toArray(),
+                    'category_names' => $schoolclass->classcategories->pluck('name')->toArray()
+                ]);
 
                 try {
                     if (class_exists(\App\Models\Assessment::class)) {
@@ -587,87 +637,164 @@ class ViewStudentReportController extends Controller
                             ->with('subAssessments')
                             ->orderBy('id')
                             ->get();
+
+                        Log::debug('Assessments loaded', [
+                            'assessment_count' => $assessments->count(),
+                            'assessment_names' => $assessments->pluck('name')->toArray(),
+                            'assessment_ids' => $assessments->pluck('id')->toArray()
+                        ]);
+                    } else {
+                        Log::warning('Assessment model class does not exist');
                     }
                 } catch (\Exception $e) {
-                    Log::error('Error loading assessments', ['error' => $e->getMessage()]);
-                }
-            }
-
-            // Fetch scores - IMPORTANT: Use TOTAL for display and grading
-            $scores = Broadsheets::where('broadsheet_records.student_id', $id)
-                ->where('broadsheets.term_id', $termid)
-                ->where('broadsheet_records.session_id', $sessionid)
-                ->where('broadsheet_records.schoolclass_id', $schoolclassid)
-                ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadsheet_record_id')
-                ->join('subject', 'subject.id', '=', 'broadsheet_records.subject_id')
-                ->orderBy('subject.subject')
-                ->select([
-                    'subject.id as subject_id',
-                    'subject.subject as subject_name',
-                    'subject.subject_code',
-                    'broadsheets.total',
-                    'broadsheets.bf',
-                    'broadsheets.cum',
-                    'broadsheets.grade',
-                    'broadsheets.remark',
-                    'broadsheets.subject_position_class as position',
-                    'broadsheets.avg as class_average',
-                    'broadsheets.id as broadsheet_id',
-                ])->get();
-
-            // Get class category for grade calculation
-            $classCategory = $schoolclass->classcategories->first();
-
-            // Ensure grades are correct based on TOTAL score
-            foreach ($scores as $score) {
-                // Recalculate grade based on TOTAL score
-                $correctGrade = $classCategory ?
-                    $classCategory->calculateGrade($score->total) :
-                    $this->calculateGrade($score->total);
-
-                if ($score->grade != $correctGrade) {
-                    Log::warning('Grade mismatch detected', [
-                        'subject' => $score->subject_name,
-                        'total_score' => $score->total,
-                        'current_grade' => $score->grade,
-                        'correct_grade' => $correctGrade
-                    ]);
-                    $score->grade = $correctGrade;
-                    $score->remark = $this->getRemark($correctGrade);
-
-                    // Update database
-                    Broadsheets::where('id', $score->broadsheet_id)->update([
-                        'grade' => $correctGrade,
-                        'remark' => $this->getRemark($correctGrade)
+                    Log::error('Error loading assessments', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                        'category_ids' => $categoryIds->toArray()
                     ]);
                 }
+            } else {
+                Log::warning('No class categories found or schoolclass not found', [
+                    'schoolclassid' => $schoolclassid,
+                    'class_exists' => !is_null($schoolclass),
+                    'has_categories' => $schoolclass ? $schoolclass->classcategories->isNotEmpty() : false
+                ]);
             }
 
-            // Load assessment scores
-            foreach ($scores as $score) {
-                try {
-                    if (class_exists(\App\Models\BroadsheetAssessmentScore::class)) {
-                        $assessmentScores = \App\Models\BroadsheetAssessmentScore::where('broadsheet_id', $score->broadsheet_id)
-                            ->with('assessment')
-                            ->orderBy('assessment_id')
-                            ->get();
+            $scores = null;
+            $attempts = 0;
+            $maxAttempts = 3;
+            $retryDelay = 500;
 
-                        $assessmentArray = $assessmentScores->values();
+            Log::info('Fetching broadsheet scores', [
+                'student_id' => $id,
+                'schoolclassid' => $schoolclassid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
+                'max_attempts' => $maxAttempts
+            ]);
 
-                        $score->ca1 = $assessmentArray->get(0)->score ?? 0;
-                        $score->ca2 = $assessmentArray->get(1)->score ?? 0;
-                        $score->ca3 = $assessmentArray->get(2)->score ?? 0;
-                        $score->exam = $assessmentArray->get(3)->score ?? 0;
+            while ($attempts < $maxAttempts) {
+                $scores = Broadsheets::where('broadsheet_records.student_id', $id)
+                    ->where('broadsheets.term_id', $termid)
+                    ->where('broadsheet_records.session_id', $sessionid)
+                    ->where('broadsheet_records.schoolclass_id', $schoolclassid)
+                    ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadsheet_record_id')
+                    ->join('subject', 'subject.id', '=', 'broadsheet_records.subject_id')
+                    ->orderBy('subject.subject')
+                    ->select([
+                        'subject.id as subject_id',
+                        'subject.subject as subject_name',
+                        'subject.subject_code',
+                        'broadsheets.total',
+                        'broadsheets.bf',
+                        'broadsheets.cum',
+                        'broadsheets.grade',
+                        'broadsheets.remark',
+                        'broadsheets.subject_position_class as position',
+                        'broadsheets.avg as class_average',
+                        'broadsheets.id as broadsheet_id',
+                    ])->get();
 
-                        $score->assessment_scores = $assessmentScores;
-                        $score->assessments = $assessments;
+                Log::debug('Broadsheet query attempt', [
+                    'attempt' => $attempts + 1,
+                    'scores_found' => $scores->count(),
+                    'subject_names' => $scores->pluck('subject_name')->toArray(),
+                    'query_time' => now()->format('H:i:s')
+                ]);
+
+                foreach ($scores as $score) {
+                    try {
+                        if (class_exists(\App\Models\BroadsheetAssessmentScore::class)) {
+                            $assessmentScores = \App\Models\BroadsheetAssessmentScore::where('broadsheet_id', $score->broadsheet_id)
+                                ->with('assessment')
+                                ->orderBy('assessment_id')
+                                ->get();
+
+                            Log::debug('Assessment scores fetched for subject', [
+                                'subject' => $score->subject_name,
+                                'assessment_score_count' => $assessmentScores->count(),
+                                'broadsheet_id' => $score->broadsheet_id
+                            ]);
+
+                            $assessmentArray = $assessmentScores->values();
+
+                            $score->ca1 = 0;
+                            $score->ca2 = 0;
+                            $score->ca3 = 0;
+                            $score->exam = 0;
+
+                            if ($assessmentArray->count() > 0) $score->ca1 = $assessmentArray->get(0)->score ?? 0;
+                            if ($assessmentArray->count() > 1) $score->ca2 = $assessmentArray->get(1)->score ?? 0;
+                            if ($assessmentArray->count() > 2) $score->ca3 = $assessmentArray->get(2)->score ?? 0;
+                            if ($assessmentArray->count() > 3) $score->exam = $assessmentArray->get(3)->score ?? 0;
+
+                            $score->assessment_scores = $assessmentScores;
+                            $score->assessments = $assessments;
+
+                            Log::debug('Mapped assessment scores', [
+                                'subject' => $score->subject_name,
+                                'ca1' => $score->ca1,
+                                'ca2' => $score->ca2,
+                                'ca3' => $score->ca3,
+                                'exam' => $score->exam,
+                                'total_assessments' => $assessmentArray->count(),
+                                'assessment_ids' => $assessmentScores->pluck('assessment_id')->toArray()
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Error loading assessment scores', [
+                            'error' => $e->getMessage(),
+                            'broadsheet_id' => $score->broadsheet_id,
+                            'subject_name' => $score->subject_name
+                        ]);
                     }
-                } catch (\Exception $e) {
-                    Log::error('Error loading assessment scores', ['error' => $e->getMessage()]);
                 }
+
+                $hasValidGrades = $scores->every(function ($score) {
+                    return $score->grade !== '-' && $score->grade !== null;
+                });
+
+                if ($hasValidGrades || $scores->isEmpty()) {
+                    Log::debug('Valid grades condition met', [
+                        'has_valid_grades' => $hasValidGrades,
+                        'is_empty' => $scores->isEmpty(),
+                        'attempt' => $attempts + 1
+                    ]);
+                    break;
+                }
+
+                Log::warning('Retrying fetch of broadsheet data due to incomplete grades', [
+                    'student_id' => $id,
+                    'attempt' => $attempts + 1,
+                    'scores_count' => $scores->count(),
+                    'invalid_grades_count' => $scores->where('grade', '-')->count(),
+                    'grades_found' => $scores->pluck('grade')->toArray()
+                ]);
+
+                usleep($retryDelay * 1000);
+                $attempts++;
             }
 
-            // Calculate GPA/CGPA
+            if ($attempts >= $maxAttempts) {
+                Log::error('Failed to fetch valid broadsheet data after retries', [
+                    'student_id' => $id,
+                    'schoolclassid' => $schoolclassid,
+                    'sessionid' => $sessionid,
+                    'termid' => $termid,
+                    'scores_count' => $scores ? $scores->count() : 0,
+                    'final_grades' => $scores ? $scores->pluck('grade')->toArray() : []
+                ]);
+            }
+
+            Log::info('Fetched broadsheet data', [
+                'student_id' => $id,
+                'scores_count' => $scores ? $scores->count() : 0,
+                'grades' => $scores ? $scores->pluck('grade')->toArray() : [],
+                'subjects' => $scores ? $scores->pluck('subject_name')->toArray() : [],
+                'total_attempts' => $attempts + 1
+            ]);
+
             $gpaData = [];
             if ($schoolclass && $schoolclass->classcategories->isNotEmpty()) {
                 try {
@@ -677,8 +804,17 @@ class ViewStudentReportController extends Controller
                         $termid,
                         $sessionid
                     );
+
+                    Log::info('GPA/CGPA calculation completed', array_merge(
+                        ['student_id' => $id],
+                        $gpaData
+                    ));
                 } catch (\Exception $e) {
-                    Log::error('Error calculating GPA/CGPA', ['error' => $e->getMessage()]);
+                    Log::error('Error calculating GPA/CGPA', [
+                        'student_id' => $id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
                     $gpaData = [
                         'gpa' => 0.0,
                         'cgpa' => 0.0,
@@ -688,24 +824,82 @@ class ViewStudentReportController extends Controller
                         'calculated_gpa' => 0.0,
                     ];
                 }
+            } else {
+                Log::warning('Skipping GPA calculation - no class or categories', [
+                    'student_id' => $id,
+                    'has_schoolclass' => !is_null($schoolclass),
+                    'has_categories' => $schoolclass ? $schoolclass->classcategories->isNotEmpty() : false
+                ]);
             }
 
-            // Get student personality profile
-            $studentpp = Studentpersonalityprofile::where('studentpersonalityprofiles.studentid', $id)
-                ->where('studentpersonalityprofiles.termid', $termid)
-                ->where('studentpersonalityprofiles.sessionid', $sessionid)
-                ->where('studentpersonalityprofiles.schoolclassid', $schoolclassid)
-                ->get();
+            try {
+                $studentpp = Studentpersonalityprofile::where('studentpersonalityprofiles.studentid', $id)
+                    ->where('studentpersonalityprofiles.termid', $termid)
+                    ->where('studentpersonalityprofiles.sessionid', $sessionid)
+                    ->where('studentpersonalityprofiles.schoolclassid', $schoolclassid)
+                    ->join('schoolsession', 'schoolsession.id', '=', 'studentpersonalityprofiles.sessionid')
+                    ->join('schoolterm', 'schoolterm.id', '=', 'studentpersonalityprofiles.termid')
+                    ->join('schoolclass', 'schoolclass.id', '=', 'studentpersonalityprofiles.schoolclassid')
+                    ->select(
+                        'studentpersonalityprofiles.*',
+                        'schoolsession.session as session',
+                        'schoolterm.term as term',
+                        'schoolclass.schoolclass as schoolclass'
+                    )
+                    ->get();
+
+                Log::debug('Student personality profile fetched', [
+                    'student_id' => $id,
+                    'profile_count' => $studentpp->count(),
+                    'has_data' => $studentpp->isNotEmpty()
+                ]);
+
+                if ($studentpp->isEmpty()) {
+                    $studentpp = collect();
+                    Log::info('No student personality profile found', ['student_id' => $id]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Error fetching student personality profile', [
+                    'student_id' => $id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $studentpp = collect();
+            }
 
             $schoolsession = Schoolsession::where('id', $sessionid)->first();
             $schoolterm = Schoolterm::where('id', $termid)->first();
+
+            Log::debug('Session and term details', [
+                'session_found' => !is_null($schoolsession),
+                'session_name' => $schoolsession->session ?? 'Not found',
+                'term_found' => !is_null($schoolterm),
+                'term_name' => $schoolterm->term ?? 'Not found'
+            ]);
 
             $numberOfStudents = Studentclass::where('schoolclassid', $schoolclassid)
                 ->where('sessionid', $sessionid)
                 ->count();
 
+            Log::debug('Class student count', [
+                'class_id' => $schoolclassid,
+                'session_id' => $sessionid,
+                'student_count' => $numberOfStudents
+            ]);
+
+            // Get school information
             $schoolInfo = SchoolInformation::first();
-            if (!$schoolInfo) {
+
+            if ($schoolInfo) {
+                Log::debug('School info fetched', [
+                    'school_id' => $schoolInfo->id,
+                    'school_name' => $schoolInfo->school_name ?? 'Not found',
+                    'logo_path' => $schoolInfo->school_logo ?? null,
+                    'has_logo' => !empty($schoolInfo->school_logo)
+                ]);
+            } else {
+                Log::warning('No school information found in database');
+                // Create a dummy school info object
                 $schoolInfo = new \stdClass();
                 $schoolInfo->id = 0;
                 $schoolInfo->school_name = 'School Name Not Found';
@@ -723,11 +917,22 @@ class ViewStudentReportController extends Controller
                     ->where('session_id', $sessionid)
                     ->where('term_id', $termid)
                     ->first();
+
                 if ($promotionStatus) {
                     $promotionStatusValue = $promotionStatus->status;
+                    Log::debug('Promotion status found', [
+                        'student_id' => $id,
+                        'status' => $promotionStatusValue
+                    ]);
+                } else {
+                    Log::info('No promotion status found', ['student_id' => $id]);
                 }
             } catch (\Exception $e) {
-                Log::error('Error fetching promotion status', ['error' => $e->getMessage()]);
+                Log::error('Error fetching promotion status', [
+                    'student_id' => $id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
             }
 
             $compulsorySubjects = [];
@@ -735,14 +940,29 @@ class ViewStudentReportController extends Controller
                 $compulsorySubjects = CompulsorySubjectClass::where('class_id', $schoolclassid)
                     ->pluck('subject_id')
                     ->toArray();
+
+                Log::debug('Compulsory subjects fetched', [
+                    'class_id' => $schoolclassid,
+                    'subject_count' => count($compulsorySubjects),
+                    'subject_ids' => $compulsorySubjects
+                ]);
             } catch (\Exception $e) {
-                Log::error('Error fetching compulsory subjects', ['error' => $e->getMessage()]);
+                Log::error('Error fetching compulsory subjects', [
+                    'class_id' => $schoolclassid,
+                    'error' => $e->getMessage()
+                ]);
             }
 
             if ($scores) {
+                $compulsoryCount = 0;
                 foreach ($scores as $score) {
                     $score->is_compulsory = in_array($score->subject_id, $compulsorySubjects);
+                    if ($score->is_compulsory) $compulsoryCount++;
                 }
+                Log::debug('Compulsory flags added to scores', [
+                    'compulsory_count' => $compulsoryCount,
+                    'total_scores' => $scores->count()
+                ]);
             }
 
             $result = [
@@ -766,17 +986,27 @@ class ViewStudentReportController extends Controller
 
             Log::channel('pdf')->info('========== END getStudentResultData ==========', [
                 'student_id' => $id,
-                'scores_count' => $scores->count(),
-                'has_gpa_data' => !empty($gpaData),
+                'result_keys' => array_keys($result),
+                'has_students' => !empty($students) && $students->isNotEmpty(),
+                'has_scores' => !empty($scores) && $scores->isNotEmpty(),
+                'students_count' => $students->count() ?? 0,
+                'scores_count' => $scores->count() ?? 0,
+                'execution_time' => now()->toDateTimeString(),
+                'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB'
             ]);
 
             return $result;
         } catch (Exception $e) {
             Log::channel('pdf')->error('========== ERROR in getStudentResultData ==========', [
                 'student_id' => $id,
+                'schoolclassid' => $schoolclassid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
                 'error_message' => $e->getMessage(),
                 'error_file' => $e->getFile(),
                 'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString(),
+                'timestamp' => now()->toDateTimeString()
             ]);
             return [];
         }
@@ -794,6 +1024,7 @@ class ViewStudentReportController extends Controller
         $termid = $request->input('termid');
 
         if (!$schoolclassid || !$sessionid || !$termid) {
+            Log::error('Missing parameters for column options', $request->all());
             return response()->json([
                 'success' => false,
                 'message' => 'Missing parameters'
@@ -811,9 +1042,18 @@ class ViewStudentReportController extends Controller
                         ->with('subAssessments')
                         ->orderBy('id')
                         ->get();
+
+                    Log::debug('Assessments for column options', [
+                        'schoolclassid' => $schoolclassid,
+                        'assessment_count' => $assessments->count(),
+                        'category_ids' => $categoryIds->toArray()
+                    ]);
                 }
             } catch (\Exception $e) {
-                Log::error('Error loading assessments for column options', ['error' => $e->getMessage()]);
+                Log::error('Error loading assessments for column options', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
             }
         }
 
@@ -859,6 +1099,13 @@ class ViewStudentReportController extends Controller
             ];
         }
 
+        Log::info('Column options prepared', [
+            'total_columns' => count($columns['student_info']) + count($columns['assessments']) +
+                              count($columns['scores']) + count($columns['gpa_metrics']) +
+                              count($columns['other']),
+            'assessment_count' => count($columns['assessments'])
+        ]);
+
         return response()->json([
             'success' => true,
             'columns' => $columns,
@@ -873,6 +1120,8 @@ class ViewStudentReportController extends Controller
      */
     public function calculateGradePreview(Request $request)
     {
+        Log::debug('Calculating grade preview', ['request' => $request->all()]);
+
         $request->validate([
             'schoolclass_id' => 'required|exists:schoolclass,id',
             'total' => 'required|numeric|min:0|max:100',
@@ -887,6 +1136,12 @@ class ViewStudentReportController extends Controller
             $grade = $this->calculateGrade($request->total);
         }
 
+        Log::debug('Grade preview result', [
+            'schoolclass_id' => $request->schoolclass_id,
+            'total' => $request->total,
+            'grade' => $grade
+        ]);
+
         return response()->json(['grade' => $grade]);
     }
 
@@ -895,10 +1150,23 @@ class ViewStudentReportController extends Controller
      */
     public function studentresult($id, $schoolclassid, $sessionid, $termid)
     {
+        Log::info('Displaying student result view', [
+            'student_id' => $id,
+            'schoolclassid' => $schoolclassid,
+            'sessionid' => $sessionid,
+            'termid' => $termid
+        ]);
+
         $pagetitle = "Student Personality Profile";
 
         $metricsCalculated = $this->calculateClassPositionsAndAverages($schoolclassid, $sessionid, $termid);
         if (!$metricsCalculated) {
+            Log::error('Failed to calculate class metrics for student result', [
+                'student_id' => $id,
+                'schoolclassid' => $schoolclassid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
+            ]);
             return back()->with('error', 'Failed to calculate class metrics. Please try again.');
         }
 
@@ -912,10 +1180,23 @@ class ViewStudentReportController extends Controller
      */
     public function studentmockresult($id, $schoolclassid, $sessionid, $termid)
     {
+        Log::info('Displaying student mock result', [
+            'student_id' => $id,
+            'schoolclassid' => $schoolclassid,
+            'sessionid' => $sessionid,
+            'termid' => $termid
+        ]);
+
         $pagetitle = "Student Mock Result";
 
         $metricsCalculated = $this->calculateClassPositionsAndAverages($schoolclassid, $sessionid, $termid);
         if (!$metricsCalculated) {
+            Log::error('Failed to calculate class metrics for mock result', [
+                'student_id' => $id,
+                'schoolclassid' => $schoolclassid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
+            ]);
             return back()->with('error', 'Failed to calculate class metrics. Please try again.');
         }
 
@@ -929,6 +1210,12 @@ class ViewStudentReportController extends Controller
      */
     public function classBroadsheet($schoolclassid, $sessionid, $termid): View
     {
+        Log::info('Displaying class broadsheet', [
+            'schoolclassid' => $schoolclassid,
+            'sessionid' => $sessionid,
+            'termid' => $termid
+        ]);
+
         $class = Schoolclass::findOrFail($schoolclassid);
         $session = Schoolsession::findOrFail($sessionid);
         $term = $termid;
@@ -949,10 +1236,16 @@ class ViewStudentReportController extends Controller
      */
     public function registeredClasses(Request $request)
     {
+        Log::info('Getting registered classes', ['request' => $request->all()]);
+
         $classId = $request->query('class_id');
         $sessionId = $request->query('session_id');
 
         if (!$classId || !$sessionId || $classId === 'ALL' || $sessionId === 'ALL') {
+            Log::warning('Invalid parameters for registered classes', [
+                'class_id' => $classId,
+                'session_id' => $sessionId
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Please select a valid class and session.'
@@ -975,6 +1268,13 @@ class ViewStudentReportController extends Controller
             ')
             ->get();
 
+        Log::info('Registered classes retrieved', [
+            'class_id' => $classId,
+            'session_id' => $sessionId,
+            'classes_count' => $classes->count(),
+            'student_counts' => $classes->pluck('student_count')->toArray()
+        ]);
+
         return response()->json([
             'success' => true,
             'data' => $classes
@@ -987,23 +1287,57 @@ class ViewStudentReportController extends Controller
     public function exportStudentResultPdf($id, $schoolclassid, $sessionid, $termid)
     {
         try {
+            Log::channel('pdf')->info('========== START SINGLE STUDENT PDF EXPORT ==========', [
+                'student_id' => $id,
+                'schoolclassid' => $schoolclassid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
+                'timestamp' => now()->toDateTimeString(),
+                'memory_limit' => ini_get('memory_limit'),
+                'max_execution_time' => ini_get('max_execution_time')
+            ]);
+
             ini_set('max_execution_time', 600);
             ini_set('memory_limit', '1024M');
 
             $metricsCalculated = $this->calculateClassPositionsAndAverages($schoolclassid, $sessionid, $termid);
             if (!$metricsCalculated) {
+                Log::error('Failed to calculate class metrics for PDF generation', [
+                    'student_id' => $id,
+                    'schoolclassid' => $schoolclassid,
+                    'sessionid' => $sessionid,
+                    'termid' => $termid,
+                ]);
                 return back()->with('error', 'Failed to calculate class metrics. Please try again.');
             }
 
             $data = $this->getStudentResultData($id, $schoolclassid, $sessionid, $termid);
 
             if (empty($data) || empty($data['students']) || $data['students']->isEmpty()) {
+                Log::error('No valid student data for PDF generation', [
+                    'student_id' => $id,
+                    'schoolclassid' => $schoolclassid,
+                    'sessionid' => $sessionid,
+                    'termid' => $termid,
+                    'has_data' => !empty($data),
+                    'has_students' => !empty($data['students']),
+                    'students_count' => !empty($data['students']) ? $data['students']->count() : 0
+                ]);
                 return back()->with('error', 'No student data found for the provided parameters.');
             }
 
             $student = $data['students']->first();
             $studentName = $student ? $student->fname . '_' . $student->lastname : 'Student';
             $filename = 'Terminal_Report_' . $studentName . '_' . $data['schoolsession']->session . '_Term_' . $data['termid'] . '.pdf';
+
+            Log::debug('Fixing image paths for single student PDF');
+            $this->fixImagePaths([$data]);
+
+            Log::info('Loading PDF view for single student', [
+                'student_name' => $studentName,
+                'filename' => $filename,
+                'view' => 'studentreports.studentresult_pdf'
+            ]);
 
             $pdf = Pdf::loadView('studentreports.studentresult_pdf', ['data' => $data])
                 ->setPaper('A4', 'portrait')
@@ -1013,11 +1347,34 @@ class ViewStudentReportController extends Controller
                     'isRemoteEnabled' => true,
                     'isHtml5ParserEnabled' => true,
                     'isFontSubsettingEnabled' => true,
+                    'isPhpEnabled' => false,
+                    'chroot' => [public_path(), storage_path()],
+                    'fontCache' => storage_path('fonts/'),
+                    'logOutputFile' => storage_path('logs/dompdf.log'),
+                    'debugCss' => config('app.debug', false),
+                    'debugLayout' => config('app.debug', false),
                 ]);
+
+            Log::info('PDF generated successfully for single student', [
+                'student_id' => $id,
+                'filename' => $filename,
+                'file_size' => strlen($pdf->output()) . ' bytes'
+            ]);
 
             return $pdf->download($filename);
         } catch (Exception $e) {
-            Log::error('Error in exportStudentResultPdf', ['error' => $e->getMessage()]);
+            Log::channel('pdf')->error('========== ERROR SINGLE STUDENT PDF EXPORT ==========', [
+                'student_id' => $id,
+                'schoolclassid' => $schoolclassid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString(),
+                'timestamp' => now()->toDateTimeString()
+            ]);
+
             return back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
         }
     }
@@ -1028,6 +1385,19 @@ class ViewStudentReportController extends Controller
     public function exportClassResultsPdf(Request $request)
     {
         try {
+            Log::info('========== START CLASS PDF EXPORT ==========', [
+                'request_data' => $request->all(),
+                'timestamp' => now()->toDateTimeString(),
+                'server_ip' => request()->server('SERVER_ADDR') ?? 'unknown',
+                'client_ip' => request()->ip(),
+                'user_agent' => request()->header('User-Agent'),
+                'memory_limit' => ini_get('memory_limit'),
+                'max_execution_time' => ini_get('max_execution_time')
+            ]);
+
+            $this->checkServerRequirements();
+            $this->debugStorageStructure();
+
             ini_set('max_execution_time', 300);
             ini_set('memory_limit', '512M');
 
@@ -1037,16 +1407,27 @@ class ViewStudentReportController extends Controller
             $studentIds = $request->input('studentIds', []);
             $selectedColumns = $request->input('selectedColumns', []);
 
+            Log::info('Starting class results PDF generation', [
+                'schoolclassid' => $schoolclassid,
+                'sessionid' => $sessionid,
+                'termid' => $termid,
+                'studentIds_count' => count($studentIds),
+                'selectedColumns_count' => count($selectedColumns),
+                'selectedColumns_sample' => array_slice($selectedColumns, 0, 5)
+            ]);
+
             if (!$schoolclassid || !$sessionid || !$termid) {
+                Log::error('Missing required parameters for PDF export', $request->all());
                 return response()->json([
                     'success' => false,
-                    'message' => 'Missing required parameters'
+                    'message' => 'Missing required parameters: schoolclassid, sessionid, termid'
                 ], 400);
             }
 
             // First, calculate positions and averages for all subjects
             $metricsCalculated = $this->calculateClassPositionsAndAverages($schoolclassid, $sessionid, $termid);
             if (!$metricsCalculated) {
+                Log::error('Failed to calculate class metrics for PDF export');
                 return response()->json([
                     'success' => false,
                     'message' => 'Failed to calculate class metrics. Please try again.'
@@ -1054,8 +1435,20 @@ class ViewStudentReportController extends Controller
             }
 
             $allStudentData = [];
+            $processedCount = 0;
+            $failedCount = 0;
 
-            foreach ($studentIds as $studentId) {
+            Log::info('Starting to process individual student data', [
+                'total_students' => count($studentIds)
+            ]);
+
+            foreach ($studentIds as $index => $studentId) {
+                Log::debug('Processing student', [
+                    'index' => $index + 1,
+                    'total' => count($studentIds),
+                    'student_id' => $studentId
+                ]);
+
                 $studentData = $this->getStudentResultData(
                     $studentId,
                     $schoolclassid,
@@ -1063,28 +1456,97 @@ class ViewStudentReportController extends Controller
                     $termid
                 );
 
+                Log::debug('Student data retrieved', [
+                    'student_id' => $studentId,
+                    'data_empty' => empty($studentData),
+                    'has_students' => !empty($studentData['students']),
+                    'students_count' => !empty($studentData['students']) ? $studentData['students']->count() : 0,
+                    'has_scores' => !empty($studentData['scores']),
+                    'scores_count' => !empty($studentData['scores']) ? $studentData['scores']->count() : 0,
+                    'data_keys' => !empty($studentData) ? array_keys($studentData) : []
+                ]);
+
                 if (!empty($studentData) &&
                     !empty($studentData['students']) &&
                     $studentData['students']->isNotEmpty()) {
 
                     $studentData['selected_columns'] = $selectedColumns;
                     $allStudentData[] = $studentData;
+                    $processedCount++;
+
+                    Log::debug('Student data added successfully', [
+                        'student_id' => $studentId,
+                        'student_name' => $studentData['students']->first()->fname . ' ' . $studentData['students']->first()->lastname
+                    ]);
+                } else {
+                    $failedCount++;
+                    Log::warning('Skipped student due to empty data', [
+                        'student_id' => $studentId,
+                        'iteration' => $index + 1,
+                        'data_empty' => empty($studentData),
+                        'has_students' => !empty($studentData['students']),
+                        'students_empty' => !empty($studentData['students']) && $studentData['students']->isEmpty()
+                    ]);
                 }
             }
 
+            Log::info('Student data processing completed', [
+                'total_students' => count($studentIds),
+                'processed_count' => $processedCount,
+                'failed_count' => $failedCount,
+                'final_data_count' => count($allStudentData)
+            ]);
+
             if (empty($allStudentData)) {
+                Log::error('All student data processing failed - no valid data collected', [
+                    'total_students' => count($studentIds),
+                    'processed_count' => $processedCount,
+                    'failed_count' => $failedCount
+                ]);
+
+                $this->debugStudentQuery($studentIds, $schoolclassid, $sessionid, $termid);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'No valid student data found'
+                    'message' => 'Failed to process student data. Check server logs for details.',
+                    'details' => 'No valid student data could be retrieved. Please verify student enrollment and scores.',
+                    'debug_info' => [
+                        'student_ids' => $studentIds,
+                        'class_id' => $schoolclassid,
+                        'session_id' => $sessionid,
+                        'term_id' => $termid
+                    ]
                 ], 500);
             }
 
-            $schoolclass = Schoolclass::where('id', $schoolclassid)->with(['arms'])->first();
+            Log::info('Fixing image paths for all student data');
+            $this->fixImagePaths($allStudentData);
+
+            $schoolclass = Schoolclass::where('id', $schoolclassid)->with(['arms', 'classcategories'])->first(['id', 'schoolclass', 'arm']);
             $schoolsession = Schoolsession::where('id', $sessionid)->value('session') ?? 'N/A';
             $term = $this->getTermName($termid);
             $className = $schoolclass ? ($schoolclass->schoolclass . ($schoolclass->arms ? $schoolclass->arms->arm : '')) : 'Class';
             $filename = 'Class_Results_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $className) . '_' .
                         preg_replace('/[^A-Za-z0-9_-]/', '_', $schoolsession) . '_' . $term . '.pdf';
+
+            Log::info('Preparing PDF data', [
+                'filename' => $filename,
+                'class_name' => $className,
+                'session' => $schoolsession,
+                'term' => $term,
+                'student_count_in_pdf' => count($allStudentData),
+                'selected_columns_count' => count($selectedColumns),
+                'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB'
+            ]);
+
+            $viewName = 'studentreports.class_results_pdf';
+            if (!view()->exists($viewName)) {
+                Log::error('PDF view not found', ['view' => $viewName]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'PDF template view not found: ' . $viewName,
+                ], 500);
+            }
 
             $viewData = [
                 'allStudentData' => $allStudentData,
@@ -1098,7 +1560,9 @@ class ViewStudentReportController extends Controller
                 ],
             ];
 
-            $pdf = Pdf::loadView('studentreports.class_results_pdf', $viewData)
+            Log::info('Generating PDF for inline display');
+
+            $pdf = Pdf::loadView($viewName, $viewData)
                 ->setPaper('A4', 'portrait')
                 ->setOptions([
                     'dpi' => 96,
@@ -1106,9 +1570,32 @@ class ViewStudentReportController extends Controller
                     'isRemoteEnabled' => true,
                     'isHtml5ParserEnabled' => true,
                     'isFontSubsettingEnabled' => true,
+                    'isPhpEnabled' => false,
+                    'chroot' => [public_path(), storage_path()],
+                    'tempDir' => storage_path('app/temp/'),
+                    'fontCache' => storage_path('fonts/'),
+                    'logOutputFile' => storage_path('logs/dompdf.log'),
+                    'isJavascriptEnabled' => false,
+                    'enable_css_float' => true,
+                    'debugLayout' => false,
+                    'debugCss' => false,
+                    'debugKeepTemp' => false,
                 ]);
 
             $pdfContent = $pdf->output();
+
+            if (empty($pdfContent)) {
+                Log::error('PDF content is empty');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Generated PDF content is empty',
+                ], 500);
+            }
+
+            Log::info('PDF generated successfully, returning inline response', [
+                'size_bytes' => strlen($pdfContent),
+                'filename' => $filename
+            ]);
 
             return response($pdfContent)
                 ->header('Content-Type', 'application/pdf')
@@ -1116,11 +1603,446 @@ class ViewStudentReportController extends Controller
                 ->header('Content-Length', strlen($pdfContent));
 
         } catch (Exception $e) {
-            Log::error('Error in exportClassResultsPdf', ['error' => $e->getMessage()]);
+            Log::error('========== ERROR CLASS PDF EXPORT ==========', [
+                'schoolclassid' => $schoolclassid ?? 'N/A',
+                'sessionid' => $sessionid ?? 'N/A',
+                'termid' => $termid ?? 'N/A',
+                'studentIds_count' => count($studentIds ?? []),
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString(),
+                'timestamp' => now()->toDateTimeString(),
+                'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB',
+                'peak_memory' => round(memory_get_peak_usage() / 1024 / 1024, 2) . ' MB'
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+                'message' => 'Failed to generate PDF: ' . $e->getMessage(),
+                'error_type' => get_class($e)
             ], 500);
+        } finally {
+            Log::info('========== END CLASS PDF EXPORT ==========', [
+                'timestamp' => now()->toDateTimeString(),
+                'execution_time' => round(microtime(true) - LARAVEL_START, 2) . ' seconds',
+                'final_memory' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB'
+            ]);
+        }
+    }
+
+    /**
+     * Check server requirements for PDF generation
+     */
+    private function checkServerRequirements()
+    {
+        Log::info('Checking server requirements for PDF generation');
+
+        $checks = [
+            'storage_writable' => is_writable(storage_path()),
+            'temp_dir_writable' => is_writable(storage_path('app/temp')),
+            'dompdf_installed' => class_exists('Barryvdh\DomPDF\PDF'),
+            'php_memory_limit' => ini_get('memory_limit'),
+            'php_max_execution_time' => ini_get('max_execution_time'),
+            'public_storage_exists' => file_exists(public_path('storage')),
+            'student_avatars_exists' => file_exists(public_path('storage/student_avatars')),
+            'school_logos_exists' => file_exists(public_path('storage/school_logos')),
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'unknown',
+        ];
+
+        Log::info('Server requirements check', $checks);
+
+        if (!$checks['temp_dir_writable']) {
+            $tempDir = storage_path('app/temp');
+            if (!file_exists($tempDir)) {
+                mkdir($tempDir, 0755, true);
+                Log::info('Created temp directory', ['path' => $tempDir]);
+            }
+        }
+
+        $defaultStudentImage = public_path('storage/student_avatars/unnamed.jpg');
+        $defaultSchoolLogo = public_path('storage/school_logos/default.jpg');
+
+        if (!file_exists($defaultStudentImage)) {
+            Log::warning('Default student image not found', ['path' => $defaultStudentImage]);
+            $studentDir = dirname($defaultStudentImage);
+            if (!file_exists($studentDir)) {
+                mkdir($studentDir, 0755, true);
+                Log::info('Created student avatars directory', ['path' => $studentDir]);
+            }
+        }
+
+        if (!file_exists($defaultSchoolLogo)) {
+            Log::warning('Default school logo not found', ['path' => $defaultSchoolLogo]);
+            $logoDir = dirname($defaultSchoolLogo);
+            if (!file_exists($logoDir)) {
+                mkdir($logoDir, 0755, true);
+                Log::info('Created school logos directory', ['path' => $logoDir]);
+            }
+        }
+
+        return $checks;
+    }
+
+    /**
+     * Get absolute image path for a given relative path
+     */
+    private function getAbsoluteImagePath($path, $isStudent = false)
+    {
+        Log::debug('Getting absolute image path', [
+            'original_path' => $path,
+            'is_student' => $isStudent,
+            'path_is_null' => is_null($path),
+            'path_is_empty' => empty($path)
+        ]);
+
+        if (empty($path)) {
+            Log::debug('Empty path provided');
+            return null;
+        }
+
+        // If it's already a full path, use it
+        if (str_starts_with($path, public_path()) || str_starts_with($path, storage_path())) {
+            $exists = file_exists($path);
+            Log::debug('Path is already absolute', [
+                'path' => $path,
+                'exists' => $exists
+            ]);
+            return $exists ? $path : null;
+        }
+
+        // Check if it's a base64 image
+        if (str_starts_with($path, 'data:image')) {
+            Log::debug('Path is base64 image data');
+            return null;
+        }
+
+        // Clean up the path
+        $path = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $path);
+
+        // Remove any URL prefix
+        $path = preg_replace('/^(http:\/\/|https:\/\/|\/\/)[^\/]+/', '', $path);
+        $path = ltrim($path, DIRECTORY_SEPARATOR);
+
+        $possiblePaths = [];
+
+        if ($isStudent) {
+            // STUDENT IMAGE PATHS
+            $possiblePaths = [
+                public_path('storage/student_avatars/' . $path),
+                storage_path('app/public/student_avatars/' . $path),
+                public_path('storage/' . $path),
+                storage_path('app/public/' . $path),
+                public_path('uploads/students/' . $path),
+                public_path('images/students/' . $path),
+                storage_path('app/uploads/students/' . $path),
+                public_path($path),
+                storage_path($path),
+            ];
+        } else {
+            // SCHOOL LOGO PATHS
+            $possiblePaths = [
+                storage_path('app/public/' . $path),
+                public_path('storage/' . $path),
+                storage_path('app/public/school_logos/' . basename($path)),
+                public_path('storage/school_logos/' . basename($path)),
+                public_path($path),
+                public_path(basename($path)),
+                public_path('school_logos/' . basename($path)),
+                storage_path($path),
+                storage_path(basename($path)),
+                base_path('public/' . $path),
+                base_path('public/storage/' . $path),
+                storage_path('app/' . $path),
+                public_path('uploads/' . $path),
+                public_path('uploads/school_logos/' . basename($path)),
+            ];
+        }
+
+        // Add unique paths only
+        $possiblePaths = array_unique($possiblePaths);
+
+        Log::debug('Checking possible paths for image', [
+            'original' => $path,
+            'is_student' => $isStudent,
+            'possible_paths_count' => count($possiblePaths),
+            'sample_paths' => array_slice($possiblePaths, 0, 5)
+        ]);
+
+        foreach ($possiblePaths as $fullPath) {
+            if (file_exists($fullPath)) {
+                Log::debug('Image FOUND at path', [
+                    'path' => $fullPath,
+                    'file_size' => filesize($fullPath) . ' bytes',
+                    'is_readable' => is_readable($fullPath),
+                    'mime_type' => function_exists('mime_content_type') ? @mime_content_type($fullPath) : 'unknown',
+                    'is_student' => $isStudent
+                ]);
+                return $fullPath;
+            }
+        }
+
+        Log::warning('Image NOT found in any possible paths', [
+            'original_path' => $path,
+            'is_student' => $isStudent,
+            'checked_paths_count' => count($possiblePaths)
+        ]);
+        return null;
+    }
+
+    /**
+     * Convert image to base64 for PDF embedding
+     */
+    private function imageToBase64($imagePath)
+    {
+        if (str_starts_with($imagePath, 'data:image')) {
+            return $imagePath;
+        }
+
+        if (!$imagePath || !file_exists($imagePath)) {
+            Log::warning('Image file does not exist for base64 conversion', ['path' => $imagePath]);
+
+            $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+                    <rect width="100" height="100" fill="#f0f0f0" stroke="#ddd" stroke-width="2"/>
+                    <circle cx="50" cy="40" r="15" fill="#ddd"/>
+                    <rect x="35" y="60" width="30" height="25" fill="#ddd" rx="2"/>
+                    <text x="50" y="95" text-anchor="middle" fill="#999" font-family="Arial" font-size="8">
+                        No Image
+                    </text>
+                </svg>';
+
+            return 'data:image/svg+xml;base64,' . base64_encode($svg);
+        }
+
+        try {
+            $imageData = file_get_contents($imagePath);
+            if (empty($imageData)) {
+                throw new \Exception('Image file is empty');
+            }
+
+            $mimeType = mime_content_type($imagePath);
+            if (!$mimeType) {
+                $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+                $mimeTypes = [
+                    'jpg' => 'image/jpeg',
+                    'jpeg' => 'image/jpeg',
+                    'png' => 'image/png',
+                    'gif' => 'image/gif',
+                    'svg' => 'image/svg+xml',
+                    'webp' => 'image/webp',
+                ];
+                $mimeType = $mimeTypes[$extension] ?? 'image/jpeg';
+            }
+
+            $base64 = base64_encode($imageData);
+            $result = "data:{$mimeType};base64,{$base64}";
+
+            Log::debug('Image converted to base64', [
+                'path' => $imagePath,
+                'mime_type' => $mimeType,
+                'file_size' => filesize($imagePath) . ' bytes',
+                'data_length' => strlen($base64) . ' bytes'
+            ]);
+
+            return $result;
+        } catch (\Exception $e) {
+            Log::error('Failed to convert image to base64', [
+                'path' => $imagePath,
+                'error' => $e->getMessage()
+            ]);
+
+            return 'data:image/svg+xml;base64,' . base64_encode(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+                    <rect width="100" height="100" fill="#f8f9fa"/>
+                    <text x="50" y="50" text-anchor="middle" dy=".3em" fill="#6c757d" font-family="Arial" font-size="10">
+                        Error
+                    </text>
+                </svg>'
+            );
+        }
+    }
+
+    /**
+     * Fix image paths for PDF embedding
+     */
+    private function fixImagePaths(&$studentData)
+    {
+        Log::info('Fixing image paths for student data', ['student_count' => count($studentData)]);
+
+        $defaultStudentImage = public_path('storage/student_avatars/unnamed.jpg');
+        $defaultSchoolLogo = public_path('storage/school_logos/default.jpg');
+
+        // Ensure defaults exist
+        if (!file_exists($defaultStudentImage)) {
+            Log::warning('Default student image not found', ['path' => $defaultStudentImage]);
+            $studentDir = dirname($defaultStudentImage);
+            if (!file_exists($studentDir)) {
+                mkdir($studentDir, 0755, true);
+            }
+            $this->createPlaceholderImage($defaultStudentImage, 'Student');
+        }
+
+        if (!file_exists($defaultSchoolLogo)) {
+            Log::warning('Default school logo not found', ['path' => $defaultSchoolLogo]);
+            $logoDir = dirname($defaultSchoolLogo);
+            if (!file_exists($logoDir)) {
+                mkdir($logoDir, 0755, true);
+            }
+            $this->createPlaceholderImage($defaultSchoolLogo, 'School');
+        }
+
+        foreach ($studentData as $index => &$student) {
+            Log::debug("Processing student {$index} image paths");
+
+            // Student image handling
+            if (isset($student['students']) && $student['students']->isNotEmpty() && $student['students']->first()->picture) {
+                $imagePath = $student['students']->first()->picture;
+                $absolutePath = $this->getAbsoluteImagePath($imagePath, true);
+
+                if ($absolutePath && file_exists($absolutePath)) {
+                    $student['student_image_base64'] = $this->imageToBase64($absolutePath);
+                    Log::debug('Student image found and converted', [
+                        'student_index' => $index,
+                        'original_path' => $imagePath,
+                        'absolute_path' => $absolutePath,
+                    ]);
+                } else {
+                    $student['student_image_base64'] = $this->imageToBase64($defaultStudentImage);
+                    Log::warning('Using default student image', [
+                        'student_index' => $index,
+                        'original_path' => $imagePath,
+                    ]);
+                }
+            } else {
+                $student['student_image_base64'] = $this->imageToBase64($defaultStudentImage);
+                Log::debug('No student picture, using default', ['student_index' => $index]);
+            }
+
+            // School logo handling
+            if (isset($student['schoolInfo'])) {
+                $hasLogoInDatabase = !empty($student['schoolInfo']->school_logo);
+                $logoPath = $student['schoolInfo']->school_logo;
+
+                if ($hasLogoInDatabase && $logoPath) {
+                    $absolutePath = $this->getAbsoluteImagePath($logoPath, false);
+
+                    if ($absolutePath && file_exists($absolutePath)) {
+                        $fileSize = filesize($absolutePath);
+                        if ($fileSize > 100) {
+                            $student['school_logo_base64'] = $this->imageToBase64($absolutePath);
+                            Log::info('Actual school logo found and used', [
+                                'student_index' => $index,
+                                'file_size' => $fileSize,
+                                'path' => $absolutePath,
+                            ]);
+                        } else {
+                            Log::warning('Logo file exists but is too small', [
+                                'student_index' => $index,
+                                'file_size' => $fileSize,
+                            ]);
+                            $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
+                        }
+                    } else {
+                        Log::warning('Logo in database but file not found', [
+                            'student_index' => $index,
+                            'logo_path' => $logoPath,
+                        ]);
+                        $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
+                    }
+                } else {
+                    Log::info('No logo in database, using default', ['student_index' => $index]);
+                    $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
+                }
+            } else {
+                Log::warning('No schoolInfo found, using default logo', ['student_index' => $index]);
+                $student['school_logo_base64'] = $this->imageToBase64($defaultSchoolLogo);
+            }
+        }
+
+        Log::info('Image path fixing completed', ['students_processed' => count($studentData)]);
+    }
+
+    /**
+     * Create a placeholder image
+     */
+    private function createPlaceholderImage($path, $text)
+    {
+        try {
+            $width = 300;
+            $height = 200;
+
+            $image = imagecreatetruecolor($width, $height);
+            $backgroundColor = imagecolorallocate($image, 240, 240, 240);
+            $textColor = imagecolorallocate($image, 153, 153, 153);
+
+            imagefill($image, 0, 0, $backgroundColor);
+
+            $font = 5;
+            $textWidth = imagefontwidth($font) * strlen($text);
+            $textHeight = imagefontheight($font);
+            $x = ($width - $textWidth) / 2;
+            $y = ($height - $textHeight) / 2;
+
+            imagestring($image, $font, $x, $y, $text, $textColor);
+
+            imagejpeg($image, $path, 80);
+            imagedestroy($image);
+
+            Log::info('Created placeholder image', ['path' => $path, 'text' => $text]);
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to create placeholder image', [
+                'path' => $path,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Debug storage structure
+     */
+    private function debugStorageStructure()
+    {
+        Log::info('Debugging storage structure');
+
+        $pathsToCheck = [
+            'storage/app/public' => storage_path('app/public'),
+            'storage/app/public/school_logos' => storage_path('app/public/school_logos'),
+            'public/storage' => public_path('storage'),
+            'public/storage/school_logos' => public_path('storage/school_logos'),
+            'public/school_logos' => public_path('school_logos'),
+            'storage' => storage_path(),
+            'public' => public_path(),
+        ];
+
+        foreach ($pathsToCheck as $name => $path) {
+            if (file_exists($path)) {
+                if (is_dir($path)) {
+                    $files = scandir($path);
+                    $fileCount = count($files) - 2;
+                    Log::info("Directory: {$name}", [
+                        'path' => $path,
+                        'exists' => true,
+                        'is_dir' => true,
+                        'file_count' => $fileCount,
+                        'files_sample' => array_slice(array_filter($files, function($file) {
+                            return !in_array($file, ['.', '..']);
+                        }), 0, 10)
+                    ]);
+                } else {
+                    Log::info("File: {$name}", [
+                        'path' => $path,
+                        'exists' => true,
+                        'is_dir' => false,
+                        'size' => filesize($path) . ' bytes'
+                    ]);
+                }
+            } else {
+                Log::warning("Not found: {$name}", ['path' => $path]);
+            }
         }
     }
 
@@ -1135,7 +2057,158 @@ class ViewStudentReportController extends Controller
             3 => 'Third Term'
         ];
 
-        return $terms[$termid] ?? 'Unknown Term';
+        $termName = $terms[$termid] ?? 'Unknown Term';
+        Log::debug('Getting term name', ['term_id' => $termid, 'term_name' => $termName]);
+
+        return $termName;
+    }
+
+    /**
+     * Debug student query for troubleshooting
+     */
+    private function debugStudentQuery($studentIds, $schoolclassid, $sessionid, $termid)
+    {
+        Log::info('DEBUG: Running direct database queries to check data');
+
+        $studentsExist = Student::whereIn('id', $studentIds)->count();
+        Log::info('DEBUG: Students exist check', [
+            'student_ids' => $studentIds,
+            'students_found' => $studentsExist,
+            'expected' => count($studentIds)
+        ]);
+
+        $studentsInClass = Studentclass::whereIn('studentId', $studentIds)
+            ->where('schoolclassid', $schoolclassid)
+            ->where('sessionid', $sessionid)
+            ->count();
+
+        Log::info('DEBUG: Students in class check', [
+            'students_in_class' => $studentsInClass,
+            'expected' => count($studentIds)
+        ]);
+
+        $broadsheetRecords = DB::table('broadsheet_records')
+            ->whereIn('student_id', $studentIds)
+            ->where('schoolclass_id', $schoolclassid)
+            ->where('session_id', $sessionid)
+            ->count();
+
+        Log::info('DEBUG: Broadsheet records check', [
+            'broadsheet_records' => $broadsheetRecords
+        ]);
+
+        $broadsheets = DB::table('broadsheets')
+            ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadsheet_record_id')
+            ->whereIn('broadsheet_records.student_id', $studentIds)
+            ->where('broadsheet_records.schoolclass_id', $schoolclassid)
+            ->where('broadsheet_records.session_id', $sessionid)
+            ->where('broadsheets.term_id', $termid)
+            ->count();
+
+        Log::info('DEBUG: Broadsheets check', [
+            'broadsheets_found' => $broadsheets
+        ]);
+
+        if ($broadsheets > 0) {
+            $sampleData = DB::table('broadsheets')
+                ->join('broadsheet_records', 'broadsheet_records.id', '=', 'broadsheets.broadsheet_record_id')
+                ->join('studentRegistration', 'studentRegistration.id', '=', 'broadsheet_records.student_id')
+                ->join('subject', 'subject.id', '=', 'broadsheet_records.subject_id')
+                ->whereIn('broadsheet_records.student_id', $studentIds)
+                ->where('broadsheet_records.schoolclass_id', $schoolclassid)
+                ->where('broadsheet_records.session_id', $sessionid)
+                ->where('broadsheets.term_id', $termid)
+                ->select(
+                    'studentRegistration.firstname',
+                    'studentRegistration.lastname',
+                    'subject.subject',
+                    'broadsheets.total',
+                    'broadsheets.grade'
+                )
+                ->limit(5)
+                ->get();
+
+            Log::info('DEBUG: Sample broadsheet data', [
+                'sample_data' => $sampleData->toArray()
+            ]);
+        }
+    }
+
+    /**
+     * Test PDF generation endpoint
+     */
+    public function testPdfGeneration(Request $request)
+    {
+        Log::info('Test PDF generation endpoint called');
+
+        try {
+            $testStudentId = Student::first()->id ?? null;
+            $testClassId = Schoolclass::first()->id ?? null;
+            $testSessionId = Schoolsession::first()->id ?? null;
+
+            Log::debug('Test parameters', [
+                'test_student_id' => $testStudentId,
+                'test_class_id' => $testClassId,
+                'test_session_id' => $testSessionId
+            ]);
+
+            if (!$testStudentId || !$testClassId || !$testSessionId) {
+                Log::error('Test data not available');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Test data not available in database'
+                ]);
+            }
+
+            $studentData = $this->getStudentResultData(
+                $testStudentId,
+                $testClassId,
+                $testSessionId,
+                3
+            );
+
+            $result = [
+                'success' => !empty($studentData),
+                'student_data_keys' => array_keys($studentData),
+                'has_students' => isset($studentData['students']) && !$studentData['students']->isEmpty(),
+                'has_scores' => isset($studentData['scores']) && !$studentData['scores']->isEmpty(),
+                'student_count' => $studentData['students']->count() ?? 0,
+                'scores_count' => $studentData['scores']->count() ?? 0,
+                'server_info' => [
+                    'storage_writable' => is_writable(storage_path()),
+                    'php_version' => PHP_VERSION,
+                    'memory_limit' => ini_get('memory_limit'),
+                    'max_execution_time' => ini_get('max_execution_time'),
+                    'laravel_version' => app()->version(),
+                ],
+                'paths' => [
+                    'public_path' => public_path(),
+                    'storage_path' => storage_path(),
+                    'default_student_image' => public_path('storage/student_avatars/unnamed.jpg'),
+                    'default_school_logo' => public_path('storage/school_logos/default.jpg'),
+                ],
+                'file_exists' => [
+                    'default_student_image' => file_exists(public_path('storage/student_avatars/unnamed.jpg')),
+                    'default_school_logo' => file_exists(public_path('storage/school_logos/default.jpg')),
+                ]
+            ];
+
+            Log::info('Test completed', $result);
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            Log::error('Test PDF generation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 
     /**
@@ -1143,6 +2216,12 @@ class ViewStudentReportController extends Controller
      */
     public function index(Request $request): View|JsonResponse
     {
+        Log::info('ViewStudentReportController index method called', [
+            'request_params' => $request->all(),
+            'ajax' => $request->ajax(),
+            'method' => $request->method()
+        ]);
+
         $pagetitle = "Student Terminal Report Management";
         $current = "Current";
 
@@ -1166,6 +2245,8 @@ class ViewStudentReportController extends Controller
                       ->orWhere('studentRegistration.lastname', 'like', "%{$search}%")
                       ->orWhere('studentRegistration.othername', 'like', "%{$search}%");
                 });
+
+                Log::debug('Search filter applied', ['search_term' => $search]);
             }
 
             $allstudents = $query->select([
@@ -1182,13 +2263,38 @@ class ViewStudentReportController extends Controller
                 'schoolarm.arm as schoolarm',
                 'schoolsession.session as session',
             ])->latest('studentclass.created_at')->paginate(100);
+
+            Log::info('Student query executed', [
+                'schoolclassid' => $request->input('schoolclassid'),
+                'sessionid' => $request->input('sessionid'),
+                'student_count' => $allstudents->total(),
+                'page' => $allstudents->currentPage(),
+                'per_page' => $allstudents->perPage()
+            ]);
+        } else {
+            Log::info('No class/session selected or ALL selected', [
+                'schoolclassid' => $request->input('schoolclassid'),
+                'sessionid' => $request->input('sessionid')
+            ]);
         }
 
         $schoolsessions = Schoolsession::where('status', 'Current')->get();
         $schoolclasses = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
             ->get(['schoolclass.id', 'schoolclass.schoolclass', 'schoolarm.arm']);
 
+        Log::debug('Session and class data loaded', [
+            'sessions_count' => $schoolsessions->count(),
+            'classes_count' => $schoolclasses->count(),
+            'sample_classes' => $schoolclasses->take(3)->map(function($c) {
+                return $c->schoolclass . ' ' . $c->arm;
+            })->toArray()
+        ]);
+
         if ($request->ajax()) {
+            Log::info('AJAX request for student data', [
+                'student_count' => $allstudents->total(),
+                'page' => $allstudents->currentPage()
+            ]);
             return response()->json([
                 'tableBody' => view('studentreports.partials.student_rows', compact('allstudents'))->render(),
                 'pagination' => $allstudents->links('pagination::bootstrap-5')->render(),
@@ -1196,16 +2302,7 @@ class ViewStudentReportController extends Controller
             ]);
         }
 
+        Log::info('Returning full view for student reports');
         return view('studentreports.index', compact('allstudents', 'schoolsessions', 'schoolclasses', 'pagetitle'));
     }
-
-    // Helper methods for image handling (keep these from your original code)
-    private function fixImagePaths(&$studentData) {}
-    private function getAbsoluteImagePath($path, $isStudent = false) { return null; }
-    private function imageToBase64($imagePath) { return ''; }
-    private function createPlaceholderImage($path, $text) {}
-    private function checkServerRequirements() {}
-    private function debugStorageStructure() {}
-    private function debugStudentQuery($studentIds, $schoolclassid, $sessionid, $termid) {}
-    public function testPdfGeneration(Request $request) {}
 }
