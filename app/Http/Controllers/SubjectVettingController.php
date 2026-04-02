@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SubjectVetting;
+use App\Models\User;
+use App\Models\Schoolterm;
+use App\Models\Broadsheets;
 use App\Models\Schoolclass;
 use App\Models\Subjectclass;
-use App\Models\SubjectTeacher;
-use App\Models\Schoolterm;
-use App\Models\Schoolsession;
-use App\Models\User;
-use App\Models\Broadsheets;
-use App\Models\BroadsheetsMock;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
+use App\Models\Schoolsession;
+use App\Models\SubjectTeacher;
+use App\Models\SubjectVetting;
+use App\Models\BroadsheetsMock;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Validator;
 
 class SubjectVettingController extends Controller
 {
@@ -26,6 +27,124 @@ class SubjectVettingController extends Controller
         $this->middleware('permission:Delete subject-vettings', ['only' => ['destroy']]);
     }
 
+    /**
+     * Search subject classes via AJAX with term colors
+     */
+    public function searchSubjectClasses(Request $request)
+    {
+        try {
+            $query = $request->get('q', '');
+            $excludeIds = $request->get('exclude_ids', []);
+
+            if (strlen($query) < 2) {
+                return response()->json([
+                    'success' => true,
+                    'data' => []
+                ]);
+            }
+
+            $subjectClasses = Subjectclass::select(
+                    'subjectclass.id',
+                    'subject.subject as subjectname',
+                    'subject.subject_code as subjectcode',
+                    'schoolclass.schoolclass as sclass',
+                    'schoolarm.arm as schoolarm',
+                    'users.name as teachername',
+                    'schoolterm.id as termid',
+                    'schoolterm.term as termname',
+                    'schoolsession.id as sessionid',
+                    'schoolsession.session as sessionname',
+                    'schoolsession.status as sessionstatus'
+                )
+                ->leftJoin('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
+                ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+                ->leftJoin('users', 'users.id', '=', 'subjectteacher.staffid')
+                ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+                ->where(function($q) use ($query) {
+                    $q->where('subject.subject', 'LIKE', "%{$query}%")
+                      ->orWhere('subject.subject_code', 'LIKE', "%{$query}%")
+                      ->orWhere('schoolclass.schoolclass', 'LIKE', "%{$query}%")
+                      ->orWhere('schoolarm.arm', 'LIKE', "%{$query}%")
+                      ->orWhere('users.name', 'LIKE', "%{$query}%")
+                      ->orWhere('schoolsession.session', 'LIKE', "%{$query}%")
+                      ->orWhere('schoolterm.term', 'LIKE', "%{$query}%");
+                })
+                ->when(!empty($excludeIds), function($q) use ($excludeIds) {
+                    if (is_array($excludeIds)) {
+                        $q->whereNotIn('subjectclass.id', $excludeIds);
+                    } elseif (str_contains($excludeIds, ',')) {
+                        $ids = explode(',', $excludeIds);
+                        $q->whereNotIn('subjectclass.id', $ids);
+                    } else {
+                        $q->where('subjectclass.id', '!=', $excludeIds);
+                    }
+                })
+                ->orderBy('schoolterm.id')
+                ->orderBy('subject.subject')
+                ->limit(30)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $subjectClasses
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error searching subject classes: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Search failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get selected subject classes details
+     */
+    public function getSelectedSubjectClasses(Request $request)
+    {
+        try {
+            $ids = $request->get('ids', []);
+            if (empty($ids)) {
+                return response()->json([]);
+            }
+
+            $idsArray = is_array($ids) ? $ids : explode(',', $ids);
+
+            $subjectClasses = Subjectclass::select(
+                    'subjectclass.id',
+                    'subject.subject as subjectname',
+                    'subject.subject_code as subjectcode',
+                    'schoolclass.schoolclass as sclass',
+                    'schoolarm.arm as schoolarm',
+                    'users.name as teachername',
+                    'schoolterm.id as termid',
+                    'schoolterm.term as termname',
+                    'schoolsession.id as sessionid',
+                    'schoolsession.session as sessionname',
+                    'schoolsession.status as sessionstatus'
+                )
+                ->leftJoin('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
+                ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
+                ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
+                ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
+                ->leftJoin('users', 'users.id', '=', 'subjectteacher.staffid')
+                ->leftJoin('schoolterm', 'schoolterm.id', '=', 'subjectteacher.termid')
+                ->leftJoin('schoolsession', 'schoolsession.id', '=', 'subjectteacher.sessionid')
+                ->whereIn('subjectclass.id', $idsArray)
+                ->get();
+
+            return response()->json($subjectClasses);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting selected subject classes: ' . $e->getMessage());
+            return response()->json([], 500);
+        }
+    }
+
     public function store(Request $request)
     {
         try {
@@ -33,16 +152,13 @@ class SubjectVettingController extends Controller
                 'userid' => 'required|exists:users,id',
                 'termid.*' => 'required|exists:schoolterm,id',
                 'sessionid' => 'required|exists:schoolsession,id',
+                'subjectclassid' => 'required|array',
                 'subjectclassid.*' => 'required|exists:subjectclass,id',
             ], [
                 'userid.required' => 'Please select a staff member!',
-                'userid.exists' => 'Selected staff member does not exist!',
                 'termid.*.required' => 'Please select at least one term!',
-                'termid.*.exists' => 'Selected term does not exist!',
                 'sessionid.required' => 'Please select a session!',
-                'sessionid.exists' => 'Selected session does not exist!',
-                'subjectclassid.*.required' => 'Please select at least one subject-class!',
-                'subjectclassid.*.exists' => 'Selected subject-class does not exist!',
+                'subjectclassid.required' => 'Please select at least one subject-class!',
             ]);
 
             if ($validator->fails()) {
@@ -56,7 +172,7 @@ class SubjectVettingController extends Controller
             $userId = $request->input('userid');
             $termIds = $request->input('termid', []);
             $sessionId = $request->input('sessionid');
-            $subjectClassIds = array_unique($request->input('subjectclassid', [])); // Deduplicate subjectclassid
+            $subjectClassIds = array_unique($request->input('subjectclassid', []));
 
             Log::debug('Store inputs', [
                 'userId' => $userId,
@@ -103,6 +219,7 @@ class SubjectVettingController extends Controller
 
             if (!empty($existingAssignments)) {
                 $assignedSubjectClasses = Subjectclass::whereIn('subjectclass.id', array_unique($existingAssignments))
+                    ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                     ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
                     ->leftJoin('schoolclass', 'schoolclass.id', '=', 'subjectclass.schoolclassid')
                     ->leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
@@ -142,7 +259,7 @@ class SubjectVettingController extends Controller
             Log::info('Subject vetting assignments created', ['count' => count($createdRecords)]);
             return response()->json([
                 'success' => true,
-                'message' => 'Subject Vetting assignment(s) added successfully.',
+                'message' => count($createdRecords) . ' Subject Vetting assignment(s) added successfully.',
                 'data' => $createdRecords
             ], 201);
         } catch (\Exception $e) {
@@ -161,10 +278,28 @@ class SubjectVettingController extends Controller
         try {
             $pagetitle = "Subject Vetting Management";
 
+            // Get current session
+            $currentSession = Schoolsession::where('status', 'Current')->first();
+
+            // If no current session, use the latest session
+            if (!$currentSession) {
+                $currentSession = Schoolsession::latest()->first();
+            }
+
+            // Check if session filter is provided in request
+            $selectedSessionId = $request->input('session');
+            if ($selectedSessionId) {
+                $selectedSession = Schoolsession::find($selectedSessionId);
+                if ($selectedSession) {
+                    $currentSession = $selectedSession;
+                }
+            }
+
             $schoolclasses = Schoolclass::leftJoin('schoolarm', 'schoolarm.id', '=', 'schoolclass.arm')
                 ->get(['schoolclass.id as id', 'schoolclass.schoolclass as schoolclass', 'schoolarm.arm as arm'])
                 ->sortBy('schoolclass');
 
+            // Get all subjectclasses for the dropdown (for backward compatibility)
             $subjectclasses = Subjectclass::leftJoin('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
@@ -192,8 +327,9 @@ class SubjectVettingController extends Controller
 
             $staff = User::get(['id', 'name', 'avatar'])->sortBy('name');
             $terms = Schoolterm::get(['id', 'term'])->sortBy('term');
-            $sessions = Schoolsession::get(['id', 'session'])->sortBy('session');
+            $sessions = Schoolsession::get(['id', 'session', 'status'])->sortBy('session');
 
+            // Filter subjectvettings to show only current session by default
             $subjectvettings = SubjectVetting::leftJoin('subjectclass', 'subject_vettings.subjectclassid', '=', 'subjectclass.id')
                 ->leftJoin('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
@@ -223,11 +359,23 @@ class SubjectVettingController extends Controller
                     'schoolsession.session as sessionname',
                     'subject_vettings.status',
                     'subject_vettings.updated_at'
-                ])
-                ->orderBy('vetting_username')
+                ]);
+
+            // Filter by current session if exists
+            if ($currentSession) {
+                $subjectvettings = $subjectvettings->where('subject_vettings.sessionid', $currentSession->id);
+            }
+
+            $subjectvettings = $subjectvettings->orderBy('vetting_username')
                 ->get();
 
-            $statusCounts = SubjectVetting::groupBy('status')
+            // Status counts should also be filtered by current session
+            $statusCountsQuery = SubjectVetting::query();
+            if ($currentSession) {
+                $statusCountsQuery = $statusCountsQuery->where('sessionid', $currentSession->id);
+            }
+
+            $statusCounts = $statusCountsQuery->groupBy('status')
                 ->selectRaw('status, COUNT(*) as count')
                 ->pluck('count', 'status')
                 ->toArray();
@@ -242,7 +390,8 @@ class SubjectVettingController extends Controller
                 return response()->json([
                     'success' => true,
                     'subjectvettings' => $subjectvettings,
-                    'statusCounts' => $statusCounts
+                    'statusCounts' => $statusCounts,
+                    'currentSession' => $currentSession ? $currentSession->session : null
                 ], 200);
             }
 
@@ -254,7 +403,8 @@ class SubjectVettingController extends Controller
                 ->with('terms', $terms)
                 ->with('sessions', $sessions)
                 ->with('pagetitle', $pagetitle)
-                ->with('statusCounts', $statusCounts);
+                ->with('statusCounts', $statusCounts)
+                ->with('currentSession', $currentSession);
         } catch (\Exception $e) {
             Log::error('Error loading subject vetting index: ' . $e->getMessage());
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -272,6 +422,7 @@ class SubjectVettingController extends Controller
                 ->with('sessions', collect([]))
                 ->with('pagetitle', 'Subject Vetting Management')
                 ->with('statusCounts', ['pending' => 0, 'completed' => 0, 'rejected' => 0])
+                ->with('currentSession', null)
                 ->with('danger', 'Failed to load subject vetting data: ' . $e->getMessage());
         }
     }
@@ -283,6 +434,15 @@ class SubjectVettingController extends Controller
                 ->get(['schoolclass.id as id', 'schoolclass.schoolclass as schoolclass', 'schoolarm.arm as arm'])
                 ->sortBy('schoolclass');
 
+            // Get current session
+            $currentSession = Schoolsession::where('status', 'Current')->first();
+
+            // If no current session, use the latest session
+            if (!$currentSession) {
+                $currentSession = Schoolsession::latest()->first();
+            }
+
+            // Get all subjectclasses with session status
             $subjectclasses = Subjectclass::leftJoin('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
@@ -304,20 +464,22 @@ class SubjectVettingController extends Controller
                     'schoolterm.id as termid',
                     'schoolterm.term as termname',
                     'schoolsession.id as sessionid',
-                    'schoolsession.session as sessionname'
+                    'schoolsession.session as sessionname',
+                    'schoolsession.status as sessionstatus'
                 ])
                 ->sortBy('sclass');
 
             $staff = User::get(['id', 'name', 'avatar'])->sortBy('name');
             $terms = Schoolterm::get(['id', 'term'])->sortBy('term');
-            $sessions = Schoolsession::get(['id', 'session'])->sortBy('session');
+            $sessions = Schoolsession::get(['id', 'session', 'status'])->sortBy('session');
 
             return view('subjectvetting.create')
                 ->with('subjectclasses', $subjectclasses)
                 ->with('schoolclasses', $schoolclasses)
                 ->with('staff', $staff)
                 ->with('terms', $terms)
-                ->with('sessions', $sessions);
+                ->with('sessions', $sessions)
+                ->with('currentSession', $currentSession);
         } catch (\Exception $e) {
             Log::error('Error loading subject vetting create page: ' . $e->getMessage());
             return redirect()->route('subjectvetting.index')
@@ -332,6 +494,15 @@ class SubjectVettingController extends Controller
                 ->get(['schoolclass.id as id', 'schoolclass.schoolclass as schoolclass', 'schoolarm.arm as arm'])
                 ->sortBy('schoolclass');
 
+            // Get current session
+            $currentSession = Schoolsession::where('status', 'Current')->first();
+
+            // If no current session, use the latest session
+            if (!$currentSession) {
+                $currentSession = Schoolsession::latest()->first();
+            }
+
+            // Get all subjectclasses with session status
             $subjectclasses = Subjectclass::leftJoin('schoolclass', 'subjectclass.schoolclassid', '=', 'schoolclass.id')
                 ->leftJoin('subjectteacher', 'subjectteacher.id', '=', 'subjectclass.subjectteacherid')
                 ->leftJoin('subject', 'subject.id', '=', 'subjectteacher.subjectid')
@@ -353,13 +524,14 @@ class SubjectVettingController extends Controller
                     'schoolterm.id as termid',
                     'schoolterm.term as termname',
                     'schoolsession.id as sessionid',
-                    'schoolsession.session as sessionname'
+                    'schoolsession.session as sessionname',
+                    'schoolsession.status as sessionstatus'
                 ])
                 ->sortBy('sclass');
 
             $staff = User::get(['id', 'name', 'avatar'])->sortBy('name');
             $terms = Schoolterm::get(['id', 'term'])->sortBy('term');
-            $sessions = Schoolsession::get(['id', 'session'])->sortBy('session');
+            $sessions = Schoolsession::get(['id', 'session', 'status'])->sortBy('session');
 
             $subjectvetting = SubjectVetting::where('subject_vettings.id', $id)
                 ->leftJoin('subjectclass', 'subject_vettings.subjectclassid', '=', 'subjectclass.id')
@@ -404,7 +576,8 @@ class SubjectVettingController extends Controller
                 ->with('schoolclasses', $schoolclasses)
                 ->with('staff', $staff)
                 ->with('terms', $terms)
-                ->with('sessions', $sessions);
+                ->with('sessions', $sessions)
+                ->with('currentSession', $currentSession);
         } catch (\Exception $e) {
             Log::error('Error loading subject vetting edit page: ' . $e->getMessage());
             return redirect()->route('subjectvetting.index')
@@ -512,7 +685,7 @@ class SubjectVettingController extends Controller
         }
     }
 
-       public function destroy($id)
+    public function destroy($id)
     {
         try {
             $subjectVetting = SubjectVetting::find($id);
@@ -563,5 +736,45 @@ class SubjectVettingController extends Controller
             ], 500);
         }
     }
+
+    public function bulkDelete(Request $request)
+{
+    try {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No records selected for deletion.'
+            ], 422);
+        }
+
+        DB::transaction(function () use ($ids) {
+            $vettings = SubjectVetting::whereIn('id', $ids)->get();
+
+            foreach ($vettings as $vetting) {
+                // Update related broadsheets if they exist
+                Broadsheets::where('vettedby', $vetting->userid)
+                    ->where('subjectclass_id', $vetting->subjectclassId)
+                    ->where('term_id', $vetting->termid)
+                    ->update([
+                        'vettedby' => null,
+                        'vettedstatus' => null
+                    ]);
+            }
+
+            SubjectVetting::whereIn('id', $ids)->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => count($ids) . ' record(s) deleted successfully.'
+        ], 200);
+    } catch (\Exception $e) {
+        Log::error('Error in bulk delete: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Error deleting records: ' . $e->getMessage()
+        ], 500);
+    }
 }
-?>
+}
