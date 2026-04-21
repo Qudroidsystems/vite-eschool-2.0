@@ -333,7 +333,8 @@ Route::post('/students/bulk-remove-from-term', [StudentController::class, 'bulkR
     Route::get('/subassessment/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}/{subassessmentid}', [MyScoreSheetController::class, 'subassessmentScoresheet'])->name('subassessment.scoresheet');
     Route::get('/assessment/scoresheet/{schoolclassid}/{subjectclassid}/{staffid}/{termid}/{sessionid}/{assessmentid}', [MyScoreSheetController::class, 'assessmentScoresheet'])->name('assessment.scoresheet');
     Route::post('/subjectscoresheet/single-update', [MyScoreSheetController::class, 'singleUpdateScore'])->name('subjectscoresheet.single-update');
-
+    Route::post('scoresheet-mock/single-update', [MyScoreSheetController::class, 'mockSingleUpdateScore'])
+        ->name('scoresheet-mock.single-update');
 
 
 
